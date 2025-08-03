@@ -1,0 +1,441 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
+import 'package:we_decor_enquiries/core/providers/role_provider.dart';
+import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
+import 'package:we_decor_enquiries/core/services/notification_service.dart';
+import 'package:we_decor_enquiries/core/services/audit_service.dart';
+import 'package:we_decor_enquiries/shared/models/user_model.dart';
+import 'package:we_decor_enquiries/shared/widgets/enquiry_history_widget.dart';
+
+class EnquiryDetailsScreen extends ConsumerStatefulWidget {
+  final String enquiryId;
+
+  const EnquiryDetailsScreen({
+    super.key,
+    required this.enquiryId,
+  });
+
+  @override
+  ConsumerState<EnquiryDetailsScreen> createState() => _EnquiryDetailsScreenState();
+}
+
+class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
+  String? _selectedStatus;
+  bool _isUpdating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = ref.watch(currentUserIsAdminProvider);
+    final currentUser = ref.watch(currentUserWithFirestoreProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Enquiry Details'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('enquiries')
+            .doc(widget.enquiryId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('Enquiry not found'));
+          }
+
+          final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+          final enquiryId = snapshot.data!.id;
+
+          // Check if staff user can access this enquiry
+          if (!isAdmin) {
+            final assignedTo = enquiryData['assignedTo'] as String?;
+            final currentUserId = currentUser.value?.uid;
+            
+            if (assignedTo != null && assignedTo != currentUserId) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.lock,
+                      size: 64,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Access Denied',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'You can only view enquiries assigned to you.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with status
+                _buildHeader(enquiryData, isAdmin),
+                const SizedBox(height: 24),
+
+                // Basic Information
+                _buildSection(
+                  title: 'Basic Information',
+                  children: [
+                    _buildInfoRow('Customer Name', enquiryData['customerName'] ?? 'N/A'),
+                    _buildInfoRow('Phone', enquiryData['customerPhone'] ?? 'N/A'),
+                    _buildInfoRow('Email', enquiryData['customerEmail'] ?? 'N/A'),
+                    _buildInfoRow('Location', enquiryData['eventLocation'] ?? 'N/A'),
+                  ],
+                ),
+
+                // Event Details
+                _buildSection(
+                  title: 'Event Details',
+                  children: [
+                    _buildInfoRow('Event Type', enquiryData['eventType'] ?? 'N/A'),
+                    _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
+                    _buildInfoRow('Guest Count', '${enquiryData['guestCount'] ?? 'N/A'} guests'),
+                    _buildInfoRow('Budget Range', enquiryData['budgetRange'] ?? 'N/A'),
+                    _buildInfoRow('Priority', _capitalizeFirst(enquiryData['priority'] ?? 'N/A')),
+                    _buildInfoRow('Source', enquiryData['source'] ?? 'N/A'),
+                  ],
+                ),
+
+                // Assignment Information (Admin Only)
+                if (isAdmin) ...[
+                  _buildSection(
+                    title: 'Assignment',
+                    children: [
+                      _buildInfoRow('Assigned To', _getAssignedUserName(enquiryData['assignedTo'])),
+                      _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'])),
+                    ],
+                  ),
+                ],
+
+                // Financial Information (Admin Only)
+                if (isAdmin) ...[
+                  _buildSection(
+                    title: 'Financial Information',
+                    children: [
+                      _buildInfoRow('Total Cost', _formatCurrency(enquiryData['totalCost'])),
+                      _buildInfoRow('Advance Paid', _formatCurrency(enquiryData['advancePaid'])),
+                      _buildInfoRow('Payment Status', _capitalizeFirst(enquiryData['paymentStatus'] ?? 'N/A')),
+                    ],
+                  ),
+                ],
+
+                // Description
+                _buildSection(
+                  title: 'Description',
+                  children: [
+                    _buildInfoRow('Notes', enquiryData['description'] ?? 'No description provided'),
+                  ],
+                ),
+
+                // Timestamps
+                _buildSection(
+                  title: 'Timestamps',
+                  children: [
+                    _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
+                    _buildInfoRow('Last Updated', _formatTimestamp(enquiryData['updatedAt'])),
+                  ],
+                ),
+
+                // Change History
+                _buildSection(
+                  title: 'Change History',
+                  children: [
+                    EnquiryHistoryWidget(enquiryId: widget.enquiryId),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(Map<String, dynamic> enquiryData, bool isAdmin) {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Enquiry #${widget.enquiryId.substring(0, 8)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                if (isAdmin) ...[
+                  // Admin can edit status
+                  _buildStatusDropdown(enquiryData),
+                ] else ...[
+                  // Staff can only view status
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(enquiryData['status']),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      _capitalizeFirst(enquiryData['status'] ?? 'N/A'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Customer: ${enquiryData['customerName'] ?? 'N/A'}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown(Map<String, dynamic> enquiryData) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: ref.read(firestoreServiceProvider).getStatuses(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const CircularProgressIndicator();
+        }
+
+        final statuses = snapshot.data!.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+
+        return DropdownButton<String>(
+          value: _selectedStatus ?? enquiryData['status'],
+          items: statuses.map((status) {
+            return DropdownMenuItem<String>(
+              value: status['name'] as String,
+              child: Text(status['name'] as String),
+            );
+          }).toList(),
+          onChanged: (value) async {
+            if (value != null && value != enquiryData['status']) {
+              setState(() {
+                _isUpdating = true;
+              });
+
+              try {
+                final oldStatus = enquiryData['status'] as String? ?? 'Unknown';
+                
+                await FirebaseFirestore.instance
+                    .collection('enquiries')
+                    .doc(widget.enquiryId)
+                    .update({
+                  'status': value,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                });
+
+                // Record audit trail for status change
+                final auditService = AuditService();
+                await auditService.recordChange(
+                  enquiryId: widget.enquiryId,
+                  fieldChanged: 'status',
+                  oldValue: oldStatus,
+                  newValue: value!,
+                );
+
+                // Send notification for status update
+                final notificationService = NotificationService();
+                await notificationService.notifyStatusUpdated(
+                  enquiryId: widget.enquiryId,
+                  customerName: enquiryData['customerName'] as String? ?? 'Unknown Customer',
+                  oldStatus: oldStatus,
+                  newStatus: value!,
+                  updatedBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                );
+
+                setState(() {
+                  _selectedStatus = value;
+                  _isUpdating = false;
+                });
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Status updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                setState(() {
+                  _isUpdating = false;
+                });
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error updating status: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSection({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'N/A';
+    if (date is Timestamp) {
+      return '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}';
+    }
+    return date.toString();
+  }
+
+  String _formatCurrency(dynamic amount) {
+    if (amount == null) return 'N/A';
+    if (amount is num) {
+      return '\$${amount.toStringAsFixed(2)}';
+    }
+    return amount.toString();
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    if (timestamp is Timestamp) {
+      return '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year} ${timestamp.toDate().hour}:${timestamp.toDate().minute}';
+    }
+    return timestamp.toString();
+  }
+
+  String _capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1).toLowerCase();
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'in progress':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getAssignedUserName(String? assignedTo) {
+    if (assignedTo == null) return 'Unassigned';
+    // TODO: Fetch user name from Firestore
+    return 'User ID: $assignedTo';
+  }
+
+  String _getCreatedByUserName(String? createdBy) {
+    if (createdBy == null) return 'Unknown';
+    // TODO: Fetch user name from Firestore
+    return 'User ID: $createdBy';
+  }
+} 

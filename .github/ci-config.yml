@@ -1,0 +1,160 @@
+# CI/CD Configuration for We Decor Enquiries
+
+## Required GitHub Secrets
+
+### Firebase Configuration
+- `FIREBASE_TOKEN`: Firebase CLI token for deployment
+- `FIREBASE_PROJECT_ID`: Firebase project ID
+
+### Android Deployment
+- `PLAY_STORE_CONFIG_JSON`: Google Play Console service account JSON
+
+### iOS Deployment (Optional)
+- `IOS_P12_BASE64`: Base64 encoded iOS distribution certificate
+- `IOS_P12_PASSWORD`: Password for the iOS certificate
+- `APPSTORE_ISSUER_ID`: App Store Connect issuer ID
+- `APPSTORE_API_KEY_ID`: App Store Connect API key ID
+- `APPSTORE_API_PRIVATE_KEY`: App Store Connect API private key
+
+## Setup Instructions
+
+### 1. Firebase Setup
+```bash
+# Login to Firebase
+firebase login
+
+# Generate token for CI/CD
+firebase login:ci
+
+# Add the token to GitHub secrets as FIREBASE_TOKEN
+```
+
+### 2. Google Play Console Setup
+1. Create a service account in Google Play Console
+2. Download the JSON key file
+3. Add the JSON content to GitHub secrets as `PLAY_STORE_CONFIG_JSON`
+
+### 3. App Store Connect Setup (Optional)
+1. Create an App Store Connect API key
+2. Add the required credentials to GitHub secrets
+
+## Workflow Triggers
+
+### CI Pipeline (ci.yml)
+- **Triggers**: Push to main/develop, Pull requests to main/develop
+- **Jobs**: Analyze, Test, Integration Test, Build (Android/iOS/Web), Deploy Preview
+
+### Production Deployment (deploy.yml)
+- **Triggers**: Push to main branch only
+- **Jobs**: Deploy Web, Deploy Android, Build iOS
+
+## Job Dependencies
+
+```
+analyze ──┐
+test ─────┼── quality-gate ── notify
+integration-test ─┘
+build-android ──┐
+build-ios ──────┼── notify
+build-web ──────┘
+```
+
+## Quality Gates
+
+The pipeline includes quality gates that must pass:
+- ✅ Code analysis (flutter analyze)
+- ✅ Code formatting (dart format)
+- ✅ Unit and widget tests
+- ✅ Integration tests with Firebase emulators
+- ✅ Build success for all platforms
+
+## Deployment Strategy
+
+### Preview Deployments
+- **Trigger**: Pull requests
+- **Target**: Firebase Hosting preview channel
+- **URL**: https://{project-id}.web.app
+- **Purpose**: Review changes before merging
+
+### Production Deployments
+- **Trigger**: Push to main branch
+- **Target**: Firebase Hosting production channel
+- **Platforms**: Web (automatic), Android (automatic), iOS (manual)
+
+## Build Artifacts
+
+### Android
+- `app-release.apk`: Debuggable APK for testing
+- `app-release.aab`: App Bundle for Play Store
+
+### iOS
+- `ios-build/`: iOS build artifacts for manual deployment
+- `ios-production-build/`: Production iOS build
+
+### Web
+- `web-build/`: Web build artifacts
+- Deployed to Firebase Hosting
+
+## Monitoring and Notifications
+
+### Success Notifications
+- PR comments with preview URLs
+- Deployment success notifications
+- Build artifact availability
+
+### Failure Notifications
+- Detailed failure reports in PR comments
+- Failed job identification
+- Workflow run links for debugging
+
+## Performance Optimizations
+
+### Caching
+- Flutter dependencies cached between runs
+- Firebase CLI cached for faster deployments
+
+### Parallel Execution
+- Independent jobs run in parallel
+- Platform-specific builds run concurrently
+
+### Resource Usage
+- Ubuntu runners for most jobs
+- macOS runners only for iOS builds
+- Optimized Flutter setup with specific versions
+
+## Troubleshooting
+
+### Common Issues
+1. **Firebase Token Expired**: Regenerate token with `firebase login:ci`
+2. **Build Failures**: Check Flutter version compatibility
+3. **Test Failures**: Verify Firebase emulator setup
+4. **Deployment Failures**: Check Firebase project configuration
+
+### Debug Commands
+```bash
+# Check Flutter version
+flutter --version
+
+# Verify Firebase setup
+firebase projects:list
+
+# Test emulator locally
+firebase emulators:start --only auth,firestore,storage
+```
+
+## Security Considerations
+
+### Secrets Management
+- All sensitive data stored in GitHub secrets
+- No hardcoded credentials in workflows
+- Regular rotation of tokens and keys
+
+### Access Control
+- Production deployments only from main branch
+- Preview deployments for all PRs
+- Manual approval for critical deployments
+
+### Code Quality
+- Automated code analysis
+- Test coverage requirements
+- Integration test validation 
