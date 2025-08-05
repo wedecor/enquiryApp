@@ -554,7 +554,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: const Color(0xFF2563EB), // Blue
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -592,7 +592,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Colors.deepPurple,
+                          color: const Color(0xFF2563EB), // Blue
         ),
       ),
     );
