@@ -220,7 +220,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 'In Progress',
                 inProgressEnquiries.toString(),
                 Icons.pending,
-                Colors.purple,
+                const Color(0xFF2563EB), // Blue
               ),
             ),
             const SizedBox(width: 12),
@@ -450,7 +450,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case 'in progress':
         return const Color(0xFF2563EB); // Our new blue color
       case 'quote sent':
-        return Colors.purple;
+        return const Color(0xFF2563EB); // Blue
       case 'confirmed':
         return Colors.indigo;
       case 'completed':

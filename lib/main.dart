@@ -81,7 +81,7 @@ Future<void> _seedDataForDebug() async {
 /// and navigates users to the appropriate screen based on their
 /// authentication status.
 /// 
-/// The app uses Material Design 3 with a deep purple color scheme and
+/// The app uses Material Design 3 with a blue-green color scheme and
 /// implements role-based navigation:
 /// - Authenticated users are directed to the [DashboardScreen]
 /// - Unauthenticated users are directed to the [LoginScreen]

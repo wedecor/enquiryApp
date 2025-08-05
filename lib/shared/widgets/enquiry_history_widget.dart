@@ -241,7 +241,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
       case 'status':
         return const Color(0xFF2563EB); // Our new blue color
       case 'assignedto':
-        return Colors.purple;
+        return const Color(0xFF2563EB); // Blue
       case 'priority':
         return Colors.orange;
       case 'totalcost':
