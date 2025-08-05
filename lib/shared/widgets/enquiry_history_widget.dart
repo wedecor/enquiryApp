@@ -239,7 +239,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
   Color _getFieldColor(String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
-        return Colors.blue;
+        return const Color(0xFF2563EB); // Our new blue color
       case 'assignedto':
         return Colors.purple;
       case 'priority':
@@ -254,7 +254,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
       case 'eventtype':
       case 'eventdate':
       case 'eventlocation':
-        return Colors.teal;
+        return const Color(0xFF059669); // Our new green color
       case 'description':
         return Colors.brown;
       default:

@@ -1,13 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
-import 'package:we_decor_enquiries/core/services/notification_service.dart';
-import 'package:we_decor_enquiries/core/services/audit_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/shared/widgets/enquiry_history_widget.dart';
+
+// Placeholder services - TODO: Implement proper services
+class AuditService {
+  Future<void> recordChange({
+    required String enquiryId,
+    required String fieldChanged,
+    required String oldValue,
+    required String newValue,
+  }) async {
+    // TODO: Implement audit trail
+    print('Audit: $fieldChanged changed from $oldValue to $newValue');
+  }
+}
+
+class NotificationService {
+  Future<void> notifyStatusUpdated({
+    required String enquiryId,
+    required String customerName,
+    required String oldStatus,
+    required String newStatus,
+    required String updatedBy,
+  }) async {
+    // TODO: Implement notification
+    print('Notification: Status updated for $customerName from $oldStatus to $newStatus');
+  }
+}
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
   final String enquiryId;
@@ -56,7 +77,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           }
 
           final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
-          final enquiryId = snapshot.data!.id;
 
           // Check if staff user can access this enquiry
           if (!isAdmin) {
@@ -106,10 +126,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 _buildSection(
                   title: 'Basic Information',
                   children: [
-                    _buildInfoRow('Customer Name', enquiryData['customerName'] ?? 'N/A'),
-                    _buildInfoRow('Phone', enquiryData['customerPhone'] ?? 'N/A'),
-                    _buildInfoRow('Email', enquiryData['customerEmail'] ?? 'N/A'),
-                    _buildInfoRow('Location', enquiryData['eventLocation'] ?? 'N/A'),
+                    _buildInfoRow('Customer Name', (enquiryData['customerName'] as String?) ?? 'N/A'),
+                    _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
+                    _buildInfoRow('Location', (enquiryData['location'] as String?) ?? 'N/A'),
                   ],
                 ),
 
@@ -117,12 +136,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 _buildSection(
                   title: 'Event Details',
                   children: [
-                    _buildInfoRow('Event Type', enquiryData['eventType'] ?? 'N/A'),
+                    _buildInfoRow('Event Type', (enquiryData['eventType'] as String?) ?? 'N/A'),
                     _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
                     _buildInfoRow('Guest Count', '${enquiryData['guestCount'] ?? 'N/A'} guests'),
-                    _buildInfoRow('Budget Range', enquiryData['budgetRange'] ?? 'N/A'),
-                    _buildInfoRow('Priority', _capitalizeFirst(enquiryData['priority'] ?? 'N/A')),
-                    _buildInfoRow('Source', enquiryData['source'] ?? 'N/A'),
+                    _buildInfoRow('Budget Range', (enquiryData['budgetRange'] as String?) ?? 'N/A'),
+                    _buildInfoRow('Priority', _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A')),
+                    _buildInfoRow('Source', (enquiryData['source'] as String?) ?? 'N/A'),
                   ],
                 ),
 
@@ -131,8 +150,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   _buildSection(
                     title: 'Assignment',
                     children: [
-                      _buildInfoRow('Assigned To', _getAssignedUserName(enquiryData['assignedTo'])),
-                      _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'])),
+                      _buildInfoRow('Assigned To', _getAssignedUserName(enquiryData['assignedTo'] as String?)),
+                      _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'] as String?)),
                     ],
                   ),
                 ],
@@ -144,7 +163,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     children: [
                       _buildInfoRow('Total Cost', _formatCurrency(enquiryData['totalCost'])),
                       _buildInfoRow('Advance Paid', _formatCurrency(enquiryData['advancePaid'])),
-                      _buildInfoRow('Payment Status', _capitalizeFirst(enquiryData['paymentStatus'] ?? 'N/A')),
+                      _buildInfoRow('Payment Status', _capitalizeFirst((enquiryData['paymentStatus'] as String?) ?? 'N/A')),
                     ],
                   ),
                 ],
@@ -153,7 +172,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 _buildSection(
                   title: 'Description',
                   children: [
-                    _buildInfoRow('Notes', enquiryData['description'] ?? 'No description provided'),
+                    _buildInfoRow('Notes', (enquiryData['description'] as String?) ?? 'No description provided'),
                   ],
                 ),
 
@@ -211,11 +230,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(enquiryData['status']),
+                      color: _getStatusColor(enquiryData['eventStatus']),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      _capitalizeFirst(enquiryData['status'] ?? 'N/A'),
+                      _capitalizeFirst((enquiryData['eventStatus'] as String?) ?? 'N/A'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -227,7 +246,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Customer: ${enquiryData['customerName'] ?? 'N/A'}',
+              'Customer: ${(enquiryData['customerName'] as String?) ?? 'N/A'}',
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
@@ -252,7 +271,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             .toList();
 
         return DropdownButton<String>(
-          value: _selectedStatus ?? enquiryData['status'],
+          value: _selectedStatus ?? enquiryData['eventStatus'],
           items: statuses.map((status) {
             return DropdownMenuItem<String>(
               value: status['name'] as String,
@@ -260,19 +279,19 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             );
           }).toList(),
           onChanged: (value) async {
-            if (value != null && value != enquiryData['status']) {
+            if (value != null && value != enquiryData['eventStatus']) {
               setState(() {
                 _isUpdating = true;
               });
 
               try {
-                final oldStatus = enquiryData['status'] as String? ?? 'Unknown';
+                final oldStatus = enquiryData['eventStatus'] as String? ?? 'Unknown';
                 
                 await FirebaseFirestore.instance
                     .collection('enquiries')
                     .doc(widget.enquiryId)
                     .update({
-                  'status': value,
+                  'eventStatus': value,
                   'updatedAt': FieldValue.serverTimestamp(),
                 });
 
@@ -280,7 +299,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 final auditService = AuditService();
                 await auditService.recordChange(
                   enquiryId: widget.enquiryId,
-                  fieldChanged: 'status',
+                  fieldChanged: 'eventStatus',
                   oldValue: oldStatus,
                   newValue: value!,
                 );

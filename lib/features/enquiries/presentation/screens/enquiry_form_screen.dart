@@ -39,6 +39,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   final ImagePicker _picker = ImagePicker();
 
   @override
+  void initState() {
+    super.initState();
+    // Set default values for dropdowns
+    _selectedStatus = 'Enquired';
+    _selectedPriority = 'medium';
+    _selectedPaymentStatus = 'No Payment';
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();

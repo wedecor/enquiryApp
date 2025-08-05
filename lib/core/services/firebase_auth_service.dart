@@ -247,12 +247,14 @@ final currentUserProvider = StreamProvider<User?>((ref) {
 /// ```
 final authStateProvider = StreamProvider<AuthState>((ref) {
   final authService = ref.watch(firebaseAuthServiceProvider);
-  return authService.authStateChanges.map((user) {
-    if (user == null) {
-      return AuthState.unauthenticated;
-    }
-    // You can add role-based logic here later
-    return AuthState.authenticated;
+  return Stream.value(AuthState.loading).asyncExpand((_) {
+    return authService.authStateChanges.map((user) {
+      if (user == null) {
+        return AuthState.unauthenticated;
+      }
+      // You can add role-based logic here later
+      return AuthState.authenticated;
+    });
   });
 });
 

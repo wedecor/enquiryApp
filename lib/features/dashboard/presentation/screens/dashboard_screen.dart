@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiries_list_screen.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -20,18 +18,12 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedStatus = 'All';
-  List<String> _statuses = ['All', 'New', 'In Progress', 'Quote Sent', 'Confirmed', 'Completed', 'Cancelled'];
+  final List<String> _statuses = ['All', 'New', 'In Progress', 'Quote Sent', 'Confirmed', 'Completed', 'Cancelled'];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _statuses.length, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        _selectedStatus = _statuses[_tabController.index];
-      });
-    });
   }
 
   @override
@@ -80,8 +72,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
               builder: (context) => const EnquiryFormScreen(),
             ),
           );
@@ -192,15 +184,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final totalEnquiries = enquiries.length;
         final newEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['status'] == 'New';
+          return data['eventStatus'] == 'New';
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['status'] == 'In Progress';
+          return data['eventStatus'] == 'In Progress';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['status'] == 'Completed';
+          return data['eventStatus'] == 'Completed';
         }).length;
 
         return Row(
@@ -210,7 +202,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 'Total',
                 totalEnquiries.toString(),
                 Icons.inbox,
-                Colors.blue,
+                const Color(0xFF2563EB), // Our new blue color
               ),
             ),
             const SizedBox(width: 12),
@@ -343,9 +335,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: _getStatusColor(enquiryData['status']),
+                  backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
                   child: Text(
-                    _getStatusInitial(enquiryData['status']),
+                    _getStatusInitial(enquiryData['eventStatus'] as String?),
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -353,23 +345,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ),
                 title: Text(
-                  enquiryData['customerName'] ?? 'Unknown Customer',
+                  (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(enquiryData['eventType'] ?? 'Unknown Event'),
+                    Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
                     Text(
                       'Date: ${_formatDate(enquiryData['eventDate'])}',
                       style: const TextStyle(fontSize: 12),
                     ),
                     if (isAdmin && enquiryData['assignedTo'] != null) ...[
                       Text(
-                        'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'])}',
+                        'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.blue,
+                          color: Color(0xFF2563EB), // Our new blue color
                         ),
                       ),
                     ],
@@ -384,11 +376,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _getPriorityColor(enquiryData['priority']),
+                        color: _getPriorityColor(enquiryData['priority'] as String?),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _capitalizeFirst(enquiryData['priority'] ?? 'N/A'),
+                        _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -401,8 +393,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ],
                 ),
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
                       builder: (context) => EnquiryDetailsScreen(
                         enquiryId: enquiryId,
                       ),
@@ -427,7 +419,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // Apply status filtering
     if (status != null && status != 'All') {
-      query = query.where('status', isEqualTo: status);
+      query = query.where('eventStatus', isEqualTo: status);
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();
@@ -456,7 +448,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case 'new':
         return Colors.orange;
       case 'in progress':
-        return Colors.blue;
+        return const Color(0xFF2563EB); // Our new blue color
       case 'quote sent':
         return Colors.purple;
       case 'confirmed':
