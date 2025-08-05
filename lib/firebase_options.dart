@@ -4,6 +4,9 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+// Import our secure configuration
+import 'package:we_decor_enquiries/core/config/firebase_config.dart';
+
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
@@ -40,8 +43,8 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY_HERE', // Replace with environment variable in production
+  static FirebaseOptions get web => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:web:we_decor_enquiries',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
@@ -49,8 +52,8 @@ class DefaultFirebaseOptions {
     storageBucket: 'wedecorenquiries.firebasestorage.app',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY_HERE', // Replace with environment variable in production
+  static FirebaseOptions get android => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:android:add1c459e9abd7879cce45',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
@@ -75,8 +78,8 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.weDecorEnquiries',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'YOUR_WINDOWS_API_KEY_HERE', // Replace with environment variable in production
+  static FirebaseOptions get windows => FirebaseOptions(
+    apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:web:we_decor_enquiries',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
