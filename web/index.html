@@ -42,7 +42,7 @@
   <script>
     // Firebase configuration
     const firebaseConfig = {
-      apiKey: "AIzaSyB2k0yFFJrEMY8A6YLyu9X_6RRGfSgT9tk",
+      apiKey: process.env.FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
       authDomain: "wedecorenquiries.firebaseapp.com",
       projectId: "wedecorenquiries",
       storageBucket: "wedecorenquiries.firebasestorage.app",

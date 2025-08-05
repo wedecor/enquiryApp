@@ -58,6 +58,12 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Firebase configuration files with sensitive data
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
 # IDE specific
 .vscode/
 .idea/

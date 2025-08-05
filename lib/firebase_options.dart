@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB2k0yFFJrEMY8A6YLyu9X_6RRGfSgT9tk',
+    apiKey: 'YOUR_WEB_API_KEY_HERE', // Replace with environment variable in production
     appId: '1:270194759200:web:we_decor_enquiries',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB2k0yFFJrEMY8A6YLyu9X_6RRGfSgT9tk',
+    apiKey: 'YOUR_ANDROID_API_KEY_HERE', // Replace with environment variable in production
     appId: '1:270194759200:android:add1c459e9abd7879cce45',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
@@ -76,7 +76,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyB2k0yFFJrEMY8A6YLyu9X_6RRGfSgT9tk',
+    apiKey: 'YOUR_WINDOWS_API_KEY_HERE', // Replace with environment variable in production
     appId: '1:270194759200:web:we_decor_enquiries',
     messagingSenderId: '270194759200',
     projectId: 'wedecorenquiries',
