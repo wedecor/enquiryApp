@@ -152,7 +152,7 @@ Future<void> _testCompleteWorkflow() async {
     'eventLocation': 'Test Venue',
     'eventDate': Timestamp.now(),
     'eventType': 'Wedding',
-    'status': 'New',
+    'eventStatus': 'New',
     'priority': 'Medium',
     'description': 'Test enquiry for integration testing',
     'createdAt': FieldValue.serverTimestamp(),
@@ -163,7 +163,7 @@ Future<void> _testCompleteWorkflow() async {
   final enquiryDoc = await enquiryRef.get();
   expect(enquiryDoc.exists, isTrue);
   expect(enquiryDoc.data()?['customerName'], 'John Doe');
-  expect(enquiryDoc.data()?['status'], 'New');
+  expect(enquiryDoc.data()?['eventStatus'], 'New');
   print('✅ Enquiry created successfully');
   
   // Step 2: Assign the enquiry to staff
@@ -171,25 +171,25 @@ Future<void> _testCompleteWorkflow() async {
     'assignedTo': 'staff-test',
     'assignedAt': FieldValue.serverTimestamp(),
     'assignedBy': 'admin-test',
-    'status': 'In Progress',
+    'eventStatus': 'In Progress',
   });
   
   // Verify the assignment
   final assignedDoc = await enquiryRef.get();
   expect(assignedDoc.data()?['assignedTo'], 'staff-test');
-  expect(assignedDoc.data()?['status'], 'In Progress');
+  expect(assignedDoc.data()?['eventStatus'], 'In Progress');
   print('✅ Enquiry assigned successfully');
   
   // Step 3: Mark the enquiry as completed
   await enquiryRef.update({
-    'status': 'Completed',
+    'eventStatus': 'Completed',
     'completedAt': FieldValue.serverTimestamp(),
     'completedBy': 'staff-test',
   });
   
   // Verify the completion
   final completedDoc = await enquiryRef.get();
-  expect(completedDoc.data()?['status'], 'Completed');
+  expect(completedDoc.data()?['eventStatus'], 'Completed');
   expect(completedDoc.data()?['completedBy'], 'staff-test');
   print('✅ Enquiry completed successfully');
   
@@ -199,7 +199,7 @@ Future<void> _testCompleteWorkflow() async {
   
   expect(data['customerName'], 'John Doe');
   expect(data['assignedTo'], 'staff-test');
-  expect(data['status'], 'Completed');
+  expect(data['eventStatus'], 'Completed');
   expect(data['createdBy'], 'admin-test');
   expect(data['completedBy'], 'staff-test');
   

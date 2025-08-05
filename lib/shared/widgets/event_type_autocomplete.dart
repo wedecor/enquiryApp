@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
@@ -53,11 +51,11 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           .collection('dropdowns')
           .doc('event_types')
           .collection('items')
-          .orderBy('name')
+          .orderBy('value')
           .get();
 
       final eventTypes = snapshot.docs
-          .map((doc) => doc.data()['name'] as String)
+          .map((doc) => doc.data()['value'] as String)
           .toList();
 
       setState(() {
@@ -66,17 +64,20 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         _isLoading = false;
       });
     } catch (e) {
+      // Fallback to default values if Firestore is not available
+      print('⚠️ Using fallback values for event types: $e');
+      final defaultEventTypes = [
+        'Wedding', 'Birthday', 'Haldi', 'Mehendi', 'Anniversary', 
+        'Engagement', 'Naming', 'Aqiqah', 'Cradle Ceremony', 
+        'Baby Shower', 'Welcome Baby', 'Corporate', 'Farewell', 
+        'Retirement', 'House Warming', 'Reception', 'Romantic Surprise', 
+        'Proposal', 'Nikkah', 'Other'
+      ];
       setState(() {
+        _eventTypes = defaultEventTypes;
+        _filteredEventTypes = defaultEventTypes;
         _isLoading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading event types: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -139,7 +140,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           .doc('event_types')
           .collection('items')
           .add({
-        'name': trimmedType,
+        'value': trimmedType,
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
       });

@@ -2,7 +2,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 /// Service for handling Firebase Cloud Messaging (FCM)

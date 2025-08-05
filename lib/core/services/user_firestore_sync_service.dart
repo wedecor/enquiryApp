@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/services/fcm_service.dart';
+import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 /// Service for syncing user data between Firebase Auth and Firestore
@@ -110,11 +110,11 @@ class UserFirestoreSyncService {
 
 /// Enhanced current user provider that syncs with Firestore
 final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
-  final authService = ref.watch(firebaseAuthServiceProvider);
   final firestoreService = ref.watch(firestoreServiceProvider);
   final syncService = UserFirestoreSyncService(firestoreService);
 
-  return authService.authStateChanges.asyncMap((firebaseUser) async {
+  return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser == null) return null;
     return await syncService.syncCurrentUser();
   });

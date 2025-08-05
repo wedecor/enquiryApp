@@ -175,11 +175,10 @@ class AuditService {
     final oldValue = change['old_value'];
     final newValue = change['new_value'];
     final userEmail = change['user_email'] as String? ?? 'Unknown User';
-    final timestamp = change['timestamp'];
 
-    String fieldDisplayName = _getFieldDisplayName(fieldChanged);
-    String oldValueDisplay = _formatValue(oldValue);
-    String newValueDisplay = _formatValue(newValue);
+    final fieldDisplayName = _getFieldDisplayName(fieldChanged);
+    final oldValueDisplay = _formatValue(oldValue);
+    final newValueDisplay = _formatValue(newValue);
 
     return '$userEmail changed $fieldDisplayName from "$oldValueDisplay" to "$newValueDisplay"';
   }
@@ -236,7 +235,7 @@ class AuditService {
     try {
       final history = await getEnquiryHistory(enquiryId);
       
-      final summary = {
+      final summary = <String, dynamic>{
         'total_changes': history.length,
         'last_modified': history.isNotEmpty ? history.first['timestamp'] : null,
         'last_modified_by': history.isNotEmpty ? history.first['user_email'] : null,
@@ -248,12 +247,12 @@ class AuditService {
         final fieldChanged = change['field_changed'] as String?;
         final userEmail = change['user_email'] as String?;
 
-        if (fieldChanged != null && !summary['fields_changed'].contains(fieldChanged)) {
-          summary['fields_changed'].add(fieldChanged);
+        if (fieldChanged != null && !(summary['fields_changed'] as List<String>).contains(fieldChanged)) {
+          (summary['fields_changed'] as List<String>).add(fieldChanged);
         }
 
-        if (userEmail != null && !summary['users_involved'].contains(userEmail)) {
-          summary['users_involved'].add(userEmail);
+        if (userEmail != null && !(summary['users_involved'] as List<String>).contains(userEmail)) {
+          (summary['users_involved'] as List<String>).add(userEmail);
         }
       }
 

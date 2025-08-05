@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/services/fcm_service.dart';
 import 'package:we_decor_enquiries/features/auth/presentation/screens/login_screen.dart';
 import 'package:we_decor_enquiries/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:we_decor_enquiries/shared/seed_data.dart';
 
 /// Main entry point for the We Decor Enquiries application.
 /// 
@@ -30,16 +34,44 @@ void main() async {
   // Ensure Flutter bindings are initialized before using any Flutter services
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase Core services
-  await Firebase.initializeApp();
+  // Initialize Firebase Core services with platform-specific options
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
-  // Initialize Firebase Cloud Messaging for push notifications
-  final container = ProviderContainer();
-  await container.read(fcmServiceProvider).initialize();
-  container.dispose();
+  // Seed data for admin debug runs (optional)
+  // Uncomment the following lines to seed data on app startup
+  // await _seedDataForDebug();
   
   // Launch the application with Riverpod provider scope
   runApp(const ProviderScope(child: MyApp()));
+}
+
+/// Seeds data for admin debug runs
+/// 
+/// This function can be called manually or uncommented in main()
+/// to populate the database with initial data for testing.
+Future<void> _seedDataForDebug() async {
+  try {
+    print('🌱 Seeding data for debug run...');
+    
+    final firestore = FirebaseFirestore.instance;
+    final auth = FirebaseAuth.instance;
+    
+    // Connect to emulator if running locally
+    if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
+      firestore.useFirestoreEmulator('localhost', 8080);
+      print('📡 Connected to Firestore emulator for seeding');
+    }
+    
+    // Seed all data
+    await seedAllData(firestore, auth: auth);
+    
+    print('✅ Debug data seeding completed!');
+  } catch (e) {
+    print('❌ Error during debug data seeding: $e');
+    // Don't rethrow - seeding failure shouldn't prevent app from running
+  }
 }
 
 /// Main application widget that handles authentication-based navigation.
@@ -73,8 +105,65 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: 'We Decor Enquiries',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB), // Blue
+          brightness: Brightness.light,
+          primary: const Color(0xFF2563EB), // Blue
+          secondary: const Color(0xFF059669), // Green
+          tertiary: const Color(0xFFF59E0B), // Amber
+          surface: const Color(0xFFF8FAFC), // Light gray
+          background: const Color(0xFFFFFFFF), // White
+          error: const Color(0xFFDC2626), // Red
+          onPrimary: const Color(0xFFFFFFFF), // White
+          onSecondary: const Color(0xFFFFFFFF), // White
+          onSurface: const Color(0xFF1E293B), // Dark gray
+          onBackground: const Color(0xFF1E293B), // Dark gray
+        ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2563EB),
+          foregroundColor: Color(0xFFFFFFFF),
+          elevation: 0,
+          centerTitle: true,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: const Color(0xFFFFFFFF),
+            elevation: 2,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF059669),
+          foregroundColor: Color(0xFFFFFFFF),
+        ),
+        cardTheme: const CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          color: Color(0xFFFFFFFF),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
+          ),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+        ),
       ),
       home: authState.when(
         data: (state) {
@@ -115,31 +204,74 @@ class _LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App icon/branding
-            Icon(
-              Icons.home,
-              size: 80,
-              color: Colors.deepPurple,
-            ),
-            SizedBox(height: 24),
-            // App title
-            Text(
-              'We Decor Enquiries',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
+            // App icon/branding with gradient
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF2563EB), // Blue
+                    Color(0xFF059669), // Green
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.home,
+                size: 60,
+                color: Color(0xFFFFFFFF),
               ),
             ),
-            SizedBox(height: 32),
+            const SizedBox(height: 32),
+            // App title
+            const Text(
+              'We Decor Enquiries',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Event Management System',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 48),
             // Loading indicator
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Loading...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -178,32 +310,60 @@ class _ErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Error icon
-              const Icon(
-                Icons.error_outline,
-                size: 80,
-                color: Colors.red,
+              // Error icon with gradient background
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFFDC2626), // Red
+                      Color(0xFFEF4444), // Light red
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFDC2626).withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.error_outline,
+                  size: 60,
+                  color: Color(0xFFFFFFFF),
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               // Error title
               const Text(
                 'Authentication Error',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                  letterSpacing: 1.2,
                 ),
               ),
               const SizedBox(height: 16),
               // Error details
               Text(
                 error.toString(),
-                style: const TextStyle(color: Colors.grey),
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 16,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -217,7 +377,21 @@ class _ErrorScreen extends StatelessWidget {
                     ),
                   );
                 },
-                child: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: const Color(0xFFFFFFFF),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Try Again',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),

@@ -283,7 +283,7 @@ class FirestoreService {
   /// ```
   Stream<QuerySnapshot> getEnquiriesByStatus(String status) {
     return _enquiriesCollection
-        .where('status', isEqualTo: status)
+        .where('eventStatus', isEqualTo: status)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
@@ -382,8 +382,7 @@ class FirestoreService {
   /// ```
   Stream<QuerySnapshot> getEventTypes() {
     return _eventTypesCollection
-        .where('isActive', isEqualTo: true)
-        .orderBy('sortOrder')
+        .orderBy('value')
         .snapshots();
   }
 
@@ -401,14 +400,13 @@ class FirestoreService {
   /// statusesStream.listen((snapshot) {
   ///   for (final doc in snapshot.docs) {
   ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Status: ${data['name']}');
+  ///     print('Status: ${data['value']}');
   ///   }
   /// });
   /// ```
   Stream<QuerySnapshot> getStatuses() {
     return _statusesCollection
-        .where('isActive', isEqualTo: true)
-        .orderBy('sortOrder')
+        .orderBy('value')
         .snapshots();
   }
 
@@ -426,14 +424,13 @@ class FirestoreService {
   /// paymentStatusesStream.listen((snapshot) {
   ///   for (final doc in snapshot.docs) {
   ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Payment Status: ${data['name']}');
+  ///     print('Payment Status: ${data['value']}');
   ///   }
   /// });
   /// ```
   Stream<QuerySnapshot> getPaymentStatuses() {
     return _paymentStatusesCollection
-        .where('isActive', isEqualTo: true)
-        .orderBy('sortOrder')
+        .orderBy('value')
         .snapshots();
   }
 
@@ -462,7 +459,7 @@ class FirestoreService {
     // Initialize event types
     for (final eventType in DefaultDropdownValues.eventTypes) {
       final data = {
-        ...eventType,
+        'value': eventType,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -473,7 +470,7 @@ class FirestoreService {
     // Initialize statuses
     for (final status in DefaultDropdownValues.statuses) {
       final data = {
-        ...status,
+        'value': status,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -484,7 +481,7 @@ class FirestoreService {
     // Initialize payment statuses
     for (final paymentStatus in DefaultDropdownValues.paymentStatuses) {
       final data = {
-        ...paymentStatus,
+        'value': paymentStatus,
         'isActive': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -543,7 +540,7 @@ class FirestoreService {
     final stats = <String, int>{};
     for (final doc in enquiries) {
       final data = doc.data() as Map<String, dynamic>;
-      final status = data['status'] as String? ?? 'Unknown';
+      final status = data['eventStatus'] as String? ?? 'Unknown';
       stats[status] = (stats[status] ?? 0) + 1;
     }
 
@@ -599,7 +596,6 @@ class FirestoreService {
   /// ```
   Stream<QuerySnapshot> getActiveUsers() {
     return _usersCollection
-        .where('isActive', isEqualTo: true)
         .orderBy('name')
         .snapshots();
   }

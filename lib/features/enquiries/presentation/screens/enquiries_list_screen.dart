@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
@@ -78,9 +76,9 @@ class EnquiriesListScreen extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _getStatusColor(enquiryData['status']),
+                    backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
                     child: Text(
-                      _getStatusInitial(enquiryData['status']),
+                      _getStatusInitial(enquiryData['eventStatus'] as String?),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -88,20 +86,20 @@ class EnquiriesListScreen extends ConsumerWidget {
                     ),
                   ),
                   title: Text(
-                    enquiryData['customerName'] ?? 'Unknown Customer',
+                    (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(enquiryData['eventType'] ?? 'Unknown Event'),
+                      Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
                       Text(
                         'Date: ${_formatDate(enquiryData['eventDate'])}',
                         style: const TextStyle(fontSize: 12),
                       ),
                       if (isAdmin && enquiryData['assignedTo'] != null) ...[
                         Text(
-                          'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'])}',
+                          'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.blue,
@@ -119,11 +117,11 @@ class EnquiriesListScreen extends ConsumerWidget {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: _getPriorityColor(enquiryData['priority']),
+                          color: _getPriorityColor(enquiryData['priority'] as String?),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          _capitalizeFirst(enquiryData['priority'] ?? 'N/A'),
+                          _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -136,8 +134,8 @@ class EnquiriesListScreen extends ConsumerWidget {
                     ],
                   ),
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
+                    Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
                         builder: (context) => EnquiryDetailsScreen(
                           enquiryId: enquiryId,
                         ),

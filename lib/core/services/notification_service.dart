@@ -5,7 +5,6 @@ import 'package:we_decor_enquiries/shared/models/user_model.dart';
 /// Service for managing notification triggers and sending notifications
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Send notification when a new enquiry is created
   Future<void> notifyEnquiryCreated({

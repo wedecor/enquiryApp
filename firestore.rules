@@ -1,9 +1,80 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents for testing
-    match /{document=**} {
-      allow read, write: if true;
+    // ===== HELPER FUNCTIONS =====
+    
+    /// Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    /// Check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    /// Check if user is staff
+    function isStaff() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff';
+    }
+    
+    /// Check if user is admin or staff
+    function isAdminOrStaff() {
+      return isAdmin() || isStaff();
+    }
+    
+    // ===== USERS COLLECTION =====
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+    
+    // ===== ENQUIRIES COLLECTION =====
+    match /enquiries/{enquiryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
+      
+      // ===== FINANCIAL SUBSCOLLECTION =====
+      match /financial/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+      
+      // ===== HISTORY SUBSCOLLECTION =====
+      match /history/{docId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if false; // History should be immutable
+        allow delete: if false; // History should be immutable
+      }
+    }
+    
+    // ===== DROPDOWNS COLLECTION =====
+    match /dropdowns/{dropdownType} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+      
+      // ===== DROPDOWN ITEMS SUBSCOLLECTION =====
+      match /items/{itemId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if isAuthenticated();
+        allow delete: if isAuthenticated();
+      }
+    }
+    
+    // ===== META COLLECTION (for seeding status) =====
+    match /meta/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 } 

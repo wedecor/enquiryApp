@@ -77,7 +77,7 @@ void main() {
       
       expect(data['customerName'], 'John Doe');
       expect(data['assignedTo'], 'staff-test');
-      expect(data['status'], 'Completed');
+      expect(data['eventStatus'], 'Completed');
       expect(data['createdBy'], 'admin-test');
       expect(data['completedBy'], 'staff-test');
       

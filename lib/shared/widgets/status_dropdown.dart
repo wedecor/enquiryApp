@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
@@ -53,11 +52,11 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .collection('dropdowns')
           .doc(widget.collectionName)
           .collection('items')
-          .orderBy('name')
+          .orderBy('value')
           .get();
 
       final statuses = snapshot.docs
-          .map((doc) => doc.data()['name'] as String)
+          .map((doc) => doc.data()['value'] as String)
           .toList();
 
       setState(() {
@@ -65,17 +64,25 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         _isLoading = false;
       });
     } catch (e) {
+      // Fallback to default values if Firestore is not available
+      print('⚠️ Using fallback values for ${widget.collectionName}: $e');
       setState(() {
+        _statuses = _getDefaultValues(widget.collectionName);
         _isLoading = false;
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading ${widget.label.toLowerCase()}: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    }
+  }
+
+  List<String> _getDefaultValues(String collectionName) {
+    switch (collectionName) {
+      case 'statuses':
+        return ['Enquired', 'Confirmed', 'Assigned', 'Not Interested', 'Completed'];
+      case 'payment_statuses':
+        return ['No Payment', 'Advance Paid', 'Full Payment', 'Refund'];
+      case 'event_types':
+        return ['Wedding', 'Birthday', 'Haldi', 'Mehendi', 'Anniversary', 'Engagement', 'Corporate', 'Other'];
+      default:
+        return [];
     }
   }
 
@@ -119,7 +126,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .doc(widget.collectionName)
           .collection('items')
           .add({
-        'name': newStatus,
+        'value': newStatus,
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
       });

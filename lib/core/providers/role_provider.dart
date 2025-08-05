@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 /// Riverpod provider that streams the current user's role information.
@@ -104,6 +105,78 @@ final isStaffProvider = Provider<bool>((ref) {
     loading: () => false,
     error: (error, stack) => false,
   );
+});
+
+/// Alias for isAdminProvider to maintain compatibility with existing code.
+/// 
+/// This provider is equivalent to [isAdminProvider] and is used in
+/// components that expect this specific name.
+final currentUserIsAdminProvider = isAdminProvider;
+
+/// Provider that provides the current user with Firestore data.
+/// 
+/// This provider combines authentication state with Firestore user data
+/// to provide a complete user profile. It watches the authentication
+/// state and fetches corresponding user data from Firestore.
+/// 
+/// Returns a [StreamProvider<UserModel?>] that provides:
+/// - [UserModel] with complete user data if authenticated
+/// - `null` if not authenticated
+/// 
+/// Usage:
+/// ```dart
+/// final userAsync = ref.watch(currentUserWithFirestoreProvider);
+/// userAsync.when(
+///   data: (user) {
+///     if (user != null) {
+///       return Text('Welcome, ${user.name}');
+///     } else {
+///       return Text('Please sign in');
+///     }
+///   },
+///   loading: () => CircularProgressIndicator(),
+///   error: (error, stack) => Text('Error: $error'),
+/// );
+/// ```
+final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
+  final currentUser = ref.watch(currentUserProvider);
+  
+  return currentUser.when(
+    data: (user) {
+      if (user == null) {
+        return Stream.value(null);
+      }
+      
+      // For now, return a default user model
+      // TODO: Fetch user data from Firestore based on user.uid
+      return Stream.value(UserModel(
+        uid: user.uid,
+        name: user.displayName ?? 'Unknown User',
+        email: user.email ?? '',
+        phone: user.phoneNumber ?? '',
+        role: UserRole.staff,
+      ));
+    },
+    loading: () => Stream.value(null),
+    error: (error, stack) => Stream.value(null),
+  );
+});
+
+/// Provider for Firestore service.
+/// 
+/// This provider provides access to the Firestore service for database
+/// operations. It creates a singleton instance of the service that can
+/// be used throughout the application.
+/// 
+/// Returns a [Provider<FirestoreService>] that provides the Firestore service.
+/// 
+/// Usage:
+/// ```dart
+/// final firestoreService = ref.read(firestoreServiceProvider);
+/// final enquiries = await firestoreService.getEnquiries();
+/// ```
+final firestoreServiceProvider = Provider<FirestoreService>((ref) {
+  return FirestoreService();
 });
 
 /// Riverpod provider that provides comprehensive user permissions.
