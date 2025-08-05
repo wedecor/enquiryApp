@@ -58,12 +58,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
-# Firebase configuration files with sensitive data
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-macos/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
-
 # IDE specific
 .vscode/
 .idea/
@@ -124,13 +118,39 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
+# Environment variables and secrets - CRITICAL SECURITY
+# All environment files that may contain sensitive data
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-# Note: .env.example is NOT ignored - it serves as a template
+.env.*.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# Firebase configuration files with sensitive data
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+macos/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# API keys and secrets
+secrets.json
+api-keys.json
+credentials.json
+*.key
+*.pem
+*.p12
+
+# Additional security patterns
+**/google-services.json
+**/GoogleService-Info.plist
+**/firebase_options.dart
+**/secrets/
+**/keys/
+**/credentials/
+
+# Note: .env.example is NOT ignored - it serves as a safe template
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
