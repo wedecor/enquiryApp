@@ -9,6 +9,7 @@ import 'package:we_decor_enquiries/core/services/fcm_service.dart';
 import 'package:we_decor_enquiries/features/auth/presentation/screens/login_screen.dart';
 import 'package:we_decor_enquiries/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:we_decor_enquiries/shared/seed_data.dart';
+import 'package:we_decor_enquiries/core/config/firebase_config.dart';
 
 /// Main entry point for the We Decor Enquiries application.
 /// 
@@ -38,6 +39,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Security check for environment variables
+  if (kDebugMode) {
+    print(FirebaseConfig.securityWarning);
+  }
   
   // Seed data for admin debug runs (optional)
   // Uncomment the following lines to seed data on app startup
