@@ -42,7 +42,7 @@
   <script>
     // Firebase configuration
     const firebaseConfig = {
-      apiKey: "REDACTED_LEAKED_FIREBASE_API_KEY",
+      apiKey: process.env.FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
       authDomain: "wedecorenquiries.firebaseapp.com",
       projectId: "wedecorenquiries",
       storageBucket: "wedecorenquiries.firebasestorage.app",
