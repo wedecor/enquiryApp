@@ -183,7 +183,7 @@ Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async
   print('👤 Starting admin user seeding...');
   
   const email = 'ilyas.prime@gmail.com';
-  const password = 'ilyas@08';
+  const password = 'CHANGE_THIS_PASSWORD'; // ⚠️ SECURITY: Change this password!
   const name = 'Ilyas';
   const phone = 'N/A';
   const role = 'admin';
