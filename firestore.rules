@@ -1,33 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===== HELPER FUNCTIONS =====
+    // ===== SHARED HELPERS =====
     
-    /// Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    /// Check if user is admin
+
     function isAdmin() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
-    
-    /// Check if user is assigned to an enquiry
-    function isAssignedToEnquiry(enquiryData) {
-      return enquiryData.assignedTo == request.auth.uid;
+
+    function isStaff() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "staff";
     }
-    
-    /// Check if user can modify enquiry (admin or assigned staff)
-    function canModifyEnquiry(enquiryData) {
-      return isAdmin() || isAssignedToEnquiry(enquiryData);
+
+    function isAssignedToEnquiry(enquiry) {
+      return enquiry.assignedTo == request.auth.uid;
     }
-    
-    /// Check if user can view enquiry (admin or assigned staff)
-    function canViewEnquiry(enquiryData) {
-      return isAdmin() || isAssignedToEnquiry(enquiryData);
+
+    function canViewEnquiry(enquiry) {
+      return isAdmin() || isAssignedToEnquiry(enquiry);
+    }
+
+    function canModifyEnquiry(enquiry) {
+      return isAdmin() || (isAssignedToEnquiry(enquiry) && request.resource.data.diff(resource.data).changedKeys().hasOnly(["eventStatus"]));
     }
     
     // ===== USERS COLLECTION =====
@@ -40,10 +37,7 @@ service cloud.firestore {
     
     // ===== ENQUIRIES COLLECTION =====
     match /enquiries/{enquiryId} {
-      allow read: if isAuthenticated() && (
-        isAdmin() || 
-        isAssignedToEnquiry(resource.data)
-      );
+      allow read: if isAuthenticated() && canViewEnquiry(resource.data);
       allow create: if isAuthenticated(); // Any authenticated user can create enquiries
       allow update: if isAuthenticated() && canModifyEnquiry(resource.data);
       allow delete: if isAdmin();
