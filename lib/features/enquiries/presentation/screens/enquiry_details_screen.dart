@@ -163,6 +163,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'] as String?)),
                         ],
                       ),
+                    ] else if (userRole == UserRole.staff) ...[
+                      // Staff can see their own assignment status
+                      _buildSection(
+                        title: 'Assignment',
+                        children: [
+                          _buildInfoRow('Assigned To', _getAssignmentStatusForStaff(enquiryData['assignedTo'] as String?, user.uid)),
+                        ],
+                      ),
                     ],
 
                     // Financial Information (Admin Only)
@@ -479,5 +487,15 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     if (createdBy == null) return 'Unknown';
     // TODO: Fetch user name from Firestore
     return 'User ID: $createdBy';
+  }
+
+  String _getAssignmentStatusForStaff(String? assignedTo, String currentUserId) {
+    if (assignedTo == null) {
+      return 'Unassigned';
+    }
+    if (assignedTo == currentUserId) {
+      return 'You';
+    }
+    return 'User ID: $assignedTo';
   }
 } 
