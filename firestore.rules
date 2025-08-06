@@ -15,43 +15,51 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    /// Check if user is staff
-    function isStaff() {
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff';
+    /// Check if user is assigned to an enquiry
+    function isAssignedToEnquiry(enquiryData) {
+      return enquiryData.assignedTo == request.auth.uid;
     }
     
-    /// Check if user is admin or staff
-    function isAdminOrStaff() {
-      return isAdmin() || isStaff();
+    /// Check if user can modify enquiry (admin or assigned staff)
+    function canModifyEnquiry(enquiryData) {
+      return isAdmin() || isAssignedToEnquiry(enquiryData);
+    }
+    
+    /// Check if user can view enquiry (admin or assigned staff)
+    function canViewEnquiry(enquiryData) {
+      return isAdmin() || isAssignedToEnquiry(enquiryData);
     }
     
     // ===== USERS COLLECTION =====
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow create: if isAdmin(); // Only admins can create users
+      allow update: if isAdmin() || request.auth.uid == userId; // Users can update their own profile, admins can update any
       allow delete: if isAdmin();
     }
     
     // ===== ENQUIRIES COLLECTION =====
     match /enquiries/{enquiryId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        isAdmin() || 
+        isAssignedToEnquiry(resource.data)
+      );
+      allow create: if isAuthenticated(); // Any authenticated user can create enquiries
+      allow update: if isAuthenticated() && canModifyEnquiry(resource.data);
       allow delete: if isAdmin();
       
       // ===== FINANCIAL SUBSCOLLECTION =====
       match /financial/{docId} {
-        allow read: if isAuthenticated();
-        allow write: if isAuthenticated();
+        allow read: if isAuthenticated() && canViewEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
+        allow create: if isAdmin(); // Only admins can create financial records
+        allow update: if isAdmin(); // Only admins can update financial records
+        allow delete: if isAdmin();
       }
       
       // ===== HISTORY SUBSCOLLECTION =====
       match /history/{docId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
+        allow read: if isAuthenticated() && canViewEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
+        allow create: if isAuthenticated() && canModifyEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
         allow update: if false; // History should be immutable
         allow delete: if false; // History should be immutable
       }
@@ -60,14 +68,16 @@ service cloud.firestore {
     // ===== DROPDOWNS COLLECTION =====
     match /dropdowns/{dropdownType} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow create: if isAdmin(); // Only admins can create dropdown types
+      allow update: if isAdmin(); // Only admins can update dropdown types
+      allow delete: if isAdmin();
       
       // ===== DROPDOWN ITEMS SUBSCOLLECTION =====
       match /items/{itemId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated();
-        allow update: if isAuthenticated();
-        allow delete: if isAuthenticated();
+        allow create: if isAdmin(); // Only admins can create dropdown items
+        allow update: if isAdmin(); // Only admins can update dropdown items
+        allow delete: if isAdmin(); // Only admins can delete dropdown items
       }
     }
     
