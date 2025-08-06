@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/widgets/enquiry_history_widget.dart';
+import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 // Placeholder services - TODO: Implement proper services
 class AuditService {
@@ -48,161 +49,175 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
+    final userRole = currentUser.value?.role;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Enquiry Details'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('enquiries')
-            .doc(widget.enquiryId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
+      body: currentUser.when(
+        data: (user) {
+          if (user == null) {
+            return const Center(
+              child: Text('Please log in to view enquiry details'),
             );
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          return StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('enquiries')
+                .doc(widget.enquiryId)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Enquiry not found'));
-          }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const Center(child: Text('Enquiry not found'));
+              }
 
-          // Check if staff user can access this enquiry
-          if (!isAdmin) {
-            final assignedTo = enquiryData['assignedTo'] as String?;
-            final currentUserId = currentUser.value?.uid;
-            
-            if (assignedTo != null && assignedTo != currentUserId) {
-              return const Center(
+              final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+
+              // Check if staff user can access this enquiry
+              if (userRole != UserRole.admin) {
+                final assignedTo = enquiryData['assignedTo'] as String?;
+                final currentUserId = user.uid;
+                
+                if (assignedTo != null && assignedTo != currentUserId) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Access Denied',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'You can only view enquiries assigned to you.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.lock,
-                      size: 64,
-                      color: Colors.grey,
+                    // Header with status
+                    _buildHeader(enquiryData, userRole),
+                    const SizedBox(height: 24),
+
+                    // Basic Information (Visible to all)
+                    _buildSection(
+                      title: 'Basic Information',
+                      children: [
+                        _buildInfoRow('Customer Name', (enquiryData['customerName'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Location', (enquiryData['location'] as String?) ?? 'N/A'),
+                      ],
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Access Denied',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+
+                    // Event Details (Visible to all)
+                    _buildSection(
+                      title: 'Event Details',
+                      children: [
+                        _buildInfoRow('Event Type', (enquiryData['eventType'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
+                        _buildInfoRow('Guest Count', '${enquiryData['guestCount'] ?? 'N/A'} guests'),
+                        _buildInfoRow('Budget Range', (enquiryData['budgetRange'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Priority', _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A')),
+                        _buildInfoRow('Source', (enquiryData['source'] as String?) ?? 'N/A'),
+                      ],
+                    ),
+
+                    // Assignment Information (Admin Only)
+                    if (userRole == UserRole.admin) ...[
+                      _buildSection(
+                        title: 'Assignment',
+                        children: [
+                          _buildInfoRow('Assigned To', _getAssignedUserName(enquiryData['assignedTo'] as String?)),
+                          _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'] as String?)),
+                        ],
                       ),
+                    ],
+
+                    // Financial Information (Admin Only)
+                    if (userRole == UserRole.admin) ...[
+                      _buildSection(
+                        title: 'Financial Information',
+                        children: [
+                          _buildInfoRow('Total Cost', _formatCurrency(enquiryData['totalCost'])),
+                          _buildInfoRow('Advance Paid', _formatCurrency(enquiryData['advancePaid'])),
+                          _buildInfoRow('Payment Status', _capitalizeFirst((enquiryData['paymentStatus'] as String?) ?? 'N/A')),
+                        ],
+                      ),
+                    ],
+
+                    // Description (Visible to all)
+                    _buildSection(
+                      title: 'Description',
+                      children: [
+                        _buildInfoRow('Notes', (enquiryData['description'] as String?) ?? 'No description provided'),
+                      ],
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      'You can only view enquiries assigned to you.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+
+                    // Timestamps (Visible to all)
+                    _buildSection(
+                      title: 'Timestamps',
+                      children: [
+                        _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
+                        _buildInfoRow('Last Updated', _formatTimestamp(enquiryData['updatedAt'])),
+                      ],
                     ),
+
+                    // Change History (Visible to all)
+                    _buildSection(
+                      title: 'Change History',
+                      children: [
+                        EnquiryHistoryWidget(enquiryId: widget.enquiryId),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
                   ],
                 ),
               );
-            }
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with status
-                _buildHeader(enquiryData, isAdmin),
-                const SizedBox(height: 24),
-
-                // Basic Information
-                _buildSection(
-                  title: 'Basic Information',
-                  children: [
-                    _buildInfoRow('Customer Name', (enquiryData['customerName'] as String?) ?? 'N/A'),
-                    _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
-                    _buildInfoRow('Location', (enquiryData['location'] as String?) ?? 'N/A'),
-                  ],
-                ),
-
-                // Event Details
-                _buildSection(
-                  title: 'Event Details',
-                  children: [
-                    _buildInfoRow('Event Type', (enquiryData['eventType'] as String?) ?? 'N/A'),
-                    _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
-                    _buildInfoRow('Guest Count', '${enquiryData['guestCount'] ?? 'N/A'} guests'),
-                    _buildInfoRow('Budget Range', (enquiryData['budgetRange'] as String?) ?? 'N/A'),
-                    _buildInfoRow('Priority', _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A')),
-                    _buildInfoRow('Source', (enquiryData['source'] as String?) ?? 'N/A'),
-                  ],
-                ),
-
-                // Assignment Information (Admin Only)
-                if (isAdmin) ...[
-                  _buildSection(
-                    title: 'Assignment',
-                    children: [
-                      _buildInfoRow('Assigned To', _getAssignedUserName(enquiryData['assignedTo'] as String?)),
-                      _buildInfoRow('Created By', _getCreatedByUserName(enquiryData['createdBy'] as String?)),
-                    ],
-                  ),
-                ],
-
-                // Financial Information (Admin Only)
-                if (isAdmin) ...[
-                  _buildSection(
-                    title: 'Financial Information',
-                    children: [
-                      _buildInfoRow('Total Cost', _formatCurrency(enquiryData['totalCost'])),
-                      _buildInfoRow('Advance Paid', _formatCurrency(enquiryData['advancePaid'])),
-                      _buildInfoRow('Payment Status', _capitalizeFirst((enquiryData['paymentStatus'] as String?) ?? 'N/A')),
-                    ],
-                  ),
-                ],
-
-                // Description
-                _buildSection(
-                  title: 'Description',
-                  children: [
-                    _buildInfoRow('Notes', (enquiryData['description'] as String?) ?? 'No description provided'),
-                  ],
-                ),
-
-                // Timestamps
-                _buildSection(
-                  title: 'Timestamps',
-                  children: [
-                    _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
-                    _buildInfoRow('Last Updated', _formatTimestamp(enquiryData['updatedAt'])),
-                  ],
-                ),
-
-                // Change History
-                _buildSection(
-                  title: 'Change History',
-                  children: [
-                    EnquiryHistoryWidget(enquiryId: widget.enquiryId),
-                  ],
-                ),
-
-                const SizedBox(height: 32),
-              ],
-            ),
+            },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text('Error loading user data: $error'),
+        ),
       ),
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> enquiryData, bool isAdmin) {
+  Widget _buildHeader(Map<String, dynamic> enquiryData, UserRole? userRole) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -222,11 +237,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     ),
                   ),
                 ),
-                if (isAdmin) ...[
+                if (userRole == UserRole.admin) ...[
                   // Admin can edit status
                   _buildStatusDropdown(enquiryData),
+                ] else if (userRole == UserRole.staff) ...[
+                  // Staff can edit status (but only status)
+                  _buildStatusDropdown(enquiryData),
                 ] else ...[
-                  // Staff can only view status
+                  // Read-only status for other users
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -260,7 +278,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   Widget _buildStatusDropdown(Map<String, dynamic> enquiryData) {
     return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(firestoreServiceProvider).getStatuses(),
+      stream: FirebaseFirestore.instance
+          .collection('dropdowns')
+          .doc('statuses')
+          .collection('items')
+          .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const CircularProgressIndicator();
@@ -293,6 +315,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     .update({
                   'eventStatus': value,
                   'updatedAt': FieldValue.serverTimestamp(),
+                  'updatedBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                 });
 
                 // Record audit trail for status change
