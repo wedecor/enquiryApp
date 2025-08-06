@@ -6,6 +6,7 @@ import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
+import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiries_list_screen.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -42,6 +43,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       appBar: AppBar(
         title: const Text('We Decor Dashboard'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        automaticallyImplyLeading: true, // This will show the hamburger menu
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -55,6 +57,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           tabs: _statuses.map((status) => Tab(text: status)).toList(),
         ),
       ),
+      drawer: _buildNavigationDrawer(currentUser, isAdmin),
       body: authState.when(
         data: (state) {
           if (state == AuthState.authenticated) {
@@ -514,5 +517,209 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     } catch (e) {
       // Error handling is done by the auth service
     }
+  }
+
+  Widget _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          // Drawer header with user info
+          DrawerHeader(
+            decoration: const BoxDecoration(
+              color: Color(0xFF2563EB),
+            ),
+            child: currentUser.when(
+              data: (user) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.account_circle,
+                    size: 64,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    user?.name ?? 'User',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    user?.email ?? 'user@example.com',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isAdmin ? Colors.orange : Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isAdmin ? 'Administrator' : 'Staff Member',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+              error: (error, stack) => const Text(
+                'Error loading user',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+
+          // Navigation menu items
+          _buildMenuItem(
+            icon: Icons.dashboard,
+            title: 'Dashboard',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer
+              // Already on dashboard, no navigation needed
+            },
+          ),
+
+          _buildMenuItem(
+            icon: Icons.list,
+            title: isAdmin ? 'All Enquiries' : 'My Enquiries',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => const EnquiriesListScreen(),
+                ),
+              );
+            },
+          ),
+
+          _buildMenuItem(
+            icon: Icons.add,
+            title: 'New Enquiry',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => const EnquiryFormScreen(),
+                ),
+              );
+            },
+          ),
+
+          // Admin-only menu items
+          if (isAdmin) ...[
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Admin Tools',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ),
+            _buildMenuItem(
+              icon: Icons.people,
+              title: 'User Management',
+              onTap: () {
+                Navigator.of(context).pop(); // Close drawer
+                _showAdminFeatureNotImplemented(context, 'User Management');
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.settings,
+              title: 'Dropdown Management',
+              onTap: () {
+                Navigator.of(context).pop(); // Close drawer
+                _showAdminFeatureNotImplemented(context, 'Dropdown Management');
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.analytics,
+              title: 'System Analytics',
+              onTap: () {
+                Navigator.of(context).pop(); // Close drawer
+                _showAdminFeatureNotImplemented(context, 'System Analytics');
+              },
+            ),
+          ],
+
+          const Divider(),
+
+          // Settings and logout
+          _buildMenuItem(
+            icon: Icons.settings,
+            title: 'Settings',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer
+              _showFeatureNotImplemented(context, 'Settings');
+            },
+          ),
+
+          _buildMenuItem(
+            icon: Icons.logout,
+            title: 'Sign Out',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer
+              _signOut(ref);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF2563EB)),
+      title: Text(title),
+      onTap: onTap,
+    );
+  }
+
+  void _showAdminFeatureNotImplemented(BuildContext context, String featureName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$featureName feature is coming soon!'),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
+  }
+
+  void _showFeatureNotImplemented(BuildContext context, String featureName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$featureName feature is coming soon!'),
+        backgroundColor: Colors.blue,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
+      ),
+    );
   }
 } 
