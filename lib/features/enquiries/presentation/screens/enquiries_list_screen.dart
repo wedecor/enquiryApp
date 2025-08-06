@@ -9,12 +9,12 @@ class EnquiriesListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
+    final userRole = currentUser.value?.role;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isAdmin ? 'All Enquiries' : 'My Enquiries'),
+        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -26,133 +26,149 @@ class EnquiriesListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _getEnquiriesStream(isAdmin, currentUser.value?.uid),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
+      body: currentUser.when(
+        data: (user) {
+          if (user == null) {
+            return const Center(
+              child: Text('Please log in to view enquiries'),
             );
           }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          return StreamBuilder<QuerySnapshot>(
+            stream: _getEnquiriesStream(userRole, user.uid),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('Error: ${snapshot.error}'),
+                );
+              }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isAdmin ? Icons.inbox : Icons.assignment,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isAdmin ? 'No enquiries found' : 'No enquiries assigned to you',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final enquiries = snapshot.data!.docs;
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(8),
-            itemCount: enquiries.length,
-            itemBuilder: (context, index) {
-              final enquiry = enquiries[index];
-              final enquiryData = enquiry.data() as Map<String, dynamic>;
-              final enquiryId = enquiry.id;
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
-                    child: Text(
-                      _getStatusInitial(enquiryData['eventStatus'] as String?),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
-                      Text(
-                        'Date: ${_formatDate(enquiryData['eventDate'])}',
-                        style: const TextStyle(fontSize: 12),
+                      Icon(
+                        userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
+                        size: 64,
+                        color: Colors.grey,
                       ),
-                      if (isAdmin && enquiryData['assignedTo'] != null) ...[
-                        Text(
-                          'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                          ),
+                      const SizedBox(height: 16),
+                      Text(
+                        userRole == UserRole.admin 
+                            ? 'No enquiries found' 
+                            : 'No enquiries assigned to you',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey,
                         ),
-                      ],
+                      ),
                     ],
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getPriorityColor(enquiryData['priority'] as String?),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                );
+              }
+
+              final enquiries = snapshot.data!.docs;
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: enquiries.length,
+                itemBuilder: (context, index) {
+                  final enquiry = enquiries[index];
+                  final enquiryData = enquiry.data() as Map<String, dynamic>;
+                  final enquiryId = enquiry.id;
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
                         child: Text(
-                          _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
+                          _getStatusInitial(enquiryData['eventStatus'] as String?),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (context) => EnquiryDetailsScreen(
-                          enquiryId: enquiryId,
-                        ),
+                      title: Text(
+                        (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-                  },
-                ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                          Text(
+                            'Date: ${_formatDate(enquiryData['eventDate'])}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
+                            Text(
+                              'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getPriorityColor(enquiryData['priority'] as String?),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (context) => EnquiryDetailsScreen(
+                              enquiryId: enquiryId,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Text('Error loading user data: $error'),
+        ),
       ),
     );
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? currentUserId) {
-    if (isAdmin) {
+  Stream<QuerySnapshot> _getEnquiriesStream(UserRole? userRole, String? currentUserId) {
+    if (userRole == UserRole.admin) {
       // Admin sees all enquiries
       return FirebaseFirestore.instance
           .collection('enquiries')
