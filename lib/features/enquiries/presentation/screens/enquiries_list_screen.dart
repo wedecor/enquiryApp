@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
+import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
