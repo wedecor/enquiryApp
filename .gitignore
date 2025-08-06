@@ -132,7 +132,7 @@ jspm_packages/
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
+# Note: lib/firebase_options.dart is now secure and should be tracked
 
 # API keys and secrets
 secrets.json
@@ -145,7 +145,7 @@ credentials.json
 # Additional security patterns
 **/google-services.json
 **/GoogleService-Info.plist
-**/firebase_options.dart
+# Note: **/firebase_options.dart is now secure and should be tracked
 **/secrets/
 **/keys/
 **/credentials/
