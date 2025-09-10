@@ -1,0 +1,15 @@
+{
+  "indexes": [
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "eventDate", "order": "DESCENDING" } ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ { "fieldPath": "assignedToUid", "order": "ASCENDING" }, { "fieldPath": "status", "order": "ASCENDING" } ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ { "fieldPath": "createdByUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ { "fieldPath": "eventTypeId", "order": "ASCENDING" }, { "fieldPath": "eventDate", "order": "ASCENDING" } ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "updatedAt", "order": "DESCENDING" } ] }
+  ],
+  "fieldOverrides": []
+}

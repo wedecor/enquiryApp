@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Temporary: Allow all access for testing
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    match /EventTypeOptions/{id} {
+      allow read, list: if gate();
+      allow create, update, delete: if gate() && (isAdmin() || isPartner());
+    }
+
+    match /StatusOptions/{id} {
+      allow read, list: if gate();
+      allow create, update, delete: if gate() && isAdmin();
+    }
+
+    match /SystemSettings/{docId} {
+      allow read: if gate() && isAdmin();
+      allow create, update, delete: if gate() && isAdmin();
+    }
+
+    match /enquiries/{enquiryId} {
+      function isAssignee(doc) { return doc.assignedToUid == request.auth.uid; }
+      function isCreator(doc)  { return doc.createdByUid == request.auth.uid; }
+      function financeChanged() { return ('payment' in request.resource.data.diff(resource.data).affectedKeys()); }
+
+      function validPayment(doc) {
+        let p = (doc.payment == null) ? {} : doc.payment;
+        let total   = (p.totalAmount == null) ? 0 : p.totalAmount;
+        let advance = (p.advanceAmount == null) ? 0 : p.advanceAmount;
+        let balance = (p.balance == null) ? 0 : p.balance;
+        let expected = (total - advance) < 0 ? 0 : (total - advance);
+        return balance == expected;
+      }
+
+      allow get:  if gate() && (isAdmin() || isPartner() || isAssignee(resource.data) || isCreator(resource.data));
+      allow list: if gate() && (isAdmin() || isPartner() || isStaff());
+
+      allow create: if gate() && (isAdmin() || isPartner())
+        && request.resource.data.createdByUid == request.auth.uid
+        && validPayment(request.resource.data);
+
+      allow update: if gate() && (
+        (isAdmin()   && validPayment(request.resource.data)) ||
+        (isPartner() && validPayment(request.resource.data)) ||
+        (
+          isStaff() && isAssignee(resource.data) &&
+          ( !financeChanged() || (financeChanged() && financeVisibleToAssignee()) ) &&
+          validPayment(request.resource.data)
+        )
+      );
+
+      allow delete: if gate() && isAdmin();
+
+      match /EnquiryHistory/{histId} {
+        allow read: if gate() && (isAdmin() || isPartner() || isAssignee(resource.data) || isCreator(resource.data));
+        allow create, update, delete: if false;
+      }
+    }
+  }
+}
