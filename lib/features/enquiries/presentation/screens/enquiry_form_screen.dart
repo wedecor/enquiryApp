@@ -2,17 +2,24 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 import 'package:we_decor_enquiries/shared/widgets/event_type_autocomplete.dart';
 import 'package:we_decor_enquiries/shared/widgets/status_dropdown.dart';
 import 'package:we_decor_enquiries/core/services/notification_service.dart';
 import 'package:we_decor_enquiries/core/services/audit_service.dart';
+import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 /// Screen for creating and editing enquiries
 class EnquiryFormScreen extends ConsumerStatefulWidget {
   /// Creates an EnquiryFormScreen
-  const EnquiryFormScreen({super.key});
+  /// [enquiryId] is required for editing mode
+  /// [mode] can be 'create' or 'edit'
+  const EnquiryFormScreen({super.key, this.enquiryId, this.mode = 'create'});
+
+  final String? enquiryId;
+  final String mode;
 
   @override
   ConsumerState<EnquiryFormScreen> createState() => _EnquiryFormScreenState();
@@ -46,7 +53,66 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     _selectedStatus = 'new';
     _selectedPriority = 'medium';
     _selectedPaymentStatus = 'unpaid';
+    
+    // Load existing data if in edit mode
+    if (widget.mode == 'edit' && widget.enquiryId != null) {
+      _loadEnquiryData();
+    }
   }
+
+  Future<void> _loadEnquiryData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('enquiries')
+          .doc(widget.enquiryId!)
+          .get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        setState(() {
+          _nameController.text = (data['customerName'] as String?) ?? '';
+          _phoneController.text = (data['customerPhone'] as String?) ?? '';
+          _locationController.text = (data['eventLocation'] as String?) ?? '';
+          _notesController.text = (data['description'] as String?) ?? '';
+          
+          if (data['totalCost'] != null) {
+            _totalCostController.text = data['totalCost'].toString();
+          }
+          if (data['advancePaid'] != null) {
+            _advancePaidController.text = data['advancePaid'].toString();
+          }
+          
+          // Set dropdown values from database
+          _selectedEventType = data['eventType'] as String?;
+          
+          // Safely set dropdown values - ensure they exist in valid options
+          final eventStatus = data['eventStatus'] as String?;
+          _selectedStatus = eventStatus;
+          
+          final priority = data['priority'] as String?;
+          _selectedPriority = priority;
+
+          final paymentStatus = data['paymentStatus'] as String?;
+          _selectedPaymentStatus = paymentStatus;
+          
+          _selectedAssignedTo = data['assignedTo'] as String?;
+          
+          if (data['eventDate'] != null) {
+            final timestamp = data['eventDate'] as Timestamp;
+            _selectedDate = timestamp.toDate();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading enquiry data: $e')),
+        );
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -118,69 +184,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         throw Exception('User not authenticated');
       }
 
-      final firestoreService = ref.read(firestoreServiceProvider);
-      
-      // TODO: Upload images to Firebase Storage and get URLs
-      // For now, we'll skip image upload
-      
-      final enquiryId = await firestoreService.createEnquiry(
-        customerName: _nameController.text.trim(),
-        customerEmail: '', // TODO: Add email field if needed
-        customerPhone: _phoneController.text.trim(),
-        eventType: _selectedEventType!,
-        eventDate: _selectedDate!,
-        eventLocation: _locationController.text.trim(),
-        guestCount: 0, // TODO: Add guest count field
-        budgetRange: '', // TODO: Add budget field
-        description: _notesController.text.trim(),
-        createdBy: currentUser.uid,
-        priority: _selectedPriority ?? 'medium',
-        source: 'app',
-        totalCost: _parseDouble(_totalCostController.text),
-        advancePaid: _parseDouble(_advancePaidController.text),
-        paymentStatus: _selectedPaymentStatus,
-        assignedTo: _selectedAssignedTo,
-      );
-
-      // Send notification for new enquiry creation
-      final notificationService = NotificationService();
-      await notificationService.notifyEnquiryCreated(
-        enquiryId: enquiryId,
-        customerName: _nameController.text.trim(),
-        eventType: _selectedEventType!,
-        createdBy: currentUser.uid,
-      );
-
-      // Record audit trail for assignment if assigned
-      if (_selectedAssignedTo != null) {
-        final auditService = AuditService();
-        await auditService.recordChange(
-          enquiryId: enquiryId,
-          fieldChanged: 'assignedTo',
-          oldValue: null,
-          newValue: _selectedAssignedTo!,
-        );
-
-        // Send notification for assignment
-        await notificationService.notifyEnquiryAssigned(
-          enquiryId: enquiryId,
-          customerName: _nameController.text.trim(),
-          eventType: _selectedEventType!,
-          assignedTo: _selectedAssignedTo!,
-          assignedBy: currentUser.uid,
-        );
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enquiry created successfully!')),
-        );
-        Navigator.of(context).pop();
+      if (widget.mode == 'edit' && widget.enquiryId != null) {
+        // Update existing enquiry
+        await _updateEnquiry(currentUser);
+      } else {
+        // Create new enquiry
+        await _createEnquiry(currentUser);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating enquiry: $e')),
+          SnackBar(content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e')),
         );
       }
     } finally {
@@ -192,6 +206,107 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
   }
 
+  Future<void> _createEnquiry(UserModel currentUser) async {
+    final firestoreService = ref.read(firestoreServiceProvider);
+    
+    // TODO: Upload images to Firebase Storage and get URLs
+    // For now, we'll skip image upload
+    
+    final enquiryId = await firestoreService.createEnquiry(
+      customerName: _nameController.text.trim(),
+      customerEmail: '', // TODO: Add email field if needed
+      customerPhone: _phoneController.text.trim(),
+      eventType: _selectedEventType!,
+      eventDate: _selectedDate!,
+      eventLocation: _locationController.text.trim(),
+      guestCount: 0, // TODO: Add guest count field
+      budgetRange: '', // TODO: Add budget field
+      description: _notesController.text.trim(),
+      createdBy: currentUser.uid,
+      priority: _selectedPriority ?? 'medium',
+      source: 'app',
+      totalCost: _parseDouble(_totalCostController.text),
+      advancePaid: _parseDouble(_advancePaidController.text),
+      paymentStatus: _selectedPaymentStatus,
+      assignedTo: _selectedAssignedTo,
+    );
+
+    // Send notification for new enquiry creation
+    final notificationService = NotificationService();
+    await notificationService.notifyEnquiryCreated(
+      enquiryId: enquiryId,
+      customerName: _nameController.text.trim(),
+      eventType: _selectedEventType!,
+      createdBy: currentUser.uid,
+    );
+
+    // Record audit trail for assignment if assigned
+    if (_selectedAssignedTo != null) {
+      final auditService = AuditService();
+      await auditService.recordChange(
+        enquiryId: enquiryId,
+        fieldChanged: 'assignedTo',
+        oldValue: null,
+        newValue: _selectedAssignedTo!,
+      );
+
+      // Send notification for assignment
+      await notificationService.notifyEnquiryAssigned(
+        enquiryId: enquiryId,
+        customerName: _nameController.text.trim(),
+        eventType: _selectedEventType!,
+        assignedTo: _selectedAssignedTo!,
+        assignedBy: currentUser.uid,
+      );
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enquiry created successfully!')),
+      );
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _updateEnquiry(UserModel currentUser) async {
+    // Update the enquiry document directly
+    await FirebaseFirestore.instance
+        .collection('enquiries')
+        .doc(widget.enquiryId!)
+        .update({
+      'customerName': _nameController.text.trim(),
+      'customerPhone': _phoneController.text.trim(),
+      'eventLocation': _locationController.text.trim(),
+      'description': _notesController.text.trim(),
+      'eventType': _selectedEventType,
+      'eventDate': Timestamp.fromDate(_selectedDate!),
+      'priority': _selectedPriority,
+      'eventStatus': _selectedStatus,
+      'paymentStatus': _selectedPaymentStatus,
+      'assignedTo': _selectedAssignedTo,
+      'totalCost': _parseDouble(_totalCostController.text),
+      'advancePaid': _parseDouble(_advancePaidController.text),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedBy': currentUser.uid,
+    });
+
+    // Record audit trail for the update
+    final auditService = AuditService();
+    await auditService.recordChange(
+      enquiryId: widget.enquiryId!,
+      fieldChanged: 'general_update',
+      oldValue: 'Previous values',
+      newValue: 'Updated enquiry data',
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enquiry updated successfully!')),
+      );
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeUsers = ref.watch(activeUsersProvider);
@@ -199,7 +314,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Enquiry'),
+        title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Form(
@@ -296,7 +411,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Event Type Auto-complete
+              // Event Type Field
               EventTypeAutocomplete(
                 initialValue: _selectedEventType,
                 onChanged: (value) {
@@ -305,7 +420,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   });
                 },
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please select an event type';
                   }
                   return null;
@@ -313,65 +428,66 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Status Dropdown
+              // Status Field
               StatusDropdown(
+                collectionName: 'statuses',
                 value: _selectedStatus,
+                label: 'Status',
                 onChanged: (value) {
                   setState(() {
                     _selectedStatus = value;
                   });
                 },
-                label: 'Status',
-                collectionName: 'statuses',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please select a status';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
-              // Priority Dropdown
-              DropdownButtonFormField<String>(
+              // Priority Field
+              StatusDropdown(
+                collectionName: 'priorities',
                 value: _selectedPriority,
-                decoration: const InputDecoration(
-                  labelText: 'Priority',
-                  prefixIcon: Icon(Icons.priority_high),
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Low')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'high', child: Text('High')),
-                ],
+                label: 'Priority',
                 onChanged: (value) {
                   setState(() {
                     _selectedPriority = value;
                   });
                 },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please select a priority';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
-              // Assignment Dropdown (Admin Only)
+              // Assignment Field (Admin Only)
               if (isAdmin) ...[
                 activeUsers.when(
-                  data: (snapshot) {
-                    final userList = snapshot.docs
-                        .map((doc) => doc.data() as Map<String, dynamic>)
-                        .toList();
-
+                  data: (users) {
                     return DropdownButtonFormField<String>(
                       value: _selectedAssignedTo,
                       decoration: const InputDecoration(
                         labelText: 'Assign To',
                         prefixIcon: Icon(Icons.person_add),
                         border: OutlineInputBorder(),
-                        hintText: 'Select staff member',
                       ),
+                      hint: const Text('Select user to assign'),
                       items: [
                         const DropdownMenuItem<String>(
                           value: null,
                           child: Text('Unassigned'),
                         ),
-                        ...userList.map((user) {
+                        ...users.docs.map((doc) {
+                          final user = doc.data() as Map<String, dynamic>;
                           return DropdownMenuItem<String>(
-                            value: user['uid'] as String? ?? user['id'] as String?,
-                            child: Text(user['name'] as String? ?? 'Unknown User'),
+                            value: doc.id,
+                            child: Text((user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown'),
                           );
                         }),
                       ],
@@ -382,8 +498,29 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, stack) => Text('Error loading users: $error'),
+                  loading: () => TextFormField(
+                    decoration: InputDecoration(
+                      labelText: 'Assign To',
+                      prefixIcon: Icon(Icons.person_add),
+                      border: OutlineInputBorder(),
+                      hintText: 'Loading users...',
+                    ),
+                    enabled: false,
+                  ),
+                  error: (error, stack) => TextFormField(
+                    initialValue: _selectedAssignedTo ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Assign To (User ID)',
+                      prefixIcon: Icon(Icons.person_add),
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter user ID or leave empty for unassigned',
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedAssignedTo = value.isEmpty ? null : value;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -444,16 +581,22 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Payment Status Dropdown
+                // Payment Status Field
                 StatusDropdown(
+                  collectionName: 'payment_statuses',
                   value: _selectedPaymentStatus,
+                  label: 'Payment Status',
                   onChanged: (value) {
                     setState(() {
                       _selectedPaymentStatus = value;
                     });
                   },
-                  label: 'Payment Status',
-                  collectionName: 'payment_statuses',
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please select a payment status';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 24),
               ],
@@ -568,9 +711,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text(
-                        'Create Enquiry',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    : Text(
+                        widget.mode == 'edit' ? 'Update Enquiry' : 'Create Enquiry',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ],
