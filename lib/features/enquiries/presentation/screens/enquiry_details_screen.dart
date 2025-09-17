@@ -137,7 +137,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       children: [
                         _buildInfoRow('Customer Name', (enquiryData['customerName'] as String?) ?? 'N/A'),
                         _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
-                        _buildInfoRow('Location', (enquiryData['location'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Location', (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String? ?? 'N/A')),
                       ],
                     ),
 
@@ -290,6 +290,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           .collection('dropdowns')
           .doc('statuses')
           .collection('items')
+          .where('active', isEqualTo: true)
+          .orderBy('order')
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -300,12 +302,20 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
 
+        final currentStatus = (_selectedStatus ?? (enquiryData['eventStatus'] as String?)) ?? 'new';
+        final values = statuses.map((s) => (s['value'] as String?) ?? '').toList();
+        final safeValue = values.contains(currentStatus)
+            ? currentStatus
+            : (values.isNotEmpty ? values.first : 'new');
+
         return DropdownButton<String>(
-          value: _selectedStatus ?? enquiryData['eventStatus'],
+          value: safeValue,
           items: statuses.map((status) {
+            final value = (status['value'] as String?) ?? '';
+            final label = (status['label'] as String?) ?? value;
             return DropdownMenuItem<String>(
-              value: status['name'] as String,
-              child: Text(status['name'] as String),
+              value: value,
+              child: Text(label),
             );
           }).toList(),
           onChanged: (value) async {
@@ -315,7 +325,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               });
 
               try {
-                final oldStatus = enquiryData['eventStatus'] as String? ?? 'Unknown';
+                final oldStatus = (enquiryData['eventStatus'] as String?) ?? 'Unknown';
                 
                 await FirebaseFirestore.instance
                     .collection('enquiries')
@@ -332,7 +342,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   enquiryId: widget.enquiryId,
                   fieldChanged: 'eventStatus',
                   oldValue: oldStatus,
-                  newValue: value!,
+                  newValue: value,
                 );
 
                 // Send notification for status update
@@ -341,7 +351,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   enquiryId: widget.enquiryId,
                   customerName: enquiryData['customerName'] as String? ?? 'Unknown Customer',
                   oldStatus: oldStatus,
-                  newStatus: value!,
+                  newStatus: value,
                   updatedBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                 );
 
@@ -406,7 +416,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, dynamic value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -424,7 +434,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           ),
           Expanded(
             child: Text(
-              value,
+              value == null ? 'N/A' : value.toString(),
               style: const TextStyle(fontSize: 16),
             ),
           ),
@@ -463,14 +473,21 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   }
 
   Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'pending':
+    switch (status) {
+      case 'new':
         return Colors.orange;
-      case 'in progress':
+      case 'in_progress':
         return Colors.blue;
+      case 'quote_sent':
+        return Colors.teal;
+      case 'approved':
+        return Colors.indigo;
+      case 'scheduled':
+        return Colors.purple;
       case 'completed':
         return Colors.green;
       case 'cancelled':
+      case 'closed_lost':
         return Colors.red;
       default:
         return Colors.grey;

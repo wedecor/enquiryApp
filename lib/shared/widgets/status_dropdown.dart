@@ -26,7 +26,8 @@ class StatusDropdown extends ConsumerStatefulWidget {
 }
 
 class _StatusDropdownState extends ConsumerState<StatusDropdown> {
-  List<String> _statuses = [];
+  // Each status item stores both label (display) and value (id)
+  List<Map<String, String>> _statuses = [];
   bool _isLoading = false;
   final TextEditingController _addController = TextEditingController();
 
@@ -52,12 +53,19 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .collection('dropdowns')
           .doc(widget.collectionName)
           .collection('items')
-          .orderBy('value')
+          .where('active', isEqualTo: true)
+          .orderBy('order')
           .get();
 
-      final statuses = snapshot.docs
-          .map((doc) => doc.data()['value'] as String)
-          .toList();
+      final statuses = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final label = (data['label'] as String?)?.trim();
+        final value = (data['value'] as String?)?.trim();
+        return {
+          'label': label?.isNotEmpty == true ? label! : (value ?? ''),
+          'value': value ?? '',
+        };
+      }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
 
       setState(() {
         _statuses = statuses;
@@ -73,14 +81,28 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     }
   }
 
-  List<String> _getDefaultValues(String collectionName) {
+  List<Map<String, String>> _getDefaultValues(String collectionName) {
     switch (collectionName) {
       case 'statuses':
-        return ['Enquired', 'Confirmed', 'Assigned', 'Not Interested', 'Completed'];
+        return [
+          {'label': 'New', 'value': 'new'},
+          {'label': 'Contacted', 'value': 'contacted'},
+          {'label': 'In Progress', 'value': 'in_progress'},
+          {'label': 'Quote Sent', 'value': 'quote_sent'},
+          {'label': 'Approved', 'value': 'approved'},
+          {'label': 'Scheduled', 'value': 'scheduled'},
+          {'label': 'Completed', 'value': 'completed'},
+          {'label': 'Closed - Lost', 'value': 'closed_lost'},
+          {'label': 'Cancelled', 'value': 'cancelled'},
+        ];
       case 'payment_statuses':
-        return ['No Payment', 'Advance Paid', 'Full Payment', 'Refund'];
-      case 'event_types':
-        return ['Wedding', 'Birthday', 'Haldi', 'Mehendi', 'Anniversary', 'Engagement', 'Corporate', 'Other'];
+        return [
+          {'label': 'Unpaid', 'value': 'unpaid'},
+          {'label': 'Advance Paid', 'value': 'advance_paid'},
+          {'label': 'Partially Paid', 'value': 'partially_paid'},
+          {'label': 'Paid', 'value': 'paid'},
+          {'label': 'Refunded', 'value': 'refunded'},
+        ];
       default:
         return [];
     }
@@ -103,7 +125,8 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
     // Check for case-insensitive uniqueness
     final exists = _statuses.any(
-      (status) => status.toLowerCase() == newStatus.toLowerCase(),
+      (status) => (status['label'] ?? '').toLowerCase() == newStatus.toLowerCase() ||
+                   (status['value'] ?? '').toLowerCase() == newStatus.toLowerCase(),
     );
 
     if (exists) {
@@ -126,7 +149,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .doc(widget.collectionName)
           .collection('items')
           .add({
-        'value': newStatus,
+        'label': newStatus,
+        'value': newStatus.toLowerCase().replaceAll(' ', '_'),
+        'active': true,
+        'order': (_statuses.length + 1),
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
       });
@@ -135,7 +161,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       await _loadStatuses();
 
       // Set the new value
-      widget.onChanged(newStatus);
+      widget.onChanged(newStatus.toLowerCase().replaceAll(' ', '_'));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -234,8 +260,8 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 ),
                 items: _statuses.map((status) {
                   return DropdownMenuItem<String>(
-                    value: status,
-                    child: Text(status),
+                    value: status['value'],
+                    child: Text(status['label'] ?? status['value'] ?? ''),
                   );
                 }).toList(),
                 onChanged: widget.onChanged,

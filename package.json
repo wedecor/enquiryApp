@@ -1,0 +1,15 @@
+{
+  "name": "wedecor-firestore-seed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "node scripts/seed/seed.mjs",
+    "setup:apis": "bash scripts/setup/enable_apis.sh",
+    "setup:firestore": "bash scripts/setup/create_firestore_db.sh"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
+
+

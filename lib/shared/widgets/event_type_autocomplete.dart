@@ -22,8 +22,10 @@ class EventTypeAutocomplete extends ConsumerStatefulWidget {
 class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  List<String> _eventTypes = [];
-  List<String> _filteredEventTypes = [];
+  
+  // Store both label (display) and value (id) for each option
+  List<Map<String, String>> _eventTypes = [];
+  List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
 
@@ -51,12 +53,19 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           .collection('dropdowns')
           .doc('event_types')
           .collection('items')
-          .orderBy('value')
+          .where('active', isEqualTo: true)
+          .orderBy('order')
           .get();
 
-      final eventTypes = snapshot.docs
-          .map((doc) => doc.data()['value'] as String)
-          .toList();
+      final eventTypes = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final label = (data['label'] as String?)?.trim();
+        final value = (data['value'] as String?)?.trim();
+        return {
+          'label': label?.isNotEmpty == true ? label! : (value ?? ''),
+          'value': value ?? '',
+        };
+      }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
 
       setState(() {
         _eventTypes = eventTypes;
@@ -67,11 +76,19 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       // Fallback to default values if Firestore is not available
       print('⚠️ Using fallback values for event types: $e');
       final defaultEventTypes = [
-        'Wedding', 'Birthday', 'Haldi', 'Mehendi', 'Anniversary', 
-        'Engagement', 'Naming', 'Aqiqah', 'Cradle Ceremony', 
-        'Baby Shower', 'Welcome Baby', 'Corporate', 'Farewell', 
-        'Retirement', 'House Warming', 'Reception', 'Romantic Surprise', 
-        'Proposal', 'Nikkah', 'Other'
+        {'label': 'Wedding', 'value': 'wedding'},
+        {'label': 'Birthday', 'value': 'birthday'},
+        {'label': 'Haldi', 'value': 'haldi'},
+        {'label': 'Mehendi', 'value': 'mehendi'},
+        {'label': 'Anniversary', 'value': 'anniversary'},
+        {'label': 'Engagement', 'value': 'engagement'},
+        {'label': 'Naming', 'value': 'naming_ceremony'},
+        {'label': 'Baby Shower', 'value': 'baby_shower'},
+        {'label': 'Corporate', 'value': 'corporate'},
+        {'label': 'Reception', 'value': 'reception'},
+        {'label': 'Romantic Surprise', 'value': 'romantic_surprise'},
+        {'label': 'Proposal', 'value': 'proposal'},
+        {'label': 'Other', 'value': 'other'},
       ];
       setState(() {
         _eventTypes = defaultEventTypes;
@@ -88,9 +105,12 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         _showAddButton = false;
       });
     } else {
-      final filtered = _eventTypes
-          .where((type) => type.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      final filtered = _eventTypes.where((type) {
+        final label = type['label'] ?? '';
+        final value = type['value'] ?? '';
+        final q = query.toLowerCase();
+        return label.toLowerCase().contains(q) || value.toLowerCase().contains(q);
+      }).toList();
 
       setState(() {
         _filteredEventTypes = filtered;
@@ -117,7 +137,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
 
     // Check for case-insensitive uniqueness
     final exists = _eventTypes.any(
-      (type) => type.toLowerCase() == trimmedType.toLowerCase(),
+      (type) => (type['label'] ?? '').toLowerCase() == trimmedType.toLowerCase() ||
+                (type['value'] ?? '').toLowerCase() == trimmedType.toLowerCase(),
     );
 
     if (exists) {
@@ -140,7 +161,10 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           .doc('event_types')
           .collection('items')
           .add({
-        'value': trimmedType,
+        'label': trimmedType,
+        'value': trimmedType.toLowerCase().replaceAll(' ', '_'),
+        'active': true,
+        'order': (_eventTypes.length + 1),
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
       });
@@ -182,7 +206,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Autocomplete<String>(
+        Autocomplete<Map<String, String>>(
+          displayStringForOption: (opt) => opt['label'] ?? '',
           fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
             return TextFormField(
               controller: controller,
@@ -201,7 +226,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
               validator: widget.validator,
               onChanged: (value) {
                 _filterEventTypes(value);
-                widget.onChanged(value);
+                // Do not emit value on free-typing; emit on selection
               },
             );
           },
@@ -211,9 +236,11 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             }
             return _filteredEventTypes;
           },
-          onSelected: (String selection) {
-            _controller.text = selection;
-            widget.onChanged(selection);
+          onSelected: (Map<String, String> selection) {
+            final label = selection['label'] ?? '';
+            final value = selection['value'] ?? '';
+            _controller.text = label;
+            widget.onChanged(value);
             setState(() {
               _showAddButton = false;
             });
@@ -230,9 +257,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
                     if (index == options.length && _showAddButton) {
                       return _buildAddNewOption();
                     }
-                    final option = options.elementAt(index);
+                    final option = options.elementAt(index) as Map<String, String>;
                     return ListTile(
-                      title: Text(option),
+                      title: Text(option['label'] ?? ''),
                       onTap: () {
                         onSelected(option);
                       },

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
@@ -34,16 +35,19 @@ import 'package:we_decor_enquiries/shared/models/user_model.dart';
 /// ```
 final roleProvider = StreamProvider<UserRole>((ref) {
   final currentUser = ref.watch(currentUserProvider);
-  
+
   return currentUser.when(
     data: (user) {
       if (user == null) {
-        return Stream.value(UserRole.staff); // Default role for unauthenticated users
+        return Stream.value(UserRole.staff);
       }
-      
-      // For now, return a default role
-      // TODO: Fetch user role from Firestore based on user.uid
-      return Stream.value(UserRole.staff);
+
+      final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      return docRef.snapshots().map((snap) {
+        final data = snap.data();
+        final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
+        return roleString == 'admin' ? UserRole.admin : UserRole.staff;
+      });
     },
     loading: () => Stream.value(UserRole.staff),
     error: (error, stack) => Stream.value(UserRole.staff),
@@ -139,23 +143,36 @@ final currentUserIsAdminProvider = isAdminProvider;
 /// );
 /// ```
 final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
-  final currentUser = ref.watch(currentUserProvider);
-  
-  return currentUser.when(
-    data: (user) {
-      if (user == null) {
+  final authUserAsync = ref.watch(currentUserProvider);
+
+  return authUserAsync.when(
+    data: (authUser) {
+      if (authUser == null) {
         return Stream.value(null);
       }
-      
-      // For now, return a default user model
-      // TODO: Fetch user data from Firestore based on user.uid
-      return Stream.value(UserModel(
-        uid: user.uid,
-        name: user.displayName ?? 'Unknown User',
-        email: user.email ?? '',
-        phone: user.phoneNumber ?? '',
-        role: UserRole.staff,
-      ));
+
+      final docRef = FirebaseFirestore.instance.collection('users').doc(authUser.uid);
+      return docRef.snapshots().map((snap) {
+        final data = snap.data();
+        if (data == null) {
+          return UserModel(
+            uid: authUser.uid,
+            name: authUser.displayName ?? 'User',
+            email: authUser.email ?? '',
+            phone: authUser.phoneNumber ?? '',
+            role: UserRole.staff,
+          );
+        }
+
+        final roleString = (data['role'] as String?) ?? 'staff';
+        return UserModel(
+          uid: authUser.uid,
+          name: (data['name'] as String?) ?? (authUser.displayName ?? 'User'),
+          email: (data['email'] as String?) ?? (authUser.email ?? ''),
+          phone: (data['phone'] as String?) ?? (authUser.phoneNumber ?? ''),
+          role: roleString == 'admin' ? UserRole.admin : UserRole.staff,
+        );
+      });
     },
     loading: () => Stream.value(null),
     error: (error, stack) => Stream.value(null),

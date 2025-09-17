@@ -133,6 +133,9 @@ android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
 # Note: lib/firebase_options.dart is now secure and should be tracked
+serviceAccountKey.json
+*.local.*
+.env
 
 # API keys and secrets
 secrets.json
