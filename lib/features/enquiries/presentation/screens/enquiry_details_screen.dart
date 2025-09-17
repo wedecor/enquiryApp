@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/widgets/enquiry_history_widget.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
+import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
 
 // Placeholder services - TODO: Implement proper services
 class AuditService {
@@ -56,6 +57,24 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       appBar: AppBar(
         title: const Text('Enquiry Details'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          if (userRole == UserRole.admin) ...[
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => EnquiryFormScreen(
+                      enquiryId: widget.enquiryId,
+                      mode: 'edit',
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'Edit Enquiry',
+            ),
+          ],
+        ],
       ),
       body: currentUser.when(
         data: (user) {

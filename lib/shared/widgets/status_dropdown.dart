@@ -43,6 +43,15 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(StatusDropdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only rebuild if the value actually changed and we have data loaded
+    if (oldWidget.value != widget.value && _statuses.isNotEmpty) {
+      setState(() {});
+    }
+  }
+
   Future<void> _loadStatuses() async {
     setState(() {
       _isLoading = true;
@@ -103,9 +112,40 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           {'label': 'Paid', 'value': 'paid'},
           {'label': 'Refunded', 'value': 'refunded'},
         ];
+      case 'priorities':
+        return [
+          {'label': 'Low', 'value': 'low'},
+          {'label': 'Medium', 'value': 'medium'},
+          {'label': 'High', 'value': 'high'},
+        ];
       default:
         return [];
     }
+  }
+
+  // Get the first valid value from the list as default
+  String? _getDefaultValue() {
+    if (_statuses.isEmpty) return null;
+    return _statuses.first['value'];
+  }
+
+  // Validate if the current value exists in the statuses list
+  String? _getValidValue(String? value) {
+    if (value == null) return null;
+    
+    // If still loading, return null to show hint text
+    if (_isLoading) return null;
+    
+    // CRITICAL FIX: Return null if _statuses is empty (still loading)
+    if (_statuses.isEmpty) return null;
+    
+    // Check if the value exists in the current statuses list
+    final exists = _statuses.any((status) => status['value'] == value);
+    if (exists) return value;
+    
+    // If value doesn't exist in the list, return null to show hint text
+    // This prevents assertion errors while still showing the field
+    return null;
   }
 
   Future<void> _addNewStatus() async {
@@ -246,11 +286,16 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: widget.value,
+                // CRITICAL: Always ensure value is valid or null
+                value: _getValidValue(widget.value),
                 decoration: InputDecoration(
                   labelText: widget.required ? '${widget.label} *' : widget.label,
                   prefixIcon: Icon(_getIconForStatus()),
                   border: const OutlineInputBorder(),
+                  hintText: widget.value != null && !_isLoading && _statuses.isNotEmpty && 
+                           !_statuses.any((status) => status['value'] == widget.value)
+                      ? 'Current: ${widget.value}' 
+                      : null,
                   suffixIcon: _isLoading
                       ? const Padding(
                           padding: EdgeInsets.all(12),
@@ -288,8 +333,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         return Icons.flag;
       case 'payment_statuses':
         return Icons.payment;
+      case 'priorities':
+        return Icons.priority_high;
       default:
         return Icons.list;
     }
   }
-} 
+}

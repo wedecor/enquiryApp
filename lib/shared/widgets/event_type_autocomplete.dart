@@ -28,11 +28,12 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller.text = widget.initialValue ?? '';
+    // Don't set initial value immediately - wait for event types to load
     _loadEventTypes();
   }
 
@@ -41,6 +42,16 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(EventTypeAutocomplete oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Update the controller when the initial value changes
+    if (oldWidget.initialValue != widget.initialValue && !_isLoading) {
+      _isInitialized = false;
+      _setInitialValue();
+    }
   }
 
   Future<void> _loadEventTypes() async {
@@ -72,6 +83,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         _filteredEventTypes = eventTypes;
         _isLoading = false;
       });
+      
+      // Set initial value after loading event types
+      _setInitialValue();
     } catch (e) {
       // Fallback to default values if Firestore is not available
       print('⚠️ Using fallback values for event types: $e');
@@ -95,6 +109,29 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         _filteredEventTypes = defaultEventTypes;
         _isLoading = false;
       });
+      
+      // Set initial value after loading default event types
+      _setInitialValue();
+    }
+  }
+
+  void _setInitialValue() {
+    if (!_isInitialized && widget.initialValue != null && widget.initialValue!.isNotEmpty) {
+      // Find the matching event type by value
+      final matchingEventType = _eventTypes.firstWhere(
+        (eventType) => eventType['value'] == widget.initialValue,
+        orElse: () => <String, String>{},
+      );
+      
+      if (matchingEventType.isNotEmpty) {
+        _controller.text = matchingEventType['label'] ?? widget.initialValue!;
+        widget.onChanged(widget.initialValue!);
+      } else {
+        // If no exact match found, just set the text as-is
+        _controller.text = widget.initialValue!;
+        widget.onChanged(widget.initialValue!);
+      }
+      _isInitialized = true;
     }
   }
 
@@ -114,8 +151,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
 
       setState(() {
         _filteredEventTypes = filtered;
-        // Show add button if query doesn't match any existing type
-        _showAddButton = filtered.isEmpty && query.trim().isNotEmpty;
+        // Show add button if no exact match found and admin
+        final isAdmin = ref.read(currentUserIsAdminProvider);
+        _showAddButton = filtered.isEmpty && isAdmin;
       });
     }
   }
@@ -124,8 +162,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     final isAdmin = ref.read(currentUserIsAdminProvider);
     if (!isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Only admins can add new event types'),
+        SnackBar(
+          content: const Text('Only admins can add new event types'),
           backgroundColor: Colors.red,
         ),
       );
@@ -143,8 +181,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
 
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Event type already exists'),
+        SnackBar(
+          content: Text('Event type "$trimmedType" already exists'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -246,25 +284,28 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             });
           },
           optionsViewBuilder: (context, onSelected, options) {
-            return Material(
-              elevation: 4,
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: options.length + (_showAddButton ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == options.length && _showAddButton) {
-                      return _buildAddNewOption();
-                    }
-                    final option = options.elementAt(index) as Map<String, String>;
-                    return ListTile(
-                      title: Text(option['label'] ?? ''),
-                      onTap: () {
-                        onSelected(option);
-                      },
-                    );
-                  },
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: options.length + (_showAddButton ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == options.length && _showAddButton) {
+                        return _buildAddNewOption();
+                      }
+                      final option = options.elementAt(index) as Map<String, String>;
+                      return ListTile(
+                        title: Text(option['label'] ?? ''),
+                        onTap: () {
+                          onSelected(option);
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             );
@@ -298,4 +339,4 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       ),
     );
   }
-} 
+}

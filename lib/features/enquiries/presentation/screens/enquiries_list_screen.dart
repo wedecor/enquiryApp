@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
+import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
   const EnquiriesListScreen({super.key});
@@ -141,6 +142,26 @@ class EnquiriesListScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
+                          // Edit button for admin users
+                          if (userRole == UserRole.admin) ...[
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 20),
+                              onPressed: () {
+                                Navigator.of(context).push<void>(
+                                  MaterialPageRoute<void>(
+                                    builder: (context) => EnquiryFormScreen(
+                                      enquiryId: enquiryId,
+                                      mode: 'edit',
+                                    ),
+                                  ),
+                                );
+                              },
+                              tooltip: 'Edit Enquiry',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                            const SizedBox(width: 4),
+                          ],
                           const Icon(Icons.chevron_right),
                         ],
                       ),
