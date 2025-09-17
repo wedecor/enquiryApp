@@ -151,7 +151,7 @@ class FirestoreService {
   /// 
   /// This method creates a comprehensive enquiry record with all the
   /// provided customer and event information. The enquiry is automatically
-  /// assigned a "New" status and "Pending" payment status.
+  /// assigned a default status and payment status.
   /// 
   /// Parameters:
   /// - [customerName]: Name of the customer making the enquiry
@@ -221,8 +221,9 @@ class FirestoreService {
       'guestCount': guestCount,
       'budgetRange': budgetRange,
       'description': description,
-      'status': 'New',
-      'paymentStatus': paymentStatus ?? 'Pending',
+      // Defaults follow dropdown values (snake_case)
+      'eventStatus': 'new',
+      'paymentStatus': paymentStatus ?? 'unpaid',
       'totalCost': totalCost,
       'advancePaid': advancePaid,
       'assignedTo': assignedTo,

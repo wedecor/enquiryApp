@@ -19,12 +19,21 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<String> _statuses = ['All', 'New', 'In Progress', 'Quote Sent', 'Confirmed', 'Completed', 'Cancelled'];
+  // Use value keys that match Firestore (snake_case), plus display labels
+  final List<Map<String, String>> _statusTabs = [
+    {'label': 'All', 'value': 'All'},
+    {'label': 'New', 'value': 'new'},
+    {'label': 'In Progress', 'value': 'in_progress'},
+    {'label': 'Quote Sent', 'value': 'quote_sent'},
+    {'label': 'Confirmed', 'value': 'confirmed'},
+    {'label': 'Completed', 'value': 'completed'},
+    {'label': 'Cancelled', 'value': 'cancelled'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _statuses.length, vsync: this);
+    _tabController = TabController(length: _statusTabs.length, vsync: this);
   }
 
   @override
@@ -54,7 +63,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: _statuses.map((status) => Tab(text: status)).toList(),
+          tabs: _statusTabs.map((s) => Tab(text: s['label']!)).toList(),
         ),
       ),
       drawer: _buildNavigationDrawer(currentUser, isAdmin),
@@ -97,7 +106,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: _statuses.map((status) => _buildEnquiriesTab(status, isAdmin, user?.uid)).toList(),
+            children: _statusTabs.map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid)).toList(),
           ),
         ),
       ],
@@ -187,15 +196,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final totalEnquiries = enquiries.length;
         final newEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['eventStatus'] == 'New';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'new';
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['eventStatus'] == 'In Progress';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_progress';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return data['eventStatus'] == 'Completed';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'completed';
         }).length;
 
         return Row(
@@ -443,16 +452,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   String _getStatusInitial(String? status) {
     if (status == null) return '?';
-    return status[0].toUpperCase();
+    return status.isEmpty ? '?' : status[0].toUpperCase();
   }
 
   Color _getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
       case 'new':
         return Colors.orange;
-      case 'in progress':
+      case 'in_progress':
         return const Color(0xFF2563EB); // Our new blue color
-      case 'quote sent':
+      case 'quote_sent':
         return const Color(0xFF2563EB); // Blue
       case 'confirmed':
         return Colors.indigo;

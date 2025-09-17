@@ -42,9 +42,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   void initState() {
     super.initState();
     // Set default values for dropdowns
-    _selectedStatus = 'Enquired';
+    // Use dropdown value keys (snake_case)
+    _selectedStatus = 'new';
     _selectedPriority = 'medium';
-    _selectedPaymentStatus = 'No Payment';
+    _selectedPaymentStatus = 'unpaid';
   }
 
   @override

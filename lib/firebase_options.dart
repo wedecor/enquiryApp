@@ -38,28 +38,29 @@ class DefaultFirebaseOptions {
   }
 
   static FirebaseOptions get web => FirebaseOptions(
-    apiKey: FirebaseConfig.apiKey,
-    appId: '1:270194759200:web:we_decor_enquiries',
-    messagingSenderId: '270194759200',
-    projectId: 'wedecorenquiries',
-    authDomain: 'wedecorenquiries.firebaseapp.com',
-    storageBucket: 'wedecorenquiries.firebasestorage.app',
+    // Using concrete values for the new web app in project wedecorenquries
+    apiKey: 'AIzaSyCB1Zln4VM1fXtEoJSXIRzguxVPJAWV8ZI',
+    appId: '1:747327664982:web:98e5e0d4bed9a1526edcf7',
+    messagingSenderId: '747327664982',
+    projectId: 'wedecorenquries',
+    authDomain: 'wedecorenquries.firebaseapp.com',
+    storageBucket: 'wedecorenquries.appspot.com',
   );
 
   static FirebaseOptions get android => FirebaseOptions(
     apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:android:add1c459e9abd7879cce45',
     messagingSenderId: '270194759200',
-    projectId: 'wedecorenquiries',
-    storageBucket: 'wedecorenquiries.firebasestorage.app',
+    projectId: 'wedecorenquries',
+    storageBucket: 'wedecorenquries.appspot.com',
   );
 
   static FirebaseOptions get ios => FirebaseOptions(
     apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:ios:add1c459e9abd7879cce45',
     messagingSenderId: '270194759200',
-    projectId: 'wedecorenquiries',
-    storageBucket: 'wedecorenquiries.firebasestorage.app',
+    projectId: 'wedecorenquries',
+    storageBucket: 'wedecorenquries.appspot.com',
     iosBundleId: 'com.example.weDecorEnquiries',
   );
 
@@ -67,8 +68,8 @@ class DefaultFirebaseOptions {
     apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:ios:add1c459e9abd7879cce45',
     messagingSenderId: '270194759200',
-    projectId: 'wedecorenquiries',
-    storageBucket: 'wedecorenquiries.firebasestorage.app',
+    projectId: 'wedecorenquries',
+    storageBucket: 'wedecorenquries.appspot.com',
     iosBundleId: 'com.example.weDecorEnquiries',
   );
 
@@ -76,8 +77,8 @@ class DefaultFirebaseOptions {
     apiKey: FirebaseConfig.apiKey,
     appId: '1:270194759200:web:we_decor_enquiries',
     messagingSenderId: '270194759200',
-    projectId: 'wedecorenquiries',
-    authDomain: 'wedecorenquiries.firebaseapp.com',
-    storageBucket: 'wedecorenquiries.firebasestorage.app',
+    projectId: 'wedecorenquries',
+    authDomain: 'wedecorenquries.firebaseapp.com',
+    storageBucket: 'wedecorenquries.appspot.com',
   );
 } 
