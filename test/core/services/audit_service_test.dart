@@ -355,11 +355,11 @@ Map<String, dynamic> _calculateChangeSummary(List<Map<String, dynamic>> changes)
     final fieldChanged = change['field_changed'] as String?;
     final userEmail = change['user_email'] as String?;
 
-    if (fieldChanged != null && !summary['fields_changed'].contains(fieldChanged)) {
+    if (fieldChanged != null && !(summary['fields_changed'] as List).contains(fieldChanged)) {
       summary['fields_changed'].add(fieldChanged);
     }
 
-    if (userEmail != null && !summary['users_involved'].contains(userEmail)) {
+    if (userEmail != null && !(summary['users_involved'] as List).contains(userEmail)) {
       summary['users_involved'].add(userEmail);
     }
   }

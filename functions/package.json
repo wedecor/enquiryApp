@@ -2,7 +2,8 @@
   "name": "wedecor-functions",
   "private": true,
   "type": "commonjs",
-  "engines": { "node": ">=20" },
+  "engines": { "node": "20" },
+  "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p .",
     "deploy": "firebase deploy --only functions:notifyOnEnquiryChange",

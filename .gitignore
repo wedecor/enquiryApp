@@ -199,4 +199,11 @@ test-results/
 # CI/CD artifacts
 artifacts/
 .vercel
+
+# Additional Security Hardening
 serviceAccountKey.json
+*.secret.json
+firebase-debug.log
+
+# Build outputs
+functions/lib

@@ -14,12 +14,19 @@
     "setup:firestore": "bash scripts/setup/create_firestore_db.sh",
     "setup:service-account": "bash scripts/01_create_service_account_and_key.sh",
     "seed:docker": "bash scripts/03_seed_docker.sh",
-    "smoke:notify": "node scripts/smoke_notify.mjs"
+    "smoke:notify": "node scripts/smoke_notify.mjs",
+    "sec:scan": "tsx scripts/security/exposure_scan.ts",
+    "sec:rules": "tsx scripts/security/check_rules.ts",
+    "sec:logs": "tsx scripts/security/check_logs.ts",
+    "sec:all": "tsx scripts/security/run_audit.ts",
+    "migrate:tokens": "tsx scripts/migrations/move_tokens_private.ts"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "glob": "^10.3.10",
+    "picocolors": "^1.0.0"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
