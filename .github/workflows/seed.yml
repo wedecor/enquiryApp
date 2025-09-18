@@ -6,6 +6,9 @@ on:
         description: "Firebase Auth UID for the admin user doc"
         required: true
         type: string
+  push:
+    branches: [ main ]
+    paths: [ '.github/workflows/seed.yml' ]
 
 jobs:
   seed:
