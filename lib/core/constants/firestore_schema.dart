@@ -43,14 +43,14 @@ class UserDocument {
   final String role;
   
   /// FCM token for push notifications (optional)
-  final String? fcmToken;
+  // fcmToken removed for security - stored in private subcollection
 
   const UserDocument({
     required this.name,
     required this.email,
     required this.phone,
     required this.role,
-    this.fcmToken,
+    // fcmToken constructor parameter removed
   });
 
   Map<String, dynamic> toMap() {
@@ -59,7 +59,7 @@ class UserDocument {
       'email': email,
       'phone': phone,
       'role': role,
-      'fcmToken': fcmToken,
+      // fcmToken removed for security
     };
   }
 }

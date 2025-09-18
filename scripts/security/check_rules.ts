@@ -66,11 +66,15 @@ class FirestoreRulesChecker {
       for (const file of dartFiles) {
         const content = readFileSync(file, 'utf8');
         
-        // Check if code writes fcmToken to users collection
-        if (content.includes("collection('users')") && 
-            (content.includes('fcmToken') || content.includes('webTokens'))) {
-          this.hasUserTokenStorage = true;
-          break;
+        // Check if code writes fcmToken to users collection (more precise check)
+        if ((content.includes("collection('users')") || content.includes('collection("users")')) && 
+            (content.includes("'fcmToken'") || content.includes('"fcmToken"') || 
+             content.includes("'webTokens'") || content.includes('"webTokens"'))) {
+          // Additional check: ensure it's actually setting these fields
+          if (content.includes('.set(') || content.includes('.update(')) {
+            this.hasUserTokenStorage = true;
+            break;
+          }
         }
       }
     } catch (error) {

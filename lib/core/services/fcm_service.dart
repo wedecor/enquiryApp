@@ -74,14 +74,20 @@ class FCMService {
     try {
       final currentUser = _auth.currentUser;
       if (currentUser != null) {
+        // Store token in private subcollection for security
         await _firestore
             .collection('users')
             .doc(currentUser.uid)
-            .update({
-          'fcmToken': token,
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-        print('FCM: Token saved to user profile');
+            .collection('private')
+            .doc('notifications')
+            .collection('tokens')
+            .doc(token)
+            .set({
+          'token': token,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastUpdate': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        print('FCM: Token saved to private collection');
       }
     } catch (e) {
       print('FCM: Error saving token to user profile: $e');
@@ -220,19 +226,24 @@ class FCMService {
     }
   }
 
-  /// Delete FCM token from user profile (for logout)
+  /// Delete FCM token from private collection (for logout)
   Future<void> deleteTokenFromProfile() async {
     try {
       final currentUser = _auth.currentUser;
       if (currentUser != null) {
-        await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .update({
-          'fcmToken': FieldValue.delete(),
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-        print('FCM: Token deleted from user profile');
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          // Delete token from private subcollection
+          await _firestore
+              .collection('users')
+              .doc(currentUser.uid)
+              .collection('private')
+              .doc('notifications')
+              .collection('tokens')
+              .doc(token)
+              .delete();
+          print('FCM: Token deleted from private collection');
+        }
       }
     } catch (e) {
       print('FCM: Error deleting token from user profile: $e');

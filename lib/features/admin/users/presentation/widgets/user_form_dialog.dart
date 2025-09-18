@@ -150,7 +150,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       role: _selectedRole,
       active: _isActive,
-      fcmToken: widget.user?.fcmToken,
+      // fcmToken removed for security - stored in private subcollection
       createdAt: widget.user?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );

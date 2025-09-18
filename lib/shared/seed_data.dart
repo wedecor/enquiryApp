@@ -241,7 +241,7 @@ Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async
       'email': email,
       'phone': phone,
       'role': role,
-      'fcmToken': null,
+      // fcmToken removed for security - stored in private subcollection
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

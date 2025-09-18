@@ -329,9 +329,10 @@ class SchemaVerificationService {
     }
 
     // Optional field validation
-    if (data.containsKey('fcmToken') && data['fcmToken'] != null && data['fcmToken'] is! String) {
-      errors.add('fcmToken must be a string or null');
-    }
+    // fcmToken field removed for security - tokens now stored in private subcollection
+    // if (data.containsKey('fcmToken') && data['fcmToken'] != null && data['fcmToken'] is! String) {
+    //   errors.add('fcmToken must be a string or null');
+    // }
 
     return SchemaValidationResult(
       isValid: errors.isEmpty,

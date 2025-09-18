@@ -123,7 +123,7 @@ final currentUserProvider = Provider<UserModel?>((ref) {
     phone: userData['phone'] as String?,
     role: userData['role'] as String? ?? 'staff',
     active: userData['active'] as bool? ?? true,
-    fcmToken: userData['fcmToken'] as String?,
+    // fcmToken removed for security - stored in private subcollection
     createdAt: DateTime.now(), // These will be properly set when loaded from Firestore
     updatedAt: DateTime.now(),
   );

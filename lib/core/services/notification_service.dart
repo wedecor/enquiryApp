@@ -234,11 +234,30 @@ class NotificationService {
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
 
-      final userData = userDoc.data() as Map<String, dynamic>;
-      final fcmToken = userData['fcmToken'] as String?;
+      // Read tokens from private subcollection
+      final tokensSnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('private')
+          .doc('notifications')
+          .collection('tokens')
+          .limit(10)
+          .get();
       
-      if (fcmToken == null || fcmToken.isEmpty) {
-        print('NotificationService: No FCM token for user $userId');
+      if (tokensSnapshot.docs.isEmpty) {
+        print('NotificationService: No FCM tokens for user $userId');
+        return;
+      }
+      
+      // Get all valid tokens
+      final tokens = tokensSnapshot.docs
+          .map((doc) => doc.get('token') as String?)
+          .where((token) => token != null && token.isNotEmpty)
+          .cast<String>()
+          .toList();
+      
+      if (tokens.isEmpty) {
+        print('NotificationService: No valid FCM tokens for user $userId');
         return;
       }
 
