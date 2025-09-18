@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiries_list_screen.dart';
+import 'package:we_decor_enquiries/features/admin/users/presentation/user_management_screen.dart';
+import 'package:we_decor_enquiries/features/admin/dropdowns/presentation/dropdown_management_screen.dart';
+import 'package:we_decor_enquiries/features/admin/analytics/presentation/analytics_screen.dart';
+import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart' as auth_provider;
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -44,9 +47,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
-    final currentUser = ref.watch(currentUserWithFirestoreProvider);
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
+    final authUser = ref.watch(auth_provider.firebaseAuthUserProvider);
+    final currentUser = ref.watch(auth_provider.currentUserAsyncProvider);
+    final isAdmin = ref.watch(auth_provider.isAdminProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -67,9 +70,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ),
       ),
       drawer: _buildNavigationDrawer(currentUser, isAdmin),
-      body: authState.when(
-        data: (state) {
-          if (state == AuthState.authenticated) {
+      body: authUser.when(
+        data: (user) {
+          if (user != null) {
             return currentUser.when(
               data: (user) => _buildDashboardContent(context, user, isAdmin),
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -533,50 +536,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          // Drawer header with user info
-          DrawerHeader(
+          // Ultra-simple user header - NO COLUMN, NO OVERFLOW
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               color: Color(0xFF2563EB),
             ),
             child: currentUser.when(
-              data: (user) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              data: (user) => Row(
                 children: [
                   const Icon(
                     Icons.account_circle,
-                    size: 64,
+                    size: 20,
                     color: Colors.white,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user?.name ?? 'User',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    user?.email ?? 'user@example.com',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isAdmin ? Colors.orange : Colors.green,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: Text(
-                      isAdmin ? 'Administrator' : 'Staff Member',
+                      '${user?.name ?? 'User'} (${isAdmin ? 'Admin' : 'Staff'})',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -646,7 +630,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               title: 'User Management',
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
-                _showAdminFeatureNotImplemented(context, 'User Management');
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const UserManagementScreen(),
+                  ),
+                );
               },
             ),
             _buildMenuItem(
@@ -654,7 +642,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               title: 'Dropdown Management',
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
-                _showAdminFeatureNotImplemented(context, 'Dropdown Management');
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const DropdownManagementScreen(),
+                  ),
+                );
               },
             ),
             _buildMenuItem(
@@ -662,7 +654,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               title: 'System Analytics',
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
-                _showAdminFeatureNotImplemented(context, 'System Analytics');
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const AnalyticsScreen(),
+                  ),
+                );
               },
             ),
           ],

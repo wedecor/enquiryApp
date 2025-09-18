@@ -106,17 +106,17 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         ];
       case 'payment_statuses':
         return [
-          {'label': 'Unpaid', 'value': 'unpaid'},
-          {'label': 'Advance Paid', 'value': 'advance_paid'},
-          {'label': 'Partially Paid', 'value': 'partially_paid'},
+          {'label': 'Pending', 'value': 'pending'},
+          {'label': 'Partial', 'value': 'partial'},
           {'label': 'Paid', 'value': 'paid'},
-          {'label': 'Refunded', 'value': 'refunded'},
+          {'label': 'Overdue', 'value': 'overdue'},
         ];
       case 'priorities':
         return [
           {'label': 'Low', 'value': 'low'},
           {'label': 'Medium', 'value': 'medium'},
           {'label': 'High', 'value': 'high'},
+          {'label': 'Urgent', 'value': 'urgent'},
         ];
       default:
         return [];
@@ -201,7 +201,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       await _loadStatuses();
 
       // Set the new value
-      widget.onChanged(newStatus.toLowerCase().replaceAll(' ', '_'));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onChanged(newStatus.toLowerCase().replaceAll(' ', '_'));
+      });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

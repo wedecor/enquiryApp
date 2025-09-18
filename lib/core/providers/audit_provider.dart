@@ -9,7 +9,7 @@ final auditServiceProvider = Provider<AuditService>((ref) {
 /// Provider for enquiry history stream
 final enquiryHistoryProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, enquiryId) {
   final auditService = ref.read(auditServiceProvider);
-  return Stream.fromFuture(auditService.getEnquiryHistory(enquiryId));
+  return auditService.getEnquiryHistoryStream(enquiryId);
 });
 
 /// Provider for field history stream

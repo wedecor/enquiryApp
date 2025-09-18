@@ -8,10 +8,11 @@
     "typecheck": "tsc --noEmit",
     "check-workflow": "tsx scripts/checkWorkflow.ts",
     "gh-run-seed": "gh workflow run 'Seed Firestore (WeDecor)' -f admin_uid=$ADMIN_UID && gh run watch",
+    "admin-uid": "tsx scripts/getOrCreateAdminUid.ts",
+    "seed:local": "bash scripts/run_local_seed.sh",
     "setup:apis": "bash scripts/setup/enable_apis.sh",
     "setup:firestore": "bash scripts/setup/create_firestore_db.sh",
     "setup:service-account": "bash scripts/01_create_service_account_and_key.sh",
-    "seed:local": "bash scripts/02_seed_local.sh",
     "seed:docker": "bash scripts/03_seed_docker.sh"
   },
   "devDependencies": {

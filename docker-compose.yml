@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  seeder:
+    build: .
+    environment:
+      - ADMIN_UID=${ADMIN_UID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/serviceAccountKey.json
+    volumes:
+      - .:/app
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    working_dir: /app
+    command: npm run seed
+
