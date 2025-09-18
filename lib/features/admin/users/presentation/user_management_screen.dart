@@ -7,6 +7,7 @@ import '../domain/user_model.dart';
 import 'users_providers.dart';
 import 'widgets/user_form_dialog.dart';
 import 'widgets/confirm_dialog.dart';
+import 'invite_user_dialog.dart';
 import 'role_checker_panel.dart';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
@@ -54,9 +55,21 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         title: const Text('User Management'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (isAdmin)
+          if (isAdmin) ...[
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              child: FilledButton.icon(
+                onPressed: () => _showInviteUserDialog(context),
+                icon: const Icon(Icons.email),
+                label: const Text('Invite'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
               child: FilledButton.icon(
                 onPressed: () => _showAddUserDialog(context),
                 icon: const Icon(Icons.person_add),
@@ -67,6 +80,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 ),
               ),
             ),
+          ],
         ],
       ),
       body: Column(
@@ -494,6 +508,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => const UserFormDialog(),
+    );
+  }
+
+  void _showInviteUserDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const InviteUserDialog(),
     );
   }
 
