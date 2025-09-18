@@ -13,7 +13,8 @@
     "setup:apis": "bash scripts/setup/enable_apis.sh",
     "setup:firestore": "bash scripts/setup/create_firestore_db.sh",
     "setup:service-account": "bash scripts/01_create_service_account_and_key.sh",
-    "seed:docker": "bash scripts/03_seed_docker.sh"
+    "seed:docker": "bash scripts/03_seed_docker.sh",
+    "smoke:notify": "node scripts/smoke_notify.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
