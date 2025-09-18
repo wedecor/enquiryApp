@@ -1,19 +1,38 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
-    "outDir": "lib",
+    "target": "es2020",
+    "lib": ["es2020"],
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true,
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "removeComments": true,
     "strict": true,
-    "target": "es2018",
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/*"]
+    },
+    "allowJs": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false
   },
-  "compileOnSave": true,
   "include": [
-    "src"
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "lib"
   ]
 }
-

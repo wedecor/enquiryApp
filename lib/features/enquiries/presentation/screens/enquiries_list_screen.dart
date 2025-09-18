@@ -21,7 +21,7 @@ class EnquiriesListScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (action) => _handleAction(context, ref, action, userRole, user?.uid),
+            onSelected: (action) => _handleAction(context, ref, action, userRole, currentUser.value?.uid),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'export',
