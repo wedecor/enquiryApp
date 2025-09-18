@@ -1,11 +1,25 @@
 {
   "indexes": [
     {
+      "collectionGroup": "items",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "active",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "assignedTo",
+          "fieldPath": "eventStatus",
           "order": "ASCENDING"
         },
         {
@@ -20,28 +34,6 @@
       "fields": [
         {
           "fieldPath": "assignedTo",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "eventStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "enquiries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "assignedTo",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "eventStatus",
           "order": "ASCENDING"
         },
         {
@@ -65,47 +57,47 @@
       ]
     },
     {
-      "collectionGroup": "enquiries",
+      "collectionGroup": "history",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "eventStatus",
+          "fieldPath": "enquiry_id",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "assignedTo",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "enquiries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "eventStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "enquiries",
+      "collectionGroup": "history",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "eventType",
+          "fieldPath": "user_id",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "field_changed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
       ]
     }
   ],
   "fieldOverrides": []
-} 
+}

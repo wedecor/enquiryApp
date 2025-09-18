@@ -116,4 +116,24 @@ docker-compose --version
 - ✅ TypeScript seeder with Zod validation
 - ✅ Complete Firebase Admin SDK setup
 
+## Local one-shot seeding
+
+```bash
+# 0) Install deps
+npm i
+
+# 1) Put your Firebase service account at:
+#    ./serviceAccountKey.json
+#    OR export GOOGLE_APPLICATION_CREDENTIALS to its absolute path.
+
+# 2) Run the full pipeline (UID → seed → verify)
+npm run seed:local
+```
+
+**Defaults:**
+
+Admin email: admin@wedecorevents.com
+
+Temp password: admin12 (change later in Firebase Console)
+
 **This is the ultimate, enterprise-grade solution for your Firestore seeding needs!** 🚀

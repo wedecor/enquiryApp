@@ -48,19 +48,24 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   @override
   void initState() {
     super.initState();
+    print('🔍 EnquiryFormScreen: initState called - mode: ${widget.mode}, enquiryId: ${widget.enquiryId}');
     // Set default values for dropdowns
     // Use dropdown value keys (snake_case)
     _selectedStatus = 'new';
     _selectedPriority = 'medium';
-    _selectedPaymentStatus = 'unpaid';
+    _selectedPaymentStatus = 'pending';
     
     // Load existing data if in edit mode
     if (widget.mode == 'edit' && widget.enquiryId != null) {
+      print('🔍 EnquiryFormScreen: About to call _loadEnquiryData');
       _loadEnquiryData();
+    } else {
+      print('🔍 EnquiryFormScreen: Not in edit mode or no enquiryId');
     }
   }
 
   Future<void> _loadEnquiryData() async {
+    print('🔍 EnquiryFormScreen: _loadEnquiryData called for enquiryId: ${widget.enquiryId}');
     try {
       final doc = await FirebaseFirestore.instance
           .collection('enquiries')
@@ -85,6 +90,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           
           // Set dropdown values from database
           _selectedEventType = data['eventType'] as String?;
+          print('🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"');
           
           // Safely set dropdown values - ensure they exist in valid options
           final eventStatus = data['eventStatus'] as String?;
@@ -411,19 +417,38 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Event Type Field
-              EventTypeAutocomplete(
-                initialValue: _selectedEventType,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedEventType = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please select an event type';
-                  }
-                  return null;
+              // Event Type Field - SIMPLIFIED FOR TESTING
+              Builder(
+                builder: (context) {
+                  print('🔍 EnquiryFormScreen: Event type value: "$_selectedEventType"');
+                  return DropdownButtonFormField<String>(
+                    value: _selectedEventType,
+                    decoration: const InputDecoration(
+                      labelText: 'Event Type *',
+                      prefixIcon: Icon(Icons.event),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'wedding', child: Text('Wedding')),
+                      DropdownMenuItem(value: 'birthday', child: Text('Birthday')),
+                      DropdownMenuItem(value: 'corporate_event', child: Text('Corporate Event')),
+                      DropdownMenuItem(value: 'haldi', child: Text('Haldi')),
+                      DropdownMenuItem(value: 'anniversary', child: Text('Anniversary')),
+                      DropdownMenuItem(value: 'others', child: Text('Others')),
+                    ],
+                    onChanged: (value) {
+                      print('🔍 EnquiryFormScreen: Event type changed to: "$value"');
+                      setState(() {
+                        _selectedEventType = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please select an event type';
+                      }
+                      return null;
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 16),
@@ -434,8 +459,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 value: _selectedStatus,
                 label: 'Status',
                 onChanged: (value) {
-                  setState(() {
-                    _selectedStatus = value;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      _selectedStatus = value;
+                    });
                   });
                 },
                 validator: (value) {
@@ -453,8 +480,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 value: _selectedPriority,
                 label: 'Priority',
                 onChanged: (value) {
-                  setState(() {
-                    _selectedPriority = value;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      _selectedPriority = value;
+                    });
                   });
                 },
                 validator: (value) {
@@ -492,8 +521,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         }),
                       ],
                       onChanged: (value) {
-                        setState(() {
-                          _selectedAssignedTo = value;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          setState(() {
+                            _selectedAssignedTo = value;
+                          });
                         });
                       },
                     );
@@ -516,8 +547,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       hintText: 'Enter user ID or leave empty for unassigned',
                     ),
                     onChanged: (value) {
-                      setState(() {
-                        _selectedAssignedTo = value.isEmpty ? null : value;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        setState(() {
+                          _selectedAssignedTo = value.isEmpty ? null : value;
+                        });
                       });
                     },
                   ),
@@ -587,8 +620,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   value: _selectedPaymentStatus,
                   label: 'Payment Status',
                   onChanged: (value) {
-                    setState(() {
-                      _selectedPaymentStatus = value;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        _selectedPaymentStatus = value;
+                      });
                     });
                   },
                   validator: (value) {

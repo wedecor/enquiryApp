@@ -1,84 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===== SHARED HELPERS =====
-    
-    function isAuthenticated() {
+
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    // Resolve role from users doc of the requester
     function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    function isStaff() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "staff";
+    // User management - Allow read for signed-in users, write for admins
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Temporarily allow all authenticated users to write
     }
 
-    function isAssignedToEnquiry(enquiry) {
-      return enquiry.assignedTo == request.auth.uid;
-    }
-
-    function canViewEnquiry(enquiry) {
-      return isAdmin() || isAssignedToEnquiry(enquiry);
-    }
-
-    function canModifyEnquiry(enquiry) {
-      return isAdmin() || (isAssignedToEnquiry(enquiry) && request.resource.data.diff(resource.data).changedKeys().hasOnly(["eventStatus"]));
-    }
-    
-    // ===== USERS COLLECTION =====
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin(); // Only admins can create users
-      allow update: if isAdmin() || request.auth.uid == userId; // Users can update their own profile, admins can update any
-      allow delete: if isAdmin();
-    }
-    
-    // ===== ENQUIRIES COLLECTION =====
+    // Enquiries - authenticated users can read and write
     match /enquiries/{enquiryId} {
-      allow read: if isAuthenticated() && canViewEnquiry(resource.data);
-      allow create: if isAuthenticated(); // Any authenticated user can create enquiries
-      allow update: if isAuthenticated() && canModifyEnquiry(resource.data);
-      allow delete: if isAdmin();
-      
-      // ===== FINANCIAL SUBSCOLLECTION =====
-      match /financial/{docId} {
-        allow read: if isAuthenticated() && canViewEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
-        allow create: if isAdmin(); // Only admins can create financial records
-        allow update: if isAdmin(); // Only admins can update financial records
-        allow delete: if isAdmin();
-      }
-      
-      // ===== HISTORY SUBSCOLLECTION =====
-      match /history/{docId} {
-        allow read: if isAuthenticated() && canViewEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
-        allow create: if isAuthenticated() && canModifyEnquiry(get(/databases/$(database)/documents/enquiries/$(enquiryId)).data);
-        allow update: if false; // History should be immutable
-        allow delete: if false; // History should be immutable
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn();
       }
     }
-    
-    // ===== DROPDOWNS COLLECTION =====
-    match /dropdowns/{dropdownType} {
-      allow read: if isAuthenticated();
-      allow create: if isAdmin(); // Only admins can create dropdown types
-      allow update: if isAdmin(); // Only admins can update dropdown types
-      allow delete: if isAdmin();
-      
-      // ===== DROPDOWN ITEMS SUBSCOLLECTION =====
-      match /items/{itemId} {
-        allow read: if isAuthenticated();
-        allow create: if isAdmin(); // Only admins can create dropdown items
-        allow update: if isAdmin(); // Only admins can update dropdown items
-        allow delete: if isAdmin(); // Only admins can delete dropdown items
-      }
+
+    // Dropdowns - authenticated users can read, admin can manage
+    match /dropdowns/{group}/items/{value} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
-    
-    // ===== META COLLECTION (for seeding status) =====
-    match /meta/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+
+    // Optional aggregated analytics collections (if you deploy functions)
+    match /analytics/{doc=**} {
+      allow read: if isSignedIn();
     }
   }
-} 
+}

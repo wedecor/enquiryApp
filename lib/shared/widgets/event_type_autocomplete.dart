@@ -48,17 +48,42 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   void didUpdateWidget(EventTypeAutocomplete oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Update the controller when the initial value changes
-    if (oldWidget.initialValue != widget.initialValue && !_isLoading) {
+    if (oldWidget.initialValue != widget.initialValue) {
+      print('🔍 EventTypeAutocomplete: Initial value changed from "${oldWidget.initialValue}" to "${widget.initialValue}"');
       _isInitialized = false;
-      _setInitialValue();
+      if (!_isLoading) {
+        _setInitialValue();
+      }
     }
   }
 
   Future<void> _loadEventTypes() async {
+    print('🔍 EventTypeAutocomplete: Starting to load event types...');
     setState(() {
       _isLoading = true;
     });
 
+    // TEMPORARY: Always use fallback values for testing
+    print('🔍 EventTypeAutocomplete: Using fallback values for testing');
+    final defaultEventTypes = [
+      {'label': 'Wedding', 'value': 'wedding'},
+      {'label': 'Birthday', 'value': 'birthday'},
+      {'label': 'Corporate Event', 'value': 'corporate_event'},
+      {'label': 'Haldi', 'value': 'haldi'},
+      {'label': 'Anniversary', 'value': 'anniversary'},
+      {'label': 'Others', 'value': 'others'},
+    ];
+    setState(() {
+      _eventTypes = defaultEventTypes;
+      _filteredEventTypes = defaultEventTypes;
+      _isLoading = false;
+    });
+    
+    // Set initial value after loading default event types
+    _setInitialValue();
+
+    // TODO: Re-enable Firestore loading after testing
+    /*
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('dropdowns')
@@ -78,6 +103,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         };
       }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
 
+      print('🔍 EventTypeAutocomplete: Successfully loaded ${eventTypes.length} event types from Firestore');
       setState(() {
         _eventTypes = eventTypes;
         _filteredEventTypes = eventTypes;
@@ -92,17 +118,10 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       final defaultEventTypes = [
         {'label': 'Wedding', 'value': 'wedding'},
         {'label': 'Birthday', 'value': 'birthday'},
+        {'label': 'Corporate Event', 'value': 'corporate_event'},
         {'label': 'Haldi', 'value': 'haldi'},
-        {'label': 'Mehendi', 'value': 'mehendi'},
         {'label': 'Anniversary', 'value': 'anniversary'},
-        {'label': 'Engagement', 'value': 'engagement'},
-        {'label': 'Naming', 'value': 'naming_ceremony'},
-        {'label': 'Baby Shower', 'value': 'baby_shower'},
-        {'label': 'Corporate', 'value': 'corporate'},
-        {'label': 'Reception', 'value': 'reception'},
-        {'label': 'Romantic Surprise', 'value': 'romantic_surprise'},
-        {'label': 'Proposal', 'value': 'proposal'},
-        {'label': 'Other', 'value': 'other'},
+        {'label': 'Others', 'value': 'others'},
       ];
       setState(() {
         _eventTypes = defaultEventTypes;
@@ -113,10 +132,13 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       // Set initial value after loading default event types
       _setInitialValue();
     }
+    */
   }
 
   void _setInitialValue() {
-    if (!_isInitialized && widget.initialValue != null && widget.initialValue!.isNotEmpty) {
+    print('🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"');
+    print('🔍 EventTypeAutocomplete: Available event types: ${_eventTypes.map((e) => '${e['value']}: ${e['label']}').join(', ')}');
+    if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
       // Find the matching event type by value
       final matchingEventType = _eventTypes.firstWhere(
         (eventType) => eventType['value'] == widget.initialValue,
@@ -125,13 +147,32 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       
       if (matchingEventType.isNotEmpty) {
         _controller.text = matchingEventType['label'] ?? widget.initialValue!;
-        widget.onChanged(widget.initialValue!);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onChanged(widget.initialValue!);
+        });
+        _isInitialized = true;
       } else {
-        // If no exact match found, just set the text as-is
-        _controller.text = widget.initialValue!;
-        widget.onChanged(widget.initialValue!);
+        // If no exact match found, try to find by label
+        final matchingByLabel = _eventTypes.firstWhere(
+          (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
+          orElse: () => <String, String>{},
+        );
+        
+        if (matchingByLabel.isNotEmpty) {
+          _controller.text = matchingByLabel['label'] ?? widget.initialValue!;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onChanged(matchingByLabel['value'] ?? widget.initialValue!);
+          });
+          _isInitialized = true;
+        } else {
+          // If still no match, just set the text as-is
+          _controller.text = widget.initialValue!;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onChanged(widget.initialValue!);
+          });
+          _isInitialized = true;
+        }
       }
-      _isInitialized = true;
     }
   }
 

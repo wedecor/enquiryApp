@@ -199,3 +199,4 @@ test-results/
 # CI/CD artifacts
 artifacts/
 .vercel
+serviceAccountKey.json

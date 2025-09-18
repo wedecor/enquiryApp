@@ -313,13 +313,34 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           .orderBy('order')
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const CircularProgressIndicator();
+        // Show loading only briefly, then fallback to default statuses
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          );
         }
 
-        final statuses = snapshot.data!.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        // Use fallback statuses if Firestore collection is empty or has error
+        List<Map<String, dynamic>> statuses;
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          // Fallback to default statuses
+          statuses = [
+            {'value': 'new', 'label': 'New', 'order': 1},
+            {'value': 'in_progress', 'label': 'In Progress', 'order': 2},
+            {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3},
+            {'value': 'approved', 'label': 'Approved', 'order': 4},
+            {'value': 'scheduled', 'label': 'Scheduled', 'order': 5},
+            {'value': 'completed', 'label': 'Completed', 'order': 6},
+            {'value': 'cancelled', 'label': 'Cancelled', 'order': 7},
+            {'value': 'closed_lost', 'label': 'Closed Lost', 'order': 8},
+          ];
+        } else {
+          statuses = snapshot.data!.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
+        }
 
         final currentStatus = (_selectedStatus ?? (enquiryData['eventStatus'] as String?)) ?? 'new';
         final values = statuses.map((s) => (s['value'] as String?) ?? '').toList();
