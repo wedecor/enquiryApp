@@ -1,0 +1,38 @@
+name: Seed Firestore (WeDecor)
+on:
+  workflow_dispatch:
+    inputs:
+      admin_uid:
+        description: "Firebase Auth UID for the admin user doc"
+        required: true
+        type: string
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Write service account JSON from secret
+        run: |
+          echo "${{ secrets.GOOGLE_CREDENTIALS }}" > serviceAccountKey.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$PWD/serviceAccountKey.json" >> $GITHUB_ENV
+
+      - name: Install deps
+        run: npm ci || npm i
+
+      - name: Seed Firestore
+        env:
+          ADMIN_UID: ${{ inputs.admin_uid }}
+        run: npm run seed
+
+      - name: Verify (post-seed checks)
+        env:
+          ADMIN_UID: ${{ inputs.admin_uid }}
+        run: npm run verify-seed
