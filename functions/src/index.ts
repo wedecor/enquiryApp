@@ -1,157 +1,106 @@
+import { setGlobalOptions, logger } from "firebase-functions/v2";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { setGlobalOptions } from "firebase-functions/v2/options";
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 
-// Set global options for all functions
 setGlobalOptions({
-  region: 'asia-south1',
+  region: "asia-south1",
+  memory: "128MiB",
   timeoutSeconds: 30,
-  memory: '128MiB'
+  maxInstances: 5
 });
 
-// Initialize Firebase Admin
 initializeApp();
-const firestore = getFirestore();
-const messaging = getMessaging();
 
-/**
- * Sends FCM notification when enquiry is created, assigned, or status/payment changes
- */
+type Enquiry = {
+  assignedTo?: string | null;
+  eventStatus?: string | null;
+  paymentStatus?: string | null;
+  customerName?: string | null;
+};
+
 export const notifyOnEnquiryChange = onDocumentWritten(
-  'enquiries/{id}',
+  "enquiries/{id}",
   async (event) => {
-    const enquiryId = event.params.id;
-    const before = event.data?.before?.data();
-    const after = event.data?.after?.data();
+    const before = (event.data?.before?.data() || null) as Enquiry | null;
+    const after = (event.data?.after?.data() || null) as Enquiry | null;
 
-    // If document was deleted, skip
     if (!after) {
+      // Deleted doc: no-op
       return;
     }
 
-    // For new documents (create), treat as meaningful change
-    const isCreate = !before;
-    
-    // Check for meaningful changes
-    const changes: string[] = [];
-    
-    if (isCreate) {
-      changes.push('Created');
-    } else {
-      if (before.assignedTo !== after.assignedTo) {
-        changes.push('Assigned');
-      }
-      if (before.eventStatus !== after.eventStatus) {
-        changes.push(`Status: ${after.eventStatus || 'Unknown'}`);
-      }
-      if (before.paymentStatus !== after.paymentStatus) {
-        changes.push(`Payment: ${after.paymentStatus || 'Unknown'}`);
-      }
-    }
+    const changedAssigned = (before?.assignedTo ?? null) !== (after.assignedTo ?? null);
+    const changedStatus   = (before?.eventStatus ?? null) !== (after.eventStatus ?? null);
+    const changedPayment  = (before?.paymentStatus ?? null) !== (after.paymentStatus ?? null);
 
-    // If no meaningful changes, skip notification
-    if (changes.length === 0) {
+    if (!(changedAssigned || changedStatus || changedPayment)) {
+      logger.debug("No meaningful change; skipping push", { id: event.params.id });
       return;
     }
 
-    // Must have an assigned user to notify
-    if (!after.assignedTo) {
-      console.log(`Enquiry ${enquiryId}: No assigned user, skipping notification`);
+    const uid = after.assignedTo;
+    if (!uid) {
+      logger.debug("No assignedTo on enquiry; skipping", { id: event.params.id });
       return;
     }
 
-    try {
-      // Load user document to get FCM tokens
-      const userDoc = await firestore.collection('users').doc(after.assignedTo).get();
-      
-      if (!userDoc.exists) {
-        console.log(`User ${after.assignedTo} not found, skipping notification`);
-        return;
-      }
-
-      const userData = userDoc.data()!;
-      const tokens: string[] = [];
-
-      // Collect FCM tokens (dedupe)
-      if (userData.fcmToken && typeof userData.fcmToken === 'string') {
-        tokens.push(userData.fcmToken);
-      }
-      
-      if (userData.webTokens && Array.isArray(userData.webTokens)) {
-        userData.webTokens.forEach((token: any) => {
-          if (typeof token === 'string' && token && !tokens.includes(token)) {
-            tokens.push(token);
-          }
-        });
-      }
-
-      if (tokens.length === 0) {
-        console.log(`User ${after.assignedTo}: No FCM tokens, skipping notification`);
-        return;
-      }
-
-      // Build notification content
-      const title = changes.join(' • ');
-      const body = `Customer: ${after.customerName || 'Open the app for details'}`;
-      
-      const notificationData = {
-        type: 'enquiry_update',
-        enquiryId: enquiryId,
-        eventStatus: after.eventStatus || '',
-        paymentStatus: after.paymentStatus || ''
-      };
-
-      // Send FCM notification
-      const response = await messaging.sendEachForMulticast({
-        tokens: tokens,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: notificationData,
-        webpush: {
-          notification: {
-            icon: '/icons/Icon-192.png',
-            badge: '/icons/Icon-192.png',
-            tag: enquiryId,
-            requireInteraction: false
-          }
-        }
-      });
-
-      // Optional: Write notification document
-      const notificationDoc = {
-        type: 'enquiry_update',
-        enquiryId: enquiryId,
-        title: title,
-        body: body,
-        createdAt: Timestamp.now(),
-        read: false,
-        archived: false
-      };
-
-      await firestore
-        .collection('notifications')
-        .doc(after.assignedTo)
-        .collection('items')
-        .add(notificationDoc);
-
-      // Log summary
-      console.log(`Enquiry ${enquiryId}: Sent ${response.successCount}/${tokens.length} notifications to user ${after.assignedTo}. Changes: ${changes.join(', ')}`);
-
-      // Log any failures
-      if (response.failureCount > 0) {
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            console.error(`Token ${idx} failed:`, resp.error);
-          }
-        });
-      }
-
-    } catch (error) {
-      console.error(`Failed to send notification for enquiry ${enquiryId}:`, error);
+    const db = getFirestore();
+    const userSnap = await db.doc(`users/${uid}`).get();
+    if (!userSnap.exists) {
+      logger.info("Missing users doc; skipping notification", { uid });
+      return;
     }
+
+    const fcmToken = userSnap.get("fcmToken") as string | undefined;
+    const webTokens = (userSnap.get("webTokens") as string[] | undefined) ?? [];
+    const tokens = Array.from(new Set([fcmToken, ...webTokens].filter((t): t is string => !!t && t.length > 0)));
+
+    if (tokens.length === 0) {
+      logger.info("No tokens present; skipping", { uid });
+      return;
+    }
+
+    const titleParts: string[] = [];
+    if (changedAssigned) titleParts.push("Assigned");
+    if (changedStatus)   titleParts.push(`Status: ${after.eventStatus ?? ""}`);
+    if (changedPayment)  titleParts.push(`Payment: ${after.paymentStatus ?? ""}`);
+    const title = titleParts.join(" • ") || "Enquiry Updated";
+
+    const body  = after.customerName ? `Customer: ${after.customerName}` : "Open the app for details";
+    const data  = {
+      type: "enquiry_update",
+      enquiryId: event.params.id,
+      eventStatus: after.eventStatus ?? "",
+      paymentStatus: after.paymentStatus ?? ""
+    };
+
+    const res = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data
+    });
+
+    logger.info("Push summary", {
+      id: event.params.id,
+      uid,
+      tokens: tokens.length,
+      success: res.successCount,
+      failure: res.failureCount
+    });
+
+    // Optional in-app inbox doc
+    await db.collection("notifications").doc(uid).collection("items").add({
+      type: "enquiry_update",
+      enquiryId: event.params.id,
+      title,
+      body,
+      eventStatus: after.eventStatus ?? null,
+      paymentStatus: after.paymentStatus ?? null,
+      createdAt: FieldValue.serverTimestamp(),
+      read: false,
+      archived: false
+    });
   }
 );

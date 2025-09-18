@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/services/fcm_service.dart';
 import 'package:we_decor_enquiries/core/notifications/fcm_token_manager.dart';
+import 'package:we_decor_enquiries/core/notifications/fcm_bootstrap.dart';
 import 'package:we_decor_enquiries/features/auth/presentation/screens/login_screen.dart';
 import 'package:we_decor_enquiries/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:we_decor_enquiries/shared/seed_data.dart';
@@ -42,10 +43,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Initialize FCM for web notifications
-  if (kIsWeb) {
-    await FcmTokenManager.initialize();
-  }
+  // FCM initialization is now handled by FcmBootstrap
   
   // Security check for environment variables
   if (kDebugMode) {
@@ -56,8 +54,8 @@ void main() async {
   // Uncomment the following lines to seed data on app startup
   // await _seedDataForDebug();
   
-  // Launch the application with Riverpod provider scope
-  runApp(const ProviderScope(child: MyApp()));
+  // Launch the application with Riverpod provider scope and FCM bootstrap
+  runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
 }
 
 /// Seeds data for admin debug runs

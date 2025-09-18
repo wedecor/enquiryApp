@@ -2,44 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() { 
-      return request.auth != null; 
-    }
-    
+    function isSignedIn() { return request.auth != null; }
     function isAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Users collection - Admin can manage, signed-in users can read
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
-    // Enquiries - Admins see all, Staff only see assigned enquiries
     match /enquiries/{id} {
-      allow read: if isAdmin() 
-                  || (isSignedIn() && resource.data.assignedTo == request.auth.uid);
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.assignedTo == request.auth.uid);
       allow create, update, delete: if isAdmin();
     }
 
-    // Per-user notifications (created by Cloud Functions)
     match /notifications/{uid}/items/{nid} {
       allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isAdmin(); // created by CF with admin privileges
-    }
-
-    // Dropdowns - authenticated users can read, admin can manage
-    match /dropdowns/{group}/items/{value} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Analytics read-only for signed-in users
-    match /analytics/{doc=**} {
-      allow read: if isSignedIn();
+      // created by Cloud Functions using admin privileges
+      allow create: if isAdmin();
     }
   }
 }

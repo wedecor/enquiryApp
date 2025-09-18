@@ -1,31 +1,19 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'app_notification.freezed.dart';
 part 'app_notification.g.dart';
 
-/// Notification types in the app
+/// Enumeration of notification types
 enum NotificationType {
   enquiryUpdate,
   newEnquiry,
-  userInvited,
-  systemAlert;
-
-  String get label {
-    switch (this) {
-      case NotificationType.enquiryUpdate:
-        return 'Enquiry Update';
-      case NotificationType.newEnquiry:
-        return 'New Enquiry';
-      case NotificationType.userInvited:
-        return 'User Invited';
-      case NotificationType.systemAlert:
-        return 'System Alert';
-    }
-  }
+  assignment,
+  statusChange,
+  paymentUpdate,
 }
 
-/// Application notification model
+/// Represents an application notification
 @freezed
 class AppNotification with _$AppNotification {
   const factory AppNotification({
@@ -47,7 +35,6 @@ class AppNotification with _$AppNotification {
   /// Create from Firestore document
   factory AppNotification.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
     return AppNotification(
       id: doc.id,
       type: _parseNotificationType(data['type'] as String?),
@@ -61,7 +48,6 @@ class AppNotification with _$AppNotification {
       metadata: data['metadata'] as Map<String, dynamic>?,
     );
   }
-
 }
 
 /// Extension to convert AppNotification to Firestore data
@@ -90,31 +76,15 @@ NotificationType _parseNotificationType(String? typeString) {
     case 'newEnquiry':
     case 'new_enquiry':
       return NotificationType.newEnquiry;
-    case 'userInvited':
-    case 'user_invited':
-      return NotificationType.userInvited;
-    case 'systemAlert':
-    case 'system_alert':
-      return NotificationType.systemAlert;
+    case 'assignment':
+      return NotificationType.assignment;
+    case 'statusChange':
+    case 'status_change':
+      return NotificationType.statusChange;
+    case 'paymentUpdate':
+    case 'payment_update':
+      return NotificationType.paymentUpdate;
     default:
-      return NotificationType.systemAlert;
-  }
-}
-
-/// Notification filter options
-enum NotificationFilter {
-  all,
-  unread,
-  archived;
-
-  String get label {
-    switch (this) {
-      case NotificationFilter.all:
-        return 'All';
-      case NotificationFilter.unread:
-        return 'Unread';
-      case NotificationFilter.archived:
-        return 'Archived';
-    }
+      return NotificationType.enquiryUpdate;
   }
 }
