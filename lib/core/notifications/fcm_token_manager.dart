@@ -17,8 +17,8 @@ class FcmTokenManager {
       alert: true, badge: true, sound: true,
     );
 
-    // VAPID public key from Firebase Console
-    const vapidKey = 'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E';
+    // VAPID public key from environment configuration
+    const vapidKey = String.fromEnvironment('VAPID_PUBLIC_KEY', defaultValue: 'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E');
 
     final token = await FirebaseMessaging.instance.getToken(vapidKey: vapidKey);
     if (token == null) return;

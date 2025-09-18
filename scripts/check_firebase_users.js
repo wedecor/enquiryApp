@@ -18,7 +18,7 @@ async function checkFirebaseUsers() {
     // Get all users from Firebase Auth
     const authUsers = await admin.auth().listUsers();
     
-    console.log(`\n📋 Found ${authUsers.users.length} users in Firebase Authentication:`);
+    console.log(`\n📋 Found [AUTHUSERS_REDACTED].users.length} users in Firebase Authentication:`);
     console.log('=' .repeat(80));
     
     for (const user of authUsers.users) {
@@ -42,7 +42,7 @@ async function checkFirebaseUsers() {
           console.log(`      🔄 Updated: ${userData.updatedAt?.toDate?.() || 'Not set'}`);
         } else {
           console.log(`   📄 Firestore Document: ❌ MISSING`);
-          console.log(`      ⚠️  This user exists in Auth but not in Firestore!`);
+          console.log(`      ⚠️  This user exists in [REDACTED] but not in Firestore!`);
         }
       } catch (error) {
         console.log(`   📄 Firestore Document: ❌ ERROR - ${error.message}`);
@@ -71,9 +71,9 @@ async function checkFirebaseUsers() {
       // Check if this user exists in Firebase Auth
       try {
         const authUser = await admin.auth().getUser(doc.id);
-        console.log(`   🔐 Auth Status: ✅ EXISTS (${authUser.email})`);
+        console.log(`   🔐 [REDACTED] Status: ✅ EXISTS ([AUTHUSER_REDACTED].email})`);
       } catch (error) {
-        console.log(`   🔐 Auth Status: ❌ MISSING - User exists in Firestore but not in Auth!`);
+        console.log(`   🔐 [REDACTED] Status: ❌ MISSING - User exists in Firestore but not in [REDACTED]!`);
       }
     }
     

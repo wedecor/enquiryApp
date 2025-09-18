@@ -26,7 +26,7 @@ interface MigrationStats {
 }
 
 async function migrateTokensToPrivate(): Promise<MigrationStats> {
-  console.log('🔄 Starting FCM token migration to private subcollection...\n');
+  console.log('🔄 Starting FCM [REDACTED] migration to [REDACTED] subcollection...\n');
 
   const stats: MigrationStats = {
     usersSeen: 0,
@@ -66,7 +66,7 @@ async function migrateTokensToPrivate(): Promise<MigrationStats> {
           continue;
         }
 
-        console.log(`👤 User ${userDoc.id}: Found ${legacyTokens.size} legacy tokens`);
+        console.log(`👤 User ${userDoc.id}: Found [LEGACYTOKENS_REDACTED].size} legacy tokens`);
 
         // Move tokens to private subcollection
         const tokensCollection = userDoc.ref
@@ -92,7 +92,7 @@ async function migrateTokensToPrivate(): Promise<MigrationStats> {
         }, { merge: true });
 
         stats.usersCleaned++;
-        console.log(`✅ User ${userDoc.id}: Migrated ${legacyTokens.size} tokens to private collection`);
+        console.log(`✅ User ${userDoc.id}: Migrated [LEGACYTOKENS_REDACTED].size} tokens to [REDACTED] collection`);
 
       } catch (error) {
         stats.errors++;
@@ -123,9 +123,9 @@ async function verifyMigration(): Promise<void> {
     .get();
 
   if (usersWithTokens.size > 0 || usersWithWebTokens.size > 0) {
-    console.warn('⚠️  Some users still have legacy token fields');
+    console.warn('⚠️  Some users still have legacy [REDACTED] fields');
   } else {
-    console.log('✅ No legacy token fields found in users collection');
+    console.log('✅ No legacy [REDACTED] fields found in users collection');
   }
 
   // Sample check of private tokens
@@ -137,14 +137,14 @@ async function verifyMigration(): Promise<void> {
       .collection("tokens").limit(1).get();
     
     if (privateTokens.size > 0) {
-      console.log('✅ Private token collection structure verified');
+      console.log('✅ [REDACTED] [REDACTED] collection structure verified');
     }
   }
 }
 
 async function main() {
   try {
-    console.log('🛡️  FCM TOKEN SECURITY MIGRATION');
+    console.log('🛡️  FCM [REDACTED] SECURITY MIGRATION');
     console.log('═'.repeat(40));
     console.log(`🕐 Started: ${new Date().toLocaleString()}\n`);
 
@@ -166,8 +166,8 @@ async function main() {
     }
 
     console.log('\n✅ MIGRATION SUCCESSFUL!');
-    console.log('🔒 FCM tokens are now stored securely in private subcollections');
-    console.log('🚀 Deploy updated Cloud Functions to use the new token location');
+    console.log('🔒 FCM tokens are now stored securely in [REDACTED] subcollections');
+    console.log('🚀 Deploy updated Cloud Functions to use the new [REDACTED] location');
     
     console.log(`\n🕐 Completed: ${new Date().toLocaleString()}`);
 

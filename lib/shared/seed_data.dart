@@ -183,7 +183,7 @@ Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async
   print('👤 Starting admin user seeding...');
   
   const email = 'ilyas.prime@gmail.com';
-  const password = 'CHANGE_THIS_PASSWORD'; // ⚠️ SECURITY: Change this password!
+  const password = String.fromEnvironment('ADMIN_PASSWORD', defaultValue: 'CHANGE_THIS_PASSWORD'); // ⚠️ SECURITY: Set via --dart-define
   const name = 'Ilyas';
   const phone = 'N/A';
   const role = 'admin';
@@ -202,23 +202,23 @@ Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async
       }
     } catch (e) {
       // User doesn't exist, we'll create it
-      print('ℹ️ User does not exist in Auth, will create new user');
+      print('ℹ️ User does not exist in [REDACTED], will create new user');
     }
 
     User? user;
     
     if (existingUser == null) {
       // Create new user in Firebase Auth
-      print('📝 Creating new user in Firebase Auth...');
+      print('📝 Creating new user in Firebase [REDACTED]...');
       final userCredential = await auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
       user = userCredential.user;
-      print('✅ User created in Firebase Auth: ${user?.uid}');
+      // TODO: Replace with safeLog - print('✅ User created in Firebase Auth: ${user?.uid}');
     } else {
       user = existingUser;
-      print('ℹ️ User already exists in Firebase Auth: ${user.uid}');
+      // TODO: Replace with safeLog - print('ℹ️ User already exists in Firebase Auth: ${user.uid}');
     }
 
     if (user == null) {
@@ -248,7 +248,7 @@ Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async
 
     print('✅ Admin user seeded successfully!');
     print('📧 Email: $email');
-    print('🔑 Password: $password');
+    // TODO: Replace with safeLog - print('🔑 Password: $password');
     print('👑 Role: $role');
     print('🆔 UID: ${user.uid}');
 

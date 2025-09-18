@@ -1,0 +1,14 @@
+[
+  {
+    "file": "scripts/security/exposure_scan.ts",
+    "line": 37,
+    "hash": "privateKey: /-----BEGIN PRIVATE KEY-----/g,",
+    "reason": "Security scanner regex pattern, not actual secret"
+  },
+  {
+    "file": "scripts/security/exposure_scan.ts", 
+    "line": 57,
+    "hash": "vapidPrivate: /-----BEGIN EC PRIVATE KEY-----/g,",
+    "reason": "Security scanner regex pattern, not actual secret"
+  }
+]

@@ -19,17 +19,21 @@
     "sec:rules": "tsx scripts/security/check_rules.ts",
     "sec:logs": "tsx scripts/security/check_logs.ts",
     "sec:all": "tsx scripts/security/run_audit.ts",
-    "migrate:tokens": "tsx scripts/migrations/move_tokens_private.ts"
+    "migrate:tokens": "tsx scripts/migrations/move_tokens_private.ts",
+    "refactor:secrets": "tsx scripts/refactors/replace_secrets.ts",
+    "refactor:logs": "tsx scripts/refactors/replace_risky_logs.ts",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.3",
+    "dotenv": "^17.2.2",
     "glob": "^10.3.10",
-    "picocolors": "^1.0.0"
+    "husky": "^9.1.7",
+    "picocolors": "^1.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
     "firebase": "^12.2.1",
     "firebase-admin": "^12.7.0",
     "zod": "^3.23.8"

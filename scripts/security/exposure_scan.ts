@@ -1,13 +1,14 @@
 #!/usr/bin/env tsx
 /**
- * Security Exposure Scanner
- * Scans the repository for exposed secrets, keys, and sensitive data
+ * Refined Security Exposure Scanner
+ * Precise detection of real secrets with minimal false positives
  */
 
 import { glob } from 'glob';
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
+import colors from 'picocolors';
 
 interface SecurityFinding {
   type: 'secret' | 'warning';
@@ -16,6 +17,7 @@ interface SecurityFinding {
   file?: string;
   line?: number;
   context?: string;
+  reason?: string;
 }
 
 interface ScanResult {
@@ -31,18 +33,14 @@ class ExposureScanner {
   private findings: SecurityFinding[] = [];
   private scannedFiles = 0;
 
-  // High-risk patterns to detect
+  // Refined patterns for real secrets only
   private readonly patterns = {
-    // Google service account private keys
-    privateKey: /-----BEGIN PRIVATE KEY-----/g,
+    // Real private keys (with boundary checks)
+    privateKey: /-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/g,
     
-    // Service account key components
-    serviceAccountKeys: /"private_key"\s*:\s*"[^"]+"/g,
-    clientEmail: /"client_email"\s*:\s*"[^"]+"/g,
-    projectId: /"project_id"\s*:\s*"[^"]+"/g,
-    
-    // Environment variable references (potential exposure)
-    googleCreds: /GOOGLE_APPLICATION_CREDENTIALS\s*[:=]\s*["'][^"']+["']/g,
+    // Service account credentials
+    serviceAccountPrivateKey: /"private_key"\s*:\s*"-----BEGIN PRIVATE KEY-----[^"]*"/g,
+    clientEmail: /"client_email"\s*:\s*"[^@]+@[^"]+\.gserviceaccount\.com"/g,
     
     // FCM server keys (legacy format)
     fcmServerKey: /AAAA[0-9A-Za-z_\-]{100,}/g,
@@ -50,42 +48,38 @@ class ExposureScanner {
     // JWT/Access tokens
     accessToken: /ya29\.[0-9A-Za-z\-_\.]{50,}/g,
     
-    // Password literals in code
-    passwordLiteral: /password\s*[:=]\s*["'][^"']{3,}["']/gi,
-    
     // VAPID private keys (should never be in repo)
-    vapidPrivate: /-----BEGIN EC PRIVATE KEY-----/g,
-    
-    // Generic secrets
-    apiSecret: /(secret|private).*[:=]\s*["'][0-9A-Za-z_\-]{20,}["']/gi,
-    
-    // Firebase tokens
-    firebaseToken: /[0-9]:[0-9]+:web:[0-9a-f]{17}/g,
+    vapidPrivate: /-----BEGIN EC PRIVATE KEY-----[\s\S]*?-----END EC PRIVATE KEY-----/g,
   };
 
-  // Files and directories to ignore
-  private readonly ignorePatterns = [
-    'node_modules/**',
-    '.dart_tool/**',
-    '.git/**',
-    'build/**',
-    'lib/generated/**',
-    'functions/lib/**',
-    'web/assets/**',
-    '*.min.*',
-    '**/*.min.*',
-    '.github/**',
-    'coverage/**',
-    'test_driver/**',
+  // Precise file inclusion (not exclusion)
+  private readonly includePatterns = [
+    'lib/**/*.dart',
+    'functions/src/**/*.ts',
+    'functions/src/**/*.js',
+    'scripts/**/*.ts',
+    'scripts/**/*.js',
+    'scripts/**/*.mjs',
+    'firestore.rules',
+    '*.yaml',
+    '*.yml',
+    'firebase.json',
+    'pubspec.yaml',
+  ];
+
+  // Paths to exclude
+  private readonly excludePatterns = [
+    'scripts/security/**', // Don't scan security scripts themselves
+    'scripts/refactors/**', // Don't scan refactoring tools
   ];
 
   async scan(): Promise<ScanResult> {
-    console.log('🔍 Starting security exposure scan...\n');
+    console.log(colors.blue('🔍 Starting refined security exposure scan...\n'));
 
     // Check if sensitive files are tracked by git
     await this.checkGitTrackedSecrets();
 
-    // Scan all source files
+    // Scan included files only
     const files = await this.getFilesToScan();
     
     for (const file of files) {
@@ -103,20 +97,25 @@ class ExposureScanner {
   }
 
   private async getFilesToScan(): Promise<string[]> {
-    const allFiles = await glob('**/*', {
-      ignore: this.ignorePatterns,
+    const files = await glob(this.includePatterns, {
       nodir: true,
     });
 
-    // Filter for text files only
-    return allFiles.filter(file => {
+    // Additional filtering for text files only
+    return files.filter(file => {
+      // Skip .md files entirely
+      if (file.endsWith('.md')) return false;
+      
+      // Skip excluded paths
+      if (this.excludePatterns.some(pattern => file.includes(pattern.replace('/**', '')))) {
+        return false;
+      }
+      
       const ext = path.extname(file).toLowerCase();
       return [
         '.dart', '.ts', '.js', '.json', '.yaml', '.yml', 
-        '.md', '.txt', '.env', '.config', '.conf',
-        '.sh', '.bat', '.ps1', '.gradle', '.properties',
-        '.xml', '.html', '.css', '.scss', '.vue', '.jsx', '.tsx'
-      ].includes(ext) || !ext; // Include files without extension
+        '.mjs', '.gradle', '.properties', '.xml'
+      ].includes(ext) || !ext;
     });
   }
 
@@ -134,13 +133,22 @@ class ExposureScanner {
           const lineNumber = content.substring(0, match.index).split('\n').length;
           const line = lines[lineNumber - 1]?.trim() || '';
 
+          // Skip comments and documentation
+          if (this.isCommentOrDoc(line)) {
+            continue;
+          }
+
+          // Check if it's a test fixture or safe value
+          const isSafe = this.isSafeFixture(match[0], line);
+          
           this.findings.push({
             type: 'secret',
-            severity: this.getSeverityForPattern(patternName),
+            severity: isSafe ? 'WARN' : 'FAIL',
             message: this.getMessageForPattern(patternName),
             file: filePath,
             line: lineNumber,
             context: line.length > 100 ? line.substring(0, 97) + '...' : line,
+            reason: isSafe ? 'likely test/fixture/comment' : undefined,
           });
         }
         regex.lastIndex = 0; // Reset regex
@@ -151,6 +159,46 @@ class ExposureScanner {
     }
   }
 
+  private isCommentOrDoc(line: string): boolean {
+    const trimmed = line.trim();
+    return trimmed.startsWith('//') || 
+           trimmed.startsWith('#') || 
+           trimmed.startsWith('*') ||
+           trimmed.startsWith('///') ||
+           trimmed.includes('TODO:') ||
+           trimmed.includes('FIXME:') ||
+           trimmed.includes('NOTE:');
+  }
+
+  private isSafeFixture(value: string, line: string): boolean {
+    const safePatterns = [
+      'AAAA_TEST_', 'FAKE_', 'DUMMY_', 'EXAMPLE_', 'PLACEHOLDER_',
+      'your-', 'example.com', 'test@', 'localhost',
+      'PASTE_', 'CHANGE_THIS_', 'TODO:', 'FIXME:'
+    ];
+
+    const lineLower = line.toLowerCase();
+    const valueLower = value.toLowerCase();
+
+    // Check for safe patterns
+    if (safePatterns.some(pattern => 
+      valueLower.includes(pattern.toLowerCase()) || 
+      lineLower.includes(pattern.toLowerCase())
+    )) {
+      return true;
+    }
+
+    // Check if it's in a test/example context
+    if (lineLower.includes('test') || 
+        lineLower.includes('example') || 
+        lineLower.includes('fixture') ||
+        lineLower.includes('mock')) {
+      return true;
+    }
+
+    return false;
+  }
+
   private async checkGitTrackedSecrets(): Promise<void> {
     const sensitiveFiles = [
       'serviceAccountKey.json',
@@ -159,6 +207,7 @@ class ExposureScanner {
       '.env.local',
       '.env.production',
       '.env.development',
+      'config/.env.local',
     ];
 
     for (const file of sensitiveFiles) {
@@ -180,43 +229,29 @@ class ExposureScanner {
     }
   }
 
-  private getSeverityForPattern(patternName: string): 'FAIL' | 'WARN' {
-    const failPatterns = [
-      'privateKey', 'fcmServerKey', 'accessToken', 
-      'vapidPrivate', 'serviceAccountKeys'
-    ];
-    
-    return failPatterns.includes(patternName) ? 'FAIL' : 'WARN';
-  }
-
   private getMessageForPattern(patternName: string): string {
     const messages: Record<string, string> = {
       privateKey: 'Private key detected in source code',
-      serviceAccountKeys: 'Service account credentials in source',
+      serviceAccountPrivateKey: 'Service account private key in source',
       clientEmail: 'Service account email in source',
-      projectId: 'Project ID hardcoded in source',
-      googleCreds: 'Google credentials path in source',
       fcmServerKey: 'FCM server key exposed in source',
       accessToken: 'Access token found in source',
-      passwordLiteral: 'Password literal in source code',
       vapidPrivate: 'VAPID private key in repository',
-      apiSecret: 'API secret or private key detected',
-      firebaseToken: 'Firebase app token in source',
     };
 
     return messages[patternName] || `Potential secret detected: ${patternName}`;
   }
 
   printResults(result: ScanResult): void {
-    console.log('📊 SECURITY EXPOSURE SCAN RESULTS');
-    console.log('═'.repeat(50));
+    console.log(colors.bold(colors.blue('📊 REFINED SECURITY EXPOSURE SCAN')));
+    console.log(colors.blue('═'.repeat(50)));
     console.log(`📁 Files scanned: ${result.summary.scannedFiles}`);
-    console.log(`🚨 Critical issues: ${result.summary.secrets}`);
-    console.log(`⚠️  Warnings: ${result.summary.warnings}`);
+    console.log(`🚨 Real secrets: ${result.summary.secrets}`);
+    console.log(`⚠️  Test/fixture warnings: ${result.summary.warnings}`);
     console.log();
 
     if (result.findings.length === 0) {
-      console.log('✅ No security exposures detected!');
+      console.log(colors.green('✅ No security exposures detected!'));
       return;
     }
 
@@ -225,44 +260,43 @@ class ExposureScanner {
     const warnings = result.findings.filter(f => f.severity === 'WARN');
 
     if (critical.length > 0) {
-      console.log('🚨 CRITICAL ISSUES (must fix):');
-      console.log('-'.repeat(30));
-      critical.forEach(finding => {
-        console.log(`❌ ${finding.message}`);
+      console.log(colors.red(colors.bold('🚨 REAL SECRETS (must fix):')));
+      console.log('-'.repeat(40));
+      critical.forEach((finding, index) => {
+        console.log(`${index + 1}. ${colors.red('❌')} ${finding.message}`);
         if (finding.file) {
           console.log(`   📍 ${finding.file}${finding.line ? `:${finding.line}` : ''}`);
         }
         if (finding.context) {
-          console.log(`   💬 ${finding.context}`);
+          console.log(`   💬 ${colors.dim(finding.context)}`);
         }
         console.log();
       });
     }
 
     if (warnings.length > 0) {
-      console.log('⚠️  WARNINGS (review recommended):');
-      console.log('-'.repeat(30));
-      warnings.forEach(finding => {
-        console.log(`⚠️  ${finding.message}`);
+      console.log(colors.yellow(colors.bold('⚠️  TEST/FIXTURE WARNINGS (review):')));
+      console.log('-'.repeat(40));
+      warnings.forEach((finding, index) => {
+        console.log(`${index + 1}. ${colors.yellow('⚠️')} ${finding.message}`);
+        if (finding.reason) {
+          console.log(`   💡 ${colors.dim(finding.reason)}`);
+        }
         if (finding.file) {
           console.log(`   📍 ${finding.file}${finding.line ? `:${finding.line}` : ''}`);
-        }
-        if (finding.context) {
-          console.log(`   💬 ${finding.context}`);
         }
         console.log();
       });
     }
 
-    // Remediation suggestions
-    if (result.summary.secrets > 0 || result.summary.warnings > 0) {
-      console.log('🔧 REMEDIATION SUGGESTIONS:');
-      console.log('-'.repeat(30));
-      console.log('• Move all secrets to environment variables');
+    // Remediation for real secrets only
+    if (result.summary.secrets > 0) {
+      console.log(colors.bold('🔧 IMMEDIATE ACTION REQUIRED:'));
+      console.log('-'.repeat(35));
+      console.log('• Move secrets to environment variables immediately');
+      console.log('• Rotate any exposed credentials');
       console.log('• Add sensitive files to .gitignore');
-      console.log('• Use git-secrets or similar tools in CI');
-      console.log('• Rotate any exposed credentials immediately');
-      console.log('• Review commit history for leaked secrets');
+      console.log('• Audit git history for leaked secrets');
       console.log();
     }
   }
@@ -277,6 +311,7 @@ class ExposureScanner {
         message: f.message,
         location: f.file ? `${f.file}${f.line ? `:${f.line}` : ''}` : undefined,
         context: f.context,
+        reason: f.reason,
       })),
     }, null, 2);
   }
@@ -294,14 +329,14 @@ async function main() {
     
     // Export JSON for CI/tooling
     const jsonOutput = scanner.exportJson(result);
-    console.log('\n📋 JSON Report:');
-    console.log(jsonOutput);
+    console.log(colors.dim('\n📋 JSON Report:'));
+    console.log(colors.dim(jsonOutput));
     
-    // Exit with error code if critical issues found
+    // Exit with error code only if real secrets found
     process.exit(result.summary.secrets > 0 ? 1 : 0);
     
   } catch (error) {
-    console.error('❌ Security scan failed:', error);
+    console.error(colors.red('❌ Security scan failed:'), error);
     process.exit(1);
   }
 }

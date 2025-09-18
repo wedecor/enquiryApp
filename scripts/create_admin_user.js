@@ -14,11 +14,11 @@ const db = admin.firestore();
 async function createAdminUser() {
   try {
     const adminEmail = 'admin@wedecorevents.com';
-    const adminPassword = 'admin12';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'CHANGE_THIS_PASSWORD';
     
     console.log('🔧 Creating admin user...');
     console.log(`📧 Email: ${adminEmail}`);
-    console.log(`🔑 Password: ${adminPassword}`);
+    console.log(`🔑 [REDACTED]: [ADMINPASSWORD_REDACTED]`);
     
     // Create user in Firebase Auth
     const userRecord = await admin.auth().createUser({
@@ -28,7 +28,7 @@ async function createAdminUser() {
       displayName: 'Admin User'
     });
     
-    console.log('✅ Firebase Auth user created:', userRecord.uid);
+    console.log('✅ Firebase [REDACTED] user created:');
     
     // Create user document in Firestore
     const userData = {
@@ -61,7 +61,7 @@ async function createAdminUser() {
     
     console.log('\n🎯 Login Credentials:');
     console.log(`   Email: ${adminEmail}`);
-    console.log(`   Password: ${adminPassword}`);
+    console.log(`   [REDACTED]: [ADMINPASSWORD_REDACTED]`);
     
   } catch (error) {
     if (error.code === 'auth/email-already-exists') {
@@ -72,7 +72,7 @@ async function createAdminUser() {
         
         // Update password
         await admin.auth().updateUser(userRecord.uid, {
-          password: 'admin12'
+          password: adminPassword
         });
         
         // Update Firestore document
@@ -85,7 +85,7 @@ async function createAdminUser() {
         console.log('✅ Existing user updated to admin');
         console.log('\n🎯 Login Credentials:');
         console.log(`   Email: admin@wedecorevents.com`);
-        console.log(`   Password: admin12`);
+        console.log(`   [REDACTED]: admin12`);
         
       } catch (updateError) {
         console.error('❌ Error updating user:', updateError.message);

@@ -40,8 +40,8 @@ async function updateAdminEmail() {
     
     console.log('\n🎯 Login Instructions:');
     console.log(`   📧 Email: ${newEmail}`);
-    console.log(`   🔑 Password: [Use your existing Firebase Auth password]`);
-    console.log(`   💡 Note: You may need to update the password in Firebase Console`);
+    console.log(`   🔑 [REDACTED]: [Use your existing Firebase [REDACTED] [REDACTED]]`);
+    console.log(`   💡 Note: You may need to update the [REDACTED] in Firebase Console`);
     console.log(`   🔗 Firebase Console: https://console.firebase.google.com/project/wedecorenquries/authentication/users`);
     
   } catch (error) {

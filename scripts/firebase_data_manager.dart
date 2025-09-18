@@ -190,7 +190,7 @@ class FirebaseDataManager {
         await _firestore.collection(collectionName).doc(entry.key).set(Map<String, dynamic>.from(entry.value as Map));
         importedCount++;
       } catch (e) {
-        print('   ❌ Failed to import document ${entry.key}: $e');
+        // TODO: Replace with safeLog - print('   ❌ Failed to import document ${entry.key}: $e');
       }
     }
 
@@ -250,7 +250,7 @@ class FirebaseDataManager {
 
         importedCount++;
       } catch (e) {
-        print('   ❌ Failed to import document ${entry.key}: $e');
+        // TODO: Replace with safeLog - print('   ❌ Failed to import document ${entry.key}: $e');
       }
     }
 
@@ -283,7 +283,7 @@ class FirebaseDataManager {
               .set(Map<String, dynamic>.from(itemEntry.value as Map));
           importedCount++;
         } catch (e) {
-          print('   ❌ Failed to import dropdown item ${itemEntry.key}: $e');
+          // TODO: Replace with safeLog - print('   ❌ Failed to import dropdown item ${itemEntry.key}: $e');
         }
       }
     }

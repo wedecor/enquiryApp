@@ -245,7 +245,7 @@ class NotificationService {
           .get();
       
       if (tokensSnapshot.docs.isEmpty) {
-        print('NotificationService: No FCM tokens for user $userId');
+        // TODO: Replace with safeLog - print('NotificationService: No FCM tokens for user $userId');
         return;
       }
       
@@ -257,7 +257,7 @@ class NotificationService {
           .toList();
       
       if (tokens.isEmpty) {
-        print('NotificationService: No valid FCM tokens for user $userId');
+        // TODO: Replace with safeLog - print('NotificationService: No valid FCM tokens for user $userId');
         return;
       }
 

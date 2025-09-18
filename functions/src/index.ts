@@ -58,7 +58,7 @@ export const notifyOnEnquiryChange = onDocumentWritten(
     ));
 
     if (tokens.length === 0) {
-      logger.info("No tokens present; skipping", { uid });
+      logger.info("No tokens present; skipping");
       return;
     }
 
