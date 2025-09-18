@@ -9,7 +9,9 @@ import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enqui
 import 'package:we_decor_enquiries/features/admin/users/presentation/user_management_screen.dart';
 import 'package:we_decor_enquiries/features/admin/dropdowns/presentation/dropdown_management_screen.dart';
 import 'package:we_decor_enquiries/features/admin/analytics/presentation/analytics_screen.dart';
+import 'package:we_decor_enquiries/features/notifications/presentation/notifications_icon_button.dart';
 import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart' as auth_provider;
+import 'package:we_decor_enquiries/core/notifications/fcm_token_manager.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -37,6 +39,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
+    
+    // Ensure FCM is registered after reaching dashboard (user is authenticated)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FcmTokenManager.ensureFcmRegistered();
+    });
   }
 
   @override
@@ -57,6 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         automaticallyImplyLeading: true, // This will show the hamburger menu
         actions: [
+          const NotificationsIconButton(),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _signOut(ref),
@@ -524,6 +532,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Future<void> _signOut(WidgetRef ref) async {
     try {
+      // Remove FCM token before signing out
+      await FcmTokenManager.removeTokenOnSignOut();
+      
       final authService = ref.read(firebaseAuthServiceProvider);
       await authService.signOut();
     } catch (e) {

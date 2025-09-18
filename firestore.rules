@@ -13,22 +13,23 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // User management - Allow read for signed-in users, write for admins
+    // Users collection - Admin can manage, signed-in users can read
     match /users/{uid} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn(); // Temporarily allow all authenticated users to write
+      allow create, update, delete: if isAdmin();
     }
 
-    // Enquiries - authenticated users can read and write
-    match /enquiries/{enquiryId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+    // Enquiries - Admins see all, Staff restricted to assigned docs
+    match /enquiries/{id} {
+      allow read: if isAdmin()
+                  || (isSignedIn() && resource.data.assignedTo == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
 
-      // History subcollection
-      match /history/{historyId} {
-        allow read: if isSignedIn();
-        allow write: if isSignedIn();
-      }
+    // Per-user notifications
+    match /notifications/{uid}/items/{nid} {
+      allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isAdmin() || (request.time == resource.data.createdAt); // typically created by CF
     }
 
     // Dropdowns - authenticated users can read, admin can manage

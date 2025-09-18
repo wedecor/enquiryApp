@@ -7,6 +7,7 @@ import 'widgets/line_trend_chart.dart';
 import 'widgets/breakdown_charts.dart';
 import 'widgets/top_list_table.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/export/csv_export.dart';
 
 /// Analytics screen with admin-only access
 class AnalyticsScreen extends ConsumerStatefulWidget {
@@ -104,14 +105,28 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 child: _buildDateRangeSelector(),
               ),
               const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: _refreshData,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Refresh'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                ),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _exportAnalytics,
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('Export'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _refreshData,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -151,14 +166,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<DateRangePreset>(
-                    value: state.filters.preset,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
+                  Expanded(
+                    child: DropdownButtonFormField<DateRangePreset>(
+                      initialValue: state.filters.preset,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
                     items: DateRangePreset.values.map((preset) {
                       return DropdownMenuItem(
                         value: preset,
@@ -205,7 +220,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             final currentEventType = analyticsAsync.value?.filters.eventType;
             
             return DropdownButtonFormField<String?>(
-              value: currentEventType,
+              initialValue: currentEventType,
               decoration: const InputDecoration(
                 labelText: 'Event Type',
                 isDense: true,
@@ -262,7 +277,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             final currentStatus = analyticsAsync.value?.filters.status;
             
             return DropdownButtonFormField<String?>(
-              value: currentStatus,
+              initialValue: currentStatus,
               decoration: const InputDecoration(
                 labelText: 'Status',
                 isDense: true,
@@ -319,7 +334,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             final currentPriority = analyticsAsync.value?.filters.priority;
             
             return DropdownButtonFormField<String?>(
-              value: currentPriority,
+              initialValue: currentPriority,
               decoration: const InputDecoration(
                 labelText: 'Priority',
                 isDense: true,
@@ -376,7 +391,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             final currentSource = analyticsAsync.value?.filters.source;
             
             return DropdownButtonFormField<String?>(
-              value: currentSource,
+              initialValue: currentSource,
               decoration: const InputDecoration(
                 labelText: 'Source',
                 isDense: true,
@@ -739,5 +754,77 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     final start = '${range.start.day}/${range.start.month}/${range.start.year}';
     final end = '${range.end.day}/${range.end.month}/${range.end.year}';
     return '$start - $end';
+  }
+
+  Future<void> _exportAnalytics() async {
+    final analyticsAsync = ref.read(analyticsControllerProvider);
+    
+    analyticsAsync.when(
+      data: (state) async {
+        try {
+          if (state.kpiSummary == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No analytics data to export'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            return;
+          }
+
+          // Show loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              content: Row(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 16),
+                  Text('Exporting analytics...'),
+                ],
+              ),
+            ),
+          );
+
+          // Export analytics summary
+          await CsvExport.exportAnalyticsSummary(
+            kpiSummary: state.kpiSummary!,
+            statusBreakdown: state.statusBreakdown,
+            eventTypeBreakdown: state.eventTypeBreakdown,
+            sourceBreakdown: state.sourceBreakdown,
+            dateRange: state.filters.dateRange,
+          );
+
+          // Close loading dialog
+          if (mounted) {
+            Navigator.of(context).pop();
+            CsvExport.showExportSuccess(context, 'analytics_summary.csv');
+          }
+
+        } catch (e) {
+          if (mounted) {
+            Navigator.of(context).pop();
+            CsvExport.showExportError(context, e.toString());
+          }
+        }
+      },
+      loading: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Analytics data is still loading'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      },
+      error: (error, stack) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${error.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
   }
 }

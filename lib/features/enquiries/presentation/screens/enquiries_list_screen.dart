@@ -5,6 +5,7 @@ import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
+import 'package:we_decor_enquiries/core/export/csv_export.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
   const EnquiriesListScreen({super.key});
@@ -19,12 +20,26 @@ class EnquiriesListScreen extends ConsumerWidget {
         title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.of(context).pushNamed('/enquiry-form');
-            },
-            tooltip: 'Add New Enquiry',
+          PopupMenuButton<String>(
+            onSelected: (action) => _handleAction(context, ref, action, userRole, user?.uid),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: Icon(Icons.download),
+                  title: Text('Export CSV'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'add',
+                child: ListTile(
+                  leading: Icon(Icons.add),
+                  title: Text('Add Enquiry'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -256,5 +271,88 @@ class EnquiriesListScreen extends ConsumerWidget {
     if (assignedTo == null) return 'Unassigned';
     // TODO: Fetch user name from Firestore
     return 'User ID: $assignedTo';
+  }
+
+  void _handleAction(BuildContext context, WidgetRef ref, String action, UserRole? userRole, String? userId) {
+    switch (action) {
+      case 'export':
+        _exportEnquiries(context, userRole, userId);
+        break;
+      case 'add':
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const EnquiryFormScreen(),
+          ),
+        );
+        break;
+    }
+  }
+
+  Future<void> _exportEnquiries(BuildContext context, UserRole? userRole, String? userId) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Exporting enquiries...'),
+            ],
+          ),
+        ),
+      );
+
+      // Fetch all enquiries for export
+      Query query = FirebaseFirestore.instance.collection('enquiries');
+      
+      if (userRole != UserRole.admin && userId != null) {
+        query = query.where('assignedTo', isEqualTo: userId);
+      }
+      
+      query = query.orderBy('createdAt', descending: true);
+      
+      final snapshot = await query.get();
+      final enquiries = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'id': doc.id,
+          ...data,
+        };
+      }).toList();
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (enquiries.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No enquiries to export'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Export to CSV
+      await CsvExport.exportEnquiries(enquiries);
+      
+      if (context.mounted) {
+        CsvExport.showExportSuccess(context, 'enquiries_${DateTime.now().millisecondsSinceEpoch}.csv');
+      }
+
+    } catch (e) {
+      // Close loading dialog if still open
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        CsvExport.showExportError(context, e.toString());
+      }
+    }
   }
 } 

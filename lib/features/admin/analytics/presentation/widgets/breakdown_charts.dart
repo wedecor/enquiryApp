@@ -383,6 +383,7 @@ class StatusStackedBarChart extends StatelessWidget {
               barTouchData: BarTouchData(
                 enabled: true,
               touchTooltipData: BarTouchTooltipData(
+                tooltipBgColor: Colors.blueGrey,
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                   if (rodIndex < data.length) {
                     final item = data[rodIndex];

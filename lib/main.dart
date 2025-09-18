@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
 import 'package:we_decor_enquiries/core/services/fcm_service.dart';
+import 'package:we_decor_enquiries/core/notifications/fcm_token_manager.dart';
 import 'package:we_decor_enquiries/features/auth/presentation/screens/login_screen.dart';
 import 'package:we_decor_enquiries/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:we_decor_enquiries/shared/seed_data.dart';
@@ -40,6 +41,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Initialize FCM for web notifications
+  if (kIsWeb) {
+    await FcmTokenManager.initialize();
+  }
   
   // Security check for environment variables
   if (kDebugMode) {
