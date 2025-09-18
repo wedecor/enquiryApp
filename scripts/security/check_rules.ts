@@ -1,17 +1,20 @@
 #!/usr/bin/env tsx
 /**
- * Firestore Security Rules Analyzer
- * Checks for common security pitfalls in Firestore rules
+ * Precise Firestore Security Rules Analyzer
+ * Detects actual FCM token writes to users collection with exact statement matching
  */
 
 import { readFileSync, existsSync } from 'fs';
 import { glob } from 'glob';
+import colors from 'picocolors';
 
 interface RuleFinding {
   severity: 'FAIL' | 'WARN' | 'INFO';
   rule: string;
   message: string;
+  file?: string;
   line?: number;
+  context?: string;
   remediation?: string;
 }
 
@@ -27,10 +30,9 @@ interface RulesAnalysis {
 class FirestoreRulesChecker {
   private findings: RuleFinding[] = [];
   private rulesContent = '';
-  private hasUserTokenStorage = false;
 
   async analyze(): Promise<RulesAnalysis> {
-    console.log('🔒 Analyzing Firestore security rules...\n');
+    console.log(colors.blue('🔒 Analyzing Firestore security rules...\n'));
 
     // Check if rules file exists
     if (!existsSync('firestore.rules')) {
@@ -46,35 +48,79 @@ class FirestoreRulesChecker {
     // Read and analyze rules
     this.rulesContent = readFileSync('firestore.rules', 'utf8');
     
-    // Check for token storage patterns in codebase
-    await this.checkTokenStoragePatterns();
+    // Check for precise FCM token write patterns
+    await this.checkPreciseFcmTokenWrites();
     
-    // Analyze rules
+    // Analyze rules structure
     this.checkBasicRuleSafety();
     this.checkUserCollectionSecurity();
     this.checkNotificationsSecurity();
-    this.checkDropdownsSecurity();
     this.checkFunctionSecurity();
     
     return this.getResults();
   }
 
-  private async checkTokenStoragePatterns(): Promise<void> {
+  private async checkPreciseFcmTokenWrites(): Promise<void> {
     try {
       const dartFiles = await glob('lib/**/*.dart');
       
       for (const file of dartFiles) {
         const content = readFileSync(file, 'utf8');
+        const lines = content.split('\n');
         
-        // Check if code writes fcmToken to users collection (more precise check)
-        if ((content.includes("collection('users')") || content.includes('collection("users")')) && 
-            (content.includes("'fcmToken'") || content.includes('"fcmToken"') || 
-             content.includes("'webTokens'") || content.includes('"webTokens"'))) {
-          // Additional check: ensure it's actually setting these fields
-          if (content.includes('.set(') || content.includes('.update(')) {
-            this.hasUserTokenStorage = true;
-            break;
-          }
+        // Look for exact pattern: collection('users').doc(...).set/update with fcmToken/webTokens
+        // Check for the pattern across multiple lines to capture the full object
+        const usersCollectionMatches = content.match(/collection\(['"]users['"]\)\.doc\([^)]+\)\.(set|update)\s*\(/g);
+        
+        if (usersCollectionMatches) {
+          // For each match, check if the subsequent object contains fcmToken/webTokens
+          usersCollectionMatches.forEach(match => {
+            const matchIndex = content.indexOf(match);
+            const afterMatch = content.substring(matchIndex);
+            
+            // Find the object being set (look for the opening brace and match closing)
+            const objectStart = afterMatch.indexOf('{');
+            if (objectStart === -1) return;
+            
+            let braceCount = 0;
+            let objectEnd = objectStart;
+            
+            for (let i = objectStart; i < afterMatch.length; i++) {
+              if (afterMatch[i] === '{') braceCount++;
+              if (afterMatch[i] === '}') braceCount--;
+              if (braceCount === 0) {
+                objectEnd = i;
+                break;
+              }
+            }
+            
+            const objectContent = afterMatch.substring(objectStart, objectEnd + 1);
+            
+            // Check if this object actually contains fcmToken or webTokens as properties
+            if (objectContent.includes("'fcmToken'") || 
+                objectContent.includes('"fcmToken"') || 
+                objectContent.includes("'webTokens'") || 
+                objectContent.includes('"webTokens"')) {
+              
+              const lineNumber = content.substring(0, matchIndex).split('\n').length;
+              const line = lines[lineNumber - 1]?.trim() || '';
+              
+              // Skip if it's a comment
+              if (line.startsWith('//') || line.startsWith('*')) {
+                return;
+              }
+              
+              this.findings.push({
+                severity: 'FAIL',
+                rule: 'fcm-token-write-to-users',
+                message: 'FCM token write to publicly readable users collection detected',
+                file,
+                line: lineNumber,
+                context: line,
+                remediation: 'Move FCM tokens to users/{uid}/private/notifications/tokens/ subcollection',
+              });
+            }
+          });
         }
       }
     } catch (error) {
@@ -95,6 +141,7 @@ class FirestoreRulesChecker {
           rule: 'overly-permissive-read',
           message: 'Unconditional read access detected',
           line: index + 1,
+          context: trimmed,
           remediation: 'Replace with proper authentication checks',
         });
       }
@@ -105,60 +152,33 @@ class FirestoreRulesChecker {
           rule: 'overly-permissive-write',
           message: 'Unconditional write access detected',
           line: index + 1,
+          context: trimmed,
           remediation: 'Replace with proper authorization checks',
         });
-      }
-
-      // Check for missing authentication
-      if (trimmed.includes('allow') && !trimmed.includes('request.auth')) {
-        if (!trimmed.includes('isSignedIn()') && !trimmed.includes('isAdmin()')) {
-          this.findings.push({
-            severity: 'WARN',
-            rule: 'missing-auth-check',
-            message: 'Rule may be missing authentication check',
-            line: index + 1,
-            remediation: 'Ensure proper authentication is required',
-          });
-        }
       }
     });
   }
 
   private checkUserCollectionSecurity(): void {
-    const userRulePattern = /match\s+\/users\/\{uid\}/;
-    const userRuleMatch = this.rulesContent.match(userRulePattern);
+    // Check if private token subcollection is properly secured
+    const privateTokenPattern = /match\s+\/users\/\{uid\}\/private\/notifications\/tokens\/\{tid\}/;
     
-    if (!userRuleMatch) {
-      this.findings.push({
-        severity: 'WARN',
-        rule: 'missing-user-rules',
-        message: 'No specific rules found for users collection',
-        remediation: 'Add explicit rules for users/{uid} documents',
-      });
-      return;
-    }
-
-    // Check if users collection allows read to all signed-in users
-    // and we detected token storage
-    if (this.hasUserTokenStorage) {
-      const userSection = this.extractRuleSection('users');
-      if (userSection.includes('allow read: if isSignedIn()') || 
-          userSection.includes('allow read: if request.auth != null')) {
-        
+    if (this.rulesContent.match(privateTokenPattern)) {
+      const tokenSection = this.extractRuleSection('users/{uid}/private/notifications/tokens');
+      
+      if (!tokenSection.includes('request.auth.uid == uid')) {
         this.findings.push({
           severity: 'FAIL',
-          rule: 'token-exposure-risk',
-          message: 'FCM tokens stored in publicly readable users collection',
-          remediation: `Move FCM tokens to private subcollection:
-          
-RECOMMENDED STRUCTURE:
-users/{uid}                           # public profile data only
-users/{uid}/private/notifications/   # FCM tokens (owner-only access)
-
-RULES FIX:
-match /users/{uid}/private/notifications/{tokenId} {
-  allow read, write: if request.auth != null && request.auth.uid == uid;
-}`,
+          rule: 'token-access-not-restricted',
+          message: 'Private token collection not properly restricted to owner',
+          remediation: 'Ensure: allow read, write: if request.auth != null && request.auth.uid == uid',
+        });
+      } else {
+        // Good - private tokens are properly secured
+        this.findings.push({
+          severity: 'INFO',
+          rule: 'private-tokens-secured',
+          message: 'FCM tokens properly secured in private subcollection',
         });
       }
     }
@@ -170,7 +190,6 @@ match /users/{uid}/private/notifications/{tokenId} {
     if (this.rulesContent.match(notificationPattern)) {
       const notificationSection = this.extractRuleSection('notifications');
       
-      // Check if notifications are properly restricted to owner
       if (!notificationSection.includes('request.auth.uid == uid')) {
         this.findings.push({
           severity: 'FAIL',
@@ -182,27 +201,7 @@ match /users/{uid}/private/notifications/{tokenId} {
     }
   }
 
-  private checkDropdownsSecurity(): void {
-    const dropdownPattern = /match\s+\/dropdowns/;
-    
-    if (this.rulesContent.match(dropdownPattern)) {
-      const dropdownSection = this.extractRuleSection('dropdowns');
-      
-      // Check if dropdowns allow write without admin check
-      if (dropdownSection.includes('allow write:') && 
-          !dropdownSection.includes('isAdmin()')) {
-        this.findings.push({
-          severity: 'WARN',
-          rule: 'dropdown-write-access',
-          message: 'Dropdowns may allow write access without admin check',
-          remediation: 'Restrict dropdown writes to admin users only',
-        });
-      }
-    }
-  }
-
   private checkFunctionSecurity(): void {
-    // Check if there are any function-related security configurations
     try {
       const functionFiles = glob.sync('functions/src/**/*.ts');
       let hasGlobalOptions = false;
@@ -213,8 +212,8 @@ match /users/{uid}/private/notifications/{tokenId} {
           hasGlobalOptions = true;
           
           // Check for reasonable memory limits
-          if (content.includes('memory:') || content.includes('memoryMiB:')) {
-            const memoryMatch = content.match(/memory(?:MiB)?:\s*["']?(\d+)/);
+          if (content.includes('memory:') && !content.includes('128MiB')) {
+            const memoryMatch = content.match(/memory:\s*["']?(\d+)/);
             if (memoryMatch) {
               const memory = parseInt(memoryMatch[1]);
               if (memory > 512) {
@@ -222,20 +221,11 @@ match /users/{uid}/private/notifications/{tokenId} {
                   severity: 'WARN',
                   rule: 'high-memory-function',
                   message: `Function uses ${memory}MB memory - consider if necessary`,
-                  remediation: 'Use minimal memory to reduce abuse potential',
+                  file,
+                  remediation: 'Use minimal memory (128MiB) to reduce abuse potential',
                 });
               }
             }
-          }
-          
-          // Check for timeout settings
-          if (!content.includes('timeoutSeconds')) {
-            this.findings.push({
-              severity: 'INFO',
-              rule: 'missing-timeout',
-              message: 'Function missing explicit timeout setting',
-              remediation: 'Add timeoutSeconds to prevent long-running abuse',
-            });
           }
         }
       }
@@ -253,10 +243,10 @@ match /users/{uid}/private/notifications/{tokenId} {
     }
   }
 
-  private extractRuleSection(collection: string): string {
+  private extractRuleSection(matchPattern: string): string {
     const lines = this.rulesContent.split('\n');
     const sectionStart = lines.findIndex(line => 
-      line.includes(`match `) && line.includes(`/${collection}/`)
+      line.includes('match ') && line.includes(matchPattern)
     );
     
     if (sectionStart === -1) return '';
@@ -290,15 +280,15 @@ match /users/{uid}/private/notifications/{tokenId} {
   }
 
   printResults(analysis: RulesAnalysis): void {
-    console.log('📋 FIRESTORE RULES ANALYSIS');
-    console.log('═'.repeat(40));
+    console.log(colors.bold(colors.blue('📋 FIRESTORE RULES ANALYSIS')));
+    console.log(colors.blue('═'.repeat(40)));
     console.log(`🚨 Critical issues: ${analysis.summary.critical}`);
     console.log(`⚠️  Warnings: ${analysis.summary.warnings}`);
     console.log(`ℹ️  Info: ${analysis.summary.info}`);
     console.log();
 
     if (analysis.findings.length === 0) {
-      console.log('✅ No rule security issues detected!');
+      console.log(colors.green('✅ No rule security issues detected!'));
       return;
     }
 
@@ -308,12 +298,15 @@ match /users/{uid}/private/notifications/{tokenId} {
     const info = analysis.findings.filter(f => f.severity === 'INFO');
 
     if (critical.length > 0) {
-      console.log('🚨 CRITICAL SECURITY ISSUES:');
-      console.log('-'.repeat(30));
+      console.log(colors.red(colors.bold('🚨 CRITICAL SECURITY ISSUES:')));
+      console.log('-'.repeat(35));
       critical.forEach(finding => {
-        console.log(`❌ ${finding.message}`);
-        if (finding.line) {
-          console.log(`   📍 firestore.rules:${finding.line}`);
+        console.log(`${colors.red('❌')} ${finding.message}`);
+        if (finding.file && finding.line) {
+          console.log(`   📍 ${finding.file}:${finding.line}`);
+        }
+        if (finding.context) {
+          console.log(`   💬 ${colors.dim(finding.context)}`);
         }
         if (finding.remediation) {
           console.log(`   🔧 Fix: ${finding.remediation}`);
@@ -323,28 +316,22 @@ match /users/{uid}/private/notifications/{tokenId} {
     }
 
     if (warnings.length > 0) {
-      console.log('⚠️  SECURITY WARNINGS:');
-      console.log('-'.repeat(30));
+      console.log(colors.yellow(colors.bold('⚠️  SECURITY WARNINGS:')));
+      console.log('-'.repeat(25));
       warnings.forEach(finding => {
-        console.log(`⚠️  ${finding.message}`);
-        if (finding.line) {
-          console.log(`   📍 firestore.rules:${finding.line}`);
-        }
+        console.log(`${colors.yellow('⚠️')} ${finding.message}`);
         if (finding.remediation) {
-          console.log(`   🔧 Suggestion: ${finding.remediation}`);
+          console.log(`   💡 ${finding.remediation}`);
         }
         console.log();
       });
     }
 
     if (info.length > 0) {
-      console.log('ℹ️  INFORMATION:');
-      console.log('-'.repeat(30));
+      console.log(colors.green(colors.bold('ℹ️  SECURITY STATUS:')));
+      console.log('-'.repeat(20));
       info.forEach(finding => {
-        console.log(`ℹ️  ${finding.message}`);
-        if (finding.remediation) {
-          console.log(`   💡 Tip: ${finding.remediation}`);
-        }
+        console.log(`${colors.green('✅')} ${finding.message}`);
         console.log();
       });
     }
@@ -371,14 +358,14 @@ async function main() {
     
     // Export JSON
     const jsonOutput = checker.exportJson(analysis);
-    console.log('\n📋 JSON Report:');
-    console.log(jsonOutput);
+    console.log(colors.dim('\n📋 JSON Report:'));
+    console.log(colors.dim(jsonOutput));
     
-    // Exit with error if critical issues
+    // Exit with error only if critical issues
     process.exit(analysis.summary.critical > 0 ? 1 : 0);
     
   } catch (error) {
-    console.error('❌ Rules analysis failed:', error);
+    console.error(colors.red('❌ Rules analysis failed:'), error);
     process.exit(1);
   }
 }

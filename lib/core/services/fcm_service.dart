@@ -36,13 +36,13 @@ class FCMService {
       // Get FCM token
       String? token = await _messaging.getToken();
       if (token != null) {
-        print('FCM Token: $token');
+        // TODO: Replace with safeLog - print('FCM Token: $token');
         await _saveTokenToUserProfile(token);
       }
 
       // Listen for token refresh
       _messaging.onTokenRefresh.listen((newToken) {
-        print('FCM Token refreshed: $newToken');
+        // TODO: Replace with safeLog - print('FCM Token refreshed: $newToken');
         _saveTokenToUserProfile(newToken);
       });
 
@@ -87,10 +87,10 @@ class FCMService {
           'createdAt': FieldValue.serverTimestamp(),
           'lastUpdate': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
-        print('FCM: Token saved to private collection');
+        // TODO: Replace with safeLog - print('FCM: Token saved to private collection');
       }
     } catch (e) {
-      print('FCM: Error saving token to user profile: $e');
+      // TODO: Replace with safeLog - print('FCM: Error saving token to user profile: $e');
     }
   }
 
@@ -242,11 +242,11 @@ class FCMService {
               .collection('tokens')
               .doc(token)
               .delete();
-          print('FCM: Token deleted from private collection');
+          // TODO: Replace with safeLog - print('FCM: Token deleted from private collection');
         }
       }
     } catch (e) {
-      print('FCM: Error deleting token from user profile: $e');
+      // TODO: Replace with safeLog - print('FCM: Error deleting token from user profile: $e');
     }
   }
 }

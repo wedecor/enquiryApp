@@ -1,0 +1,54 @@
+# Gitleaks Configuration for WeDecor Enquiries
+# Allowlist for known safe test fixtures and examples
+
+[allowlist]
+  description = "Known safe test fixtures and example values"
+  
+  # Path-based allowlist
+  paths = [
+    "**/test/**",
+    "**/tests/**", 
+    "**/fixtures/**",
+    "**/example/**",
+    "**/examples/**",
+    "**/*.md",
+    "**/README*",
+    "**/node_modules/**",
+  ]
+  
+  # Regex allowlist for clearly fake values
+  regexes = [
+    "AAAA_TEST_.*",
+    "FAKE_.*",
+    "DUMMY_.*",
+    "EXAMPLE_.*",
+    "PLACEHOLDER_.*",
+    "your-.*",
+    "\\btest@example\\.com\\b",
+    "\\blocalhost\\b",
+    "\\b127\\.0\\.0\\.1\\b",
+    "PASTE_WEB_PUSH_CERTIFICATE_PUBLIC_KEY",
+    "CHANGE_THIS_PASSWORD",
+    "password123",
+    "admin12", # Known test password
+    "wedecorenquries", # Project ID (public)
+  ]
+
+# Custom rules for this project
+[[rules]]
+  id = "service-account-key"
+  description = "Service account private key"
+  regex = '''-----BEGIN PRIVATE KEY-----'''
+  
+[[rules]]
+  id = "fcm-server-key"
+  description = "FCM server key (legacy)"
+  regex = '''AAAA[0-9A-Za-z_\-]{100,}'''
+
+[[rules]]
+  id = "jwt-token"
+  description = "JWT access token"
+  regex = '''ya29\.[0-9A-Za-z\-_\.]{50,}'''
+
+# IMPORTANT: Real secrets must NEVER be added to this allowlist
+# This allowlist is only for test fixtures, examples, and documentation

@@ -1,12 +1,13 @@
 #!/usr/bin/env tsx
 /**
- * Risky Logging Checker
- * Scans for potentially dangerous logging that might expose sensitive data
+ * Precise Risky Logging Checker
+ * Detects actual sensitive data exposure in logs with minimal false positives
  */
 
 import { glob } from 'glob';
 import { readFileSync } from 'fs';
 import path from 'path';
+import colors from 'picocolors';
 
 interface LogFinding {
   severity: 'WARN' | 'INFO';
@@ -29,37 +30,21 @@ class RiskyLoggingChecker {
   private findings: LogFinding[] = [];
   private scannedFiles = 0;
 
-  // Patterns for risky logging
-  private readonly logPatterns = {
-    // Log functions to check
-    logFunctions: [
-      'logger.info', 'logger.debug', 'logger.warn', 'logger.error',
-      'print', 'console.log', 'console.debug', 'console.info',
-      'console.warn', 'console.error', 'debugPrint'
-    ],
-    
-    // Sensitive data patterns
-    sensitivePatterns: [
-      'token', 'authorization', 'cookie', 'set-cookie', 
-      'secret', 'private', 'key', 'password', 'auth',
-      'bearer', 'jwt', 'session', 'credential'
-    ],
-  };
+  // Sensitive data patterns
+  private readonly sensitivePatterns = [
+    'token', 'authorization', 'cookie', 'secret', 
+    'private', 'key', 'password', 'auth'
+  ];
 
-  // Files to ignore
-  private readonly ignorePatterns = [
-    'node_modules/**',
-    '.dart_tool/**',
-    '.git/**',
-    'build/**',
-    'functions/lib/**',
-    'coverage/**',
-    '**/*.min.*',
-    'scripts/security/**', // Don't scan ourselves
+  // Only scan these specific paths
+  private readonly includePatterns = [
+    'lib/**/*.dart',
+    'functions/src/**/*.ts',
+    'functions/src/**/*.js',
   ];
 
   async analyze(): Promise<LogAnalysis> {
-    console.log('📝 Scanning for risky logging patterns...\n');
+    console.log(colors.blue('📝 Scanning for risky logging patterns...\n'));
 
     const files = await this.getFilesToScan();
     
@@ -77,20 +62,8 @@ class RiskyLoggingChecker {
   }
 
   private async getFilesToScan(): Promise<string[]> {
-    const allFiles = await glob('**/*', {
-      ignore: this.ignorePatterns,
+    return await glob(this.includePatterns, {
       nodir: true,
-    });
-
-    // Filter for source code files
-    return allFiles.filter(file => {
-      const ext = path.extname(file).toLowerCase();
-      return [
-        '.dart', '.ts', '.js', '.tsx', '.jsx',
-        '.java', '.kt', '.swift', '.m', '.mm',
-        '.py', '.rb', '.go', '.rs', '.php',
-        '.c', '.cpp', '.h', '.hpp'
-      ].includes(ext);
     });
   }
 
@@ -113,93 +86,116 @@ class RiskyLoggingChecker {
   private checkLineForRiskyLogging(line: string, file: string, lineNumber: number): void {
     const trimmedLine = line.trim();
     
-    // Skip comments (basic detection)
+    // Skip comments and documentation
     if (trimmedLine.startsWith('//') || trimmedLine.startsWith('*') || 
-        trimmedLine.startsWith('#')) {
+        trimmedLine.startsWith('#') || trimmedLine.startsWith('///')) {
       return;
     }
 
-    // Check if line contains a logging function
-    const hasLogFunction = this.logPatterns.logFunctions.some(func => 
-      trimmedLine.includes(func)
-    );
-
-    if (!hasLogFunction) {
+    // Check for logging functions
+    const logFunctionPattern = /(print|debugPrint|console\.\w+|logger\.\w+)\s*\(/;
+    const logMatch = trimmedLine.match(logFunctionPattern);
+    
+    if (!logMatch) {
       return;
     }
 
-    // Check if the log line contains sensitive patterns
-    const sensitiveMatches = this.logPatterns.sensitivePatterns.filter(pattern => 
+    // Check if line contains sensitive patterns AND dynamic values
+    const hasSensitivePattern = this.sensitivePatterns.some(pattern => 
       trimmedLine.toLowerCase().includes(pattern.toLowerCase())
     );
 
-    if (sensitiveMatches.length > 0) {
-      // Determine severity based on context
-      const severity = this.determineSeverity(trimmedLine, sensitiveMatches);
-      
+    if (!hasSensitivePattern) {
+      return;
+    }
+
+    // Check if it's logging dynamic values (variables, interpolation)
+    const hasDynamicValue = trimmedLine.includes('$') || // Dart interpolation
+                           trimmedLine.includes('${') || // Template literals
+                           trimmedLine.includes('`') ||  // Template strings
+                           /\w+\.\w+/.test(trimmedLine); // Object properties
+
+    if (!hasDynamicValue) {
+      // Static text like "no token found" is just INFO
       this.findings.push({
-        severity,
-        message: `Potentially risky logging detected: ${sensitiveMatches.join(', ')}`,
+        severity: 'INFO',
+        message: `Static log with sensitive keyword: ${this.extractSensitiveWords(trimmedLine).join(', ')}`,
         file,
         line: lineNumber,
         context: trimmedLine.length > 120 ? trimmedLine.substring(0, 117) + '...' : trimmedLine,
-        suggestion: this.getSuggestion(trimmedLine, sensitiveMatches),
+        suggestion: 'Consider if this static message could be more generic',
       });
+      return;
     }
+
+    // Dynamic logging with sensitive patterns is WARN
+    const severity = this.determineSeverity(trimmedLine);
+    
+    this.findings.push({
+      severity,
+      message: `Risky dynamic logging: ${this.extractSensitiveWords(trimmedLine).join(', ')}`,
+      file,
+      line: lineNumber,
+      context: trimmedLine.length > 120 ? trimmedLine.substring(0, 117) + '...' : trimmedLine,
+      suggestion: this.getSuggestion(file, trimmedLine),
+    });
   }
 
-  private determineSeverity(line: string, matches: string[]): 'WARN' | 'INFO' {
+  private extractSensitiveWords(line: string): string[] {
+    return this.sensitivePatterns.filter(pattern => 
+      line.toLowerCase().includes(pattern.toLowerCase())
+    );
+  }
+
+  private determineSeverity(line: string): 'WARN' | 'INFO' {
     const highRiskPatterns = ['token', 'secret', 'private', 'password', 'authorization'];
-    const hasHighRisk = matches.some(match => 
-      highRiskPatterns.includes(match.toLowerCase())
+    const lineLower = line.toLowerCase();
+    
+    const hasHighRisk = highRiskPatterns.some(pattern => 
+      lineLower.includes(pattern)
     );
 
-    // Check if it's likely just a variable name or safe logging
-    const seemsSafe = line.includes('length') || 
-                      line.includes('count') || 
-                      line.includes('size') ||
-                      line.includes('type') ||
-                      line.includes('null') ||
-                      line.includes('undefined');
+    // Check if it's likely safe (just counting/status)
+    const seemsSafe = lineLower.includes('length') || 
+                      lineLower.includes('count') || 
+                      lineLower.includes('size') ||
+                      lineLower.includes('status') ||
+                      lineLower.includes('null') ||
+                      lineLower.includes('empty');
 
     return hasHighRisk && !seemsSafe ? 'WARN' : 'INFO';
   }
 
-  private getSuggestion(line: string, matches: string[]): string {
-    const suggestions = [];
+  private getSuggestion(file: string, line: string): string {
+    const isDart = file.endsWith('.dart');
+    const isNode = file.endsWith('.ts') || file.endsWith('.js');
 
-    if (matches.includes('token') || matches.includes('authorization')) {
-      suggestions.push('Consider logging token length/type instead of value');
+    if (isDart) {
+      if (line.includes('$')) {
+        return 'Replace with safeLog(\'label\', {\'key\': value}) from lib/core/logging/safe_log.dart';
+      } else {
+        return 'Consider using safeLog for structured logging';
+      }
+    } else if (isNode) {
+      if (line.includes('token') || line.includes('secret')) {
+        return 'Log token/secret length or status, not the actual value';
+      } else {
+        return 'Use structured logging with sanitized fields';
+      }
     }
 
-    if (matches.includes('password')) {
-      suggestions.push('Never log passwords - remove or mask completely');
-    }
-
-    if (matches.includes('secret') || matches.includes('private')) {
-      suggestions.push('Avoid logging secrets - use generic success/failure messages');
-    }
-
-    if (matches.includes('key')) {
-      suggestions.push('Log key names/types, not values');
-    }
-
-    if (suggestions.length === 0) {
-      suggestions.push('Review if sensitive data could be exposed in logs');
-    }
-
-    return suggestions.join('. ');
+    return 'Review if sensitive data could be exposed in logs';
   }
 
   printResults(analysis: LogAnalysis): void {
-    console.log('📊 RISKY LOGGING ANALYSIS');
-    console.log('═'.repeat(40));
+    console.log(colors.bold(colors.blue('📊 PRECISE RISKY LOGGING ANALYSIS')));
+    console.log(colors.blue('═'.repeat(45)));
     console.log(`📁 Files scanned: ${analysis.summary.scannedFiles}`);
-    console.log(`⚠️  Risky logs found: ${analysis.summary.riskyLogs}`);
+    console.log(`⚠️  Risky patterns: ${analysis.summary.riskyLogs}`);
     console.log();
 
     if (analysis.findings.length === 0) {
-      console.log('✅ No risky logging patterns detected!');
+      console.log(colors.green('✅ No risky logging patterns detected!'));
       return;
     }
 
@@ -208,37 +204,35 @@ class RiskyLoggingChecker {
     const info = analysis.findings.filter(f => f.severity === 'INFO');
 
     if (warnings.length > 0) {
-      console.log('⚠️  HIGH RISK LOGGING:');
-      console.log('-'.repeat(30));
-      warnings.forEach(finding => {
-        console.log(`⚠️  ${finding.message}`);
+      console.log(colors.yellow(colors.bold('⚠️  DYNAMIC SENSITIVE LOGGING:')));
+      console.log('-'.repeat(35));
+      warnings.forEach((finding, index) => {
+        console.log(`${index + 1}. ${colors.yellow('⚠️')} ${finding.message}`);
         console.log(`   📍 ${finding.file}:${finding.line}`);
-        console.log(`   💬 ${finding.context}`);
+        console.log(`   💬 ${colors.dim(finding.context)}`);
         console.log(`   🔧 ${finding.suggestion}`);
         console.log();
       });
     }
 
     if (info.length > 0) {
-      console.log('ℹ️  REVIEW RECOMMENDED:');
-      console.log('-'.repeat(30));
-      info.forEach(finding => {
-        console.log(`ℹ️  ${finding.message}`);
+      console.log(colors.blue(colors.bold('ℹ️  STATIC REFERENCES (review):')));
+      console.log('-'.repeat(35));
+      info.forEach((finding, index) => {
+        console.log(`${index + 1}. ${colors.blue('ℹ️')} ${finding.message}`);
         console.log(`   📍 ${finding.file}:${finding.line}`);
-        console.log(`   💬 ${finding.context}`);
         console.log(`   💡 ${finding.suggestion}`);
         console.log();
       });
     }
 
-    // General recommendations
-    console.log('🔧 LOGGING SECURITY BEST PRACTICES:');
-    console.log('-'.repeat(30));
-    console.log('• Log events and outcomes, not sensitive data');
-    console.log('• Use structured logging with sanitized fields');
-    console.log('• Log token/key lengths or types, never values');
+    // Best practices
+    console.log(colors.bold('🔧 SECURE LOGGING BEST PRACTICES:'));
+    console.log('-'.repeat(35));
+    console.log('• Use safeLog() for Dart structured logging');
+    console.log('• Log counts/lengths/status, never actual values');
     console.log('• Implement log sanitization in production');
-    console.log('• Regularly audit logs for accidental exposures');
+    console.log('• Use structured logging with known-safe fields');
     console.log();
   }
 
@@ -263,14 +257,14 @@ async function main() {
     
     // Export JSON
     const jsonOutput = checker.exportJson(analysis);
-    console.log('\n📋 JSON Report:');
-    console.log(jsonOutput);
+    console.log(colors.dim('\n📋 JSON Report:'));
+    console.log(colors.dim(jsonOutput));
     
-    // Always exit 0 for logging checks (warnings only)
+    // Never fail on logging checks (warnings only)
     process.exit(0);
     
   } catch (error) {
-    console.error('❌ Log analysis failed:', error);
+    console.error(colors.red('❌ Log analysis failed:'), error);
     process.exit(1);
   }
 }

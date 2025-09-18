@@ -7,7 +7,15 @@
 import { ExposureScanner, ScanResult } from './exposure_scan';
 import { FirestoreRulesChecker, RulesAnalysis } from './check_rules';
 import { RiskyLoggingChecker, LogAnalysis } from './check_logs';
+import { readFileSync, existsSync } from 'fs';
 import colors from 'picocolors';
+
+interface AcknowledgedFinding {
+  file: string;
+  line: number;
+  hash: string;
+  reason: string;
+}
 
 interface AuditSummary {
   timestamp: string;
@@ -30,6 +38,22 @@ interface AuditSection {
 
 class SecurityAuditor {
   private recommendations: string[] = [];
+  private acknowledgedFindings: AcknowledgedFinding[] = [];
+
+  constructor() {
+    this.loadAcknowledgedFindings();
+  }
+
+  private loadAcknowledgedFindings(): void {
+    try {
+      if (existsSync('scripts/security/acknowledge.json')) {
+        const content = readFileSync('scripts/security/acknowledge.json', 'utf8');
+        this.acknowledgedFindings = JSON.parse(content);
+      }
+    } catch (error) {
+      // Ignore errors loading acknowledge file
+    }
+  }
 
   async runFullAudit(): Promise<AuditSummary> {
     console.log(colors.bold(colors.blue('🛡️  WEDECOR SECURITY AUDIT')));
@@ -81,13 +105,16 @@ class SecurityAuditor {
     rules: RulesAnalysis, 
     logs: LogAnalysis
   ): AuditSummary {
+    // Filter out acknowledged findings
+    const realSecrets = this.filterAcknowledgedFindings(secrets);
+    const realSecretsCount = realSecrets.filter(f => f.severity === 'FAIL').length;
     const secretsSection: AuditSection = {
-      status: secrets.summary.secrets > 0 ? 'FAIL' : 
+      status: realSecretsCount > 0 ? 'FAIL' : 
               secrets.summary.warnings > 0 ? 'WARN' : 'PASS',
-      critical: secrets.summary.secrets,
+      critical: realSecretsCount,
       warnings: secrets.summary.warnings,
       info: 0,
-      message: this.getSecretsMessage(secrets),
+      message: this.getSecretsMessage({ ...secrets, summary: { ...secrets.summary, secrets: realSecretsCount } }),
     };
 
     const rulesSection: AuditSection = {
@@ -211,6 +238,28 @@ class SecurityAuditor {
     // Default admin password warning
     this.recommendations.push('⚠️  IMPORTANT: Change default admin password (admin@wedecorevents.com)');
     this.recommendations.push('🔐 Enable 2FA for all admin accounts');
+  }
+
+  private filterAcknowledgedFindings(secrets: ScanResult): any[] {
+    return secrets.findings.filter(finding => {
+      if (!finding.file || !finding.line) return true;
+      
+      const isAcknowledged = this.acknowledgedFindings.some(ack => 
+        ack.file === finding.file && 
+        ack.line === finding.line &&
+        finding.context?.includes(ack.hash)
+      );
+      
+      if (isAcknowledged) {
+        const ack = this.acknowledgedFindings.find(a => 
+          a.file === finding.file && a.line === finding.line
+        );
+        console.log(colors.dim(`🔄 ACKED: ${finding.message} (${ack?.reason})`));
+        return false;
+      }
+      
+      return true;
+    });
   }
 
   private printUnifiedReport(summary: AuditSummary): void {

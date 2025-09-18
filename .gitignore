@@ -204,6 +204,8 @@ artifacts/
 serviceAccountKey.json
 *.secret.json
 firebase-debug.log
+config/.env.local
+config/.env.*.local
 
 # Build outputs
 functions/lib

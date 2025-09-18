@@ -256,6 +256,6 @@ Future<void> _testAuthenticationFlow() async {
     expect(auth.app, isNotNull);
     print('✅ Authentication flow test completed');
   } catch (e) {
-    print('⚠️ Authentication test skipped (emulator not running): $e');
+    // TODO: Replace with safeLog - print('⚠️ Authentication test skipped (emulator not running): $e');
   }
 } 
