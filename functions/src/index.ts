@@ -47,15 +47,15 @@ export const notifyOnEnquiryChange = onDocumentWritten(
     }
 
     const db = getFirestore();
-    const userSnap = await db.doc(`users/${uid}`).get();
-    if (!userSnap.exists) {
-      logger.info("Missing users doc; skipping notification", { uid });
-      return;
-    }
+    
+    // NEW: Read private tokens from secure subcollection
+    const tokensSnap = await db.collection("users").doc(uid)
+      .collection("private").doc("notifications")
+      .collection("tokens").limit(500).get();
 
-    const fcmToken = userSnap.get("fcmToken") as string | undefined;
-    const webTokens = (userSnap.get("webTokens") as string[] | undefined) ?? [];
-    const tokens = Array.from(new Set([fcmToken, ...webTokens].filter((t): t is string => !!t && t.length > 0)));
+    const tokens = Array.from(new Set(
+      tokensSnap.docs.map(d => (d.get("token") as string | undefined) || d.id).filter(Boolean) as string[]
+    ));
 
     if (tokens.length === 0) {
       logger.info("No tokens present; skipping", { uid });

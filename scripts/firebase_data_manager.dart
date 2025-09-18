@@ -187,7 +187,7 @@ class FirebaseDataManager {
     int importedCount = 0;
     for (final entry in documents.entries) {
       try {
-        await _firestore.collection(collectionName).doc(entry.key).set(entry.value);
+        await _firestore.collection(collectionName).doc(entry.key).set(Map<String, dynamic>.from(entry.value as Map));
         importedCount++;
       } catch (e) {
         print('   ❌ Failed to import document ${entry.key}: $e');
@@ -213,8 +213,8 @@ class FirebaseDataManager {
     int importedCount = 0;
     for (final entry in documents.entries) {
       try {
-        final docData = Map<String, dynamic>.from(entry.value);
-        final subcollections = docData.remove('_subcollections') as Map<String, dynamic>?;
+        final docData = Map<String, dynamic>.from(entry.value as Map);
+        final subcollections = docData.remove('_subcollections') as Map<dynamic, dynamic>?;
 
         // Import main document
         await _firestore.collection(collectionName).doc(entry.key).set(docData);
@@ -230,20 +230,20 @@ class FirebaseDataManager {
                   .doc(entry.key)
                   .collection('financial')
                   .doc(financialEntry.key)
-                  .set(financialEntry.value);
+                  .set(Map<String, dynamic>.from(financialEntry.value as Map));
             }
           }
 
           // Import history subcollection
           if (subcollections.containsKey('history')) {
-            final historyDocs = subcollections['history'] as Map<String, dynamic>;
+            final historyDocs = subcollections['history'] as Map<dynamic, dynamic>;
             for (final historyEntry in historyDocs.entries) {
               await _firestore
                   .collection(collectionName)
                   .doc(entry.key)
                   .collection('history')
                   .doc(historyEntry.key)
-                  .set(historyEntry.value);
+                  .set(Map<String, dynamic>.from(historyEntry.value as Map));
             }
           }
         }
@@ -280,7 +280,7 @@ class FirebaseDataManager {
               .doc(dropdownType)
               .collection('items')
               .doc(itemEntry.key)
-              .set(itemEntry.value);
+              .set(Map<String, dynamic>.from(itemEntry.value as Map));
           importedCount++;
         } catch (e) {
           print('   ❌ Failed to import dropdown item ${itemEntry.key}: $e');
