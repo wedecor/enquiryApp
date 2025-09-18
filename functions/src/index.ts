@@ -1,789 +1,157 @@
-import {onDocumentCreated, onDocumentUpdated, onDocumentDeleted} from "firebase-functions/v2/firestore";
-import {onSchedule} from "firebase-functions/v2/scheduler";
-import {onRequest, onCall} from "firebase-functions/v2/https";
-import {initializeApp} from "firebase-admin/app";
-import {getAuth} from "firebase-admin/auth";
-import {getFirestore} from "firebase-admin/firestore";
-import {getMessaging} from "firebase-admin/messaging";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { setGlobalOptions } from "firebase-functions/v2/options";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { getMessaging } from "firebase-admin/messaging";
+
+// Set global options for all functions
+setGlobalOptions({
+  region: 'asia-south1',
+  timeoutSeconds: 30,
+  memory: '128MiB'
+});
 
 // Initialize Firebase Admin
 initializeApp();
-const auth = getAuth();
 const firestore = getFirestore();
 const messaging = getMessaging();
 
 /**
- * Auth Sync Cloud Functions for WeDecor Enquiries App
- * 
- * These functions automatically sync Firestore user documents with Firebase Auth:
- * - Create Auth user when Firestore user doc is created
- * - Update Auth user custom claims when role changes
- * - Disable/enable Auth user when active status changes
- * - Delete Auth user when Firestore user doc is deleted
+ * Sends FCM notification when enquiry is created, assigned, or status/payment changes
  */
-
-interface UserDocument {
-  uid: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role: 'admin' | 'staff';
-  active: boolean;
-  fcmToken?: string;
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
-}
-
-/**
- * Triggered when a new user document is created in Firestore
- * Creates a corresponding Firebase Auth user with temporary password
- */
-export const onUserCreated = onDocumentCreated(
-  {
-    document: "users/{uid}",
-    region: "us-central1",
-  },
+export const notifyOnEnquiryChange = onDocumentWritten(
+  'enquiries/{id}',
   async (event) => {
-    const userData = event.data?.data() as UserDocument;
-    const uid = event.params.uid;
+    const enquiryId = event.params.id;
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
 
-    if (!userData) {
-      console.error("No user data found in document");
+    // If document was deleted, skip
+    if (!after) {
       return;
     }
 
-    try {
-      console.log(`Creating Auth user for: ${userData.email}`);
-
-      // Generate a random temporary password
-      const tempPassword = generateTempPassword();
-
-      // Create Auth user
-      await auth.createUser({
-        uid: uid,
-        email: userData.email,
-        password: tempPassword,
-        displayName: userData.name,
-        emailVerified: true, // Mark as verified since admin created it
-        disabled: !userData.active,
-      });
-
-      // Set custom claims for role-based access
-      await auth.setCustomUserClaims(uid, {
-        role: userData.role,
-        admin: userData.role === 'admin',
-      });
-
-      console.log(`Successfully created Auth user for: ${userData.email}`);
-      console.log(`Temporary password: ${tempPassword} (user should change this on first login)`);
-
-    } catch (error) {
-      console.error(`Failed to create Auth user for ${userData.email}:`, error);
-      throw error;
-    }
-  }
-);
-
-/**
- * Triggered when a user document is updated in Firestore
- * Updates Firebase Auth user accordingly (role, active status, etc.)
- */
-export const onUserUpdated = onDocumentUpdated(
-  {
-    document: "users/{uid}",
-    region: "us-central1",
-  },
-  async (event) => {
-    const beforeData = event.data?.before.data() as UserDocument;
-    const afterData = event.data?.after.data() as UserDocument;
-    const uid = event.params.uid;
-
-    if (!beforeData || !afterData) {
-      console.error("Missing user data in update event");
-      return;
-    }
-
-    try {
-      console.log(`Updating Auth user for: ${afterData.email}`);
-
-      const updates: any = {};
-
-      // Check if role changed
-      if (beforeData.role !== afterData.role) {
-        console.log(`Role changed from ${beforeData.role} to ${afterData.role}`);
-        
-        // Update custom claims
-        await auth.setCustomUserClaims(uid, {
-          role: afterData.role,
-          admin: afterData.role === 'admin',
-        });
-      }
-
-      // Check if active status changed
-      if (beforeData.active !== afterData.active) {
-        console.log(`Active status changed from ${beforeData.active} to ${afterData.active}`);
-        
-        // Enable/disable Auth user
-        await auth.updateUser(uid, {
-          disabled: !afterData.active,
-        });
-      }
-
-      // Check if name changed
-      if (beforeData.name !== afterData.name) {
-        console.log(`Name changed from ${beforeData.name} to ${afterData.name}`);
-        updates.displayName = afterData.name;
-      }
-
-      // Check if email changed (should be rare/not allowed in UI)
-      if (beforeData.email !== afterData.email) {
-        console.log(`Email changed from ${beforeData.email} to ${afterData.email}`);
-        updates.email = afterData.email;
-      }
-
-      // Apply any Auth updates
-      if (Object.keys(updates).length > 0) {
-        await auth.updateUser(uid, updates);
-      }
-
-      console.log(`Successfully updated Auth user for: ${afterData.email}`);
-
-    } catch (error) {
-      console.error(`Failed to update Auth user for ${afterData.email}:`, error);
-      throw error;
-    }
-  }
-);
-
-/**
- * Triggered when a user document is deleted from Firestore
- * Deletes the corresponding Firebase Auth user
- */
-export const onUserDeleted = onDocumentDeleted(
-  {
-    document: "users/{uid}",
-    region: "us-central1",
-  },
-  async (event) => {
-    const userData = event.data?.data() as UserDocument;
-    const uid = event.params.uid;
-
-    if (!userData) {
-      console.error("No user data found in deleted document");
-      return;
-    }
-
-    try {
-      console.log(`Deleting Auth user for: ${userData.email}`);
-
-      // Delete Auth user
-      await auth.deleteUser(uid);
-
-      console.log(`Successfully deleted Auth user for: ${userData.email}`);
-
-    } catch (error) {
-      console.error(`Failed to delete Auth user for ${userData.email}:`, error);
-      throw error;
-    }
-  }
-);
-
-/**
- * Helper function to generate a secure temporary password
- */
-function generateTempPassword(): string {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  let password = '';
-  
-  // Ensure at least one of each required type
-  password += 'ABCDEFGHJKMNPQRSTUVWXYZ'[Math.floor(Math.random() * 23)]; // uppercase
-  password += 'abcdefghijkmnpqrstuvwxyz'[Math.floor(Math.random() * 23)]; // lowercase  
-  password += '23456789'[Math.floor(Math.random() * 8)]; // number
-  
-  // Fill the rest randomly
-  for (let i = 3; i < 12; i++) {
-    password += chars[Math.floor(Math.random() * chars.length)];
-  }
-  
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-// ============================================================================
-// ANALYTICS AGGREGATION FUNCTIONS (Optional - for better performance)
-// ============================================================================
-
-interface EnquiryDocument {
-  id: string;
-  customerName: string;
-  eventType: string;
-  eventStatus: string;
-  priority: string;
-  source: string;
-  totalCost?: number;
-  createdAt: FirebaseFirestore.Timestamp;
-  [key: string]: any;
-}
-
-interface DailyAnalytics {
-  date: string; // YYYY-MM-DD format
-  totalEnquiries: number;
-  statusBreakdown: Record<string, number>;
-  eventTypeBreakdown: Record<string, number>;
-  sourceBreakdown: Record<string, number>;
-  priorityBreakdown: Record<string, number>;
-  totalRevenue: number;
-  createdAt: FirebaseFirestore.Timestamp;
-}
-
-interface RollupAnalytics {
-  range: string; // e.g., "7d", "30d", "90d"
-  startDate: string;
-  endDate: string;
-  totalEnquiries: number;
-  statusBreakdown: Record<string, number>;
-  eventTypeBreakdown: Record<string, number>;
-  sourceBreakdown: Record<string, number>;
-  priorityBreakdown: Record<string, number>;
-  totalRevenue: number;
-  createdAt: FirebaseFirestore.Timestamp;
-}
-
-/**
- * Scheduled function that runs every hour to compute analytics aggregations
- * This improves client-side performance by pre-computing common queries
- */
-export const computeAnalyticsAggregations = onSchedule(
-  {
-    schedule: "0 * * * *", // Every hour at minute 0
-    timeZone: "UTC",
-    region: "us-central1",
-  },
-  async (event) => {
-    console.log("Starting analytics aggregation computation...");
+    // For new documents (create), treat as meaningful change
+    const isCreate = !before;
     
-    try {
-      const now = new Date();
-      const last90Days = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      
-      // Compute daily analytics for the last 90 days
-      await computeDailyAnalytics(last90Days, now);
-      
-      // Compute rollup analytics for common ranges
-      await computeRollupAnalytics(now);
-      
-      console.log("Analytics aggregation computation completed successfully");
-    } catch (error) {
-      console.error("Failed to compute analytics aggregations:", error);
-      throw error;
-    }
-  }
-);
-
-/**
- * HTTPS function for manual backfill of analytics data
- * Usage: POST to function URL with { "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }
- */
-export const backfillAnalytics = onRequest(
-  {
-    region: "us-central1",
-  },
-  async (req, res) => {
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      res.status(405).json({ error: 'Method not allowed' });
-      return;
-    }
+    // Check for meaningful changes
+    const changes: string[] = [];
     
-    try {
-      const { startDate, endDate } = req.body;
-      
-      if (!startDate || !endDate) {
-        res.status(400).json({ error: 'startDate and endDate are required' });
-        return;
-      }
-      
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
-        return;
-      }
-      
-      console.log(`Starting manual backfill from ${startDate} to ${endDate}`);
-      
-      // Compute daily analytics for the specified range
-      await computeDailyAnalytics(start, end);
-      
-      // Compute rollup analytics
-      await computeRollupAnalytics(end);
-      
-      res.json({ 
-        success: true, 
-        message: `Analytics backfilled from ${startDate} to ${endDate}` 
-      });
-      
-    } catch (error) {
-      console.error("Analytics backfill failed:", error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-);
-
-/**
- * Compute daily analytics for a date range
- */
-async function computeDailyAnalytics(startDate: Date, endDate: Date) {
-  console.log(`Computing daily analytics from ${startDate.toISOString()} to ${endDate.toISOString()}`);
-  
-  // Get all enquiries in the date range
-  const enquiriesSnapshot = await firestore
-    .collection('enquiries')
-    .where('createdAt', '>=', FirebaseFirestore.Timestamp.fromDate(startDate))
-    .where('createdAt', '<=', FirebaseFirestore.Timestamp.fromDate(endDate))
-    .get();
-  
-  // Group enquiries by date
-  const enquiriesByDate: Record<string, EnquiryDocument[]> = {};
-  
-  enquiriesSnapshot.docs.forEach(doc => {
-    const data = doc.data() as EnquiryDocument;
-    const date = data.createdAt.toDate();
-    const dateKey = formatDateKey(date);
-    
-    if (!enquiriesByDate[dateKey]) {
-      enquiriesByDate[dateKey] = [];
-    }
-    
-    enquiriesByDate[dateKey].push({ ...data, id: doc.id });
-  });
-  
-  // Compute analytics for each date
-  const batch = firestore.batch();
-  let operationCount = 0;
-  
-  for (const [dateKey, enquiries] of Object.entries(enquiriesByDate)) {
-    const analytics = computeAnalyticsForEnquiries(enquiries);
-    const dailyAnalytics: DailyAnalytics = {
-      date: dateKey,
-      ...analytics,
-      createdAt: FirebaseFirestore.Timestamp.now(),
-    };
-    
-    const docRef = firestore.collection('analytics').doc('daily').collection('data').doc(dateKey);
-    batch.set(docRef, dailyAnalytics, { merge: true });
-    operationCount++;
-    
-    // Firestore batch has a limit of 500 operations
-    if (operationCount >= 400) {
-      await batch.commit();
-      operationCount = 0;
-    }
-  }
-  
-  if (operationCount > 0) {
-    await batch.commit();
-  }
-  
-  console.log(`Computed daily analytics for ${Object.keys(enquiriesByDate).length} days`);
-}
-
-/**
- * Compute rollup analytics for common date ranges
- */
-async function computeRollupAnalytics(endDate: Date) {
-  console.log("Computing rollup analytics...");
-  
-  const ranges = [
-    { key: '7d', days: 7 },
-    { key: '30d', days: 30 },
-    { key: '90d', days: 90 },
-  ];
-  
-  for (const range of ranges) {
-    const startDate = new Date(endDate.getTime() - range.days * 24 * 60 * 60 * 1000);
-    
-    console.log(`Computing ${range.key} rollup from ${startDate.toISOString()} to ${endDate.toISOString()}`);
-    
-    // Get all enquiries in the range
-    const enquiriesSnapshot = await firestore
-      .collection('enquiries')
-      .where('createdAt', '>=', FirebaseFirestore.Timestamp.fromDate(startDate))
-      .where('createdAt', '<=', FirebaseFirestore.Timestamp.fromDate(endDate))
-      .get();
-    
-    const enquiries: EnquiryDocument[] = enquiriesSnapshot.docs.map(doc => ({
-      ...doc.data() as EnquiryDocument,
-      id: doc.id,
-    }));
-    
-    const analytics = computeAnalyticsForEnquiries(enquiries);
-    const rollupAnalytics: RollupAnalytics = {
-      range: range.key,
-      startDate: formatDateKey(startDate),
-      endDate: formatDateKey(endDate),
-      ...analytics,
-      createdAt: FirebaseFirestore.Timestamp.now(),
-    };
-    
-    await firestore
-      .collection('analytics')
-      .doc('rollups')
-      .collection('data')
-      .doc(range.key)
-      .set(rollupAnalytics, { merge: true });
-  }
-  
-  console.log(`Computed rollup analytics for ${ranges.length} ranges`);
-}
-
-/**
- * Compute analytics metrics for a set of enquiries
- */
-function computeAnalyticsForEnquiries(enquiries: EnquiryDocument[]) {
-  const statusBreakdown: Record<string, number> = {};
-  const eventTypeBreakdown: Record<string, number> = {};
-  const sourceBreakdown: Record<string, number> = {};
-  const priorityBreakdown: Record<string, number> = {};
-  let totalRevenue = 0;
-  
-  enquiries.forEach(enquiry => {
-    // Status breakdown
-    const status = enquiry.eventStatus || 'unknown';
-    statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
-    
-    // Event type breakdown
-    const eventType = enquiry.eventType || 'unknown';
-    eventTypeBreakdown[eventType] = (eventTypeBreakdown[eventType] || 0) + 1;
-    
-    // Source breakdown
-    const source = enquiry.source || 'unknown';
-    sourceBreakdown[source] = (sourceBreakdown[source] || 0) + 1;
-    
-    // Priority breakdown
-    const priority = enquiry.priority || 'medium';
-    priorityBreakdown[priority] = (priorityBreakdown[priority] || 0) + 1;
-    
-    // Revenue
-    if (enquiry.totalCost && typeof enquiry.totalCost === 'number') {
-      totalRevenue += enquiry.totalCost;
-    }
-  });
-  
-  return {
-    totalEnquiries: enquiries.length,
-    statusBreakdown,
-    eventTypeBreakdown,
-    sourceBreakdown,
-    priorityBreakdown,
-    totalRevenue,
-  };
-}
-
-/**
- * Format date as YYYY-MM-DD
- */
-function formatDateKey(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-// ============================================================================
-// NOTIFICATION FUNCTIONS
-// ============================================================================
-
-interface NotificationDocument {
-  type: string;
-  enquiryId?: string;
-  title: string;
-  body: string;
-  eventStatus?: string;
-  paymentStatus?: string;
-  createdAt: FirebaseFirestore.Timestamp;
-  read: boolean;
-  archived: boolean;
-}
-
-/**
- * Triggered when an enquiry is updated
- * Sends notifications for meaningful changes
- */
-export const notifyOnEnquiryChange = onDocumentUpdated(
-  {
-    document: "enquiries/{enquiryId}",
-    region: "us-central1",
-  },
-  async (event) => {
-    const beforeData = event.data?.before.data();
-    const afterData = event.data?.after.data();
-    const enquiryId = event.params.enquiryId;
-
-    if (!beforeData || !afterData) {
-      console.error("Missing enquiry data in update event");
-      return;
-    }
-
-    try {
-      // Check for meaningful changes
-      const changes: string[] = [];
-      
-      if (beforeData.assignedTo !== afterData.assignedTo) {
-        changes.push(`assigned to ${afterData.assignedTo ? 'staff member' : 'unassigned'}`);
-      }
-      
-      if (beforeData.eventStatus !== afterData.eventStatus) {
-        changes.push(`status changed to ${afterData.eventStatus}`);
-      }
-      
-      if (beforeData.paymentStatus !== afterData.paymentStatus) {
-        changes.push(`payment status changed to ${afterData.paymentStatus}`);
-      }
-
-      // If no meaningful changes, skip notification
-      if (changes.length === 0) {
-        return;
-      }
-
-      // Create notification content
-      const customerName = afterData.customerName || 'Unknown Customer';
-      const eventType = afterData.eventType || 'Event';
-      const title = `Enquiry Updated: ${customerName}`;
-      const body = `${eventType} enquiry ${changes.join(', ')}`;
-
-      // Determine who to notify
-      const notifyUsers: string[] = [];
-      
-      // Always notify the assigned user if present
-      if (afterData.assignedTo) {
-        notifyUsers.push(afterData.assignedTo);
-      }
-      
-      // If assignment changed, notify the previously assigned user too
-      if (beforeData.assignedTo && beforeData.assignedTo !== afterData.assignedTo) {
-        notifyUsers.push(beforeData.assignedTo);
-      }
-
-      // Send notifications to relevant users
-      for (const userId of notifyUsers) {
-        await createNotificationForUser(userId, {
-          type: "enquiry_update",
-          enquiryId,
-          title,
-          body,
-          eventStatus: afterData.eventStatus,
-          paymentStatus: afterData.paymentStatus,
-          createdAt: FirebaseFirestore.Timestamp.now(),
-          read: false,
-          archived: false,
-        });
-      }
-
-      console.log(`Sent enquiry update notifications for ${enquiryId} to ${notifyUsers.length} users`);
-
-    } catch (error) {
-      console.error(`Failed to send enquiry update notifications for ${enquiryId}:`, error);
-    }
-  }
-);
-
-/**
- * Triggered when a new enquiry is created
- * Notifies all admin users
- */
-export const notifyOnNewEnquiryForAdmins = onDocumentCreated(
-  {
-    document: "enquiries/{enquiryId}",
-    region: "us-central1",
-  },
-  async (event) => {
-    const enquiryData = event.data?.data();
-    const enquiryId = event.params.enquiryId;
-
-    if (!enquiryData) {
-      console.error("No enquiry data found in document");
-      return;
-    }
-
-    try {
-      // Get all admin users
-      const adminUsersSnapshot = await firestore
-        .collection('users')
-        .where('role', '==', 'admin')
-        .where('isActive', '==', true)
-        .get();
-
-      if (adminUsersSnapshot.empty) {
-        console.log("No active admin users found");
-        return;
-      }
-
-      // Create notification content
-      const customerName = enquiryData.customerName || 'Unknown Customer';
-      const eventType = enquiryData.eventType || 'Event';
-      const title = `New Enquiry: ${customerName}`;
-      const body = `New ${eventType} enquiry received from ${customerName}`;
-
-      // Send notifications to all admins
-      const notificationPromises = adminUsersSnapshot.docs.map(doc => 
-        createNotificationForUser(doc.id, {
-          type: "new_enquiry",
-          enquiryId,
-          title,
-          body,
-          eventStatus: enquiryData.eventStatus,
-          createdAt: FirebaseFirestore.Timestamp.now(),
-          read: false,
-          archived: false,
-        })
-      );
-
-      await Promise.all(notificationPromises);
-
-      console.log(`Sent new enquiry notifications for ${enquiryId} to ${adminUsersSnapshot.docs.length} admins`);
-
-    } catch (error) {
-      console.error(`Failed to send new enquiry notifications for ${enquiryId}:`, error);
-    }
-  }
-);
-
-/**
- * HTTPS Callable function to invite a new user
- */
-export const inviteUser = onCall(
-  {
-    region: "us-central1",
-  },
-  async (request) => {
-    // Verify caller is admin
-    const callerUid = request.auth?.uid;
-    if (!callerUid) {
-      throw new Error('Authentication required');
-    }
-
-    const callerDoc = await firestore.collection('users').doc(callerUid).get();
-    const callerData = callerDoc.data();
-    
-    if (!callerData || callerData.role !== 'admin') {
-      throw new Error('Admin access required');
-    }
-
-    const { email, name, role } = request.data;
-
-    // Validate input
-    if (!email || !name || !role) {
-      throw new Error('Email, name, and role are required');
-    }
-
-    if (!['admin', 'staff'].includes(role)) {
-      throw new Error('Role must be admin or staff');
-    }
-
-    try {
-      console.log(`Inviting user: ${email} as ${role}`);
-
-      // Check if user already exists
-      let userRecord;
-      try {
-        userRecord = await auth.getUserByEmail(email);
-        console.log(`User already exists: ${userRecord.uid}`);
-      } catch (error) {
-        // User doesn't exist, create new one
-        userRecord = await auth.createUser({
-          email: email,
-          displayName: name,
-          emailVerified: false,
-          disabled: false,
-        });
-        console.log(`Created new user: ${userRecord.uid}`);
-      }
-
-      // Generate password reset link
-      const resetLink = await auth.generatePasswordResetLink(email);
-
-      // Set custom claims
-      await auth.setCustomUserClaims(userRecord.uid, {
-        role: role,
-        admin: role === 'admin',
-      });
-
-      // Create/update Firestore user document
-      const userData = {
-        name: name,
-        email: email,
-        phone: '', // Will be updated by user
-        role: role,
-        isActive: true,
-        createdAt: FirebaseFirestore.Timestamp.now(),
-        updatedAt: FirebaseFirestore.Timestamp.now(),
-      };
-
-      await firestore.collection('users').doc(userRecord.uid).set(userData, { merge: true });
-
-      console.log(`Successfully invited user: ${email}`);
-
-      return {
-        uid: userRecord.uid,
-        resetLink: resetLink,
-      };
-
-    } catch (error) {
-      console.error(`Failed to invite user ${email}:`, error);
-      throw new Error(`Failed to invite user: ${error}`);
-    }
-  }
-);
-
-/**
- * Helper function to create notification for a specific user
- */
-async function createNotificationForUser(userId: string, notificationData: NotificationDocument) {
-  try {
-    // Create notification document
-    await firestore
-      .collection('notifications')
-      .doc(userId)
-      .collection('items')
-      .add(notificationData);
-
-    // Get user's FCM token and send push notification
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-    
-    if (userData?.fcmToken) {
-      try {
-        await messaging.send({
-          token: userData.fcmToken,
-          notification: {
-            title: notificationData.title,
-            body: notificationData.body,
-          },
-          data: {
-            type: notificationData.type,
-            enquiryId: notificationData.enquiryId || '',
-            userId: userId,
-          },
-          webpush: {
-            notification: {
-              icon: '/icons/Icon-192.png',
-              badge: '/icons/Icon-192.png',
-              tag: notificationData.enquiryId || 'default',
-            },
-          },
-        });
-        
-        console.log(`FCM notification sent to user ${userId}`);
-      } catch (fcmError) {
-        console.error(`Failed to send FCM notification to user ${userId}:`, fcmError);
-        // Don't throw - notification document was created successfully
-      }
+    if (isCreate) {
+      changes.push('Created');
     } else {
-      console.log(`No FCM token found for user ${userId}`);
+      if (before.assignedTo !== after.assignedTo) {
+        changes.push('Assigned');
+      }
+      if (before.eventStatus !== after.eventStatus) {
+        changes.push(`Status: ${after.eventStatus || 'Unknown'}`);
+      }
+      if (before.paymentStatus !== after.paymentStatus) {
+        changes.push(`Payment: ${after.paymentStatus || 'Unknown'}`);
+      }
     }
 
-  } catch (error) {
-    console.error(`Failed to create notification for user ${userId}:`, error);
-    throw error;
-  }
-}
+    // If no meaningful changes, skip notification
+    if (changes.length === 0) {
+      return;
+    }
 
+    // Must have an assigned user to notify
+    if (!after.assignedTo) {
+      console.log(`Enquiry ${enquiryId}: No assigned user, skipping notification`);
+      return;
+    }
+
+    try {
+      // Load user document to get FCM tokens
+      const userDoc = await firestore.collection('users').doc(after.assignedTo).get();
+      
+      if (!userDoc.exists) {
+        console.log(`User ${after.assignedTo} not found, skipping notification`);
+        return;
+      }
+
+      const userData = userDoc.data()!;
+      const tokens: string[] = [];
+
+      // Collect FCM tokens (dedupe)
+      if (userData.fcmToken && typeof userData.fcmToken === 'string') {
+        tokens.push(userData.fcmToken);
+      }
+      
+      if (userData.webTokens && Array.isArray(userData.webTokens)) {
+        userData.webTokens.forEach((token: any) => {
+          if (typeof token === 'string' && token && !tokens.includes(token)) {
+            tokens.push(token);
+          }
+        });
+      }
+
+      if (tokens.length === 0) {
+        console.log(`User ${after.assignedTo}: No FCM tokens, skipping notification`);
+        return;
+      }
+
+      // Build notification content
+      const title = changes.join(' • ');
+      const body = `Customer: ${after.customerName || 'Open the app for details'}`;
+      
+      const notificationData = {
+        type: 'enquiry_update',
+        enquiryId: enquiryId,
+        eventStatus: after.eventStatus || '',
+        paymentStatus: after.paymentStatus || ''
+      };
+
+      // Send FCM notification
+      const response = await messaging.sendEachForMulticast({
+        tokens: tokens,
+        notification: {
+          title: title,
+          body: body
+        },
+        data: notificationData,
+        webpush: {
+          notification: {
+            icon: '/icons/Icon-192.png',
+            badge: '/icons/Icon-192.png',
+            tag: enquiryId,
+            requireInteraction: false
+          }
+        }
+      });
+
+      // Optional: Write notification document
+      const notificationDoc = {
+        type: 'enquiry_update',
+        enquiryId: enquiryId,
+        title: title,
+        body: body,
+        createdAt: Timestamp.now(),
+        read: false,
+        archived: false
+      };
+
+      await firestore
+        .collection('notifications')
+        .doc(after.assignedTo)
+        .collection('items')
+        .add(notificationDoc);
+
+      // Log summary
+      console.log(`Enquiry ${enquiryId}: Sent ${response.successCount}/${tokens.length} notifications to user ${after.assignedTo}. Changes: ${changes.join(', ')}`);
+
+      // Log any failures
+      if (response.failureCount > 0) {
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            console.error(`Token ${idx} failed:`, resp.error);
+          }
+        });
+      }
+
+    } catch (error) {
+      console.error(`Failed to send notification for enquiry ${enquiryId}:`, error);
+    }
+  }
+);

@@ -62,7 +62,10 @@ class AppNotification with _$AppNotification {
     );
   }
 
-  /// Convert to Firestore data
+}
+
+/// Extension to convert AppNotification to Firestore data
+extension AppNotificationFirestore on AppNotification {
   Map<String, dynamic> toFirestore() {
     return {
       'type': type.name,

@@ -2,11 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
+    function isSignedIn() { 
+      return request.auth != null; 
     }
-
-    // Resolve role from users doc of the requester
+    
     function isAdmin() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -19,17 +18,17 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Enquiries - Admins see all, Staff restricted to assigned docs
+    // Enquiries - Admins see all, Staff only see assigned enquiries
     match /enquiries/{id} {
-      allow read: if isAdmin()
+      allow read: if isAdmin() 
                   || (isSignedIn() && resource.data.assignedTo == request.auth.uid);
       allow create, update, delete: if isAdmin();
     }
 
-    // Per-user notifications
+    // Per-user notifications (created by Cloud Functions)
     match /notifications/{uid}/items/{nid} {
       allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isAdmin() || (request.time == resource.data.createdAt); // typically created by CF
+      allow create: if isAdmin(); // created by CF with admin privileges
     }
 
     // Dropdowns - authenticated users can read, admin can manage
@@ -38,7 +37,7 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Optional aggregated analytics collections (if you deploy functions)
+    // Analytics read-only for signed-in users
     match /analytics/{doc=**} {
       allow read: if isSignedIn();
     }
