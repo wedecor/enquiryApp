@@ -17,8 +17,8 @@ class FcmTokenManager {
       alert: true, badge: true, sound: true,
     );
 
-    // TODO: paste your Web Push certificate (VAPID public key) from Firebase Console
-    const vapidKey = 'PASTE_WEB_PUSH_CERTIFICATE_PUBLIC_KEY';
+    // VAPID public key from Firebase Console
+    const vapidKey = 'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E';
 
     final token = await FirebaseMessaging.instance.getToken(vapidKey: vapidKey);
     if (token == null) return;
