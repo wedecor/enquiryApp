@@ -36,7 +36,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
   @override
   Widget build(BuildContext context) {
     final isAdmin = ref.watch(isAdminProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('System Analytics'),
@@ -101,7 +101,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           // Date range presets
           Row(
             children: [
-              Expanded(
+          Expanded(
                 child: _buildDateRangeSelector(),
               ),
               const SizedBox(width: 16),
@@ -496,20 +496,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         
         return analyticsAsync.when(
           data: (state) => SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
+            children: [
+              Expanded(
                       child: StatusStackedBarChart(
                         data: state.statusBreakdown,
                         title: 'Status Breakdown',
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                       child: EventTypePieChart(
                         data: state.eventTypeBreakdown,
                         title: 'Event Types',
@@ -554,19 +554,19 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                       child: TopListTable(
                         title: 'Top Event Types',
                         data: state.topEventTypes,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+                ),
+              ),
+              const SizedBox(width: 16),
                     Expanded(
                       child: TopListTable(
                         title: 'Top Sources',
                         data: state.topSources,
                       ),
-                    ),
-                  ],
                 ),
-              ],
-            ),
+            ],
+          ),
+        ],
+      ),
           ),
           loading: () => _buildLoadingState(),
           error: (error, stack) => _buildErrorState(error.toString()),
@@ -673,13 +673,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading analytics data...'),
-          ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Loading analytics data...'),
+        ],
         ),
       ),
     );

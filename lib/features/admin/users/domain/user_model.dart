@@ -13,7 +13,7 @@ class UserModel with _$UserModel {
     String? phone,
     required String role, // 'admin' or 'staff'
     @Default(true) bool active,
-    String? fcmToken,
+    // fcmToken removed for security - now stored in private subcollection
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _UserModel;
@@ -29,7 +29,7 @@ class UserModel with _$UserModel {
       phone: data['phone'] as String?,
       role: data['role'] as String,
       active: data['active'] as bool? ?? true,
-      fcmToken: data['fcmToken'] as String?,
+      // fcmToken removed for security
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
@@ -44,7 +44,7 @@ class UserModel with _$UserModel {
       phone: null,
       role: 'staff',
       active: true,
-      fcmToken: null,
+      // fcmToken removed for security
       createdAt: now,
       updatedAt: now,
     );
@@ -60,7 +60,7 @@ extension UserModelX on UserModel {
       'phone': phone,
       'role': role,
       'active': active,
-      'fcmToken': fcmToken,
+      // fcmToken removed for security - stored in private subcollection
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
