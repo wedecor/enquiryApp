@@ -1,0 +1,19 @@
+We Decor Enquiries - Web PWA
+
+URL: https://your-domain.com/app/
+Alternative: https://wedecor-enquiries.web.app/
+
+Features:
+- Progressive Web App (PWA)
+- Add to Home Screen support
+- Offline functionality
+- Same features as mobile app
+- No installation required
+
+Instructions:
+1. Open URL in mobile browser (Chrome/Safari)
+2. Tap "Add to Home Screen" when prompted
+3. App icon will appear on home screen
+4. Works offline with cached content
+
+Note: Replace with actual deployment URL after hosting setup.
