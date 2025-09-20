@@ -4,7 +4,7 @@ void main() {
   group('UserManagementScreen', () {
     // Note: Complex widget tests with Firebase dependencies are converted to unit tests
     // This prevents Firebase initialization issues in CI/CD environments
-    
+
     test('should have proper widget structure', () {
       // Test widget logic without Firebase dependencies
       expect(true, isTrue); // Placeholder for widget structure validation

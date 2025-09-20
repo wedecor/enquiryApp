@@ -4,7 +4,7 @@ void main() {
   group('EnquiryListScreen Widget Tests', () {
     // Note: Complex widget tests with Firebase dependencies are converted to unit tests
     // This prevents Firebase initialization issues in CI/CD environments
-    
+
     test('should handle authentication state logic', () {
       // Test authentication state handling logic
       expect(true, isTrue); // Placeholder for auth logic validation
