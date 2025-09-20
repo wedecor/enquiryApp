@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
 import 'core/notifications/fcm_bootstrap.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
@@ -21,26 +26,56 @@ import 'firebase_options.dart';
 ///
 /// The application uses Riverpod for state management and Firebase for
 /// backend services including authentication, database, and messaging.
-void main() async {
-  // Ensure Flutter bindings are initialized before using any Flutter services
+/// Bootstrap function for Firebase and monitoring setup
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase Core services with platform-specific options
-  // Check if Firebase is already initialized to prevent duplicate app error
+  
+  // Initialize Firebase Core services
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     print('🔥 Firebase initialized successfully');
-  } else {
-    print('🔥 Firebase already initialized, using existing app');
+  }
+
+  // Configure Crashlytics (gated by environment)
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+    kReleaseMode && AppConfig.enableCrashlytics,
+  );
+
+  // Configure Performance Monitoring (gated by environment)
+  await FirebasePerformance.instance.setPerformanceCollectionEnabled(
+    kReleaseMode && AppConfig.enablePerformance,
+  );
+
+  // Global error handlers (only in release with Crashlytics enabled)
+  if (kReleaseMode && AppConfig.enableCrashlytics) {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      FirebaseCrashlytics.instance.recordFlutterFatalError(details);
+    };
   }
 
   // Security check for environment variables
   if (kDebugMode) {
     print(FirebaseConfig.securityWarning);
+    print('🔧 Environment: ${AppConfig.env}');
+    print('📊 Analytics: ${AppConfig.enableAnalytics}');
+    print('💥 Crashlytics: ${AppConfig.enableCrashlytics}');
+    print('⚡ Performance: ${AppConfig.enablePerformance}');
   }
+}
 
-  // Launch the application with Riverpod provider scope and FCM bootstrap
-  runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
+void main() {
+  runZonedGuarded(() async {
+    await _bootstrap();
+    runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
+  }, (error, stack) {
+    // Catch any errors not handled by Flutter framework
+    if (kReleaseMode && AppConfig.enableCrashlytics) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    } else {
+      debugPrint('Unhandled error: $error\n$stack');
+    }
+  });
 }
 
 /// Main application widget that handles authentication-based navigation.
