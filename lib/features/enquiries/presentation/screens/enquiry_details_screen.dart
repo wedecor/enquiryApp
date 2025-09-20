@@ -363,8 +363,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           }).toList(),
           onChanged: (value) async {
             if (value != null && value != enquiryData['eventStatus']) {
-              setState(() {
-              });
+              setState(() {});
 
               try {
                 final oldStatus = (enquiryData['eventStatus'] as String?) ?? 'Unknown';
@@ -411,8 +410,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   );
                 }
               } catch (e) {
-                setState(() {
-                });
+                setState(() {});
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
