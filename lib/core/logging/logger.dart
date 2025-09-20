@@ -4,12 +4,16 @@ import 'package:flutter/foundation.dart';
 /// Structured logger with PII redaction for production safety
 class Logger {
   static const String _name = 'WeDecorEnquiries';
+  static const int _maxLogBufferSize = 300;
 
   /// Log levels
   static const int _debugLevel = 0;
   static const int _infoLevel = 1;
   static const int _warnLevel = 2;
   static const int _errorLevel = 3;
+
+  /// In-memory log buffer for feedback collection
+  static final List<String> _logBuffer = [];
 
   /// Email regex for PII redaction
   static final RegExp _emailRegex = RegExp(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b');
@@ -32,11 +36,26 @@ class Logger {
     return redacted;
   }
 
+  /// Add log entry to in-memory buffer for feedback collection
+  static void _addToBuffer(String level, String message, {String? tag}) {
+    final timestamp = DateTime.now().toIso8601String();
+    final logEntry = '[$timestamp] [$level] [${tag ?? _name}] $message';
+    
+    _logBuffer.add(logEntry);
+    
+    // Keep buffer size manageable
+    if (_logBuffer.length > _maxLogBufferSize) {
+      _logBuffer.removeAt(0);
+    }
+  }
+
   /// Debug logging (only in debug mode)
   static void debug(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     if (!kDebugMode) return;
 
     final redactedMessage = _redactPII(message);
+    _addToBuffer('DEBUG', redactedMessage, tag: tag);
+    
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -49,6 +68,8 @@ class Logger {
   /// Info logging
   static void info(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
+    _addToBuffer('INFO', redactedMessage, tag: tag);
+    
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -61,6 +82,8 @@ class Logger {
   /// Warning logging
   static void warn(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
+    _addToBuffer('WARN', redactedMessage, tag: tag);
+    
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -73,6 +96,8 @@ class Logger {
   /// Error logging
   static void error(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
+    _addToBuffer('ERROR', redactedMessage, tag: tag);
+    
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -81,6 +106,36 @@ class Logger {
       stackTrace: stackTrace,
     );
   }
+
+  /// Collect recent logs for feedback submission (PII-safe)
+  static String collectLogBundle() {
+    if (_logBuffer.isEmpty) {
+      return 'No recent logs available';
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln('=== RECENT APP LOGS (LAST ${_logBuffer.length} ENTRIES) ===');
+    buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
+    buffer.writeln('');
+    
+    for (final logEntry in _logBuffer) {
+      buffer.writeln(logEntry);
+    }
+    
+    buffer.writeln('');
+    buffer.writeln('=== END LOGS ===');
+    
+    return buffer.toString();
+  }
+
+  /// Clear log buffer (for testing or privacy)
+  static void clearLogBuffer() {
+    _logBuffer.clear();
+    info('Log buffer cleared');
+  }
+
+  /// Get current log buffer size
+  static int get logBufferSize => _logBuffer.length;
 
   /// Structured event logging for analytics
   static void logEvent(String event, Map<String, dynamic> parameters) {
