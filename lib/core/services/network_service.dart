@@ -15,7 +15,7 @@ class NetworkService {
   final Connectivity _connectivity = Connectivity();
   final List<VoidCallback> _onlineCallbacks = [];
   final List<VoidCallback> _offlineCallbacks = [];
-  
+
   bool _isOnline = true;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -24,15 +24,15 @@ class NetworkService {
     // Check initial connectivity
     final result = await _connectivity.checkConnectivity();
     _isOnline = !result.contains(ConnectivityResult.none);
-    
+
     // Listen for connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
       final wasOnline = _isOnline;
       _isOnline = !result.contains(ConnectivityResult.none);
-      
+
       if (wasOnline != _isOnline) {
         Logger.info('Network status changed: ${_isOnline ? "Online" : "Offline"}');
-        
+
         if (_isOnline) {
           for (final callback in _onlineCallbacks) {
             callback();
@@ -89,7 +89,7 @@ class NetworkAwareQueue {
   void enqueue(QueuedOperation operation) {
     _queue.add(operation);
     Logger.info('Operation queued: ${operation.description}');
-    
+
     // Try to process immediately if online
     if (NetworkService.instance.isOnline) {
       _processQueue();
@@ -99,44 +99,44 @@ class NetworkAwareQueue {
   /// Process queued operations with retry logic
   Future<void> _processQueue() async {
     if (_isProcessing || _queue.isEmpty) return;
-    
+
     _isProcessing = true;
-    
+
     while (_queue.isNotEmpty && NetworkService.instance.isOnline) {
       final operation = _queue.removeAt(0);
-      
+
       try {
         await _executeWithRetry(operation);
         Logger.info('Operation completed: ${operation.description}');
       } catch (e) {
         Logger.error('Operation failed: ${operation.description}', error: e);
-        
+
         // Re-queue if retries remaining
         if (operation.retryCount > 0) {
           operation.retryCount--;
           _queue.insert(0, operation);
-          
+
           // Wait before retry with exponential backoff
           final delay = Duration(seconds: pow(2, 3 - operation.retryCount).toInt());
           await Future.delayed(delay);
         }
       }
     }
-    
+
     _isProcessing = false;
   }
 
   /// Execute operation with retry logic
   Future<void> _executeWithRetry(QueuedOperation operation) async {
     const maxRetries = 3;
-    
+
     for (int attempt = 0; attempt < maxRetries; attempt++) {
       try {
         await operation.execute();
         return;
       } catch (e) {
         if (attempt == maxRetries - 1) rethrow;
-        
+
         // Exponential backoff
         final delay = Duration(milliseconds: 500 * pow(2, attempt).toInt());
         await Future.delayed(delay);
@@ -168,9 +168,5 @@ class QueuedOperation {
   final Future<void> Function() execute;
   int retryCount;
 
-  QueuedOperation({
-    required this.description,
-    required this.execute,
-    this.retryCount = 3,
-  });
+  QueuedOperation({required this.description, required this.execute, this.retryCount = 3});
 }

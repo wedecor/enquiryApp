@@ -9,7 +9,7 @@ import '../app_config.dart';
 class ConsentService {
   static const String _analyticsConsentKey = 'analytics_consent';
   static const String _crashlyticsConsentKey = 'crashlytics_consent';
-  
+
   static ConsentService? _instance;
   static ConsentService get instance => _instance ??= ConsentService._();
   ConsentService._();
@@ -49,13 +49,10 @@ class ConsentService {
   Future<void> _updateAnalyticsCollection(bool enabled) async {
     if (AppConfig.enableAnalytics) {
       await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(enabled);
-      
+
       if (enabled) {
         // Set user properties for analytics
-        await FirebaseAnalytics.instance.setUserProperty(
-          name: 'user_type',
-          value: 'business_user',
-        );
+        await FirebaseAnalytics.instance.setUserProperty(name: 'user_type', value: 'business_user');
         await FirebaseAnalytics.instance.logEvent(name: 'analytics_consent_granted');
       } else {
         await FirebaseAnalytics.instance.logEvent(name: 'analytics_consent_revoked');
@@ -66,7 +63,7 @@ class ConsentService {
   /// Show consent dialog for new users (GDPR compliance)
   Future<bool> shouldShowConsentDialog() async {
     if (_prefs == null) return false;
-    
+
     // Show consent dialog if user hasn't made a choice yet
     final hasSeenDialog = _prefs!.getBool('has_seen_consent_dialog') ?? false;
     return !hasSeenDialog;
@@ -81,14 +78,11 @@ class ConsentService {
   Future<void> initializeAnalytics() async {
     if (AppConfig.enableAnalytics && hasAnalyticsConsent) {
       await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-      
+
       // Log app open event
       await FirebaseAnalytics.instance.logEvent(
         name: 'app_open',
-        parameters: {
-          'environment': AppConfig.env,
-          'platform': defaultTargetPlatform.name,
-        },
+        parameters: {'environment': AppConfig.env, 'platform': defaultTargetPlatform.name},
       );
     }
   }
@@ -96,10 +90,7 @@ class ConsentService {
   /// Log analytics event (only if consented)
   Future<void> logEvent(String name, [Map<String, Object>? parameters]) async {
     if (AppConfig.enableAnalytics && hasAnalyticsConsent) {
-      await FirebaseAnalytics.instance.logEvent(
-        name: name,
-        parameters: parameters,
-      );
+      await FirebaseAnalytics.instance.logEvent(name: name, parameters: parameters);
     }
   }
 

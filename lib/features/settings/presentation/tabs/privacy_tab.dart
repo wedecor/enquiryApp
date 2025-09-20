@@ -37,10 +37,7 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'Privacy & Data',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
+        const Text('Privacy & Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
           'Manage your privacy preferences and data sharing settings.',
@@ -57,24 +54,26 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
               'No personal information is collected.',
             ),
             value: _analyticsConsent,
-            onChanged: AppConfig.enableAnalytics ? (value) async {
-              await ConsentService.instance.setAnalyticsConsent(value);
-              setState(() {
-                _analyticsConsent = value;
-              });
-              
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      value 
-                        ? 'Analytics enabled. Thank you for helping us improve!'
-                        : 'Analytics disabled. Your privacy is protected.',
-                    ),
-                  ),
-                );
-              }
-            } : null,
+            onChanged: AppConfig.enableAnalytics
+                ? (value) async {
+                    await ConsentService.instance.setAnalyticsConsent(value);
+                    setState(() {
+                      _analyticsConsent = value;
+                    });
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value
+                                ? 'Analytics enabled. Thank you for helping us improve!'
+                                : 'Analytics disabled. Your privacy is protected.',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                : null,
           ),
         ),
 
@@ -89,30 +88,31 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
               'Requires app restart to take effect.',
             ),
             value: _crashlyticsConsent,
-            onChanged: AppConfig.enableCrashlytics ? (value) async {
-              await ConsentService.instance.setCrashlyticsConsent(value);
-              setState(() {
-                _crashlyticsConsent = value;
-              });
-              
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Crash reporting preference saved. Restart app to apply changes.'),
-                  ),
-                );
-              }
-            } : null,
+            onChanged: AppConfig.enableCrashlytics
+                ? (value) async {
+                    await ConsentService.instance.setCrashlyticsConsent(value);
+                    setState(() {
+                      _crashlyticsConsent = value;
+                    });
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Crash reporting preference saved. Restart app to apply changes.',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                : null,
           ),
         ),
 
         const SizedBox(height: 32),
 
         // Legal Documents
-        const Text(
-          'Legal Documents',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        const Text('Legal Documents', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
 
         Card(
@@ -123,9 +123,9 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 title: const Text('Privacy Policy'),
                 subtitle: const Text('How we handle your personal information'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (context) => const PrivacyPolicyScreen()),
-                ),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (context) => const PrivacyPolicyScreen())),
               ),
               const Divider(height: 1),
               ListTile(
@@ -133,9 +133,9 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 title: const Text('Terms of Service'),
                 subtitle: const Text('Terms and conditions for using this app'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen()),
-                ),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen())),
               ),
             ],
           ),
