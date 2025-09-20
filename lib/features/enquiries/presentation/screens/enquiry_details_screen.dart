@@ -289,7 +289,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(enquiryData['eventStatus']),
+                      color: _getStatusColor(enquiryData['eventStatus'] as String?),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
