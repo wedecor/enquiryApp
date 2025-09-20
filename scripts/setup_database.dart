@@ -12,9 +12,7 @@ void main() async {
     print('🚀 Starting We Decor Enquiries Database Setup...');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -53,9 +51,7 @@ void main() async {
     print('   • enquiries/{id}/history/ subcollection (for audit trail)');
     print('   • dropdowns/event_types/items/ (for event type options)');
     print('   • dropdowns/statuses/items/ (for status options)');
-    print(
-      '   • dropdowns/payment_statuses/items/ (for payment status options)',
-    );
+    print('   • dropdowns/payment_statuses/items/ (for payment status options)');
   } catch (e) {
     print('❌ Error during database setup: $e');
     exit(1);

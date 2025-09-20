@@ -4,11 +4,7 @@ void main() {
   group('Event Type Duplication Prevention Logic Tests', () {
     group('Case-insensitive duplication prevention', () {
       test('should detect duplicate event types regardless of case', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-          'Corporate Event',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party', 'Corporate Event'];
 
         // Test exact match
         expect(_isDuplicate('Wedding', existingEventTypes), isTrue);
@@ -56,10 +52,7 @@ void main() {
         expect(_isDuplicate('Wedding', []), isFalse);
 
         // Test with special characters
-        expect(
-          _isDuplicate('Wedding & Reception', existingEventTypes),
-          isFalse,
-        );
+        expect(_isDuplicate('Wedding & Reception', existingEventTypes), isFalse);
         expect(_isDuplicate('Wedding-Reception', existingEventTypes), isFalse);
       });
     });
@@ -103,11 +96,7 @@ void main() {
 
     group('Business logic validation', () {
       test('should enforce uniqueness constraints', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-          'Corporate Event',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party', 'Corporate Event'];
 
         // Test that similar names are considered duplicates
         expect(_isDuplicate('Wedding', existingEventTypes), isTrue);
@@ -122,11 +111,7 @@ void main() {
       });
 
       test('should handle special characters and formatting', () {
-        final existingEventTypes = [
-          'Wedding & Reception',
-          'Birthday-Party',
-          'Corporate Event',
-        ];
+        final existingEventTypes = ['Wedding & Reception', 'Birthday-Party', 'Corporate Event'];
 
         // Test exact matches with special characters
         expect(_isDuplicate('Wedding & Reception', existingEventTypes), isTrue);

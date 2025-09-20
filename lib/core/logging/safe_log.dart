@@ -27,9 +27,7 @@ String _redact(String key, Object? value) {
   ];
 
   // Check if key contains any sensitive patterns
-  final isSensitive = sensitivePatterns.any(
-    (pattern) => keyLower.contains(pattern),
-  );
+  final isSensitive = sensitivePatterns.any((pattern) => keyLower.contains(pattern));
 
   if (isSensitive) {
     if (value == null) return 'null';
@@ -83,13 +81,7 @@ void safeLogObject(String label, Object? object) {
   final objectStr = object.toString();
 
   // Check if the string representation contains sensitive patterns
-  const sensitivePatterns = [
-    'token',
-    'authorization',
-    'secret',
-    'key',
-    'password',
-  ];
+  const sensitivePatterns = ['token', 'authorization', 'secret', 'key', 'password'];
 
   final containsSensitive = sensitivePatterns.any(
     (pattern) => objectStr.toLowerCase().contains(pattern),
@@ -97,9 +89,7 @@ void safeLogObject(String label, Object? object) {
 
   if (containsSensitive) {
     // ignore: avoid_print
-    print(
-      '$label [REDACTED - contains sensitive data] (${objectStr.length} chars)',
-    );
+    print('$label [REDACTED - contains sensitive data] (${objectStr.length} chars)');
   } else {
     // ignore: avoid_print
     print('$label $objectStr');

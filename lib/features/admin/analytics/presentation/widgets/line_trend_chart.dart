@@ -9,12 +9,7 @@ class LineTrendChart extends StatelessWidget {
   final String title;
   final String? subtitle;
 
-  const LineTrendChart({
-    super.key,
-    required this.data,
-    required this.title,
-    this.subtitle,
-  });
+  const LineTrendChart({super.key, required this.data, required this.title, this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -40,17 +35,13 @@ class LineTrendChart extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
           ),
         ],
       ],
@@ -74,12 +65,8 @@ class LineTrendChart extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -101,10 +88,7 @@ class LineTrendChart extends StatelessWidget {
             ),
           ),
         ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: Colors.grey.shade300),
-        ),
+        borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300)),
         minX: 0,
         maxX: (data.length - 1).toDouble(),
         minY: 0,
@@ -149,16 +133,12 @@ class LineTrendChart extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             'Select a different date range or filters',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -173,9 +153,7 @@ class LineTrendChart extends StatelessWidget {
 
   double _getMaxY() {
     if (data.isEmpty) return 10;
-    final maxCount = data
-        .map((point) => point.count)
-        .reduce((a, b) => a > b ? a : b);
+    final maxCount = data.map((point) => point.count).reduce((a, b) => a > b ? a : b);
     return (maxCount * 1.1).ceilToDouble();
   }
 
@@ -200,10 +178,7 @@ class LineTrendChart extends StatelessWidget {
       final point = data[index];
       return SideTitleWidget(
         axisSide: meta.axisSide,
-        child: Text(
-          _formatDate(point.x),
-          style: const TextStyle(fontSize: 10, color: Colors.grey),
-        ),
+        child: Text(_formatDate(point.x), style: const TextStyle(fontSize: 10, color: Colors.grey)),
       );
     }
     return const SizedBox.shrink();
@@ -264,26 +239,18 @@ class MiniTrendChart extends StatelessWidget {
           minX: 0,
           maxX: (data.length - 1).toDouble(),
           minY: 0,
-          maxY: data
-              .map((p) => p.count.toDouble())
-              .reduce((a, b) => a > b ? a : b),
+          maxY: data.map((p) => p.count.toDouble()).reduce((a, b) => a > b ? a : b),
           lineBarsData: [
             LineChartBarData(
               spots: data.asMap().entries.map((entry) {
-                return FlSpot(
-                  entry.key.toDouble(),
-                  entry.value.count.toDouble(),
-                );
+                return FlSpot(entry.key.toDouble(), entry.value.count.toDouble());
               }).toList(),
               isCurved: true,
               color: color,
               barWidth: 2,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                color: color.withOpacity(0.1),
-              ),
+              belowBarData: BarAreaData(show: true, color: color.withOpacity(0.1)),
             ),
           ],
           lineTouchData: const LineTouchData(enabled: false),

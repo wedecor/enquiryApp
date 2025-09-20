@@ -18,19 +18,12 @@ class EnquiriesListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries',
-        ),
+        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (action) => _handleAction(
-              context,
-              ref,
-              action,
-              userRole,
-              currentUser.value?.uid,
-            ),
+            onSelected: (action) =>
+                _handleAction(context, ref, action, userRole, currentUser.value?.uid),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'export',
@@ -75,9 +68,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        userRole == UserRole.admin
-                            ? Icons.inbox
-                            : Icons.assignment,
+                        userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
                         size: 64,
                         color: Colors.grey,
                       ),
@@ -86,10 +77,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                         userRole == UserRole.admin
                             ? 'No enquiries found'
                             : 'No enquiries assigned to you',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey,
-                        ),
+                        style: const TextStyle(fontSize: 18, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -110,43 +98,28 @@ class EnquiriesListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(
-                          enquiryData['eventStatus'] as String?,
-                        ),
+                        backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
                         child: Text(
-                          _getStatusInitial(
-                            enquiryData['eventStatus'] as String?,
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          _getStatusInitial(enquiryData['eventStatus'] as String?),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                       title: Text(
-                        (enquiryData['customerName'] as String?) ??
-                            'Unknown Customer',
+                        (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            (enquiryData['eventType'] as String?) ??
-                                'Unknown Event',
-                          ),
+                          Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
                           Text(
                             'Date: ${_formatDate(enquiryData['eventDate'])}',
                             style: const TextStyle(fontSize: 12),
                           ),
-                          if (userRole == UserRole.admin &&
-                              enquiryData['assignedTo'] != null) ...[
+                          if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue,
-                              ),
+                              style: const TextStyle(fontSize: 12, color: Colors.blue),
                             ),
                           ],
                         ],
@@ -155,20 +128,13 @@ class EnquiriesListScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(
-                                enquiryData['priority'] as String?,
-                              ),
+                              color: _getPriorityColor(enquiryData['priority'] as String?),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              _capitalizeFirst(
-                                (enquiryData['priority'] as String?) ?? 'N/A',
-                              ),
+                              _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -184,10 +150,8 @@ class EnquiriesListScreen extends ConsumerWidget {
                               onPressed: () {
                                 Navigator.of(context).push<void>(
                                   MaterialPageRoute<void>(
-                                    builder: (context) => EnquiryFormScreen(
-                                      enquiryId: enquiryId,
-                                      mode: 'edit',
-                                    ),
+                                    builder: (context) =>
+                                        EnquiryFormScreen(enquiryId: enquiryId, mode: 'edit'),
                                   ),
                                 );
                               },
@@ -203,8 +167,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push<void>(
                           MaterialPageRoute<void>(
-                            builder: (context) =>
-                                EnquiryDetailsScreen(enquiryId: enquiryId),
+                            builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
                           ),
                         );
                       },
@@ -216,16 +179,12 @@ class EnquiriesListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(child: Text('Error loading user data: $error')),
+        error: (error, stack) => Center(child: Text('Error loading user data: $error')),
       ),
     );
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(
-    UserRole? userRole,
-    String? currentUserId,
-  ) {
+  Stream<QuerySnapshot> _getEnquiriesStream(UserRole? userRole, String? currentUserId) {
     if (userRole == UserRole.admin) {
       // Admin sees all enquiries
       return FirebaseFirestore.instance
@@ -306,18 +265,14 @@ class EnquiriesListScreen extends ConsumerWidget {
         _exportEnquiries(context, userRole, userId);
         break;
       case 'add':
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => const EnquiryFormScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const EnquiryFormScreen()));
         break;
     }
   }
 
-  Future<void> _exportEnquiries(
-    BuildContext context,
-    UserRole? userRole,
-    String? userId,
-  ) async {
+  Future<void> _exportEnquiries(BuildContext context, UserRole? userRole, String? userId) async {
     try {
       // Show loading indicator
       showDialog(
@@ -357,10 +312,7 @@ class EnquiriesListScreen extends ConsumerWidget {
       if (enquiries.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No enquiries to export'),
-              backgroundColor: Colors.orange,
-            ),
+            const SnackBar(content: Text('No enquiries to export'), backgroundColor: Colors.orange),
           );
         }
         return;

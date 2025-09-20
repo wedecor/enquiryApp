@@ -88,14 +88,8 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                     prefixIcon: Icon(Icons.security),
                   ),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'staff',
-                      child: Text('Staff Member'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'admin',
-                      child: Text('Administrator'),
-                    ),
+                    DropdownMenuItem(value: 'staff', child: Text('Staff Member')),
+                    DropdownMenuItem(value: 'admin', child: Text('Administrator')),
                   ],
                   onChanged: (role) {
                     if (role != null) {
@@ -168,9 +162,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                   ),
                   child: SelectableText(
                     _resetLink!,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
 
@@ -211,10 +203,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 : const Text('Send Invite'),
           ),
         ] else ...[
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
-          ),
+          ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
         ],
       ],
     );

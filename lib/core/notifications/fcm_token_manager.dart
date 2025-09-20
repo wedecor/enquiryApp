@@ -13,11 +13,7 @@ class FcmTokenManager {
     if (user == null) return;
 
     // Web permission prompt
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
 
     // VAPID public key from environment configuration
     const vapidKey = String.fromEnvironment(

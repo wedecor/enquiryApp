@@ -127,7 +127,6 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     }
   }
 
-
   // Validate if the current value exists in the statuses list
   String? _getValidValue(String? value) {
     if (value == null) return null;
@@ -152,9 +151,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (!isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Only admins can add new ${widget.label.toLowerCase()}',
-          ),
+          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -173,10 +170,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.label} already exists'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: Text('${widget.label} already exists'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -196,9 +190,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             'active': true,
             'order': (_statuses.length + 1),
             'createdAt': FieldValue.serverTimestamp(),
-            'createdBy':
-                ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                'unknown',
+            'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
           });
 
       // Refresh the list
@@ -239,9 +231,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (!isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Only admins can add new ${widget.label.toLowerCase()}',
-          ),
+          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -294,18 +284,14 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 // CRITICAL: Always ensure value is valid or null
                 initialValue: _getValidValue(widget.value),
                 decoration: InputDecoration(
-                  labelText: widget.required
-                      ? '${widget.label} *'
-                      : widget.label,
+                  labelText: widget.required ? '${widget.label} *' : widget.label,
                   prefixIcon: Icon(_getIconForStatus()),
                   border: const OutlineInputBorder(),
                   hintText:
                       widget.value != null &&
                           !_isLoading &&
                           _statuses.isNotEmpty &&
-                          !_statuses.any(
-                            (status) => status['value'] == widget.value,
-                          )
+                          !_statuses.any((status) => status['value'] == widget.value)
                       ? 'Current: ${widget.value}'
                       : null,
                   suffixIcon: _isLoading

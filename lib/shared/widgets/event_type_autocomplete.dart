@@ -17,8 +17,7 @@ class EventTypeAutocomplete extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EventTypeAutocomplete> createState() =>
-      _EventTypeAutocompleteState();
+  ConsumerState<EventTypeAutocomplete> createState() => _EventTypeAutocompleteState();
 }
 
 class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
@@ -30,6 +29,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -139,15 +139,11 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   void _setInitialValue() {
-    print(
-      '🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"',
-    );
+    print('🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"');
     print(
       '🔍 EventTypeAutocomplete: Available event types: ${_eventTypes.map((e) => '${e['value']}: ${e['label']}').join(', ')}',
     );
-    if (widget.initialValue != null &&
-        widget.initialValue!.isNotEmpty &&
-        _eventTypes.isNotEmpty) {
+    if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
       // Find the matching event type by value
       final matchingEventType = _eventTypes.firstWhere(
         (eventType) => eventType['value'] == widget.initialValue,
@@ -163,9 +159,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       } else {
         // If no exact match found, try to find by label
         final matchingByLabel = _eventTypes.firstWhere(
-          (eventType) =>
-              eventType['label']?.toLowerCase() ==
-              widget.initialValue!.toLowerCase(),
+          (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
           orElse: () => <String, String>{},
         );
 
@@ -198,8 +192,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         final label = type['label'] ?? '';
         final value = type['value'] ?? '';
         final q = query.toLowerCase();
-        return label.toLowerCase().contains(q) ||
-            value.toLowerCase().contains(q);
+        return label.toLowerCase().contains(q) || value.toLowerCase().contains(q);
       }).toList();
 
       setState(() {
@@ -258,9 +251,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             'active': true,
             'order': (_eventTypes.length + 1),
             'createdAt': FieldValue.serverTimestamp(),
-            'createdBy':
-                ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                'unknown',
+            'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
           });
 
       // Refresh the list
@@ -281,10 +272,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding event type: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error adding event type: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -367,10 +355,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             );
           },
         ),
-        if (_showAddButton && !_isLoading) ...[
-          const SizedBox(height: 8),
-          _buildAddNewOption(),
-        ],
+        if (_showAddButton && !_isLoading) ...[const SizedBox(height: 8), _buildAddNewOption()],
       ],
     );
   }
@@ -385,10 +370,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         leading: const Icon(Icons.add_circle, color: Colors.green),
         title: Text(
           'Add "${_controller.text.trim()}" as new event type',
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
         ),
         subtitle: const Text('Admin only'),
         onTap: () => _addNewEventType(_controller.text),

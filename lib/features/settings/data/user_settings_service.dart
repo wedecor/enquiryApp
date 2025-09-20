@@ -51,9 +51,7 @@ class UserSettingsService {
   /// Update user settings with merge
   Future<void> update(String uid, UserSettings settings) async {
     try {
-      await _settingsDoc(
-        uid,
-      ).set(settings.toFirestore(), SetOptions(merge: true));
+      await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
       safeLog('user_settings_updated', {
         'uid': uid,
         'theme': settings.theme,
@@ -75,10 +73,7 @@ class UserSettingsService {
       final doc = await _settingsDoc(uid).get();
       if (!doc.exists) {
         await _settingsDoc(uid).set(defaults.toFirestore());
-        safeLog('user_settings_initialized', {
-          'uid': uid,
-          'theme': defaults.theme,
-        });
+        safeLog('user_settings_initialized', {'uid': uid, 'theme': defaults.theme});
       }
     } catch (e, stackTrace) {
       safeLog('user_settings_init_error', {

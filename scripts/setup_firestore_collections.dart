@@ -10,9 +10,7 @@ void main() async {
 
   try {
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     final firestore = FirebaseFirestore.instance;
     print('✅ Firebase initialized successfully');
@@ -39,19 +37,10 @@ void main() async {
 Future<void> _createStatusesCollection(FirebaseFirestore firestore) async {
   print('📋 Creating statuses collection...');
 
-  final statusesRef = firestore
-      .collection('dropdowns')
-      .doc('statuses')
-      .collection('items');
+  final statusesRef = firestore.collection('dropdowns').doc('statuses').collection('items');
 
   final statuses = [
-    {
-      'value': 'new',
-      'label': 'New',
-      'order': 1,
-      'active': true,
-      'color': '#FF9800',
-    },
+    {'value': 'new', 'label': 'New', 'order': 1, 'active': true, 'color': '#FF9800'},
     {
       'value': 'in_progress',
       'label': 'In Progress',
@@ -59,41 +48,11 @@ Future<void> _createStatusesCollection(FirebaseFirestore firestore) async {
       'active': true,
       'color': '#2196F3',
     },
-    {
-      'value': 'quote_sent',
-      'label': 'Quote Sent',
-      'order': 3,
-      'active': true,
-      'color': '#009688',
-    },
-    {
-      'value': 'approved',
-      'label': 'Approved',
-      'order': 4,
-      'active': true,
-      'color': '#3F51B5',
-    },
-    {
-      'value': 'scheduled',
-      'label': 'Scheduled',
-      'order': 5,
-      'active': true,
-      'color': '#9C27B0',
-    },
-    {
-      'value': 'completed',
-      'label': 'Completed',
-      'order': 6,
-      'active': true,
-      'color': '#4CAF50',
-    },
-    {
-      'value': 'cancelled',
-      'label': 'Cancelled',
-      'order': 7,
-      'active': true,
-      'color': '#F44336',
-    },
+    {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3, 'active': true, 'color': '#009688'},
+    {'value': 'approved', 'label': 'Approved', 'order': 4, 'active': true, 'color': '#3F51B5'},
+    {'value': 'scheduled', 'label': 'Scheduled', 'order': 5, 'active': true, 'color': '#9C27B0'},
+    {'value': 'completed', 'label': 'Completed', 'order': 6, 'active': true, 'color': '#4CAF50'},
+    {'value': 'cancelled', 'label': 'Cancelled', 'order': 7, 'active': true, 'color': '#F44336'},
     {
       'value': 'closed_lost',
       'label': 'Closed Lost',
@@ -121,19 +80,10 @@ Future<void> _createStatusesCollection(FirebaseFirestore firestore) async {
 Future<void> _createEventTypesCollection(FirebaseFirestore firestore) async {
   print('🎉 Creating event types collection...');
 
-  final eventTypesRef = firestore
-      .collection('dropdowns')
-      .doc('event_types')
-      .collection('items');
+  final eventTypesRef = firestore.collection('dropdowns').doc('event_types').collection('items');
 
   final eventTypes = [
-    {
-      'value': 'wedding',
-      'label': 'Wedding',
-      'order': 1,
-      'active': true,
-      'category': 'celebration',
-    },
+    {'value': 'wedding', 'label': 'Wedding', 'order': 1, 'active': true, 'category': 'celebration'},
     {
       'value': 'birthday',
       'label': 'Birthday Party',
@@ -197,13 +147,7 @@ Future<void> _createEventTypesCollection(FirebaseFirestore firestore) async {
       'active': true,
       'category': 'celebration',
     },
-    {
-      'value': 'festival',
-      'label': 'Festival',
-      'order': 11,
-      'active': true,
-      'category': 'cultural',
-    },
+    {'value': 'festival', 'label': 'Festival', 'order': 11, 'active': true, 'category': 'cultural'},
     {
       'value': 'religious_ceremony',
       'label': 'Religious Ceremony',
@@ -211,13 +155,7 @@ Future<void> _createEventTypesCollection(FirebaseFirestore firestore) async {
       'active': true,
       'category': 'cultural',
     },
-    {
-      'value': 'other',
-      'label': 'Other',
-      'order': 99,
-      'active': true,
-      'category': 'general',
-    },
+    {'value': 'other', 'label': 'Other', 'order': 99, 'active': true, 'category': 'general'},
   ];
 
   final batch = firestore.batch();
@@ -238,40 +176,13 @@ Future<void> _createEventTypesCollection(FirebaseFirestore firestore) async {
 Future<void> _createPrioritiesCollection(FirebaseFirestore firestore) async {
   print('⚡ Creating priorities collection...');
 
-  final prioritiesRef = firestore
-      .collection('dropdowns')
-      .doc('priorities')
-      .collection('items');
+  final prioritiesRef = firestore.collection('dropdowns').doc('priorities').collection('items');
 
   final priorities = [
-    {
-      'value': 'low',
-      'label': 'Low',
-      'order': 1,
-      'active': true,
-      'color': '#4CAF50',
-    },
-    {
-      'value': 'medium',
-      'label': 'Medium',
-      'order': 2,
-      'active': true,
-      'color': '#FF9800',
-    },
-    {
-      'value': 'high',
-      'label': 'High',
-      'order': 3,
-      'active': true,
-      'color': '#F44336',
-    },
-    {
-      'value': 'urgent',
-      'label': 'Urgent',
-      'order': 4,
-      'active': true,
-      'color': '#9C27B0',
-    },
+    {'value': 'low', 'label': 'Low', 'order': 1, 'active': true, 'color': '#4CAF50'},
+    {'value': 'medium', 'label': 'Medium', 'order': 2, 'active': true, 'color': '#FF9800'},
+    {'value': 'high', 'label': 'High', 'order': 3, 'active': true, 'color': '#F44336'},
+    {'value': 'urgent', 'label': 'Urgent', 'order': 4, 'active': true, 'color': '#9C27B0'},
   ];
 
   final batch = firestore.batch();
@@ -289,9 +200,7 @@ Future<void> _createPrioritiesCollection(FirebaseFirestore firestore) async {
 }
 
 /// Create payment statuses collection for payment status dropdown
-Future<void> _createPaymentStatusesCollection(
-  FirebaseFirestore firestore,
-) async {
+Future<void> _createPaymentStatusesCollection(FirebaseFirestore firestore) async {
   print('💰 Creating payment statuses collection...');
 
   final paymentStatusesRef = firestore
@@ -300,13 +209,7 @@ Future<void> _createPaymentStatusesCollection(
       .collection('items');
 
   final paymentStatuses = [
-    {
-      'value': 'pending',
-      'label': 'Pending',
-      'order': 1,
-      'active': true,
-      'color': '#FF9800',
-    },
+    {'value': 'pending', 'label': 'Pending', 'order': 1, 'active': true, 'color': '#FF9800'},
     {
       'value': 'partial',
       'label': 'Partial Payment',
@@ -314,27 +217,9 @@ Future<void> _createPaymentStatusesCollection(
       'active': true,
       'color': '#2196F3',
     },
-    {
-      'value': 'paid',
-      'label': 'Fully Paid',
-      'order': 3,
-      'active': true,
-      'color': '#4CAF50',
-    },
-    {
-      'value': 'overdue',
-      'label': 'Overdue',
-      'order': 4,
-      'active': true,
-      'color': '#F44336',
-    },
-    {
-      'value': 'refunded',
-      'label': 'Refunded',
-      'order': 5,
-      'active': true,
-      'color': '#607D8B',
-    },
+    {'value': 'paid', 'label': 'Fully Paid', 'order': 3, 'active': true, 'color': '#4CAF50'},
+    {'value': 'overdue', 'label': 'Overdue', 'order': 4, 'active': true, 'color': '#F44336'},
+    {'value': 'refunded', 'label': 'Refunded', 'order': 5, 'active': true, 'color': '#607D8B'},
   ];
 
   final batch = firestore.batch();
@@ -348,9 +233,7 @@ Future<void> _createPaymentStatusesCollection(
   }
 
   await batch.commit();
-  print(
-    '✅ Payment statuses collection created with ${paymentStatuses.length} items',
-  );
+  print('✅ Payment statuses collection created with ${paymentStatuses.length} items');
 }
 
 /// Create budget ranges collection for budget dropdown

@@ -68,9 +68,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _loadEnquiryData() async {
-    print(
-      '🔍 EnquiryFormScreen: _loadEnquiryData called for enquiryId: ${widget.enquiryId}',
-    );
+    print('🔍 EnquiryFormScreen: _loadEnquiryData called for enquiryId: ${widget.enquiryId}');
     try {
       final doc = await FirebaseFirestore.instance
           .collection('enquiries')
@@ -95,9 +93,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
           // Set dropdown values from database
           _selectedEventType = data['eventType'] as String?;
-          print(
-            '🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"',
-          );
+          print('🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"');
 
           // Safely set dropdown values - ensure they exist in valid options
           final eventStatus = data['eventStatus'] as String?;
@@ -119,9 +115,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading enquiry data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading enquiry data: $e')));
       }
     }
   }
@@ -174,15 +170,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event date')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event date')));
       return;
     }
     if (_selectedEventType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event type')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
       return;
     }
 
@@ -207,9 +203,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e',
-            ),
+            content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e'),
           ),
         );
       }
@@ -277,34 +271,31 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry created successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry created successfully!')));
       Navigator.of(context).pop();
     }
   }
 
   Future<void> _updateEnquiry(UserModel currentUser) async {
     // Update the enquiry document directly
-    await FirebaseFirestore.instance
-        .collection('enquiries')
-        .doc(widget.enquiryId!)
-        .update({
-          'customerName': _nameController.text.trim(),
-          'customerPhone': _phoneController.text.trim(),
-          'eventLocation': _locationController.text.trim(),
-          'description': _notesController.text.trim(),
-          'eventType': _selectedEventType,
-          'eventDate': Timestamp.fromDate(_selectedDate!),
-          'priority': _selectedPriority,
-          'eventStatus': _selectedStatus,
-          'paymentStatus': _selectedPaymentStatus,
-          'assignedTo': _selectedAssignedTo,
-          'totalCost': _parseDouble(_totalCostController.text),
-          'advancePaid': _parseDouble(_advancePaidController.text),
-          'updatedAt': FieldValue.serverTimestamp(),
-          'updatedBy': currentUser.uid,
-        });
+    await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
+      'customerName': _nameController.text.trim(),
+      'customerPhone': _phoneController.text.trim(),
+      'eventLocation': _locationController.text.trim(),
+      'description': _notesController.text.trim(),
+      'eventType': _selectedEventType,
+      'eventDate': Timestamp.fromDate(_selectedDate!),
+      'priority': _selectedPriority,
+      'eventStatus': _selectedStatus,
+      'paymentStatus': _selectedPaymentStatus,
+      'assignedTo': _selectedAssignedTo,
+      'totalCost': _parseDouble(_totalCostController.text),
+      'advancePaid': _parseDouble(_advancePaidController.text),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedBy': currentUser.uid,
+    });
 
     // Record audit trail for the update
     final auditService = AuditService();
@@ -316,9 +307,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry updated successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry updated successfully!')));
       Navigator.of(context).pop();
     }
   }
@@ -417,9 +408,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         _selectedDate == null
                             ? 'Select Event Date *'
                             : 'Event Date: ${_selectedDate!.toString().split(' ')[0]}',
-                        style: TextStyle(
-                          color: _selectedDate == null ? Colors.grey : null,
-                        ),
+                        style: TextStyle(color: _selectedDate == null ? Colors.grey : null),
                       ),
                     ],
                   ),
@@ -430,9 +419,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               // Event Type Field - SIMPLIFIED FOR TESTING
               Builder(
                 builder: (context) {
-                  print(
-                    '🔍 EnquiryFormScreen: Event type value: "$_selectedEventType"',
-                  );
+                  print('🔍 EnquiryFormScreen: Event type value: "$_selectedEventType"');
                   return DropdownButtonFormField<String>(
                     initialValue: _selectedEventType,
                     decoration: const InputDecoration(
@@ -441,29 +428,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       border: OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'wedding',
-                        child: Text('Wedding'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'birthday',
-                        child: Text('Birthday'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'corporate_event',
-                        child: Text('Corporate Event'),
-                      ),
+                      DropdownMenuItem(value: 'wedding', child: Text('Wedding')),
+                      DropdownMenuItem(value: 'birthday', child: Text('Birthday')),
+                      DropdownMenuItem(value: 'corporate_event', child: Text('Corporate Event')),
                       DropdownMenuItem(value: 'haldi', child: Text('Haldi')),
-                      DropdownMenuItem(
-                        value: 'anniversary',
-                        child: Text('Anniversary'),
-                      ),
+                      DropdownMenuItem(value: 'anniversary', child: Text('Anniversary')),
                       DropdownMenuItem(value: 'others', child: Text('Others')),
                     ],
                     onChanged: (value) {
-                      print(
-                        '🔍 EnquiryFormScreen: Event type changed to: "$value"',
-                      );
+                      print('🔍 EnquiryFormScreen: Event type changed to: "$value"');
                       setState(() {
                         _selectedEventType = value;
                       });
@@ -534,18 +507,13 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       ),
                       hint: const Text('Select user to assign'),
                       items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Unassigned'),
-                        ),
+                        const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
                         ...users.docs.map((doc) {
                           final user = doc.data() as Map<String, dynamic>;
                           return DropdownMenuItem<String>(
                             value: doc.id,
                             child: Text(
-                              (user['name'] as String?) ??
-                                  (user['email'] as String?) ??
-                                  'Unknown',
+                              (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
                             ),
                           );
                         }),
@@ -692,9 +660,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 onPressed: _pickImages,
                 icon: const Icon(Icons.upload),
                 label: const Text('Upload Images'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               ),
               const SizedBox(height: 16),
 
@@ -741,11 +707,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                                 ),
                               ),
                             ),
@@ -773,19 +735,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : Text(
-                        widget.mode == 'edit'
-                            ? 'Update Enquiry'
-                            : 'Create Enquiry',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        widget.mode == 'edit' ? 'Update Enquiry' : 'Create Enquiry',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ],

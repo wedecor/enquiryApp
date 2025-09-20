@@ -7,11 +7,9 @@ enum AppConfigKind { general, notifications, security }
 class AppConfigService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  CollectionReference get _appConfigCollection =>
-      _firestore.collection('app_config');
+  CollectionReference get _appConfigCollection => _firestore.collection('app_config');
 
-  DocumentReference _configDoc(AppConfigKind kind) =>
-      _appConfigCollection.doc(kind.name);
+  DocumentReference _configDoc(AppConfigKind kind) => _appConfigCollection.doc(kind.name);
 
   /// Observe app general config
   Stream<AppGeneralConfig> observeGeneral() {
@@ -76,9 +74,7 @@ class AppConfigService {
   /// Update app general config (admin only)
   Future<void> updateGeneral(AppGeneralConfig config) async {
     try {
-      await _configDoc(
-        AppConfigKind.general,
-      ).set(config.toFirestore(), SetOptions(merge: true));
+      await _configDoc(AppConfigKind.general).set(config.toFirestore(), SetOptions(merge: true));
       safeLog('app_config_updated', {
         'kind': 'general',
         'companyName': config.companyName,
@@ -118,9 +114,7 @@ class AppConfigService {
   /// Update app security config (admin only)
   Future<void> updateSecurity(AppSecurityConfig config) async {
     try {
-      await _configDoc(
-        AppConfigKind.security,
-      ).set(config.toFirestore(), SetOptions(merge: true));
+      await _configDoc(AppConfigKind.security).set(config.toFirestore(), SetOptions(merge: true));
       safeLog('app_config_updated', {
         'kind': 'security',
         'allowedDomainsCount': config.allowedDomains.length,

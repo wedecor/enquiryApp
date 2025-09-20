@@ -46,9 +46,7 @@ class NotificationService {
         },
       );
 
-      print(
-        'NotificationService: Sent new enquiry notifications to ${adminUsers.length} admins',
-      );
+      print('NotificationService: Sent new enquiry notifications to ${adminUsers.length} admins');
     } catch (e) {
       print('NotificationService: Error sending new enquiry notifications: $e');
     }
@@ -74,8 +72,7 @@ class NotificationService {
       await _sendNotificationToUser(
         userId: assignedTo,
         title: 'Enquiry Assigned to You',
-        body:
-            'You have been assigned an enquiry from $customerName for $eventType',
+        body: 'You have been assigned an enquiry from $customerName for $eventType',
         data: {
           'type': 'enquiry_assigned',
           'enquiryId': enquiryId,
@@ -89,8 +86,7 @@ class NotificationService {
       await _sendNotificationToTopic(
         topic: 'user_$assignedTo',
         title: 'Enquiry Assigned to You',
-        body:
-            'You have been assigned an enquiry from $customerName for $eventType',
+        body: 'You have been assigned an enquiry from $customerName for $eventType',
         data: {
           'type': 'enquiry_assigned',
           'enquiryId': enquiryId,
@@ -142,8 +138,7 @@ class NotificationService {
         await _sendNotificationToUser(
           userId: admin.uid,
           title: 'Enquiry Status Updated',
-          body:
-              'Status changed from $oldStatus to $newStatus for $customerName',
+          body: 'Status changed from $oldStatus to $newStatus for $customerName',
           data: {
             'type': 'status_update',
             'enquiryId': enquiryId,
@@ -170,13 +165,9 @@ class NotificationService {
         },
       );
 
-      print(
-        'NotificationService: Sent status update notifications to ${adminUsers.length} admins',
-      );
+      print('NotificationService: Sent status update notifications to ${adminUsers.length} admins');
     } catch (e) {
-      print(
-        'NotificationService: Error sending status update notifications: $e',
-      );
+      print('NotificationService: Error sending status update notifications: $e');
     }
   }
 
@@ -271,17 +262,13 @@ class NotificationService {
       }
 
       // Store notification in Firestore for the user
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
-            'title': title,
-            'body': body,
-            'data': data,
-            'read': false,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+      await _firestore.collection('users').doc(userId).collection('notifications').add({
+        'title': title,
+        'body': body,
+        'data': data,
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       // TODO: Send actual FCM notification
       // This would typically be done via a Cloud Function or server
@@ -290,9 +277,7 @@ class NotificationService {
       print('Body: $body');
       print('Data: $data');
     } catch (e) {
-      print(
-        'NotificationService: Error sending notification to user $userId: $e',
-      );
+      print('NotificationService: Error sending notification to user $userId: $e');
     }
   }
 
@@ -305,17 +290,13 @@ class NotificationService {
   }) async {
     try {
       // Store notification in Firestore for the topic
-      await _firestore
-          .collection('notifications')
-          .doc(topic)
-          .collection('messages')
-          .add({
-            'title': title,
-            'body': body,
-            'data': data,
-            'topic': topic,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+      await _firestore.collection('notifications').doc(topic).collection('messages').add({
+        'title': title,
+        'body': body,
+        'data': data,
+        'topic': topic,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       // TODO: Send actual FCM notification to topic
       // This would typically be done via a Cloud Function or server
@@ -324,9 +305,7 @@ class NotificationService {
       print('Body: $body');
       print('Data: $data');
     } catch (e) {
-      print(
-        'NotificationService: Error sending notification to topic $topic: $e',
-      );
+      print('NotificationService: Error sending notification to topic $topic: $e');
     }
   }
 
@@ -352,10 +331,7 @@ class NotificationService {
   }
 
   /// Mark notification as read
-  Future<void> markNotificationAsRead(
-    String userId,
-    String notificationId,
-  ) async {
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
     try {
       await _firestore
           .collection('users')
@@ -380,10 +356,7 @@ class NotificationService {
           .get();
 
       for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {
-          'read': true,
-          'readAt': FieldValue.serverTimestamp(),
-        });
+        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
       }
 
       await batch.commit();

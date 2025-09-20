@@ -67,8 +67,7 @@ class DropdownItem with _$DropdownItem {
     required DateTime updatedAt,
   }) = _DropdownItem;
 
-  factory DropdownItem.fromJson(Map<String, dynamic> json) =>
-      _$DropdownItemFromJson(json);
+  factory DropdownItem.fromJson(Map<String, dynamic> json) => _$DropdownItemFromJson(json);
 
   /// Create a DropdownItem from Firestore document
   factory DropdownItem.fromFirestore(DocumentSnapshot doc) {
@@ -141,13 +140,9 @@ class DropdownItemValidation {
 
   const DropdownItemValidation._(this.isValid, this.errorMessage);
 
-  static const DropdownItemValidation valid = DropdownItemValidation._(
-    true,
-    null,
-  );
+  static const DropdownItemValidation valid = DropdownItemValidation._(true, null);
 
-  static DropdownItemValidation error(String message) =>
-      DropdownItemValidation._(false, message);
+  static DropdownItemValidation error(String message) => DropdownItemValidation._(false, message);
 
   /// Validate HEX color format
   static bool isValidHexColor(String? color) {

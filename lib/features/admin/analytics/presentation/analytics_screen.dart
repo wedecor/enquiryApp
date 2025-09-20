@@ -131,9 +131,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                             icon: const Icon(Icons.refresh, size: 18),
                             label: const Text('Refresh'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
+                              backgroundColor: Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -165,9 +163,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                           icon: const Icon(Icons.refresh, size: 18),
                           label: const Text('Refresh'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -248,16 +244,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                     decoration: const InputDecoration(
                       isDense: true,
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     items: DateRangePreset.values.map((preset) {
-                      return DropdownMenuItem(
-                        value: preset,
-                        child: Text(preset.label),
-                      );
+                      return DropdownMenuItem(value: preset, child: Text(preset.label));
                     }).toList(),
                     onChanged: (preset) {
                       if (preset != null) {
@@ -305,27 +295,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 labelText: 'Event Type',
                 isDense: true,
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('All Event Types'),
-                ),
+                const DropdownMenuItem<String?>(value: null, child: Text('All Event Types')),
                 ...eventTypes.map(
-                  (eventType) => DropdownMenuItem<String?>(
-                    value: eventType,
-                    child: Text(eventType),
-                  ),
+                  (eventType) =>
+                      DropdownMenuItem<String?>(value: eventType, child: Text(eventType)),
                 ),
               ],
               onChanged: (eventType) {
-                ref
-                    .read(analyticsControllerProvider.notifier)
-                    .updateEventTypeFilter(eventType);
+                ref.read(analyticsControllerProvider.notifier).updateEventTypeFilter(eventType);
               },
             );
           },
@@ -368,27 +348,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 labelText: 'Status',
                 isDense: true,
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('All Statuses'),
-                ),
+                const DropdownMenuItem<String?>(value: null, child: Text('All Statuses')),
                 ...statuses.map(
-                  (status) => DropdownMenuItem<String?>(
-                    value: status,
-                    child: Text(status),
-                  ),
+                  (status) => DropdownMenuItem<String?>(value: status, child: Text(status)),
                 ),
               ],
               onChanged: (status) {
-                ref
-                    .read(analyticsControllerProvider.notifier)
-                    .updateStatusFilter(status);
+                ref.read(analyticsControllerProvider.notifier).updateStatusFilter(status);
               },
             );
           },
@@ -431,27 +400,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 labelText: 'Priority',
                 isDense: true,
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('All Priorities'),
-                ),
+                const DropdownMenuItem<String?>(value: null, child: Text('All Priorities')),
                 ...priorities.map(
-                  (priority) => DropdownMenuItem<String?>(
-                    value: priority,
-                    child: Text(priority),
-                  ),
+                  (priority) => DropdownMenuItem<String?>(value: priority, child: Text(priority)),
                 ),
               ],
               onChanged: (priority) {
-                ref
-                    .read(analyticsControllerProvider.notifier)
-                    .updatePriorityFilter(priority);
+                ref.read(analyticsControllerProvider.notifier).updatePriorityFilter(priority);
               },
             );
           },
@@ -494,27 +452,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 labelText: 'Source',
                 isDense: true,
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('All Sources'),
-                ),
+                const DropdownMenuItem<String?>(value: null, child: Text('All Sources')),
                 ...sources.map(
-                  (source) => DropdownMenuItem<String?>(
-                    value: source,
-                    child: Text(source),
-                  ),
+                  (source) => DropdownMenuItem<String?>(value: source, child: Text(source)),
                 ),
               ],
               onChanged: (source) {
-                ref
-                    .read(analyticsControllerProvider.notifier)
-                    .updateSourceFilter(source);
+                ref.read(analyticsControllerProvider.notifier).updateSourceFilter(source);
               },
             );
           },
@@ -608,20 +555,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                   // Mobile layout - stack charts vertically
                   return Column(
                     children: [
-                      StatusStackedBarChart(
-                        data: state.statusBreakdown,
-                        title: 'Status Breakdown',
-                      ),
+                      StatusStackedBarChart(data: state.statusBreakdown, title: 'Status Breakdown'),
                       const SizedBox(height: 16),
-                      EventTypePieChart(
-                        data: state.eventTypeBreakdown,
-                        title: 'Event Types',
-                      ),
+                      EventTypePieChart(data: state.eventTypeBreakdown, title: 'Event Types'),
                       const SizedBox(height: 16),
-                      SourceBarChart(
-                        data: state.sourceBreakdown,
-                        title: 'Sources',
-                      ),
+                      SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
                     ],
                   );
                 } else {
@@ -647,10 +585,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                         ],
                       ),
                       const SizedBox(height: 16),
-                      SourceBarChart(
-                        data: state.sourceBreakdown,
-                        title: 'Sources',
-                      ),
+                      SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
                     ],
                   );
                 }
@@ -676,24 +611,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               builder: (context, constraints) {
                 return Column(
                   children: [
-                    RecentEnquiriesTable(
-                      data: state.recentEnquiries,
-                      title: 'Recent Enquiries',
-                    ),
+                    RecentEnquiriesTable(data: state.recentEnquiries, title: 'Recent Enquiries'),
                     const SizedBox(height: 16),
                     if (constraints.maxWidth < 600)
                       // Mobile layout - stack tables vertically
                       Column(
                         children: [
-                          TopListTable(
-                            title: 'Top Event Types',
-                            data: state.topEventTypes,
-                          ),
+                          TopListTable(title: 'Top Event Types', data: state.topEventTypes),
                           const SizedBox(height: 16),
-                          TopListTable(
-                            title: 'Top Sources',
-                            data: state.topSources,
-                          ),
+                          TopListTable(title: 'Top Sources', data: state.topSources),
                         ],
                       )
                     else
@@ -709,10 +635,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: TopListTable(
-                              title: 'Top Sources',
-                              data: state.topSources,
-                            ),
+                            child: TopListTable(title: 'Top Sources', data: state.topSources),
                           ),
                         ],
                       ),
@@ -809,9 +732,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               const SizedBox(height: 24),
               Text(
                 'Access Restricted',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Text(
@@ -869,9 +792,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               const SizedBox(height: 24),
               Text(
                 'Error Loading Data',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               Text(
@@ -901,17 +824,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(
-        start: currentRange.start,
-        end: currentRange.end,
-      ),
+      initialDateRange: DateTimeRange(start: currentRange.start, end: currentRange.end),
     );
 
     if (picked != null) {
       final customRange = DateRange(start: picked.start, end: picked.end);
-      ref
-          .read(analyticsControllerProvider.notifier)
-          .updateCustomDateRange(customRange);
+      ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange);
     }
   }
 
@@ -983,10 +901,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       },
       error: (error, stack) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${error.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${error.toString()}'), backgroundColor: Colors.red),
         );
       },
     );

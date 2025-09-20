@@ -34,10 +34,7 @@ class SessionService {
     if (user == null) {
       _lastUser = null;
       _emitSessionState(const SessionState.unauthenticated());
-      safeLog('session_transition', {
-        'outcome': 'unauthenticated',
-        'reason': 'auth_user_null',
-      });
+      safeLog('session_transition', {'outcome': 'unauthenticated', 'reason': 'auth_user_null'});
       return;
     }
 
@@ -88,9 +85,7 @@ class SessionService {
       // If needed, check if user exists in a disabled users collection
       // For now, assume all found profiles are active
 
-      _emitSessionState(
-        SessionState.authenticated(user: userLite, profile: profile),
-      );
+      _emitSessionState(SessionState.authenticated(user: userLite, profile: profile));
 
       safeLog('session_transition', {
         'outcome': 'authenticated',
@@ -99,9 +94,7 @@ class SessionService {
         'uid': user.uid,
       });
     } catch (e, stackTrace) {
-      _emitSessionState(
-        SessionState.error(message: 'Failed to load user profile', cause: e),
-      );
+      _emitSessionState(SessionState.error(message: 'Failed to load user profile', cause: e));
 
       safeLog('session_transition_error', {
         'outcome': 'error',
@@ -170,9 +163,7 @@ class SessionService {
     if (email == null || email.isEmpty) return 'unknown';
     final parts = email.split('@');
     if (parts.length != 2) return 'invalid';
-    final prefix = parts[0].length > 3
-        ? '${parts[0].substring(0, 3)}***'
-        : '***';
+    final prefix = parts[0].length > 3 ? '${parts[0].substring(0, 3)}***' : '***';
     return '$prefix@${parts[1]}';
   }
 

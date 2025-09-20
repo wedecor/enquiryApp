@@ -9,8 +9,7 @@ class DashboardDefaultsTab extends ConsumerStatefulWidget {
   const DashboardDefaultsTab({super.key});
 
   @override
-  ConsumerState<DashboardDefaultsTab> createState() =>
-      _DashboardDefaultsTabState();
+  ConsumerState<DashboardDefaultsTab> createState() => _DashboardDefaultsTabState();
 }
 
 class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
@@ -33,8 +32,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
         return _buildDashboardContent(context, settings);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text('Error loading dashboard settings: $error')),
+      error: (error, stack) => Center(child: Text('Error loading dashboard settings: $error')),
     );
   }
 
@@ -75,10 +73,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Default Date Range',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Default Date Range', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Default time period for dashboard and analytics',
@@ -96,9 +91,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
                       final newDashboard = _currentSettings!.dashboard.copyWith(
                         dateRange: newRange,
                       );
-                      _updateSettings(
-                        _currentSettings!.copyWith(dashboard: newDashboard),
-                      );
+                      _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
                     }
                   },
                   title: Text(title),
@@ -124,8 +117,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
     ];
 
     final currentTabs =
-        _currentSettings?.dashboard.statusTabs ??
-        ['new', 'in_progress', 'quote_sent'];
+        _currentSettings?.dashboard.statusTabs ?? ['new', 'in_progress', 'quote_sent'];
 
     return Card(
       child: Padding(
@@ -133,10 +125,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Default Status Tabs',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Default Status Tabs', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Which status tabs to show by default on the dashboard',
@@ -165,12 +154,8 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
                       newTabs = ['new'];
                     }
 
-                    final newDashboard = _currentSettings!.dashboard.copyWith(
-                      statusTabs: newTabs,
-                    );
-                    _updateSettings(
-                      _currentSettings!.copyWith(dashboard: newDashboard),
-                    );
+                    final newDashboard = _currentSettings!.dashboard.copyWith(statusTabs: newTabs);
+                    _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
                   },
                   title: Text(title),
                   subtitle: Text(subtitle),
@@ -203,10 +188,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Table Columns',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Table Columns', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Configure which columns to show in enquiry lists',
@@ -218,16 +200,13 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
                 final (id, title, subtitle) = column;
                 final existingColumn = currentColumns.firstWhere(
                   (col) => col.id == id,
-                  orElse: () =>
-                      ColumnSettings(id: id, visible: false, order: 0),
+                  orElse: () => ColumnSettings(id: id, visible: false, order: 0),
                 );
 
                 return CheckboxListTile(
                   value: existingColumn.visible,
                   onChanged: (checked) {
-                    final List<ColumnSettings> newColumns = List.from(
-                      currentColumns,
-                    );
+                    final List<ColumnSettings> newColumns = List.from(currentColumns);
 
                     // Remove existing column with same id
                     newColumns.removeWhere((col) => col.id == id);
@@ -236,27 +215,15 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
                       // Add column with next order
                       final maxOrder = newColumns.isEmpty
                           ? 0
-                          : newColumns
-                                .map((col) => col.order)
-                                .reduce((a, b) => a > b ? a : b);
-                      newColumns.add(
-                        ColumnSettings(
-                          id: id,
-                          visible: true,
-                          order: maxOrder + 1,
-                        ),
-                      );
+                          : newColumns.map((col) => col.order).reduce((a, b) => a > b ? a : b);
+                      newColumns.add(ColumnSettings(id: id, visible: true, order: maxOrder + 1));
                     }
 
                     // Sort by order
                     newColumns.sort((a, b) => a.order.compareTo(b.order));
 
-                    final newDashboard = _currentSettings!.dashboard.copyWith(
-                      columns: newColumns,
-                    );
-                    _updateSettings(
-                      _currentSettings!.copyWith(dashboard: newDashboard),
-                    );
+                    final newDashboard = _currentSettings!.dashboard.copyWith(columns: newColumns);
+                    _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
                   },
                   title: Text(title),
                   subtitle: Text(subtitle),
@@ -293,10 +260,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
             ),
           ),
           const SizedBox(width: 16),
-          TextButton(
-            onPressed: _isSaving ? null : _discardChanges,
-            child: const Text('Discard'),
-          ),
+          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
         ],
       ),
     );
@@ -365,11 +329,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }

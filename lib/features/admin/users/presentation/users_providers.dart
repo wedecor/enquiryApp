@@ -37,34 +37,29 @@ class UsersFilter extends StateNotifier<Map<String, dynamic>> {
   }
 
   void reset() {
-    state = {
-      'search': '',
-      'role': 'All',
-      'active': null,
-      'limit': 20,
-      'startAfterEmail': null,
-    };
+    state = {'search': '', 'role': 'All', 'active': null, 'limit': 20, 'startAfterEmail': null};
   }
 }
 
-final usersFilterProvider =
-    StateNotifierProvider<UsersFilter, Map<String, dynamic>>((ref) {
-      return UsersFilter();
-    });
+final usersFilterProvider = StateNotifierProvider<UsersFilter, Map<String, dynamic>>((ref) {
+  return UsersFilter();
+});
 
 // Users stream provider
-final usersStreamProvider =
-    StreamProvider.family<List<UserModel>, Map<String, dynamic>>((ref, filter) {
-      final repository = ref.read(usersRepositoryProvider);
+final usersStreamProvider = StreamProvider.family<List<UserModel>, Map<String, dynamic>>((
+  ref,
+  filter,
+) {
+  final repository = ref.read(usersRepositoryProvider);
 
-      return repository.watchUsers(
-        search: filter['search'] as String?,
-        role: filter['role'] as String?,
-        active: filter['active'] as bool?,
-        limit: filter['limit'] as int,
-        startAfterEmail: filter['startAfterEmail'] as String?,
-      );
-    });
+  return repository.watchUsers(
+    search: filter['search'] as String?,
+    role: filter['role'] as String?,
+    active: filter['active'] as bool?,
+    limit: filter['limit'] as int,
+    startAfterEmail: filter['startAfterEmail'] as String?,
+  );
+});
 
 // User form controller for create/edit operations
 class UserFormController extends StateNotifier<AsyncValue<void>> {
@@ -107,11 +102,12 @@ class UserFormController extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final userFormControllerProvider =
-    StateNotifierProvider<UserFormController, AsyncValue<void>>((ref) {
-      final repository = ref.read(usersRepositoryProvider);
-      return UserFormController(repository);
-    });
+final userFormControllerProvider = StateNotifierProvider<UserFormController, AsyncValue<void>>((
+  ref,
+) {
+  final repository = ref.read(usersRepositoryProvider);
+  return UserFormController(repository);
+});
 
 // Current user provider (for role checking) - now using the new auth system
 final currentUserProvider = Provider<UserModel?>((ref) {
@@ -128,8 +124,7 @@ final currentUserProvider = Provider<UserModel?>((ref) {
     role: userData['role'] as String? ?? 'staff',
     active: userData['active'] as bool? ?? true,
     // fcmToken removed for security - stored in private subcollection
-    createdAt:
-        DateTime.now(), // These will be properly set when loaded from Firestore
+    createdAt: DateTime.now(), // These will be properly set when loaded from Firestore
     updatedAt: DateTime.now(),
   );
 });
@@ -144,17 +139,9 @@ class PaginationState {
   final bool isLoading;
   final String? lastEmail;
 
-  const PaginationState({
-    this.hasMore = false,
-    this.isLoading = false,
-    this.lastEmail,
-  });
+  const PaginationState({this.hasMore = false, this.isLoading = false, this.lastEmail});
 
-  PaginationState copyWith({
-    bool? hasMore,
-    bool? isLoading,
-    String? lastEmail,
-  }) {
+  PaginationState copyWith({bool? hasMore, bool? isLoading, String? lastEmail}) {
     return PaginationState(
       hasMore: hasMore ?? this.hasMore,
       isLoading: isLoading ?? this.isLoading,
@@ -163,10 +150,11 @@ class PaginationState {
   }
 }
 
-final paginationStateProvider =
-    StateNotifierProvider<PaginationStateNotifier, PaginationState>((ref) {
-      return PaginationStateNotifier();
-    });
+final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, PaginationState>((
+  ref,
+) {
+  return PaginationStateNotifier();
+});
 
 class PaginationStateNotifier extends StateNotifier<PaginationState> {
   PaginationStateNotifier() : super(const PaginationState());

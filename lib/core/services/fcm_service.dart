@@ -27,8 +27,7 @@ class FCMService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         print('FCM: User granted permission');
-      } else if (settings.authorizationStatus ==
-          AuthorizationStatus.provisional) {
+      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
         print('FCM: User granted provisional permission');
       } else {
         print('FCM: User declined or has not accepted permission');
@@ -55,16 +54,13 @@ class FCMService {
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
       // Handle background messages
-      FirebaseMessaging.onBackgroundMessage(
-        _firebaseMessagingBackgroundHandler,
-      );
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
       // Handle notification taps when app is opened from background
       FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
       // Handle notification tap when app is terminated
-      final RemoteMessage? initialMessage = await _messaging
-          .getInitialMessage();
+      final RemoteMessage? initialMessage = await _messaging.getInitialMessage();
       if (initialMessage != null) {
         _handleMessageOpenedApp(initialMessage);
       }
@@ -107,10 +103,7 @@ class FCMService {
       // Subscribe to role-based topics
       final currentUser = _auth.currentUser;
       if (currentUser != null) {
-        final userDoc = await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
+        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
 
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;

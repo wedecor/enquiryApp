@@ -15,8 +15,7 @@ class AppGeneralConfig with _$AppGeneralConfig {
     DateTime? updatedAt,
   }) = _AppGeneralConfig;
 
-  factory AppGeneralConfig.fromJson(Map<String, dynamic> json) =>
-      _$AppGeneralConfigFromJson(json);
+  factory AppGeneralConfig.fromJson(Map<String, dynamic> json) => _$AppGeneralConfigFromJson(json);
 
   factory AppGeneralConfig.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;

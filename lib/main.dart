@@ -28,9 +28,7 @@ void main() async {
   // Initialize Firebase Core services with platform-specific options
   // Check if Firebase is already initialized to prevent duplicate app error
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     print('🔥 Firebase initialized successfully');
   } else {
     print('🔥 Firebase already initialized, using existing app');
@@ -48,7 +46,7 @@ void main() async {
 /// Main application widget that handles authentication-based navigation.
 ///
 /// This widget is the root of the application's widget tree and manages
-/// the overall app structure. It uses Material Design 3 with a blue-green 
+/// the overall app structure. It uses Material Design 3 with a blue-green
 /// color scheme and implements role-based navigation through AuthGate.
 class MyApp extends ConsumerWidget {
   /// Creates a [MyApp] widget.
@@ -84,9 +82,7 @@ class MyApp extends ConsumerWidget {
             foregroundColor: const Color(0xFFFFFFFF),
             elevation: 2,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -95,9 +91,7 @@ class MyApp extends ConsumerWidget {
         ),
         cardTheme: const CardThemeData(
           elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
           color: Color(0xFFFFFFFF),
         ),
         inputDecorationTheme: InputDecorationTheme(

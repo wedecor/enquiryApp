@@ -13,8 +13,7 @@ class AdminTab extends ConsumerStatefulWidget {
   ConsumerState<AdminTab> createState() => _AdminTabState();
 }
 
-class _AdminTabState extends ConsumerState<AdminTab>
-    with TickerProviderStateMixin {
+class _AdminTabState extends ConsumerState<AdminTab> with TickerProviderStateMixin {
   late TabController _adminTabController;
 
   @override
@@ -107,8 +106,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
         return _buildCompanyForm(context, config);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text('Error loading company config: $error')),
+      error: (error, stack) => Center(child: Text('Error loading company config: $error')),
     );
   }
 
@@ -136,10 +134,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Company & App Settings',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
+                  Text('Company & App Settings', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 16),
 
                   TextFormField(
@@ -205,19 +200,13 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
                       border: OutlineInputBorder(),
                     ),
                     items: const [
-                      DropdownMenuItem(
-                        value: 'Asia/Kolkata',
-                        child: Text('Asia/Kolkata (IST)'),
-                      ),
+                      DropdownMenuItem(value: 'Asia/Kolkata', child: Text('Asia/Kolkata (IST)')),
                       DropdownMenuItem(value: 'UTC', child: Text('UTC')),
                       DropdownMenuItem(
                         value: 'America/New_York',
                         child: Text('America/New_York (EST)'),
                       ),
-                      DropdownMenuItem(
-                        value: 'Europe/London',
-                        child: Text('Europe/London (GMT)'),
-                      ),
+                      DropdownMenuItem(value: 'Europe/London', child: Text('Europe/London (GMT)')),
                     ],
                     onChanged: (value) {
                       if (value != null) {
@@ -310,9 +299,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
     try {
       final newConfig = config.copyWith(
         companyName: _companyNameController.text.trim(),
-        logoUrl: _logoUrlController.text.trim().isEmpty
-            ? null
-            : _logoUrlController.text.trim(),
+        logoUrl: _logoUrlController.text.trim().isEmpty ? null : _logoUrlController.text.trim(),
         currency: _currencyController.text.trim().toUpperCase(),
         timezone: _timezoneController.text,
         vatPercent: double.parse(_vatPercentController.text),
@@ -358,11 +345,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
@@ -378,8 +361,7 @@ class NotificationConfigTab extends ConsumerWidget {
     return configAsync.when(
       data: (config) => _buildNotificationConfig(context, ref, config),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text('Error loading notification config: $error')),
+      error: (error, stack) => Center(child: Text('Error loading notification config: $error')),
     );
   }
 
@@ -393,10 +375,7 @@ class NotificationConfigTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Notification Settings',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Notification Settings', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
 
           Card(
@@ -405,27 +384,18 @@ class NotificationConfigTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Email Configuration',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Email Configuration', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
 
                   ListTile(
                     title: const Text('Email Invites'),
-                    subtitle: Text(
-                      config.emailInvitesEnabled ? 'Enabled' : 'Disabled',
-                    ),
+                    subtitle: Text(config.emailInvitesEnabled ? 'Enabled' : 'Disabled'),
                     trailing: Switch(
                       value: config.emailInvitesEnabled,
                       onChanged: (value) async {
                         try {
-                          final updateConfig = ref.read(
-                            updateAppNotificationConfigProvider,
-                          );
-                          await updateConfig(
-                            config.copyWith(emailInvitesEnabled: value),
-                          );
+                          final updateConfig = ref.read(updateAppNotificationConfigProvider);
+                          await updateConfig(config.copyWith(emailInvitesEnabled: value));
                         } catch (e) {
                           safeLog('notification_config_update_error', {
                             'field': 'emailInvitesEnabled',
@@ -475,8 +445,9 @@ class NotificationConfigTab extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Text(
                         'SMTP Status',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: Colors.blue.shade600),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
                       ),
                     ],
                   ),
@@ -501,23 +472,14 @@ class NotificationConfigTab extends ConsumerWidget {
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
   }
 
-  void _showReminderDaysDialog(
-    BuildContext context,
-    WidgetRef ref,
-    AppNotificationConfig config,
-  ) {
-    final controller = TextEditingController(
-      text: config.reminderDaysDefault.toString(),
-    );
+  void _showReminderDaysDialog(BuildContext context, WidgetRef ref, AppNotificationConfig config) {
+    final controller = TextEditingController(text: config.reminderDaysDefault.toString());
 
     showDialog(
       context: context,
@@ -526,10 +488,7 @@ class NotificationConfigTab extends ConsumerWidget {
         content: TextFormField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Days',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Days', border: OutlineInputBorder()),
           validator: (value) {
             final days = int.tryParse(value ?? '');
             if (days == null || days < 1 || days > 30) {
@@ -539,26 +498,17 @@ class NotificationConfigTab extends ConsumerWidget {
           },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               final days = int.tryParse(controller.text);
               if (days != null && days >= 1 && days <= 30) {
                 try {
-                  final updateConfig = ref.read(
-                    updateAppNotificationConfigProvider,
-                  );
-                  await updateConfig(
-                    config.copyWith(reminderDaysDefault: days),
-                  );
+                  final updateConfig = ref.read(updateAppNotificationConfigProvider);
+                  await updateConfig(config.copyWith(reminderDaysDefault: days));
                   Navigator.of(context).pop();
                 } catch (e) {
-                  safeLog('reminder_days_update_error', {
-                    'error': e.toString(),
-                  });
+                  safeLog('reminder_days_update_error', {'error': e.toString()});
                 }
               }
             },
@@ -580,25 +530,17 @@ class SecurityConfigTab extends ConsumerWidget {
     return configAsync.when(
       data: (config) => _buildSecurityConfig(context, ref, config),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text('Error loading security config: $error')),
+      error: (error, stack) => Center(child: Text('Error loading security config: $error')),
     );
   }
 
-  Widget _buildSecurityConfig(
-    BuildContext context,
-    WidgetRef ref,
-    AppSecurityConfig config,
-  ) {
+  Widget _buildSecurityConfig(BuildContext context, WidgetRef ref, AppSecurityConfig config) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Security Settings',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Security Settings', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
 
           Card(
@@ -607,10 +549,7 @@ class SecurityConfigTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Allowed Email Domains',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Allowed Email Domains', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text(
                     'Users can only be invited from these domains',
@@ -652,26 +591,17 @@ class SecurityConfigTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Login Security',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Login Security', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
 
                   SwitchListTile(
                     title: const Text('Require First Login Reset'),
-                    subtitle: const Text(
-                      'Force new users to reset password on first login',
-                    ),
+                    subtitle: const Text('Force new users to reset password on first login'),
                     value: config.requireFirstLoginReset,
                     onChanged: (value) async {
                       try {
-                        final updateConfig = ref.read(
-                          updateAppSecurityConfigProvider,
-                        );
-                        await updateConfig(
-                          config.copyWith(requireFirstLoginReset: value),
-                        );
+                        final updateConfig = ref.read(updateAppSecurityConfigProvider);
+                        await updateConfig(config.copyWith(requireFirstLoginReset: value));
                       } catch (e) {
                         safeLog('security_config_update_error', {
                           'field': 'requireFirstLoginReset',
@@ -689,14 +619,9 @@ class SecurityConfigTab extends ConsumerWidget {
     );
   }
 
-  void _removeDomain(
-    WidgetRef ref,
-    AppSecurityConfig config,
-    String domain,
-  ) async {
+  void _removeDomain(WidgetRef ref, AppSecurityConfig config, String domain) async {
     try {
-      final newDomains = List<String>.from(config.allowedDomains)
-        ..remove(domain);
+      final newDomains = List<String>.from(config.allowedDomains)..remove(domain);
       final updateConfig = ref.read(updateAppSecurityConfigProvider);
       await updateConfig(config.copyWith(allowedDomains: newDomains));
     } catch (e) {
@@ -704,11 +629,7 @@ class SecurityConfigTab extends ConsumerWidget {
     }
   }
 
-  void _showAddDomainDialog(
-    BuildContext context,
-    WidgetRef ref,
-    AppSecurityConfig config,
-  ) {
+  void _showAddDomainDialog(BuildContext context, WidgetRef ref, AppSecurityConfig config) {
     final controller = TextEditingController();
 
     showDialog(
@@ -725,39 +646,25 @@ class SecurityConfigTab extends ConsumerWidget {
             if (value == null || value.trim().isEmpty) {
               return 'Domain is required';
             }
-            if (!RegExp(
-              r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-            ).hasMatch(value.trim())) {
+            if (!RegExp(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value.trim())) {
               return 'Invalid domain format';
             }
             return null;
           },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
               final domain = controller.text.trim().toLowerCase();
-              if (domain.isNotEmpty &&
-                  !config.allowedDomains.contains(domain)) {
+              if (domain.isNotEmpty && !config.allowedDomains.contains(domain)) {
                 try {
-                  final newDomains = List<String>.from(config.allowedDomains)
-                    ..add(domain);
-                  final updateConfig = ref.read(
-                    updateAppSecurityConfigProvider,
-                  );
-                  await updateConfig(
-                    config.copyWith(allowedDomains: newDomains),
-                  );
+                  final newDomains = List<String>.from(config.allowedDomains)..add(domain);
+                  final updateConfig = ref.read(updateAppSecurityConfigProvider);
+                  await updateConfig(config.copyWith(allowedDomains: newDomains));
                   Navigator.of(context).pop();
                 } catch (e) {
-                  safeLog('domain_add_error', {
-                    'domain': domain,
-                    'error': e.toString(),
-                  });
+                  safeLog('domain_add_error', {'domain': domain, 'error': e.toString()});
                 }
               }
             },
@@ -779,10 +686,7 @@ class DataIntegrationsTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Data & Integrations',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Data & Integrations', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
 
           Card(
@@ -791,10 +695,7 @@ class DataIntegrationsTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Push Notifications',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Push Notifications', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
 
                   ListTile(
@@ -812,9 +713,7 @@ class DataIntegrationsTab extends ConsumerWidget {
                           ),
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('VAPID key copied to clipboard'),
-                          ),
+                          const SnackBar(content: Text('VAPID key copied to clipboard')),
                         );
                       },
                     ),
@@ -838,17 +737,12 @@ class DataIntegrationsTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Data Management',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Data Management', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
 
                   ListTile(
                     title: const Text('Dropdown Manager'),
-                    subtitle: const Text(
-                      'Manage event types, sources, and other dropdowns',
-                    ),
+                    subtitle: const Text('Manage event types, sources, and other dropdowns'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
                       Navigator.of(context).pushNamed('/admin/dropdowns');
@@ -857,9 +751,7 @@ class DataIntegrationsTab extends ConsumerWidget {
 
                   ListTile(
                     title: const Text('User Management'),
-                    subtitle: const Text(
-                      'Manage users, roles, and permissions',
-                    ),
+                    subtitle: const Text('Manage users, roles, and permissions'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
                       Navigator.of(context).pushNamed('/admin/users');
@@ -893,37 +785,23 @@ class DataIntegrationsTab extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Integration Status',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: Colors.blue.shade600),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  _buildStatusItem(
-                    'SMTP Email',
-                    'Active (Gmail)',
-                    Icons.email,
-                    Colors.green,
-                  ),
+                  _buildStatusItem('SMTP Email', 'Active (Gmail)', Icons.email, Colors.green),
                   _buildStatusItem(
                     'Push Notifications',
                     'Active (FCM)',
                     Icons.notifications,
                     Colors.green,
                   ),
-                  _buildStatusItem(
-                    'Cloud Functions',
-                    'Deployed',
-                    Icons.cloud,
-                    Colors.green,
-                  ),
-                  _buildStatusItem(
-                    'Firestore',
-                    'Connected',
-                    Icons.storage,
-                    Colors.green,
-                  ),
+                  _buildStatusItem('Cloud Functions', 'Deployed', Icons.cloud, Colors.green),
+                  _buildStatusItem('Firestore', 'Connected', Icons.storage, Colors.green),
                 ],
               ),
             ),
@@ -933,12 +811,7 @@ class DataIntegrationsTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusItem(
-    String title,
-    String status,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildStatusItem(String title, String status, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -964,10 +837,7 @@ class AboutTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'About WeDecor Events',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('About WeDecor Events', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
 
           Card(
@@ -1013,32 +883,14 @@ class AboutTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Features',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Features', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
 
-                  _buildFeatureItem(
-                    'Enquiry Management',
-                    'Track and manage customer enquiries',
-                  ),
-                  _buildFeatureItem(
-                    'User Management',
-                    'Role-based access control',
-                  ),
-                  _buildFeatureItem(
-                    'Analytics',
-                    'Comprehensive reporting and insights',
-                  ),
-                  _buildFeatureItem(
-                    'Notifications',
-                    'Real-time push and email notifications',
-                  ),
-                  _buildFeatureItem(
-                    'Settings',
-                    'Customizable user and system preferences',
-                  ),
+                  _buildFeatureItem('Enquiry Management', 'Track and manage customer enquiries'),
+                  _buildFeatureItem('User Management', 'Role-based access control'),
+                  _buildFeatureItem('Analytics', 'Comprehensive reporting and insights'),
+                  _buildFeatureItem('Notifications', 'Real-time push and email notifications'),
+                  _buildFeatureItem('Settings', 'Customizable user and system preferences'),
                   _buildFeatureItem('Export', 'CSV export for data analysis'),
                 ],
               ),
@@ -1053,10 +905,7 @@ class AboutTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Support',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Support', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
 
                   const Text(
@@ -1066,11 +915,7 @@ class AboutTab extends ConsumerWidget {
 
                   Row(
                     children: [
-                      Icon(
-                        Icons.security,
-                        color: Colors.green.shade600,
-                        size: 16,
-                      ),
+                      Icon(Icons.security, color: Colors.green.shade600, size: 16),
                       const SizedBox(width: 8),
                       const Text(
                         'All data is encrypted and securely stored',
@@ -1094,10 +939,7 @@ class AboutTab extends ConsumerWidget {
         children: [
           SizedBox(
             width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
           ),
           Text(value),
         ],
@@ -1115,24 +957,15 @@ class AboutTab extends ConsumerWidget {
             margin: const EdgeInsets.only(top: 6),
             width: 4,
             height: 4,
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  description,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(description, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),

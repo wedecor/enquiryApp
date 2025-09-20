@@ -10,9 +10,7 @@ class DatabaseSetupService {
   /// Reset and initialize the database with the correct schema
   Future<void> resetAndInitializeDatabase() async {
     try {
-      print(
-        'DatabaseSetupService: Starting database reset and initialization...',
-      );
+      print('DatabaseSetupService: Starting database reset and initialization...');
 
       // Delete existing collections if they exist
       await _deleteExistingCollections();
@@ -23,9 +21,7 @@ class DatabaseSetupService {
       // Initialize dropdowns with default values
       await _initializeDropdowns();
 
-      print(
-        'DatabaseSetupService: Database reset and initialization completed successfully!',
-      );
+      print('DatabaseSetupService: Database reset and initialization completed successfully!');
     } catch (e) {
       print('DatabaseSetupService: Error during database setup: $e');
       rethrow;
@@ -85,17 +81,11 @@ class DatabaseSetupService {
 
     // Create enquiries collection
     final enquiryRef = _firestore.collection('enquiries').doc('_temp');
-    await enquiryRef.set({
-      'temp': true,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await enquiryRef.set({'temp': true, 'createdAt': FieldValue.serverTimestamp()});
 
     // Create dropdowns collection structure
     final dropdownsRef = _firestore.collection('dropdowns').doc('_temp');
-    await dropdownsRef.set({
-      'temp': true,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    await dropdownsRef.set({'temp': true, 'createdAt': FieldValue.serverTimestamp()});
 
     // Create subcollections
     await _firestore
@@ -105,12 +95,9 @@ class DatabaseSetupService {
         .doc('_temp')
         .set({'temp': true});
 
-    await _firestore
-        .collection('dropdowns')
-        .doc('statuses')
-        .collection('items')
-        .doc('_temp')
-        .set({'temp': true});
+    await _firestore.collection('dropdowns').doc('statuses').collection('items').doc('_temp').set({
+      'temp': true,
+    });
 
     await _firestore
         .collection('dropdowns')
@@ -146,9 +133,7 @@ class DatabaseSetupService {
 
   /// Initialize dropdowns with default values
   Future<void> _initializeDropdowns() async {
-    print(
-      'DatabaseSetupService: Initializing dropdowns with default values...',
-    );
+    print('DatabaseSetupService: Initializing dropdowns with default values...');
 
     // Initialize event types
     await _initializeEventTypes();
@@ -165,15 +150,10 @@ class DatabaseSetupService {
   /// Initialize event types dropdown
   Future<void> _initializeEventTypes() async {
     final batch = _firestore.batch();
-    final collectionRef = _firestore
-        .collection('dropdowns')
-        .doc('event_types')
-        .collection('items');
+    final collectionRef = _firestore.collection('dropdowns').doc('event_types').collection('items');
 
     for (final eventType in DefaultDropdownValues.eventTypes) {
-      final docRef = collectionRef.doc(
-        eventType.toLowerCase().replaceAll(' ', '_'),
-      );
+      final docRef = collectionRef.doc(eventType.toLowerCase().replaceAll(' ', '_'));
       batch.set(docRef, EventTypeDocument(value: eventType).toMap());
     }
 
@@ -184,15 +164,10 @@ class DatabaseSetupService {
   /// Initialize statuses dropdown
   Future<void> _initializeStatuses() async {
     final batch = _firestore.batch();
-    final collectionRef = _firestore
-        .collection('dropdowns')
-        .doc('statuses')
-        .collection('items');
+    final collectionRef = _firestore.collection('dropdowns').doc('statuses').collection('items');
 
     for (final status in DefaultDropdownValues.statuses) {
-      final docRef = collectionRef.doc(
-        status.toLowerCase().replaceAll(' ', '_'),
-      );
+      final docRef = collectionRef.doc(status.toLowerCase().replaceAll(' ', '_'));
       batch.set(docRef, StatusDocument(value: status).toMap());
     }
 
@@ -209,9 +184,7 @@ class DatabaseSetupService {
         .collection('items');
 
     for (final paymentStatus in DefaultDropdownValues.paymentStatuses) {
-      final docRef = collectionRef.doc(
-        paymentStatus.toLowerCase().replaceAll(' ', '_'),
-      );
+      final docRef = collectionRef.doc(paymentStatus.toLowerCase().replaceAll(' ', '_'));
       batch.set(docRef, PaymentStatusDocument(value: paymentStatus).toMap());
     }
 
@@ -241,9 +214,7 @@ class DatabaseSetupService {
         createdAt: DateTime.now(),
       );
 
-      final docRef = await _firestore
-          .collection('enquiries')
-          .add(enquiryData.toMap());
+      final docRef = await _firestore.collection('enquiries').add(enquiryData.toMap());
 
       // Create financial subcollection
       await _firestore
@@ -273,9 +244,7 @@ class DatabaseSetupService {
             ).toMap(),
           );
 
-      print(
-        'DatabaseSetupService: Sample enquiry created with ID: ${docRef.id}',
-      );
+      print('DatabaseSetupService: Sample enquiry created with ID: ${docRef.id}');
       return docRef.id;
     } catch (e) {
       print('DatabaseSetupService: Error creating sample enquiry: $e');
@@ -289,16 +258,10 @@ class DatabaseSetupService {
 
     try {
       // Check if collections exist
-      await _firestore
-          .collection('enquiries')
-          .limit(1)
-          .get();
+      await _firestore.collection('enquiries').limit(1).get();
       results['enquiries_collection'] = true;
 
-      await _firestore
-          .collection('dropdowns')
-          .limit(1)
-          .get();
+      await _firestore.collection('dropdowns').limit(1).get();
       results['dropdowns_collection'] = true;
 
       // Check dropdown subcollections
@@ -310,12 +273,7 @@ class DatabaseSetupService {
           .get();
       results['event_types_subcollection'] = true;
 
-      await _firestore
-          .collection('dropdowns')
-          .doc('statuses')
-          .collection('items')
-          .limit(1)
-          .get();
+      await _firestore.collection('dropdowns').doc('statuses').collection('items').limit(1).get();
       results['statuses_subcollection'] = true;
 
       await _firestore
@@ -349,8 +307,7 @@ class DatabaseSetupService {
           .collection('items')
           .count()
           .get();
-      results['payment_statuses_has_data'] =
-          (paymentStatusesCount.count ?? 0) > 0;
+      results['payment_statuses_has_data'] = (paymentStatusesCount.count ?? 0) > 0;
     } catch (e) {
       print('DatabaseSetupService: Error verifying database structure: $e');
       results['verification_error'] = true;

@@ -10,9 +10,7 @@ void main(List<String> args) async {
     print('🚀 Firestore Index Management Tool');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -51,12 +49,8 @@ void main(List<String> args) async {
 
 void printUsage() {
   print('\n📖 Usage:');
-  print(
-    '  dart run scripts/manage_indexes.dart verify     - Verify index status',
-  );
-  print(
-    '  dart run scripts/manage_indexes.dart test-queries - Test queries that require indexes',
-  );
+  print('  dart run scripts/manage_indexes.dart verify     - Verify index status');
+  print('  dart run scripts/manage_indexes.dart test-queries - Test queries that require indexes');
   print('  dart run scripts/manage_indexes.dart help        - Show this help');
   print('\n🔧 Commands:');
   print('  verify      - Check if required indexes exist and are ready');

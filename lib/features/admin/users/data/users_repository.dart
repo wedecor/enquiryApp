@@ -37,9 +37,7 @@ class UsersRepository {
     query = query.limit(limit);
 
     return query.snapshots().map((snapshot) {
-      List<UserModel> users = snapshot.docs
-          .map((doc) => UserModel.fromFirestore(doc))
-          .toList();
+      List<UserModel> users = snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
 
       // Apply search filter on client side (for name and email)
       if (search != null && search.isNotEmpty) {

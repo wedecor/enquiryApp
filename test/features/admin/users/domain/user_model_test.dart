@@ -108,11 +108,7 @@ void main() {
         updatedAt: DateTime(2023, 1, 2),
       );
 
-      final updated = original.copyWith(
-        name: 'Jane Doe',
-        role: 'admin',
-        active: false,
-      );
+      final updated = original.copyWith(name: 'Jane Doe', role: 'admin', active: false);
 
       expect(updated.uid, 'test-uid'); // unchanged
       expect(updated.name, 'Jane Doe'); // changed

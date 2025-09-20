@@ -10,13 +10,12 @@ final firebaseAuthUserProvider = StreamProvider<fb.User?>((ref) {
 });
 
 /// Firestore user doc stream for the signed-in user
-final currentUserDocProvider =
-    StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
-      final auth = ref.watch(firebaseAuthUserProvider).value;
-      if (auth == null) return const Stream.empty();
-      final doc = FirebaseFirestore.instance.collection('users').doc(auth.uid);
-      return doc.snapshots();
-    });
+final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
+  final auth = ref.watch(firebaseAuthUserProvider).value;
+  if (auth == null) return const Stream.empty();
+  final doc = FirebaseFirestore.instance.collection('users').doc(auth.uid);
+  return doc.snapshots();
+});
 
 /// Current user role: "admin" | "staff" | null (unknown/not found)
 final currentUserRoleProvider = Provider<String?>((ref) {
