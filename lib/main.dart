@@ -29,7 +29,7 @@ import 'firebase_options.dart';
 /// Bootstrap function for Firebase and monitoring setup
 Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase Core services
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -65,17 +65,20 @@ Future<void> _bootstrap() async {
 }
 
 void main() {
-  runZonedGuarded(() async {
-    await _bootstrap();
-    runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
-  }, (error, stack) {
-    // Catch any errors not handled by Flutter framework
-    if (kReleaseMode && AppConfig.enableCrashlytics) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    } else {
-      debugPrint('Unhandled error: $error\n$stack');
-    }
-  });
+  runZonedGuarded(
+    () async {
+      await _bootstrap();
+      runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
+    },
+    (error, stack) {
+      // Catch any errors not handled by Flutter framework
+      if (kReleaseMode && AppConfig.enableCrashlytics) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      } else {
+        debugPrint('Unhandled error: $error\n$stack');
+      }
+    },
+  );
 }
 
 /// Main application widget that handles authentication-based navigation.
