@@ -33,11 +33,32 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            // Production signing - configure these in CI/CD or local.properties
+            // storeFile = file(project.findProperty("RELEASE_STORE_FILE") ?: "release-keystore.jks")
+            // storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String? ?: ""
+            // keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String? ?: ""
+            // keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String? ?: ""
+        }
+    }
+
     buildTypes {
+        debug {
+            isMinifyEnabled = false
+            isDebuggable = true
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // TODO: Uncomment when release keystore is configured
+            // signingConfig = signingConfigs.getByName("release")
             signingConfig = signingConfigs.getByName("debug")
+            
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
