@@ -11,7 +11,7 @@ import '../logging/logger.dart';
 class PerfTraces {
   static final Map<String, Trace> _activeTraces = {};
   static final Map<String, DateTime> _startTimes = {};
-  
+
   // Performance budgets (in milliseconds)
   static const int _appStartBudget = 2000;
   static const int _enquiryListLoadBudget = 1000;
@@ -63,11 +63,11 @@ class PerfTraces {
         // Add custom attributes
         if (attributes != null) {
           for (final entry in attributes.entries) {
-            await trace.putAttribute(entry.key, entry.value);
+            trace.putAttribute(entry.key, entry.value);
           }
         }
         
-        await trace.stop();
+        trace.stop();
         _activeTraces.remove(traceName);
         Logger.info('Performance trace stopped: $traceName - ${durationMs}ms');
       }
@@ -81,7 +81,7 @@ class PerfTraces {
   /// Check if duration exceeds performance budget
   static void _checkPerformanceBudget(String traceName, int durationMs) {
     int? budget;
-    
+
     switch (traceName) {
       case 'app_start':
         budget = _appStartBudget;
@@ -111,7 +111,7 @@ class PerfTraces {
   }
 
   /// Add custom metric to active trace
-  static Future<void> putMetric(String traceName, String metricName, int value) async {
+  static void putMetric(String traceName, String metricName, int value) {
     if (!AppConfig.enablePerformance || !kReleaseMode) {
       Logger.debug('Performance metric (debug): $traceName.$metricName = $value');
       return;
@@ -120,7 +120,7 @@ class PerfTraces {
     try {
       final trace = _activeTraces[traceName];
       if (trace != null) {
-        await trace.putMetric(metricName, value);
+        trace.putMetric(metricName, value);
       }
     } catch (e) {
       Logger.error('Failed to put metric: $traceName.$metricName', error: e);
@@ -151,10 +151,10 @@ class PerfTraces {
 
   /// Complete app startup trace (call when first screen is ready)
   static Future<void> completeAppStartTrace() async {
-    await stopTrace('app_start', attributes: {
-      'environment': AppConfig.env,
-      'platform': defaultTargetPlatform.name,
-    });
+    await stopTrace(
+      'app_start',
+      attributes: {'environment': AppConfig.env, 'platform': defaultTargetPlatform.name},
+    );
   }
 
   /// Enquiry list loading trace
@@ -163,9 +163,10 @@ class PerfTraces {
   }
 
   static Future<void> completeEnquiryListTrace({int? itemCount}) async {
-    await stopTrace('enquiry_list_load', attributes: {
-      'item_count': itemCount?.toString() ?? 'unknown',
-    });
+    await stopTrace(
+      'enquiry_list_load',
+      attributes: {'item_count': itemCount?.toString() ?? 'unknown'},
+    );
   }
 
   /// User login trace
@@ -174,9 +175,7 @@ class PerfTraces {
   }
 
   static Future<void> completeLoginTrace({bool? success}) async {
-    await stopTrace('user_login', attributes: {
-      'success': success?.toString() ?? 'unknown',
-    });
+    await stopTrace('user_login', attributes: {'success': success?.toString() ?? 'unknown'});
   }
 
   /// Image upload trace
@@ -185,8 +184,9 @@ class PerfTraces {
   }
 
   static Future<void> completeImageUploadTrace({int? fileSizeBytes}) async {
-    await stopTrace('image_upload', attributes: {
-      'file_size_bytes': fileSizeBytes?.toString() ?? 'unknown',
-    });
+    await stopTrace(
+      'image_upload',
+      attributes: {'file_size_bytes': fileSizeBytes?.toString() ?? 'unknown'},
+    );
   }
 }
