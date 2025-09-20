@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
+
+import '../../core/providers/role_provider.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
@@ -16,19 +17,19 @@ class EventTypeAutocomplete extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EventTypeAutocomplete> createState() => _EventTypeAutocompleteState();
+  ConsumerState<EventTypeAutocomplete> createState() =>
+      _EventTypeAutocompleteState();
 }
 
 class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  
+
   // Store both label (display) and value (id) for each option
   List<Map<String, String>> _eventTypes = [];
   List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
-  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -49,7 +50,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     super.didUpdateWidget(oldWidget);
     // Update the controller when the initial value changes
     if (oldWidget.initialValue != widget.initialValue) {
-      print('🔍 EventTypeAutocomplete: Initial value changed from "${oldWidget.initialValue}" to "${widget.initialValue}"');
+      print(
+        '🔍 EventTypeAutocomplete: Initial value changed from "${oldWidget.initialValue}" to "${widget.initialValue}"',
+      );
       _isInitialized = false;
       if (!_isLoading) {
         _setInitialValue();
@@ -78,7 +81,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       _filteredEventTypes = defaultEventTypes;
       _isLoading = false;
     });
-    
+
     // Set initial value after loading default event types
     _setInitialValue();
 
@@ -136,15 +139,21 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   void _setInitialValue() {
-    print('🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"');
-    print('🔍 EventTypeAutocomplete: Available event types: ${_eventTypes.map((e) => '${e['value']}: ${e['label']}').join(', ')}');
-    if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
+    print(
+      '🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"',
+    );
+    print(
+      '🔍 EventTypeAutocomplete: Available event types: ${_eventTypes.map((e) => '${e['value']}: ${e['label']}').join(', ')}',
+    );
+    if (widget.initialValue != null &&
+        widget.initialValue!.isNotEmpty &&
+        _eventTypes.isNotEmpty) {
       // Find the matching event type by value
       final matchingEventType = _eventTypes.firstWhere(
         (eventType) => eventType['value'] == widget.initialValue,
         orElse: () => <String, String>{},
       );
-      
+
       if (matchingEventType.isNotEmpty) {
         _controller.text = matchingEventType['label'] ?? widget.initialValue!;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -154,10 +163,12 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       } else {
         // If no exact match found, try to find by label
         final matchingByLabel = _eventTypes.firstWhere(
-          (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
+          (eventType) =>
+              eventType['label']?.toLowerCase() ==
+              widget.initialValue!.toLowerCase(),
           orElse: () => <String, String>{},
         );
-        
+
         if (matchingByLabel.isNotEmpty) {
           _controller.text = matchingByLabel['label'] ?? widget.initialValue!;
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -187,7 +198,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         final label = type['label'] ?? '';
         final value = type['value'] ?? '';
         final q = query.toLowerCase();
-        return label.toLowerCase().contains(q) || value.toLowerCase().contains(q);
+        return label.toLowerCase().contains(q) ||
+            value.toLowerCase().contains(q);
       }).toList();
 
       setState(() {
@@ -216,8 +228,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
 
     // Check for case-insensitive uniqueness
     final exists = _eventTypes.any(
-      (type) => (type['label'] ?? '').toLowerCase() == trimmedType.toLowerCase() ||
-                (type['value'] ?? '').toLowerCase() == trimmedType.toLowerCase(),
+      (type) =>
+          (type['label'] ?? '').toLowerCase() == trimmedType.toLowerCase() ||
+          (type['value'] ?? '').toLowerCase() == trimmedType.toLowerCase(),
     );
 
     if (exists) {
@@ -240,13 +253,15 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           .doc('event_types')
           .collection('items')
           .add({
-        'label': trimmedType,
-        'value': trimmedType.toLowerCase().replaceAll(' ', '_'),
-        'active': true,
-        'order': (_eventTypes.length + 1),
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-      });
+            'label': trimmedType,
+            'value': trimmedType.toLowerCase().replaceAll(' ', '_'),
+            'active': true,
+            'order': (_eventTypes.length + 1),
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy':
+                ref.read(currentUserWithFirestoreProvider).value?.uid ??
+                'unknown',
+          });
 
       // Refresh the list
       await _loadEventTypes();
@@ -338,7 +353,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
                       if (index == options.length && _showAddButton) {
                         return _buildAddNewOption();
                       }
-                      final option = options.elementAt(index) as Map<String, String>;
+                      final option = options.elementAt(index);
                       return ListTile(
                         title: Text(option['label'] ?? ''),
                         onTap: () {

@@ -14,20 +14,28 @@ class FcmTokenManager {
 
     // Web permission prompt
     await FirebaseMessaging.instance.requestPermission(
-      alert: true, badge: true, sound: true,
+      alert: true,
+      badge: true,
+      sound: true,
     );
 
     // VAPID public key from environment configuration
-    const vapidKey = String.fromEnvironment('VAPID_PUBLIC_KEY', defaultValue: 'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E');
+    const vapidKey = String.fromEnvironment(
+      'VAPID_PUBLIC_KEY',
+      defaultValue:
+          'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E',
+    );
 
     final token = await FirebaseMessaging.instance.getToken(vapidKey: vapidKey);
     if (token == null) return;
 
     // NEW: Store tokens in private subcollection (owner-only access)
     final tokensCollection = FirebaseFirestore.instance
-      .collection('users').doc(user.uid)
-      .collection('private').doc('notifications')
-      .collection('tokens');
+        .collection('users')
+        .doc(user.uid)
+        .collection('private')
+        .doc('notifications')
+        .collection('tokens');
 
     // Use the token as the doc ID for idempotency
     await tokensCollection.doc(token).set({
@@ -63,10 +71,13 @@ class FcmTokenManager {
 
       // Remove from private collection
       await FirebaseFirestore.instance
-        .collection('users').doc(user.uid)
-        .collection('private').doc('notifications')
-        .collection('tokens').doc(token).delete();
-
+          .collection('users')
+          .doc(user.uid)
+          .collection('private')
+          .doc('notifications')
+          .collection('tokens')
+          .doc(token)
+          .delete();
     } catch (e) {
       // Ignore cleanup errors
     }

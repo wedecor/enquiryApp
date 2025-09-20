@@ -1,6 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
+import '../../../../core/services/firebase_auth_service.dart';
 
 /// Screen for user authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -54,6 +55,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent! Check your email.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reset link sent if the email exists.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,7 +110,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   color: Color(0xFF2563EB), // Blue
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Title
                 const Text(
                   'Welcome to We Decor',
@@ -85,13 +122,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                
+
                 const Text(
                   'Sign in to your account',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -136,7 +170,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // Forgot Password Link
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _forgotPassword,
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(color: Color(0xFF2563EB)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
 
                 // Error Message
                 if (_errorMessage != null)
@@ -172,7 +219,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : const Text(
@@ -190,4 +239,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-} 
+}

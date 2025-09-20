@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../data/users_repository.dart';
 import '../domain/user_model.dart';
-import '../../../../core/auth/current_user_role_provider.dart';
 
 // Repository provider
 final usersRepositoryProvider = Provider<UsersRepository>((ref) {
@@ -10,13 +11,14 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
 
 // Filter state for users list
 class UsersFilter extends StateNotifier<Map<String, dynamic>> {
-  UsersFilter() : super({
-    'search': '',
-    'role': 'All',
-    'active': null, // null means "All"
-    'limit': 20,
-    'startAfterEmail': null,
-  });
+  UsersFilter()
+    : super({
+        'search': '',
+        'role': 'All',
+        'active': null, // null means "All"
+        'limit': 20,
+        'startAfterEmail': null,
+      });
 
   void updateSearch(String search) {
     state = {...state, 'search': search, 'startAfterEmail': null};
@@ -45,22 +47,24 @@ class UsersFilter extends StateNotifier<Map<String, dynamic>> {
   }
 }
 
-final usersFilterProvider = StateNotifierProvider<UsersFilter, Map<String, dynamic>>((ref) {
-  return UsersFilter();
-});
+final usersFilterProvider =
+    StateNotifierProvider<UsersFilter, Map<String, dynamic>>((ref) {
+      return UsersFilter();
+    });
 
 // Users stream provider
-final usersStreamProvider = StreamProvider.family<List<UserModel>, Map<String, dynamic>>((ref, filter) {
-  final repository = ref.read(usersRepositoryProvider);
-  
-  return repository.watchUsers(
-    search: filter['search'] as String?,
-    role: filter['role'] as String?,
-    active: filter['active'] as bool?,
-    limit: filter['limit'] as int,
-    startAfterEmail: filter['startAfterEmail'] as String?,
-  );
-});
+final usersStreamProvider =
+    StreamProvider.family<List<UserModel>, Map<String, dynamic>>((ref, filter) {
+      final repository = ref.read(usersRepositoryProvider);
+
+      return repository.watchUsers(
+        search: filter['search'] as String?,
+        role: filter['role'] as String?,
+        active: filter['active'] as bool?,
+        limit: filter['limit'] as int,
+        startAfterEmail: filter['startAfterEmail'] as String?,
+      );
+    });
 
 // User form controller for create/edit operations
 class UserFormController extends StateNotifier<AsyncValue<void>> {
@@ -103,19 +107,19 @@ class UserFormController extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final userFormControllerProvider = StateNotifierProvider<UserFormController, AsyncValue<void>>((ref) {
-  final repository = ref.read(usersRepositoryProvider);
-  return UserFormController(repository);
-});
-
+final userFormControllerProvider =
+    StateNotifierProvider<UserFormController, AsyncValue<void>>((ref) {
+      final repository = ref.read(usersRepositoryProvider);
+      return UserFormController(repository);
+    });
 
 // Current user provider (for role checking) - now using the new auth system
 final currentUserProvider = Provider<UserModel?>((ref) {
   final authUser = ref.watch(firebaseAuthUserProvider).value;
   final userData = ref.watch(currentUserDataProvider);
-  
+
   if (authUser == null || userData == null) return null;
-  
+
   return UserModel(
     uid: authUser.uid,
     name: userData['name'] as String? ?? '',
@@ -124,7 +128,8 @@ final currentUserProvider = Provider<UserModel?>((ref) {
     role: userData['role'] as String? ?? 'staff',
     active: userData['active'] as bool? ?? true,
     // fcmToken removed for security - stored in private subcollection
-    createdAt: DateTime.now(), // These will be properly set when loaded from Firestore
+    createdAt:
+        DateTime.now(), // These will be properly set when loaded from Firestore
     updatedAt: DateTime.now(),
   );
 });
@@ -158,9 +163,10 @@ class PaginationState {
   }
 }
 
-final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, PaginationState>((ref) {
-  return PaginationStateNotifier();
-});
+final paginationStateProvider =
+    StateNotifierProvider<PaginationStateNotifier, PaginationState>((ref) {
+      return PaginationStateNotifier();
+    });
 
 class PaginationStateNotifier extends StateNotifier<PaginationState> {
   PaginationStateNotifier() : super(const PaginationState());

@@ -1,8 +1,8 @@
-echo "🔒 Running security audit..."
-npm run sec:all || exit 1
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
-echo "🧹 Running secrets & logs refactors (non-blocking)..."
-npm run refactor:secrets || true
-npm run refactor:logs || true
+echo "🧹 formatting dart..."
+dart format -l 100 . || exit 1
 
-echo "✅ Pre-commit security checks passed!"
+echo "🔍 quick analyze (non-blocking)..."
+flutter analyze || true

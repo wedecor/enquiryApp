@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
+import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Standalone script for schema verification
 void main(List<String> args) async {
@@ -32,7 +33,10 @@ void main(List<String> args) async {
           await _runFullVerification(schemaService);
           break;
         case 'report':
-          await _generateReport(schemaService, args.length > 1 ? args[1] : null);
+          await _generateReport(
+            schemaService,
+            args.length > 1 ? args[1] : null,
+          );
           break;
         case 'quick':
           await _runQuickVerification(schemaService);
@@ -45,7 +49,6 @@ void main(List<String> args) async {
           _printUsage();
       }
     }
-
   } catch (e) {
     print('❌ Error during schema verification: $e');
     exit(1);
@@ -53,7 +56,9 @@ void main(List<String> args) async {
 }
 
 /// Run full schema verification
-Future<void> _runFullVerification(SchemaVerificationService schemaService) async {
+Future<void> _runFullVerification(
+  SchemaVerificationService schemaService,
+) async {
   print('\n🚀 Starting full schema verification...');
   print('⏳ This may take a few moments...\n');
 
@@ -85,7 +90,9 @@ Future<void> _runFullVerification(SchemaVerificationService schemaService) async
     if (result.details.isNotEmpty) {
       final details = result.details;
       if (details.containsKey('totalDocuments')) {
-        print('   📄 Documents: ${details['totalDocuments']} total, ${details['validDocuments']} valid, ${details['invalidDocuments']} invalid');
+        print(
+          '   📄 Documents: ${details['totalDocuments']} total, ${details['validDocuments']} valid, ${details['invalidDocuments']} invalid',
+        );
       }
     }
 
@@ -132,12 +139,14 @@ Future<void> _runFullVerification(SchemaVerificationService schemaService) async
 }
 
 /// Run quick schema verification
-Future<void> _runQuickVerification(SchemaVerificationService schemaService) async {
+Future<void> _runQuickVerification(
+  SchemaVerificationService schemaService,
+) async {
   print('\n⚡ Starting quick schema verification...');
   print('⏳ Checking collection structure only...\n');
 
   final startTime = DateTime.now();
-  
+
   try {
     final firestore = FirebaseFirestore.instance;
     final collections = ['users', 'enquiries', 'dropdowns'];
@@ -145,8 +154,13 @@ Future<void> _runQuickVerification(SchemaVerificationService schemaService) asyn
 
     for (final collectionName in collections) {
       try {
-        final snapshot = await firestore.collection(collectionName).limit(1).get();
-        print('✅ $collectionName: Collection exists (${snapshot.docs.length} sample documents)');
+        final snapshot = await firestore
+            .collection(collectionName)
+            .limit(1)
+            .get();
+        print(
+          '✅ $collectionName: Collection exists (${snapshot.docs.length} sample documents)',
+        );
         validCollections++;
       } catch (e) {
         print('❌ $collectionName: Error accessing collection - $e');
@@ -166,14 +180,16 @@ Future<void> _runQuickVerification(SchemaVerificationService schemaService) asyn
     } else {
       print('\n🔧 Some collections may have issues.');
     }
-
   } catch (e) {
     print('❌ Quick verification failed: $e');
   }
 }
 
 /// Generate detailed report
-Future<void> _generateReport(SchemaVerificationService schemaService, String? outputFile) async {
+Future<void> _generateReport(
+  SchemaVerificationService schemaService,
+  String? outputFile,
+) async {
   print('\n📝 Generating detailed schema report...');
 
   final report = await schemaService.generateSchemaReport();
@@ -190,10 +206,18 @@ Future<void> _generateReport(SchemaVerificationService schemaService, String? ou
 /// Print usage information
 void _printUsage() {
   print('\n📖 Schema Verification Tool Usage:');
-  print('  dart run scripts/verify_schema.dart              - Run full verification');
-  print('  dart run scripts/verify_schema.dart verify        - Run full verification');
-  print('  dart run scripts/verify_schema.dart quick         - Run quick verification');
-  print('  dart run scripts/verify_schema.dart report [file] - Generate detailed report');
+  print(
+    '  dart run scripts/verify_schema.dart              - Run full verification',
+  );
+  print(
+    '  dart run scripts/verify_schema.dart verify        - Run full verification',
+  );
+  print(
+    '  dart run scripts/verify_schema.dart quick         - Run quick verification',
+  );
+  print(
+    '  dart run scripts/verify_schema.dart report [file] - Generate detailed report',
+  );
   print('  dart run scripts/verify_schema.dart help          - Show this help');
   print('\n🔧 Commands:');
   print('  verify - Run complete schema verification (default)');
@@ -212,4 +236,4 @@ void _printUsage() {
   print('  • Dropdowns collection schema compliance');
   print('  • Field types and required fields');
   print('  • Data validation rules');
-} 
+}

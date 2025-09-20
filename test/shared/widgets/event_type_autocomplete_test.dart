@@ -12,25 +12,22 @@ void main() {
 
         // Test exact match
         expect(_isDuplicate('Wedding', existingEventTypes), isTrue);
-        
+
         // Test lowercase
         expect(_isDuplicate('wedding', existingEventTypes), isTrue);
-        
+
         // Test uppercase
         expect(_isDuplicate('WEDDING', existingEventTypes), isTrue);
-        
+
         // Test mixed case
         expect(_isDuplicate('WeDdInG', existingEventTypes), isTrue);
-        
+
         // Test with spaces
         expect(_isDuplicate('  Wedding  ', existingEventTypes), isTrue);
       });
 
       test('should allow new unique event types', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party'];
 
         // Test new unique types
         expect(_isDuplicate('Corporate Event', existingEventTypes), isFalse);
@@ -39,59 +36,50 @@ void main() {
       });
 
       test('should handle empty and whitespace-only inputs', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party'];
 
         // Test empty string
         expect(_isDuplicate('', existingEventTypes), isFalse);
-        
+
         // Test whitespace only
         expect(_isDuplicate('   ', existingEventTypes), isFalse);
         expect(_isDuplicate('\t\n', existingEventTypes), isFalse);
       });
 
       test('should handle edge cases', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party'];
 
         // Test null input
         expect(_isDuplicate(null, existingEventTypes), isFalse);
-        
+
         // Test empty list
         expect(_isDuplicate('Wedding', []), isFalse);
-        
+
         // Test with special characters
-        expect(_isDuplicate('Wedding & Reception', existingEventTypes), isFalse);
+        expect(
+          _isDuplicate('Wedding & Reception', existingEventTypes),
+          isFalse,
+        );
         expect(_isDuplicate('Wedding-Reception', existingEventTypes), isFalse);
       });
     });
 
     group('Input validation and sanitization', () {
       test('should trim whitespace from input', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party'];
 
         // Test leading whitespace
         expect(_isDuplicate('  Wedding', existingEventTypes), isTrue);
-        
+
         // Test trailing whitespace
         expect(_isDuplicate('Wedding  ', existingEventTypes), isTrue);
-        
+
         // Test both leading and trailing whitespace
         expect(_isDuplicate('  Wedding  ', existingEventTypes), isTrue);
       });
 
       test('should handle case normalization', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
+        final existingEventTypes = ['Wedding', 'Birthday Party'];
 
         // Test various case combinations
         expect(_isDuplicate('wedding', existingEventTypes), isTrue);
@@ -101,16 +89,11 @@ void main() {
       });
 
       test('should validate input format', () {
-        final existingEventTypes = [
-          'Wedding',
-          'Birthday Party',
-        ];
-
         // Test valid inputs
         expect(_isValidEventType('Corporate Event'), isTrue);
         expect(_isValidEventType('Wedding & Reception'), isTrue);
         expect(_isValidEventType('Birthday-Party'), isTrue);
-        
+
         // Test invalid inputs
         expect(_isValidEventType(''), isFalse);
         expect(_isValidEventType('   '), isFalse);
@@ -131,7 +114,7 @@ void main() {
         expect(_isDuplicate('wedding', existingEventTypes), isTrue);
         expect(_isDuplicate('Wedding ', existingEventTypes), isTrue);
         expect(_isDuplicate(' Wedding', existingEventTypes), isTrue);
-        
+
         // Test that different names are not duplicates
         expect(_isDuplicate('Wedding Reception', existingEventTypes), isFalse);
         expect(_isDuplicate('Wedding Party', existingEventTypes), isFalse);
@@ -148,11 +131,11 @@ void main() {
         // Test exact matches with special characters
         expect(_isDuplicate('Wedding & Reception', existingEventTypes), isTrue);
         expect(_isDuplicate('Birthday-Party', existingEventTypes), isTrue);
-        
+
         // Test case variations with special characters
         expect(_isDuplicate('wedding & reception', existingEventTypes), isTrue);
         expect(_isDuplicate('birthday-party', existingEventTypes), isTrue);
-        
+
         // Test similar but different names
         expect(_isDuplicate('Wedding Reception', existingEventTypes), isFalse);
         expect(_isDuplicate('Birthday Party', existingEventTypes), isFalse);
@@ -166,7 +149,7 @@ void main() {
         expect(_isValidEventType('Wedding & Reception'), isTrue);
         expect(_isValidEventType('Birthday-Party'), isTrue);
         expect(_isValidEventType('Graduation Ceremony'), isTrue);
-        
+
         // Test invalid event type names
         expect(_isValidEventType(''), isFalse);
         expect(_isValidEventType('   '), isFalse);
@@ -184,9 +167,9 @@ bool _isDuplicate(String? newEventType, List<String> existingEventTypes) {
   if (newEventType == null || newEventType.trim().isEmpty) {
     return false;
   }
-  
+
   final normalizedNewType = newEventType.trim().toLowerCase();
-  
+
   return existingEventTypes.any((existingType) {
     return existingType.trim().toLowerCase() == normalizedNewType;
   });
@@ -197,18 +180,18 @@ bool _isValidEventType(String? eventType) {
   if (eventType == null || eventType.trim().isEmpty) {
     return false;
   }
-  
+
   final trimmedType = eventType.trim();
-  
+
   // Must be at least 2 characters long
   if (trimmedType.length < 2) {
     return false;
   }
-  
+
   // Must contain at least one letter
   if (!RegExp(r'[a-zA-Z]').hasMatch(trimmedType)) {
     return false;
   }
-  
+
   return true;
-} 
+}

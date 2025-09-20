@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/features/admin/analytics/domain/analytics_models.dart';
+
+import '../../features/admin/analytics/domain/analytics_models.dart';
 
 /// Utility class for exporting data to CSV format
 class CsvExport {
@@ -13,7 +15,9 @@ class CsvExport {
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
   /// Export enquiries to CSV
-  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries) async {
+  static Future<void> exportEnquiries(
+    List<Map<String, dynamic>> enquiries,
+  ) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
@@ -45,7 +49,7 @@ class CsvExport {
 
     // Convert enquiries to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final enquiry in enquiries) {
       rows.add([
         enquiry['id']?.toString() ?? '',
@@ -75,7 +79,7 @@ class CsvExport {
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'enquiries_$timestamp.csv';
@@ -90,7 +94,9 @@ class CsvExport {
   }
 
   /// Export recent enquiries from analytics
-  static Future<void> exportRecentEnquiries(List<RecentEnquiry> enquiries) async {
+  static Future<void> exportRecentEnquiries(
+    List<RecentEnquiry> enquiries,
+  ) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
@@ -109,7 +115,7 @@ class CsvExport {
 
     // Convert enquiries to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final enquiry in enquiries) {
       rows.add([
         enquiry.id,
@@ -126,7 +132,7 @@ class CsvExport {
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'recent_enquiries_$timestamp.csv';
@@ -153,17 +159,44 @@ class CsvExport {
     // KPI Summary section
     rows.addAll([
       ['WeDecor Analytics Summary'],
-      ['Date Range', '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(dateRange.end)}'],
+      [
+        'Date Range',
+        '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(dateRange.end)}',
+      ],
       ['Generated At', _dateFormat.format(DateTime.now())],
       [''],
       ['KPI Summary'],
       ['Metric', 'Value', 'Change %'],
-      ['Total Enquiries', kpiSummary.totalEnquiries.toString(), '${kpiSummary.deltas.totalEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Active Enquiries', kpiSummary.activeEnquiries.toString(), '${kpiSummary.deltas.activeEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Won Enquiries', kpiSummary.wonEnquiries.toString(), '${kpiSummary.deltas.wonEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Lost Enquiries', kpiSummary.lostEnquiries.toString(), '${kpiSummary.deltas.lostEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Conversion Rate', '${kpiSummary.conversionRate.toStringAsFixed(1)}%', '${kpiSummary.deltas.conversionRateChange.toStringAsFixed(1)}%'],
-      ['Estimated Revenue', '₹${kpiSummary.estimatedRevenue.toStringAsFixed(2)}', '${kpiSummary.deltas.estimatedRevenueChange.toStringAsFixed(1)}%'],
+      [
+        'Total Enquiries',
+        kpiSummary.totalEnquiries.toString(),
+        '${kpiSummary.deltas.totalEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Active Enquiries',
+        kpiSummary.activeEnquiries.toString(),
+        '${kpiSummary.deltas.activeEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Won Enquiries',
+        kpiSummary.wonEnquiries.toString(),
+        '${kpiSummary.deltas.wonEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Lost Enquiries',
+        kpiSummary.lostEnquiries.toString(),
+        '${kpiSummary.deltas.lostEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Conversion Rate',
+        '${kpiSummary.conversionRate.toStringAsFixed(1)}%',
+        '${kpiSummary.deltas.conversionRateChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Estimated Revenue',
+        '₹${kpiSummary.estimatedRevenue.toStringAsFixed(2)}',
+        '${kpiSummary.deltas.estimatedRevenueChange.toStringAsFixed(1)}%',
+      ],
       [''],
     ]);
 
@@ -172,11 +205,13 @@ class CsvExport {
       rows.addAll([
         ['Status Breakdown'],
         ['Status', 'Count', 'Percentage'],
-        ...statusBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...statusBreakdown.map(
+          (item) => [
+            item.key,
+            item.count.toString(),
+            '${item.percentage.toStringAsFixed(1)}%',
+          ],
+        ),
         [''],
       ]);
     }
@@ -186,11 +221,13 @@ class CsvExport {
       rows.addAll([
         ['Event Type Breakdown'],
         ['Event Type', 'Count', 'Percentage'],
-        ...eventTypeBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...eventTypeBreakdown.map(
+          (item) => [
+            item.key,
+            item.count.toString(),
+            '${item.percentage.toStringAsFixed(1)}%',
+          ],
+        ),
         [''],
       ]);
     }
@@ -200,18 +237,20 @@ class CsvExport {
       rows.addAll([
         ['Source Breakdown'],
         ['Source', 'Count', 'Percentage'],
-        ...sourceBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...sourceBreakdown.map(
+          (item) => [
+            item.key,
+            item.count.toString(),
+            '${item.percentage.toStringAsFixed(1)}%',
+          ],
+        ),
       ]);
     }
 
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'analytics_summary_$timestamp.csv';
@@ -246,7 +285,7 @@ class CsvExport {
 
     // Convert users to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final user in users) {
       rows.add([
         user['uid']?.toString() ?? '',
@@ -264,7 +303,7 @@ class CsvExport {
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'users_$timestamp.csv';
@@ -281,9 +320,9 @@ class CsvExport {
   /// Format timestamp for CSV export
   static String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return '';
-    
+
     DateTime? dateTime;
-    
+
     if (timestamp is Timestamp) {
       dateTime = timestamp.toDate();
     } else if (timestamp is DateTime) {
@@ -295,7 +334,7 @@ class CsvExport {
         return timestamp;
       }
     }
-    
+
     return dateTime != null ? _dateFormat.format(dateTime) : '';
   }
 

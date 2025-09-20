@@ -1,7 +1,8 @@
 /// Firestore Collections and Schema Definitions
-/// 
+///
 /// This file defines the structure of all Firestore collections used in the We Decor Enquiries app.
 /// Each collection has a specific purpose and document structure.
+library;
 
 /// Collection: users/
 /// Purpose: Store user information and roles
@@ -9,19 +10,19 @@
 class FirestoreCollections {
   /// Users collection path
   static const String users = 'users';
-  
+
   /// Enquiries collection path
   static const String enquiries = 'enquiries';
-  
+
   /// Dropdowns collection path
   static const String dropdowns = 'dropdowns';
-  
+
   /// Event types subcollection path
   static const String eventTypes = 'dropdowns/event_types';
-  
+
   /// Statuses subcollection path
   static const String statuses = 'dropdowns/statuses';
-  
+
   /// Payment statuses subcollection path
   static const String paymentStatuses = 'dropdowns/payment_statuses';
 }
@@ -32,16 +33,16 @@ class FirestoreCollections {
 class UserDocument {
   /// User's full name
   final String name;
-  
+
   /// User's email address
   final String email;
-  
+
   /// User's phone number
   final String phone;
-  
+
   /// User's role in the system (admin/staff)
   final String role;
-  
+
   /// FCM token for push notifications (optional)
   // fcmToken removed for security - stored in private subcollection
 
@@ -70,34 +71,34 @@ class UserDocument {
 class EnquiryDocument {
   /// Customer's full name
   final String customerName;
-  
+
   /// Customer's phone number
   final String customerPhone;
-  
+
   /// Event location
   final String location;
-  
+
   /// Event date
   final DateTime eventDate;
-  
+
   /// Event type
   final String eventType;
-  
+
   /// Event status - default: "Enquired"
   final String eventStatus;
-  
+
   /// Detailed notes
   final String notes;
-  
+
   /// Reference images (list of Storage URLs)
   final List<String> referenceImages;
-  
+
   /// Created by user ID (references users collection)
   final String createdBy;
-  
+
   /// Assigned to user ID (references users collection, optional)
   final String? assignedTo;
-  
+
   /// When the enquiry was created
   final DateTime createdAt;
 
@@ -138,10 +139,10 @@ class EnquiryDocument {
 class FinancialDocument {
   /// Total cost
   final double totalCost;
-  
+
   /// Advance amount paid
   final double advancePaid;
-  
+
   /// Payment status
   final String paymentStatus;
 
@@ -166,16 +167,16 @@ class FinancialDocument {
 class HistoryDocument {
   /// Field that was changed
   final String fieldChanged;
-  
+
   /// Old value
   final String oldValue;
-  
+
   /// New value
   final String newValue;
-  
+
   /// User ID who made the change
   final String changedBy;
-  
+
   /// When the change was made
   final DateTime timestamp;
 
@@ -205,14 +206,10 @@ class EventTypeDocument {
   /// Event type value
   final String value;
 
-  const EventTypeDocument({
-    required this.value,
-  });
+  const EventTypeDocument({required this.value});
 
   Map<String, dynamic> toMap() {
-    return {
-      'value': value,
-    };
+    return {'value': value};
   }
 }
 
@@ -223,14 +220,10 @@ class StatusDocument {
   /// Status value
   final String value;
 
-  const StatusDocument({
-    required this.value,
-  });
+  const StatusDocument({required this.value});
 
   Map<String, dynamic> toMap() {
-    return {
-      'value': value,
-    };
+    return {'value': value};
   }
 }
 
@@ -241,14 +234,10 @@ class PaymentStatusDocument {
   /// Payment status value
   final String value;
 
-  const PaymentStatusDocument({
-    required this.value,
-  });
+  const PaymentStatusDocument({required this.value});
 
   Map<String, dynamic> toMap() {
-    return {
-      'value': value,
-    };
+    return {'value': value};
   }
 }
 
@@ -283,4 +272,4 @@ class DefaultDropdownValues {
     'Paid',
     'Overdue',
   ];
-} 
+}

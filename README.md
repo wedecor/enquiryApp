@@ -2,6 +2,10 @@
 
 A comprehensive Flutter application for managing customer enquiries in the event decoration business. Built with clean architecture principles, Firebase backend, and role-based access control.
 
+## 📱 PWA Notes
+
+Asset caching is handled by Flutter's generated service worker (`flutter_service_worker.js`). The `firebase-messaging-sw.js` handles only FCM background messages and does not include caching logic to avoid conflicts.
+
 ## 📋 Overview
 
 We Decor Enquiries is a modern, scalable Flutter application designed to streamline the enquiry management process for event decoration businesses. The application provides a complete solution for tracking customer enquiries from initial contact to completion, with role-based access for administrators and staff members.
@@ -494,6 +498,13 @@ For support and questions:
 - Create an issue in the GitHub repository
 - Check the documentation
 - Review the Firebase Console for backend issues
+
+## 🔒 Security
+
+### Security strict mode
+- Locally: `npm run sec:all` (non-strict), or `SECURITY_STRICT=1 npm run sec:all` (strict).
+- Pre-push: strict mode enforced.
+- CI on `main`: strict mode enforced + guard tests must pass.
 
 ---
 

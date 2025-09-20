@@ -59,10 +59,7 @@ void main() {
         role: UserRole.staff,
       );
 
-      final updatedUser = user.copyWith(
-        name: 'Jane Doe',
-        role: UserRole.admin,
-      );
+      final updatedUser = user.copyWith(name: 'Jane Doe', role: UserRole.admin);
 
       expect(updatedUser.uid, 'test-uid');
       expect(updatedUser.name, 'Jane Doe');
@@ -71,4 +68,4 @@ void main() {
       expect(updatedUser.role, UserRole.admin);
     });
   });
-} 
+}

@@ -2,6 +2,7 @@
   "name": "wedecor-firestore-seeder",
   "private": true,
   "type": "module",
+  "volta": { "node": "20.12.2" },
   "scripts": {
     "seed": "tsx scripts/seedFirestore.ts",
     "verify-seed": "tsx scripts/verifySeed.ts",
@@ -22,6 +23,19 @@
     "migrate:tokens": "tsx scripts/migrations/move_tokens_private.ts",
     "refactor:secrets": "tsx scripts/refactors/replace_secrets.ts",
     "refactor:logs": "tsx scripts/refactors/replace_risky_logs.ts",
+    "lint:dart": "flutter analyze",
+    "lint:dart:fix": "dart fix --apply",
+    "fmt:dart": "dart format -l 100 .",
+    "polish": "npm run fmt:dart && npm run lint:dart:fix && flutter analyze",
+    "release:tag": "git tag -a v1.0.0 -m 'WeDecor Enquiries v1.0.0' && git push origin v1.0.0",
+    "deploy:functions": "cd functions && npm i && npm run build && firebase deploy --only functions && cd ..",
+    "deploy:hosting": "flutter build web --release && firebase deploy --only hosting",
+    "deploy:all": "npm run deploy:functions && npm run deploy:hosting",
+    "fn:use": "nvm use 20 || true",
+    "fn:clean": "cd functions && npm run clean && cd -",
+    "fn:install": "cd functions && npm ci && cd -",
+    "fn:build": "cd functions && npm run build && cd -",
+    "fn:deploy": "cd functions && npm run deploy && cd -",
     "prepare": "husky"
   },
   "devDependencies": {

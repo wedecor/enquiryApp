@@ -1,16 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiries_list_screen.dart';
-import 'package:we_decor_enquiries/features/admin/users/presentation/user_management_screen.dart';
-import 'package:we_decor_enquiries/features/admin/dropdowns/presentation/dropdown_management_screen.dart';
-import 'package:we_decor_enquiries/features/admin/analytics/presentation/analytics_screen.dart';
-import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart' as auth_provider;
-import 'package:we_decor_enquiries/core/notifications/fcm_token_manager.dart';
+
+import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
+import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../shared/models/user_model.dart';
+import '../../../admin/analytics/presentation/analytics_screen.dart';
+import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
+import '../../../admin/users/presentation/user_management_screen.dart';
+import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
+import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
+import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
+import '../../../settings/presentation/settings_screen.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -38,7 +39,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
-    
+
     // FCM registration is now handled automatically by FcmBootstrap
   }
 
@@ -97,23 +98,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
           );
         },
-        child: const Icon(Icons.add),
         tooltip: 'Add New Enquiry',
+        child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
+  Widget _buildDashboardContent(
+    BuildContext context,
+    UserModel? user,
+    bool isAdmin,
+  ) {
     return Column(
       children: [
         // Welcome and Statistics Section
         _buildWelcomeAndStats(user, isAdmin),
-        
+
         // Enquiries Tab View
         Expanded(
           child: TabBarView(
             controller: _tabController,
-            children: _statusTabs.map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid)).toList(),
+            children: _statusTabs
+                .map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid))
+                .toList(),
           ),
         ),
       ],
@@ -144,7 +151,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 radius: 25,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
-                  user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
+                  user?.name.isNotEmpty == true
+                      ? user!.name[0].toUpperCase()
+                      : 'U',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -166,10 +175,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                     Text(
                       isAdmin ? 'Administrator' : 'Staff Member',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -198,7 +204,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
 
         final enquiries = snapshot.data?.docs ?? [];
-        
+
         // Calculate statistics
         final totalEnquiries = enquiries.length;
         final newEnquiries = enquiries.where((doc) {
@@ -207,7 +213,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_progress';
+          return (data['eventStatus'] as String?)?.toLowerCase() ==
+              'in_progress';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -257,7 +264,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -268,17 +280,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -321,21 +327,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  status == 'All' 
-                    ? 'No enquiries found'
-                    : 'No $status enquiries',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                  ),
+                  status == 'All'
+                      ? 'No enquiries found'
+                      : 'No $status enquiries',
+                  style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Tap the + button to create a new enquiry',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -354,7 +354,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
+                  backgroundColor: _getStatusColor(
+                    enquiryData['eventStatus'] as String?,
+                  ),
                   child: Text(
                     _getStatusInitial(enquiryData['eventStatus'] as String?),
                     style: const TextStyle(
@@ -364,13 +366,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ),
                 title: Text(
-                  (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
+                  (enquiryData['customerName'] as String?) ??
+                      'Unknown Customer',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                    Text(
+                      (enquiryData['eventType'] as String?) ?? 'Unknown Event',
+                    ),
                     Text(
                       'Date: ${_formatDate(enquiryData['eventDate'])}',
                       style: const TextStyle(fontSize: 12),
@@ -395,11 +400,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: _getPriorityColor(enquiryData['priority'] as String?),
+                        color: _getPriorityColor(
+                          enquiryData['priority'] as String?,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
+                        _capitalizeFirst(
+                          (enquiryData['priority'] as String?) ?? 'N/A',
+                        ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -414,9 +423,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 onTap: () {
                   Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
-                      builder: (context) => EnquiryDetailsScreen(
-                        enquiryId: enquiryId,
-                      ),
+                      builder: (context) =>
+                          EnquiryDetailsScreen(enquiryId: enquiryId),
                     ),
                   );
                 },
@@ -428,7 +436,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
+  Stream<QuerySnapshot> _getEnquiriesStream(
+    bool isAdmin,
+    String? userId, [
+    String? status,
+  ]) {
     Query query = FirebaseFirestore.instance.collection('enquiries');
 
     // Apply role-based filtering
@@ -505,11 +517,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
           const Text(
             'Something went wrong',
@@ -530,7 +538,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     try {
       // Remove FCM token before signing out
       // FCM token cleanup is handled automatically by FcmBootstrap
-      
+
       final authService = ref.read(firebaseAuthServiceProvider);
       await authService.signOut();
     } catch (e) {
@@ -538,7 +546,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Widget _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
+  Widget _buildNavigationDrawer(
+    AsyncValue<UserModel?> currentUser,
+    bool isAdmin,
+  ) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -547,9 +558,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF2563EB),
-            ),
+            decoration: const BoxDecoration(color: Color(0xFF2563EB)),
             child: currentUser.when(
               data: (user) => Row(
                 children: [
@@ -678,7 +687,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             title: 'Settings',
             onTap: () {
               Navigator.of(context).pop(); // Close drawer
-              _showFeatureNotImplemented(context, 'Settings');
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
           ),
 
@@ -707,31 +720,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  void _showAdminFeatureNotImplemented(BuildContext context, String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$featureName feature is coming soon!'),
-        backgroundColor: Colors.orange,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
-      ),
-    );
-  }
-
-  void _showFeatureNotImplemented(BuildContext context, String featureName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$featureName feature is coming soon!'),
-        backgroundColor: Colors.blue,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
-      ),
-    );
-  }
-} 
+}

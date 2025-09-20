@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
+import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Firebase Data Manager for export/import operations
 class FirebaseDataManager {
@@ -12,7 +13,8 @@ class FirebaseDataManager {
 
   /// Export all data from Firebase to local files
   Future<void> exportAllData({String? outputDir}) async {
-    final dir = outputDir ?? 'firebase_export_${DateTime.now().millisecondsSinceEpoch}';
+    final dir =
+        outputDir ?? 'firebase_export_${DateTime.now().millisecondsSinceEpoch}';
     await Directory(dir).create(recursive: true);
 
     print('🚀 Starting Firebase data export...');
@@ -33,7 +35,6 @@ class FirebaseDataManager {
 
       print('✅ Export completed successfully!');
       print('📁 Data exported to: $dir');
-
     } catch (e) {
       print('❌ Export failed: $e');
       rethrow;
@@ -60,7 +61,6 @@ class FirebaseDataManager {
       await _importDropdowns(inputDir);
 
       print('✅ Import completed successfully!');
-
     } catch (e) {
       print('❌ Import failed: $e');
       rethrow;
@@ -68,7 +68,10 @@ class FirebaseDataManager {
   }
 
   /// Export a single collection
-  Future<void> _exportCollection(String collectionName, String outputDir) async {
+  Future<void> _exportCollection(
+    String collectionName,
+    String outputDir,
+  ) async {
     print('📤 Exporting collection: $collectionName');
 
     final snapshot = await _firestore.collection(collectionName).get();
@@ -78,14 +81,17 @@ class FirebaseDataManager {
       documents[doc.id] = doc.data();
     }
 
-    final file = File('$outputDir/${collectionName}.json');
+    final file = File('$outputDir/$collectionName.json');
     await file.writeAsString(jsonEncode(documents, toEncodable: _jsonEncoder));
 
     print('   ✅ Exported ${documents.length} documents');
   }
 
   /// Export collection with subcollections
-  Future<void> _exportCollectionWithSubcollections(String collectionName, String outputDir) async {
+  Future<void> _exportCollectionWithSubcollections(
+    String collectionName,
+    String outputDir,
+  ) async {
     print('📤 Exporting collection with subcollections: $collectionName');
 
     final snapshot = await _firestore.collection(collectionName).get();
@@ -97,14 +103,18 @@ class FirebaseDataManager {
 
       // Export financial subcollection
       try {
-        final financialSnapshot = await doc.reference.collection('financial').get();
+        final financialSnapshot = await doc.reference
+            .collection('financial')
+            .get();
         final financialDocs = <String, dynamic>{};
         for (final financialDoc in financialSnapshot.docs) {
           financialDocs[financialDoc.id] = financialDoc.data();
         }
         subcollections['financial'] = financialDocs;
       } catch (e) {
-        print('   ⚠️  Could not export financial subcollection for ${doc.id}: $e');
+        print(
+          '   ⚠️  Could not export financial subcollection for ${doc.id}: $e',
+        );
       }
 
       // Export history subcollection
@@ -116,7 +126,9 @@ class FirebaseDataManager {
         }
         subcollections['history'] = historyDocs;
       } catch (e) {
-        print('   ⚠️  Could not export history subcollection for ${doc.id}: $e');
+        print(
+          '   ⚠️  Could not export history subcollection for ${doc.id}: $e',
+        );
       }
 
       docData['_subcollections'] = subcollections;
@@ -175,7 +187,7 @@ class FirebaseDataManager {
   Future<void> _importCollection(String collectionName, String inputDir) async {
     print('📥 Importing collection: $collectionName');
 
-    final file = File('$inputDir/${collectionName}.json');
+    final file = File('$inputDir/$collectionName.json');
     if (!await file.exists()) {
       print('   ⚠️  File not found: ${file.path}');
       return;
@@ -187,7 +199,10 @@ class FirebaseDataManager {
     int importedCount = 0;
     for (final entry in documents.entries) {
       try {
-        await _firestore.collection(collectionName).doc(entry.key).set(Map<String, dynamic>.from(entry.value as Map));
+        await _firestore
+            .collection(collectionName)
+            .doc(entry.key)
+            .set(Map<String, dynamic>.from(entry.value as Map));
         importedCount++;
       } catch (e) {
         // TODO: Replace with safeLog - print('   ❌ Failed to import document ${entry.key}: $e');
@@ -198,7 +213,10 @@ class FirebaseDataManager {
   }
 
   /// Import collection with subcollections
-  Future<void> _importCollectionWithSubcollections(String collectionName, String inputDir) async {
+  Future<void> _importCollectionWithSubcollections(
+    String collectionName,
+    String inputDir,
+  ) async {
     print('📥 Importing collection with subcollections: $collectionName');
 
     final file = File('$inputDir/${collectionName}_with_subcollections.json');
@@ -214,7 +232,8 @@ class FirebaseDataManager {
     for (final entry in documents.entries) {
       try {
         final docData = Map<String, dynamic>.from(entry.value as Map);
-        final subcollections = docData.remove('_subcollections') as Map<dynamic, dynamic>?;
+        final subcollections =
+            docData.remove('_subcollections') as Map<dynamic, dynamic>?;
 
         // Import main document
         await _firestore.collection(collectionName).doc(entry.key).set(docData);
@@ -223,7 +242,8 @@ class FirebaseDataManager {
         if (subcollections != null) {
           // Import financial subcollection
           if (subcollections.containsKey('financial')) {
-            final financialDocs = subcollections['financial'] as Map<String, dynamic>;
+            final financialDocs =
+                subcollections['financial'] as Map<String, dynamic>;
             for (final financialEntry in financialDocs.entries) {
               await _firestore
                   .collection(collectionName)
@@ -236,14 +256,19 @@ class FirebaseDataManager {
 
           // Import history subcollection
           if (subcollections.containsKey('history')) {
-            final historyDocs = subcollections['history'] as Map<dynamic, dynamic>;
+            final historyDocs =
+                subcollections['history'] as Map<dynamic, dynamic>;
             for (final historyEntry in historyDocs.entries) {
               await _firestore
                   .collection(collectionName)
                   .doc(entry.key)
                   .collection('history')
-                  .doc(historyEntry.key)
-                  .set(Map<String, dynamic>.from(historyEntry.value as Map));
+                  .doc(historyEntry.key as String)
+                  .set(
+                    Map<String, dynamic>.from(
+                      historyEntry.value as Map<String, dynamic>,
+                    ),
+                  );
             }
           }
         }
@@ -301,10 +326,7 @@ class FirebaseDataManager {
       };
     }
     if (obj is DateTime) {
-      return {
-        '_type': 'datetime',
-        'iso8601': obj.toIso8601String(),
-      };
+      return {'_type': 'datetime', 'iso8601': obj.toIso8601String()};
     }
     return obj;
   }
@@ -392,7 +414,6 @@ void main(List<String> args) async {
         print('❌ Unknown command: $command');
         printUsage();
     }
-
   } catch (e) {
     print('❌ Error: $e');
     exit(1);
@@ -401,9 +422,15 @@ void main(List<String> args) async {
 
 void printUsage() {
   print('\n📖 Firebase Data Manager Usage:');
-  print('  dart run scripts/firebase_data_manager.dart export [output_dir] - Export all data');
-  print('  dart run scripts/firebase_data_manager.dart import <input_dir>   - Import all data');
-  print('  dart run scripts/firebase_data_manager.dart help                 - Show this help');
+  print(
+    '  dart run scripts/firebase_data_manager.dart export [output_dir] - Export all data',
+  );
+  print(
+    '  dart run scripts/firebase_data_manager.dart import <input_dir>   - Import all data',
+  );
+  print(
+    '  dart run scripts/firebase_data_manager.dart help                 - Show this help',
+  );
   print('\n🔧 Commands:');
   print('  export - Export all Firebase data to local files');
   print('  import - Import data from local files to Firebase');
@@ -412,4 +439,4 @@ void printUsage() {
   print('  dart run scripts/firebase_data_manager.dart export');
   print('  dart run scripts/firebase_data_manager.dart export ./my_backup');
   print('  dart run scripts/firebase_data_manager.dart import ./my_backup');
-} 
+}

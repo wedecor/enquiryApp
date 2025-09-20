@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
 import '../../domain/analytics_models.dart';
 
 /// Line chart widget for showing trend data
@@ -26,10 +27,7 @@ class LineTrendChart extends StatelessWidget {
           children: [
             _buildHeader(context),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: _buildChart(context),
-            ),
+            SizedBox(height: 300, child: _buildChart(context)),
           ],
         ),
       ),
@@ -42,17 +40,17 @@ class LineTrendChart extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
           ),
         ],
       ],
@@ -71,10 +69,7 @@ class LineTrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: Colors.grey.shade300,
-              strokeWidth: 1,
-            );
+            return FlLine(color: Colors.grey.shade300, strokeWidth: 1);
           },
         ),
         titlesData: FlTitlesData(
@@ -140,9 +135,7 @@ class LineTrendChart extends StatelessWidget {
             ),
           ),
         ],
-        lineTouchData: LineTouchData(
-          enabled: true,
-        ),
+        lineTouchData: LineTouchData(enabled: true),
       ),
     );
   }
@@ -152,24 +145,20 @@ class LineTrendChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.show_chart,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.show_chart, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             'Select a different date range or filters',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey.shade500,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
           ),
         ],
       ),
@@ -184,7 +173,9 @@ class LineTrendChart extends StatelessWidget {
 
   double _getMaxY() {
     if (data.isEmpty) return 10;
-    final maxCount = data.map((point) => point.count).reduce((a, b) => a > b ? a : b);
+    final maxCount = data
+        .map((point) => point.count)
+        .reduce((a, b) => a > b ? a : b);
     return (maxCount * 1.1).ceilToDouble();
   }
 
@@ -211,10 +202,7 @@ class LineTrendChart extends StatelessWidget {
         axisSide: meta.axisSide,
         child: Text(
           _formatDate(point.x),
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.grey,
-          ),
+          style: const TextStyle(fontSize: 10, color: Colors.grey),
         ),
       );
     }
@@ -226,10 +214,7 @@ class LineTrendChart extends StatelessWidget {
       axisSide: meta.axisSide,
       child: Text(
         value.toInt().toString(),
-        style: const TextStyle(
-          fontSize: 10,
-          color: Colors.grey,
-        ),
+        style: const TextStyle(fontSize: 10, color: Colors.grey),
       ),
     );
   }
@@ -237,7 +222,7 @@ class LineTrendChart extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
-    
+
     if (difference == 0) {
       return 'Today';
     } else if (difference == 1) {
@@ -260,11 +245,7 @@ class MiniTrendChart extends StatelessWidget {
   final List<SeriesPoint> data;
   final Color color;
 
-  const MiniTrendChart({
-    super.key,
-    required this.data,
-    required this.color,
-  });
+  const MiniTrendChart({super.key, required this.data, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -283,11 +264,16 @@ class MiniTrendChart extends StatelessWidget {
           minX: 0,
           maxX: (data.length - 1).toDouble(),
           minY: 0,
-          maxY: data.map((p) => p.count.toDouble()).reduce((a, b) => a > b ? a : b),
+          maxY: data
+              .map((p) => p.count.toDouble())
+              .reduce((a, b) => a > b ? a : b),
           lineBarsData: [
             LineChartBarData(
               spots: data.asMap().entries.map((entry) {
-                return FlSpot(entry.key.toDouble(), entry.value.count.toDouble());
+                return FlSpot(
+                  entry.key.toDouble(),
+                  entry.value.count.toDouble(),
+                );
               }).toList(),
               isCurved: true,
               color: color,

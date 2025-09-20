@@ -83,7 +83,6 @@ class DropdownItem with _$DropdownItem {
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
   }
-
 }
 
 /// Input model for creating/updating dropdown items
@@ -142,7 +141,10 @@ class DropdownItemValidation {
 
   const DropdownItemValidation._(this.isValid, this.errorMessage);
 
-  static const DropdownItemValidation valid = DropdownItemValidation._(true, null);
+  static const DropdownItemValidation valid = DropdownItemValidation._(
+    true,
+    null,
+  );
 
   static DropdownItemValidation error(String message) =>
       DropdownItemValidation._(false, message);

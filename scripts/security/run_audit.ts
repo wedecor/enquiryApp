@@ -10,6 +10,8 @@ import { RiskyLoggingChecker, LogAnalysis } from './check_logs';
 import { readFileSync, existsSync } from 'fs';
 import colors from 'picocolors';
 
+const STRICT = process.env.SECURITY_STRICT === "1";
+
 interface AcknowledgedFinding {
   file: string;
   line: number;
@@ -345,10 +347,20 @@ async function main() {
     console.log(colors.dim('\n📋 JSON Report (for CI/tooling):'));
     console.log(colors.dim(jsonOutput));
     
-    // Exit with appropriate code
-    const exitCode = summary.overall === 'FAIL' ? 1 : 0;
-    console.log(colors.dim(`\n🔚 Exit code: ${exitCode}`));
-    process.exit(exitCode);
+    // Check for warnings and failures
+    const hadWarn = (summary.sections.secrets.status === "WARN") || (summary.sections.rules.status === "WARN") || (summary.sections.logging.status === "WARN");
+    const hadFail = (summary.sections.secrets.status === "FAIL") || (summary.sections.rules.status === "FAIL") || (summary.sections.logging.status === "FAIL");
+
+    console.log(`\n🔒 Security Summary | Secrets: ${summary.sections.secrets.status} | Rules: ${summary.sections.rules.status} | Logging: ${summary.sections.logging.status} | Strict: ${STRICT ? "on" : "off"}`);
+
+    if (hadFail) {
+      process.exit(1);
+    }
+    if (STRICT && hadWarn) {
+      console.error("🚫 Strict mode: WARN treated as FAIL.");
+      process.exit(1);
+    }
+    process.exit(0);
     
   } catch (error) {
     console.error(colors.red('❌ Security audit failed:'), error);

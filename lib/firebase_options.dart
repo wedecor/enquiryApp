@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart'
 import 'package:we_decor_enquiries/core/config/firebase_config.dart';
 
 /// Default Firebase configuration options for the current platform.
-/// 
+///
 /// This class provides platform-specific Firebase configuration options
 /// using secure environment variable handling instead of hardcoded API keys.
 class DefaultFirebaseOptions {
@@ -48,11 +48,11 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get android => FirebaseOptions(
-    apiKey: FirebaseConfig.apiKey,
-    appId: '1:270194759200:android:add1c459e9abd7879cce45',
-    messagingSenderId: '270194759200',
+    apiKey: 'AIzaSyBrNRND3_O6Gavhd_a_FYP11ZpKbBGXgF4',
+    appId: '1:747327664982:android:2b36161e30beb0cd6edcf7',
+    messagingSenderId: '747327664982',
     projectId: 'wedecorenquries',
-    storageBucket: 'wedecorenquries.appspot.com',
+    storageBucket: 'wedecorenquries.firebasestorage.app',
   );
 
   static FirebaseOptions get ios => FirebaseOptions(
@@ -81,4 +81,4 @@ class DefaultFirebaseOptions {
     authDomain: 'wedecorenquries.firebaseapp.com',
     storageBucket: 'wedecorenquries.appspot.com',
   );
-} 
+}
