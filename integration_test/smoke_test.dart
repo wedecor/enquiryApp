@@ -16,15 +16,19 @@ void main() {
 
       // Verify app launches without crashing
       expect(find.byType(MaterialApp), findsOneWidget);
-      
+
       // Should show either login screen or dashboard (if already logged in)
-      final hasLoginButton = find.text('Login').evaluate().isNotEmpty ||
-                           find.text('Sign In').evaluate().isNotEmpty;
-      final hasDashboard = find.text('Dashboard').evaluate().isNotEmpty ||
-                          find.text('Enquiries').evaluate().isNotEmpty;
-      
-      expect(hasLoginButton || hasDashboard, isTrue, 
-        reason: 'App should show either login screen or main dashboard');
+      final hasLoginButton =
+          find.text('Login').evaluate().isNotEmpty || find.text('Sign In').evaluate().isNotEmpty;
+      final hasDashboard =
+          find.text('Dashboard').evaluate().isNotEmpty ||
+          find.text('Enquiries').evaluate().isNotEmpty;
+
+      expect(
+        hasLoginButton || hasDashboard,
+        isTrue,
+        reason: 'App should show either login screen or main dashboard',
+      );
     });
 
     testWidgets('Navigation works without crashes', (WidgetTester tester) async {
@@ -37,7 +41,7 @@ void main() {
       if (settingsIcon.evaluate().isNotEmpty) {
         await tester.tap(settingsIcon);
         await tester.pumpAndSettle();
-        
+
         // Should show settings screen
         expect(find.text('Settings'), findsOneWidget);
       }
@@ -47,7 +51,7 @@ void main() {
       if (privacyTab.evaluate().isNotEmpty) {
         await tester.tap(privacyTab);
         await tester.pumpAndSettle();
-        
+
         // Should show privacy controls
         expect(find.text('Privacy & Data'), findsOneWidget);
       }
@@ -72,13 +76,13 @@ void main() {
           // Verify privacy controls exist
           expect(find.text('Share Anonymous Analytics'), findsOneWidget);
           expect(find.text('Share Crash Reports'), findsOneWidget);
-          
+
           // Test analytics toggle (if enabled in config)
           final analyticsToggle = find.byType(Switch).first;
           if (analyticsToggle.evaluate().isNotEmpty) {
             await tester.tap(analyticsToggle);
             await tester.pumpAndSettle();
-            
+
             // Should show confirmation or change state
             // (Exact behavior depends on current consent state)
           }
@@ -107,10 +111,10 @@ void main() {
           if (privacyPolicyButton.evaluate().isNotEmpty) {
             await tester.tap(privacyPolicyButton);
             await tester.pumpAndSettle();
-            
+
             // Should navigate to privacy policy screen
             expect(find.text('Privacy Policy'), findsAtLeastNWidgets(1));
-            
+
             // Navigate back
             final backButton = find.byIcon(Icons.arrow_back);
             if (backButton.evaluate().isNotEmpty) {
@@ -124,7 +128,7 @@ void main() {
           if (termsButton.evaluate().isNotEmpty) {
             await tester.tap(termsButton);
             await tester.pumpAndSettle();
-            
+
             // Should navigate to terms screen
             expect(find.text('Terms of Service'), findsAtLeastNWidgets(1));
           }
@@ -139,7 +143,7 @@ void main() {
 
       // This is a basic smoke test - actual network testing requires
       // more sophisticated setup with network mocking
-      
+
       // Verify app doesn't crash during network operations
       // (More detailed offline testing should be done manually)
       expect(find.byType(MaterialApp), findsOneWidget);

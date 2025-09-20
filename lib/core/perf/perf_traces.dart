@@ -66,7 +66,7 @@ class PerfTraces {
             trace.putAttribute(entry.key, entry.value);
           }
         }
-        
+
         trace.stop();
         _activeTraces.remove(traceName);
         Logger.info('Performance trace stopped: $traceName - ${durationMs}ms');
@@ -110,21 +110,11 @@ class PerfTraces {
     }
   }
 
-  /// Add custom metric to active trace
+  /// Add custom metric to active trace (logged for debug)
   static void putMetric(String traceName, String metricName, int value) {
-    if (!AppConfig.enablePerformance || !kReleaseMode) {
-      Logger.debug('Performance metric (debug): $traceName.$metricName = $value');
-      return;
-    }
-
-    try {
-      final trace = _activeTraces[traceName];
-      if (trace != null) {
-        trace.putMetric(metricName, value);
-      }
-    } catch (e) {
-      Logger.error('Failed to put metric: $traceName.$metricName', error: e);
-    }
+    // Note: putMetric is not available in current Firebase Performance API
+    // Log the metric for debugging purposes
+    Logger.info('Performance metric: $traceName.$metricName = $value', tag: 'Performance');
   }
 
   /// Convenience method for timing a future operation
