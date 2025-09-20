@@ -1,11 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
-import 'package:we_decor_enquiries/core/export/csv_export.dart';
+
+import '../../../../core/export/csv_export.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../shared/models/user_model.dart';
+import 'enquiry_details_screen.dart';
+import 'enquiry_form_screen.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
   const EnquiriesListScreen({super.key});
@@ -17,11 +18,19 @@ class EnquiriesListScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
+        title: Text(
+          userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries',
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (action) => _handleAction(context, ref, action, userRole, currentUser.value?.uid),
+            onSelected: (action) => _handleAction(
+              context,
+              ref,
+              action,
+              userRole,
+              currentUser.value?.uid,
+            ),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'export',
@@ -46,18 +55,14 @@ class EnquiriesListScreen extends ConsumerWidget {
       body: currentUser.when(
         data: (user) {
           if (user == null) {
-            return const Center(
-              child: Text('Please log in to view enquiries'),
-            );
+            return const Center(child: Text('Please log in to view enquiries'));
           }
 
           return StreamBuilder<QuerySnapshot>(
             stream: _getEnquiriesStream(userRole, user.uid),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(
-                  child: Text('Error: ${snapshot.error}'),
-                );
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -70,14 +75,16 @@ class EnquiriesListScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
+                        userRole == UserRole.admin
+                            ? Icons.inbox
+                            : Icons.assignment,
                         size: 64,
                         color: Colors.grey,
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        userRole == UserRole.admin 
-                            ? 'No enquiries found' 
+                        userRole == UserRole.admin
+                            ? 'No enquiries found'
                             : 'No enquiries assigned to you',
                         style: const TextStyle(
                           fontSize: 18,
@@ -103,9 +110,13 @@ class EnquiriesListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
+                        backgroundColor: _getStatusColor(
+                          enquiryData['eventStatus'] as String?,
+                        ),
                         child: Text(
-                          _getStatusInitial(enquiryData['eventStatus'] as String?),
+                          _getStatusInitial(
+                            enquiryData['eventStatus'] as String?,
+                          ),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -113,18 +124,23 @@ class EnquiriesListScreen extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
+                        (enquiryData['customerName'] as String?) ??
+                            'Unknown Customer',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                          Text(
+                            (enquiryData['eventType'] as String?) ??
+                                'Unknown Event',
+                          ),
                           Text(
                             'Date: ${_formatDate(enquiryData['eventDate'])}',
                             style: const TextStyle(fontSize: 12),
                           ),
-                          if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
+                          if (userRole == UserRole.admin &&
+                              enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
                               style: const TextStyle(
@@ -144,11 +160,15 @@ class EnquiriesListScreen extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(enquiryData['priority'] as String?),
+                              color: _getPriorityColor(
+                                enquiryData['priority'] as String?,
+                              ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
+                              _capitalizeFirst(
+                                (enquiryData['priority'] as String?) ?? 'N/A',
+                              ),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
@@ -183,9 +203,8 @@ class EnquiriesListScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push<void>(
                           MaterialPageRoute<void>(
-                            builder: (context) => EnquiryDetailsScreen(
-                              enquiryId: enquiryId,
-                            ),
+                            builder: (context) =>
+                                EnquiryDetailsScreen(enquiryId: enquiryId),
                           ),
                         );
                       },
@@ -197,14 +216,16 @@ class EnquiriesListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('Error loading user data: $error'),
-        ),
+        error: (error, stack) =>
+            Center(child: Text('Error loading user data: $error')),
       ),
     );
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(UserRole? userRole, String? currentUserId) {
+  Stream<QuerySnapshot> _getEnquiriesStream(
+    UserRole? userRole,
+    String? currentUserId,
+  ) {
     if (userRole == UserRole.admin) {
       // Admin sees all enquiries
       return FirebaseFirestore.instance
@@ -273,22 +294,30 @@ class EnquiriesListScreen extends ConsumerWidget {
     return 'User ID: $assignedTo';
   }
 
-  void _handleAction(BuildContext context, WidgetRef ref, String action, UserRole? userRole, String? userId) {
+  void _handleAction(
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+    UserRole? userRole,
+    String? userId,
+  ) {
     switch (action) {
       case 'export':
         _exportEnquiries(context, userRole, userId);
         break;
       case 'add':
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const EnquiryFormScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const EnquiryFormScreen()),
         );
         break;
     }
   }
 
-  Future<void> _exportEnquiries(BuildContext context, UserRole? userRole, String? userId) async {
+  Future<void> _exportEnquiries(
+    BuildContext context,
+    UserRole? userRole,
+    String? userId,
+  ) async {
     try {
       // Show loading indicator
       showDialog(
@@ -307,20 +336,17 @@ class EnquiriesListScreen extends ConsumerWidget {
 
       // Fetch all enquiries for export
       Query query = FirebaseFirestore.instance.collection('enquiries');
-      
+
       if (userRole != UserRole.admin && userId != null) {
         query = query.where('assignedTo', isEqualTo: userId);
       }
-      
+
       query = query.orderBy('createdAt', descending: true);
-      
+
       final snapshot = await query.get();
       final enquiries = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
 
       // Close loading dialog
@@ -342,11 +368,13 @@ class EnquiriesListScreen extends ConsumerWidget {
 
       // Export to CSV
       await CsvExport.exportEnquiries(enquiries);
-      
-      if (context.mounted) {
-        CsvExport.showExportSuccess(context, 'enquiries_${DateTime.now().millisecondsSinceEpoch}.csv');
-      }
 
+      if (context.mounted) {
+        CsvExport.showExportSuccess(
+          context,
+          'enquiries_${DateTime.now().millisecondsSinceEpoch}.csv',
+        );
+      }
     } catch (e) {
       // Close loading dialog if still open
       if (context.mounted) {
@@ -355,4 +383,4 @@ class EnquiriesListScreen extends ConsumerWidget {
       }
     }
   }
-} 
+}

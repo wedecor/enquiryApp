@@ -25,7 +25,7 @@ class KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cardColor = color ?? theme.colorScheme.primary;
-    
+
     return Card(
       elevation: 2,
       child: Container(
@@ -35,10 +35,7 @@ class KpiCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              cardColor.withOpacity(0.1),
-              cardColor.withOpacity(0.05),
-            ],
+            colors: [cardColor.withOpacity(0.1), cardColor.withOpacity(0.05)],
           ),
         ),
         child: Column(
@@ -49,18 +46,14 @@ class KpiCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  icon,
-                  color: cardColor,
-                  size: 24,
-                ),
+                Icon(icon, color: cardColor, size: 24),
                 if (deltaPercentage != null && !isLoading)
                   _buildDeltaIndicator(deltaPercentage!, theme),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Title
             Text(
               title,
@@ -69,9 +62,9 @@ class KpiCard extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            
+
             const SizedBox(height: 4),
-            
+
             // Value
             if (isLoading)
               Container(
@@ -97,7 +90,7 @@ class KpiCard extends StatelessWidget {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
-            
+
             // Subtitle if provided
             if (subtitle != null && !isLoading) ...[
               const SizedBox(height: 4),
@@ -117,10 +110,10 @@ class KpiCard extends StatelessWidget {
   Widget _buildDeltaIndicator(double deltaPercentage, ThemeData theme) {
     final isPositive = deltaPercentage >= 0;
     final isNeutral = deltaPercentage == 0;
-    
+
     Color deltaColor;
     IconData deltaIcon;
-    
+
     if (isNeutral) {
       deltaColor = theme.colorScheme.onSurface.withOpacity(0.5);
       deltaIcon = Icons.remove;
@@ -131,7 +124,7 @@ class KpiCard extends StatelessWidget {
       deltaColor = Colors.red;
       deltaIcon = Icons.trending_down;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -141,14 +134,14 @@ class KpiCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            deltaIcon,
-            color: deltaColor,
-            size: 16,
-          ),
+          Icon(deltaIcon, color: deltaColor, size: 16),
           const SizedBox(width: 4),
           Text(
-            '${isNeutral ? '0' : isPositive ? '+' : ''}${deltaPercentage.toStringAsFixed(1)}%',
+            '${isNeutral
+                ? '0'
+                : isPositive
+                ? '+'
+                : ''}${deltaPercentage.toStringAsFixed(1)}%',
             style: theme.textTheme.bodySmall?.copyWith(
               color: deltaColor,
               fontWeight: FontWeight.w600,
@@ -317,7 +310,7 @@ class EstimatedRevenueCard extends StatelessWidget {
 
   String _formatCurrency(double amount) {
     if (amount == 0) return '—';
-    
+
     if (amount >= 1000000) {
       return '₹${(amount / 1000000).toStringAsFixed(1)}M';
     } else if (amount >= 100000) {

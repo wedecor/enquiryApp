@@ -1,16 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/audit_provider.dart';
+
+import '../../core/providers/audit_provider.dart';
 
 /// Widget to display enquiry change history
 class EnquiryHistoryWidget extends ConsumerWidget {
   final String enquiryId;
 
-  const EnquiryHistoryWidget({
-    super.key,
-    required this.enquiryId,
-  });
+  const EnquiryHistoryWidget({super.key, required this.enquiryId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,26 +21,16 @@ class EnquiryHistoryWidget extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.history,
-                  size: 64,
-                  color: Colors.grey,
-                ),
+                Icon(Icons.history, size: 64, color: Colors.grey),
                 SizedBox(height: 16),
                 Text(
                   'No changes recorded',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 SizedBox(height: 8),
                 Text(
                   'Changes to this enquiry will appear here',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ],
             ),
@@ -107,10 +95,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 if (timestamp != null) ...[
                   Text(
                     _formatTimestamp(timestamp),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ],
@@ -132,7 +117,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(4),
@@ -166,7 +154,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green[50],
                           borderRadius: BorderRadius.circular(4),
@@ -192,10 +183,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 const SizedBox(width: 4),
                 Text(
                   'Changed by: $userEmail',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -328,9 +316,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
 extension StringExtension on String {
   String toTitleCase() {
     if (isEmpty) return this;
-    return split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
-} 
+}

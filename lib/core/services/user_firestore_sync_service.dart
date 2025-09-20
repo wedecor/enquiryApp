@@ -1,10 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
-import 'package:we_decor_enquiries/core/services/fcm_service.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+
+import '../../shared/models/user_model.dart';
+import 'fcm_service.dart';
+import 'firestore_service.dart';
 
 /// Service for syncing user data between Firebase Auth and Firestore
 class UserFirestoreSyncService {
@@ -37,7 +36,8 @@ class UserFirestoreSyncService {
       return userModel;
     } catch (e) {
       // If user doesn't exist in Firestore, create them with default role
-      if (e.toString().contains('not found') || e.toString().contains('permission')) {
+      if (e.toString().contains('not found') ||
+          e.toString().contains('permission')) {
         return await _createDefaultUser(currentUser);
       }
       rethrow;
@@ -91,10 +91,7 @@ class UserFirestoreSyncService {
     required String name,
     required String phone,
   }) async {
-    await _firestoreService.updateUser(uid, {
-      'name': name,
-      'phone': phone,
-    });
+    await _firestoreService.updateUser(uid, {'name': name, 'phone': phone});
   }
 
   /// Update user role (admin only)
@@ -102,9 +99,7 @@ class UserFirestoreSyncService {
     required String uid,
     required UserRole role,
   }) async {
-    await _firestoreService.updateUser(uid, {
-      'role': role.name,
-    });
+    await _firestoreService.updateUser(uid, {'role': role.name});
   }
 }
 
@@ -121,7 +116,9 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
 });
 
 /// Provider for user sync service
-final userFirestoreSyncServiceProvider = Provider<UserFirestoreSyncService>((ref) {
+final userFirestoreSyncServiceProvider = Provider<UserFirestoreSyncService>((
+  ref,
+) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return UserFirestoreSyncService(firestoreService);
 });
@@ -146,4 +143,4 @@ final currentUserIsAdminProvider = Provider<bool>((ref) {
 final currentUserIsStaffProvider = Provider<bool>((ref) {
   final role = ref.watch(currentUserRoleProvider);
   return role == UserRole.staff;
-}); 
+});

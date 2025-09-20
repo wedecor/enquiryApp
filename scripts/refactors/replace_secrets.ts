@@ -48,7 +48,7 @@ class SecretRefactor {
   // Patterns for detecting secrets
   private readonly secretPatterns = {
     // Private keys
-    privateKey: /process.env.PRIVATE_KEY_2/g,
+    privateKey: /process.env.PRIVATE_KEY || ''/g,
     
     // Service account JSON blocks
     serviceAccount: /"private_key"\s*:\s*"[^"]+"/g,

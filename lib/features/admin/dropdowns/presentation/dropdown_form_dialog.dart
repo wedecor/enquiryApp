@@ -8,11 +8,7 @@ class DropdownFormDialog extends ConsumerStatefulWidget {
   final DropdownGroup group;
   final DropdownItem? item; // null for create, non-null for edit
 
-  const DropdownFormDialog({
-    super.key,
-    required this.group,
-    this.item,
-  });
+  const DropdownFormDialog({super.key, required this.group, this.item});
 
   @override
   ConsumerState<DropdownFormDialog> createState() => _DropdownFormDialogState();
@@ -48,7 +44,11 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
     final formState = ref.watch(dropdownFormControllerProvider);
 
     return AlertDialog(
-      title: Text(isEdit ? 'Edit ${widget.group.displayName} Item' : 'Add ${widget.group.displayName} Item'),
+      title: Text(
+        isEdit
+            ? 'Edit ${widget.group.displayName} Item'
+            : 'Add ${widget.group.displayName} Item',
+      ),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -118,7 +118,7 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
               const SizedBox(height: 16),
 
               // Color preview
-              if (_colorController.text.isNotEmpty && 
+              if (_colorController.text.isNotEmpty &&
                   DropdownItemValidation.isValidHexColor(_colorController.text))
                 _buildColorPreview(),
 
@@ -145,7 +145,9 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: formState.isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: formState.isLoading
+              ? null
+              : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
@@ -182,10 +184,7 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.palette,
-            color: _getContrastColor(color),
-          ),
+          Icon(Icons.palette, color: _getContrastColor(color)),
           const SizedBox(width: 8),
           Text(
             'Color Preview',
@@ -211,14 +210,17 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
     final input = DropdownItemInput(
       value: _valueController.text.trim(),
       label: _labelController.text.trim(),
-      color: _colorController.text.trim().isEmpty ? null : _colorController.text.trim(),
+      color: _colorController.text.trim().isEmpty
+          ? null
+          : _colorController.text.trim(),
       active: _active,
     );
 
     try {
       if (widget.item == null) {
         // Create new item
-        await ref.read(dropdownFormControllerProvider.notifier)
+        await ref
+            .read(dropdownFormControllerProvider.notifier)
             .createItem(widget.group, input);
       } else {
         // Update existing item
@@ -230,7 +232,8 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
           patch['color'] = input.color;
         }
 
-        await ref.read(dropdownFormControllerProvider.notifier)
+        await ref
+            .read(dropdownFormControllerProvider.notifier)
             .updateItem(widget.group, widget.item!.value, patch);
       }
 
@@ -282,11 +285,7 @@ class DropdownDeleteDialog extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasReferences) ...[
-            const Icon(
-              Icons.warning,
-              color: Colors.orange,
-              size: 48,
-            ),
+            const Icon(Icons.warning, color: Colors.orange, size: 48),
             const SizedBox(height: 16),
             Text(
               'Cannot delete "${item.label}" because it is referenced by existing enquiries.',
@@ -326,9 +325,10 @@ class DropdownDeleteDialog extends ConsumerWidget {
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
           .deleteItem(group, item.value);
-      
+
       if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -365,7 +365,8 @@ class DropdownReplaceDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DropdownReplaceDialog> createState() => _DropdownReplaceDialogState();
+  ConsumerState<DropdownReplaceDialog> createState() =>
+      _DropdownReplaceDialogState();
 }
 
 class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
@@ -373,7 +374,9 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final replacementsAsync = ref.watch(availableReplacementsProvider((widget.group, widget.oldValue)));
+    final replacementsAsync = ref.watch(
+      availableReplacementsProvider((widget.group, widget.oldValue)),
+    );
     final formState = ref.watch(dropdownFormControllerProvider);
 
     return AlertDialog(
@@ -389,7 +392,7 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 16),
-            
+
             replacementsAsync.when(
               data: (replacements) {
                 if (replacements.isEmpty) {
@@ -400,8 +403,10 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
                 }
 
                 return DropdownButtonFormField<DropdownItem>(
-                  value: _selectedReplacement != null
-                      ? replacements.firstWhere((item) => item.value == _selectedReplacement)
+                  initialValue: _selectedReplacement != null
+                      ? replacements.firstWhere(
+                          (item) => item.value == _selectedReplacement,
+                        )
                       : null,
                   decoration: const InputDecoration(
                     labelText: 'Replacement Value',
@@ -417,7 +422,11 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
                               width: 16,
                               height: 16,
                               decoration: BoxDecoration(
-                                color: Color(int.parse(item.color!.replaceFirst('#', '0xFF'))),
+                                color: Color(
+                                  int.parse(
+                                    item.color!.replaceFirst('#', '0xFF'),
+                                  ),
+                                ),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -442,14 +451,17 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Text('Error loading replacements: $error'),
+              error: (error, stack) =>
+                  Text('Error loading replacements: $error'),
             ),
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: formState.isLoading ? null : () => Navigator.of(context).pop(),
+          onPressed: formState.isLoading
+              ? null
+              : () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
         FilledButton(
@@ -472,9 +484,14 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
     if (_selectedReplacement == null) return;
 
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
-          .replaceInEnquiries(widget.group, widget.oldValue, _selectedReplacement!);
-      
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
+          .replaceInEnquiries(
+            widget.group,
+            widget.oldValue,
+            _selectedReplacement!,
+          );
+
       if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

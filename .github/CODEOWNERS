@@ -1,0 +1,8 @@
+# Security-critical files require review from repo admins
+scripts/security/*          @repo-admins
+.github/workflows/*         @repo-admins
+.gitleaks.toml              @repo-admins
+firestore.rules             @repo-admins
+.husky/*                    @repo-admins
+test/security/*             @repo-admins
+

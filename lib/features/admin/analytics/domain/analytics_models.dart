@@ -6,10 +6,8 @@ part 'analytics_models.g.dart';
 /// Date range for analytics filtering
 @freezed
 class DateRange with _$DateRange {
-  const factory DateRange({
-    required DateTime start,
-    required DateTime end,
-  }) = _DateRange;
+  const factory DateRange({required DateTime start, required DateTime end}) =
+      _DateRange;
 
   factory DateRange.fromJson(Map<String, dynamic> json) =>
       _$DateRangeFromJson(json);
@@ -44,7 +42,7 @@ enum DateRangePreset {
   DateRange get dateRange {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
+
     switch (this) {
       case DateRangePreset.today:
         return DateRange(
@@ -114,10 +112,8 @@ class KpiDeltas with _$KpiDeltas {
 /// Data point for time series charts
 @freezed
 class SeriesPoint with _$SeriesPoint {
-  const factory SeriesPoint({
-    required DateTime x,
-    required int count,
-  }) = _SeriesPoint;
+  const factory SeriesPoint({required DateTime x, required int count}) =
+      _SeriesPoint;
 
   factory SeriesPoint.fromJson(Map<String, dynamic> json) =>
       _$SeriesPointFromJson(json);
@@ -171,10 +167,7 @@ class AnalyticsFilters with _$AnalyticsFilters {
 
   factory AnalyticsFilters.initial() {
     final preset = DateRangePreset.last30Days;
-    return AnalyticsFilters(
-      dateRange: preset.dateRange,
-      preset: preset,
-    );
+    return AnalyticsFilters(dateRange: preset.dateRange, preset: preset);
   }
 }
 
@@ -200,9 +193,7 @@ class AnalyticsState with _$AnalyticsState {
       _$AnalyticsStateFromJson(json);
 
   factory AnalyticsState.initial() {
-    return AnalyticsState(
-      filters: AnalyticsFilters.initial(),
-    );
+    return AnalyticsState(filters: AnalyticsFilters.initial());
   }
 }
 
@@ -226,7 +217,7 @@ enum TimeBucket {
   /// Determine appropriate bucket based on date range
   static TimeBucket fromDateRange(DateRange range) {
     final duration = range.end.difference(range.start);
-    
+
     if (duration.inDays <= 90) {
       return TimeBucket.day;
     } else if (duration.inDays <= 365) {
@@ -245,7 +236,7 @@ enum EnquiryStatusCategory {
 
   static EnquiryStatusCategory? fromStatus(String status) {
     final normalizedStatus = status.toLowerCase().replaceAll(' ', '_');
-    
+
     switch (normalizedStatus) {
       case 'new':
       case 'in_progress':

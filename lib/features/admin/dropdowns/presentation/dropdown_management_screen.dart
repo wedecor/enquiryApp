@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../domain/dropdown_item.dart';
-import 'dropdown_providers.dart';
 import 'dropdown_form_dialog.dart';
+import 'dropdown_providers.dart';
 
 /// Main screen for managing dropdown items
 class DropdownManagementScreen extends ConsumerStatefulWidget {
   const DropdownManagementScreen({super.key});
 
   @override
-  ConsumerState<DropdownManagementScreen> createState() => _DropdownManagementScreenState();
+  ConsumerState<DropdownManagementScreen> createState() =>
+      _DropdownManagementScreenState();
 }
 
-class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScreen>
+class _DropdownManagementScreenState
+    extends ConsumerState<DropdownManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -20,7 +23,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: DropdownGroup.values.length, vsync: this);
+    _tabController = TabController(
+      length: DropdownGroup.values.length,
+      vsync: this,
+    );
     _tabController.addListener(_onTabChanged);
     _searchController.addListener(_onSearchChanged);
   }
@@ -48,7 +54,6 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(dropdownGroupProvider);
     final isAdmin = ref.watch(isDropdownAdminProvider);
-    final searchQuery = ref.watch(dropdownQueryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -68,13 +73,16 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                 ),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.1),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               style: const TextStyle(color: Colors.white),
             ),
           ),
           const SizedBox(width: 8),
-          
+
           // Add button (admin only)
           if (isAdmin)
             ElevatedButton.icon(
@@ -82,9 +90,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               icon: const Icon(Icons.add),
               label: const Text('Add Item'),
             ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Refresh button
           IconButton(
             onPressed: () {
@@ -97,15 +105,21 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: DropdownGroup.values.map((group) => Tab(
-            text: group.displayName,
-            icon: Icon(_getGroupIcon(group)),
-          )).toList(),
+          tabs: DropdownGroup.values
+              .map(
+                (group) => Tab(
+                  text: group.displayName,
+                  icon: Icon(_getGroupIcon(group)),
+                ),
+              )
+              .toList(),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: DropdownGroup.values.map((group) => _buildGroupContent(group)).toList(),
+        children: DropdownGroup.values
+            .map((group) => _buildGroupContent(group))
+            .toList(),
       ),
     );
   }
@@ -118,7 +132,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       children: [
         // Group statistics
         _buildGroupStats(group),
-        
+
         // Dropdowns list
         Expanded(
           child: dropdownsAsync.when(
@@ -194,17 +208,13 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            _getGroupIcon(group),
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(_getGroupIcon(group), size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No ${group.displayName.toLowerCase()} found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
@@ -223,17 +233,13 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
           Text(
             'Error loading dropdowns',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.red,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: Colors.red),
           ),
           const SizedBox(height: 8),
           Text(
@@ -254,11 +260,17 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Widget _buildDropdownsList(DropdownGroup group, List<DropdownItem> items, bool isAdmin) {
+  Widget _buildDropdownsList(
+    DropdownGroup group,
+    List<DropdownItem> items,
+    bool isAdmin,
+  ) {
     return ReorderableListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
-      onReorder: isAdmin ? (oldIndex, newIndex) => _onReorder(group, items, oldIndex, newIndex) : (_, __) {},
+      onReorder: isAdmin
+          ? (oldIndex, newIndex) => _onReorder(group, items, oldIndex, newIndex)
+          : (_, __) {},
       itemBuilder: (context, index) {
         final item = items[index];
         return _buildDropdownItem(group, item, index, isAdmin);
@@ -266,7 +278,12 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Widget _buildDropdownItem(DropdownGroup group, DropdownItem item, int index, bool isAdmin) {
+  Widget _buildDropdownItem(
+    DropdownGroup group,
+    DropdownItem item,
+    int index,
+    bool isAdmin,
+  ) {
     return Card(
       key: ValueKey(item.value),
       margin: const EdgeInsets.only(bottom: 8),
@@ -286,7 +303,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(item.color!.replaceFirst('#', '0xFF'))),
+                  color: Color(
+                    int.parse(item.color!.replaceFirst('#', '0xFF')),
+                  ),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.grey.shade300),
                 ),
@@ -312,14 +331,18 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             // Active status chip
             Chip(
               label: Text(item.active ? 'Active' : 'Inactive'),
-              backgroundColor: item.active ? Colors.green.shade100 : Colors.red.shade100,
+              backgroundColor: item.active
+                  ? Colors.green.shade100
+                  : Colors.red.shade100,
               labelStyle: TextStyle(
-                color: item.active ? Colors.green.shade800 : Colors.red.shade800,
+                color: item.active
+                    ? Colors.green.shade800
+                    : Colors.red.shade800,
                 fontSize: 12,
               ),
             ),
             const SizedBox(width: 8),
-            
+
             // Actions menu
             PopupMenuButton<String>(
               enabled: isAdmin,
@@ -339,7 +362,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                   value: item.active ? 'deactivate' : 'activate',
                   child: Row(
                     children: [
-                      Icon(item.active ? Icons.visibility_off : Icons.visibility),
+                      Icon(
+                        item.active ? Icons.visibility_off : Icons.visibility,
+                      ),
                       const SizedBox(width: 8),
                       Text(item.active ? 'Deactivate' : 'Activate'),
                     ],
@@ -373,7 +398,12 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Future<void> _onReorder(DropdownGroup group, List<DropdownItem> items, int oldIndex, int newIndex) async {
+  Future<void> _onReorder(
+    DropdownGroup group,
+    List<DropdownItem> items,
+    int oldIndex,
+    int newIndex,
+  ) async {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -385,9 +415,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     final orderedValues = reorderedItems.map((item) => item.value).toList();
 
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
           .reorderItems(group, orderedValues);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -408,7 +439,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     }
   }
 
-  Future<void> _handleItemAction(String action, DropdownGroup group, DropdownItem item) async {
+  Future<void> _handleItemAction(
+    String action,
+    DropdownGroup group,
+    DropdownItem item,
+  ) async {
     switch (action) {
       case 'edit':
         _showEditDialog(context, group, item);
@@ -433,7 +468,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  void _showEditDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
+  void _showEditDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) {
     showDialog(
       context: context,
       builder: (context) => DropdownFormDialog(group: group, item: item),
@@ -442,9 +481,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
 
   Future<void> _toggleActive(DropdownGroup group, DropdownItem item) async {
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
           .toggleActive(group, item.value, !item.active);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -469,7 +509,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     }
   }
 
-  void _showReplaceDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
+  void _showReplaceDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) {
     showDialog(
       context: context,
       builder: (context) => DropdownReplaceDialog(
@@ -480,9 +524,15 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Future<void> _showDeleteDialog(BuildContext context, DropdownGroup group, DropdownItem item) async {
-    final hasReferences = await ref.read(isDropdownReferencedProvider((group, item.value)).future);
-    
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) async {
+    final hasReferences = await ref.read(
+      isDropdownReferencedProvider((group, item.value)).future,
+    );
+
     if (mounted) {
       showDialog(
         context: context,

@@ -11,7 +11,6 @@ void main() {
         phone: '+1234567890',
         role: 'admin',
         active: true,
-        fcmToken: 'test-token',
         createdAt: DateTime(2023, 1, 1),
         updatedAt: DateTime(2023, 1, 2),
       );
@@ -22,7 +21,6 @@ void main() {
       expect(user.phone, '+1234567890');
       expect(user.role, 'admin');
       expect(user.active, true);
-      expect(user.fcmToken, 'test-token');
       expect(user.createdAt, DateTime(2023, 1, 1));
       expect(user.updatedAt, DateTime(2023, 1, 2));
     });
@@ -39,7 +37,6 @@ void main() {
 
       expect(user.active, true); // default value
       expect(user.phone, null);
-      expect(user.fcmToken, null);
     });
 
     test('should create empty user for creation', () {
@@ -51,7 +48,6 @@ void main() {
       expect(user.phone, null);
       expect(user.role, 'staff');
       expect(user.active, true);
-      expect(user.fcmToken, null);
       expect(user.createdAt, isA<DateTime>());
       expect(user.updatedAt, isA<DateTime>());
     });
@@ -128,4 +124,3 @@ void main() {
     });
   });
 }
-

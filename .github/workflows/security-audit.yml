@@ -10,6 +10,9 @@ on:
     # Run weekly security audit
     - cron: '0 2 * * 1'  # Every Monday at 2 AM UTC
 
+env:
+  SECURITY_STRICT: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+
 jobs:
   gitleaks:
     name: 🔍 Secret Detection
@@ -35,11 +38,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Use Node 20 for Functions
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -56,8 +60,17 @@ jobs:
           fi
           echo "✅ No insecure FCM token storage detected"
 
-      - name: Run security audit
+      - name: Run security audit (strict on main)
         run: npm run sec:all
+
+      - name: Run guard tests (Flutter)
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs || true
+          flutter test --machine || flutter test
+
+      - name: Lint (errors only)
+        run: flutter analyze
 
       - name: Upload security report
         if: always()
@@ -87,6 +100,9 @@ jobs:
 
       - name: Run Flutter analyze
         run: flutter analyze --fatal-infos
+
+      - name: Run security tests
+        run: flutter test --machine || flutter test
 
       - name: Check for insecure dependencies
         run: flutter pub deps --style=compact | grep -E "(DEPRECATED|DISCONTINUED)" || true

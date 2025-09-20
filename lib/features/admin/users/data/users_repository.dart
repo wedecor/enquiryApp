@@ -57,7 +57,7 @@ class UsersRepository {
   /// Create a new user document
   Future<void> createUserDoc(UserModel input) async {
     final userData = input.toFirestore();
-    
+
     // Set timestamps
     userData['createdAt'] = FieldValue.serverTimestamp();
     userData['updatedAt'] = FieldValue.serverTimestamp();
@@ -68,7 +68,7 @@ class UsersRepository {
   /// Update user document with patch
   Future<void> updateUserDoc(String uid, Map<String, dynamic> patch) async {
     patch['updatedAt'] = FieldValue.serverTimestamp();
-    
+
     await _firestore.collection(_collection).doc(uid).update(patch);
   }
 
@@ -105,10 +105,7 @@ class UsersRepository {
   }
 
   /// Get total count of users (for pagination info)
-  Future<int> getTotalUsersCount({
-    String? role,
-    bool? active,
-  }) async {
+  Future<int> getTotalUsersCount({String? role, bool? active}) async {
     Query query = _firestore.collection(_collection);
 
     if (role != null && role.isNotEmpty && role != 'All') {
@@ -123,4 +120,3 @@ class UsersRepository {
     return snapshot.docs.length;
   }
 }
-

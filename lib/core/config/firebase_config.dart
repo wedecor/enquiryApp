@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 /// Secure Firebase configuration that handles environment variables
-/// 
+///
 /// This class provides a centralized way to manage Firebase configuration
 /// across different platforms while respecting environment variables.
 class FirebaseConfig {
   /// Get the API key for the current platform
-  /// 
+  ///
   /// Returns the appropriate API key based on the platform:
   /// - Web: Uses environment variable NEXT_PUBLIC_GOOGLE_API_KEY
   /// - Mobile: Uses platform-specific keys from firebase_options.dart
-  /// 
+  ///
   /// For production, ensure environment variables are set in your deployment platform
   static String get apiKey {
     if (kIsWeb) {
@@ -28,12 +28,12 @@ class FirebaseConfig {
   static String _getMobileApiKey() {
     // In a real implementation, you would use a package like flutter_dotenv
     // or platform-specific environment variable handling
-    const String? envApiKey = String.fromEnvironment('FIREBASE_API_KEY');
-    
-    if (envApiKey != null && envApiKey.isNotEmpty) {
+    const String envApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+
+    if (envApiKey.isNotEmpty) {
       return envApiKey;
     }
-    
+
     // Fallback to placeholder - this should be replaced in production
     return 'MOBILE_API_KEY_FROM_ENV';
   }
@@ -43,8 +43,8 @@ class FirebaseConfig {
     if (kIsWeb) {
       return true; // Web always uses environment variables
     } else {
-      const String? envApiKey = String.fromEnvironment('FIREBASE_API_KEY');
-      return envApiKey != null && envApiKey.isNotEmpty;
+      const String envApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+      return envApiKey.isNotEmpty;
     }
   }
 
@@ -62,4 +62,4 @@ Current configuration may expose API keys in your codebase.
     }
     return '✅ Firebase configuration is using environment variables';
   }
-} 
+}

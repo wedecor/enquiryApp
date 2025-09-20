@@ -1,35 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiries_list_screen.dart';
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
 
 void main() {
   group('EnquiryListScreen Widget Tests', () {
-    testWidgets('should show authentication required message when user is null', (WidgetTester tester) async {
-      // Act
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(null),
-            ),
-          ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
+    testWidgets(
+      'should show authentication required message when user is null',
+      (WidgetTester tester) async {
+        // Act
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              currentUserWithFirestoreProvider.overrideWith(
+                (ref) => Stream.value(null),
+              ),
+            ],
+            child: const MaterialApp(home: EnquiriesListScreen()),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Assert
-      expect(find.text('Please log in to view enquiries'), findsOneWidget);
-    });
+        // Assert
+        expect(find.text('Please log in to view enquiries'), findsOneWidget);
+      },
+    );
 
-    testWidgets('should show loading state while user data is loading', (WidgetTester tester) async {
+    testWidgets('should show loading state while user data is loading', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         ProviderScope(
@@ -38,9 +40,7 @@ void main() {
               (ref) => Stream.empty(),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -48,7 +48,9 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('should show error state when user data fails to load', (WidgetTester tester) async {
+    testWidgets('should show error state when user data fails to load', (
+      WidgetTester tester,
+    ) async {
       // Act
       await tester.pumpWidget(
         ProviderScope(
@@ -57,9 +59,7 @@ void main() {
               (ref) => Stream.error('Failed to load user'),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -69,7 +69,9 @@ void main() {
       expect(find.textContaining('Error'), findsOneWidget);
     });
 
-    testWidgets('should show add button for creating new enquiries', (WidgetTester tester) async {
+    testWidgets('should show add button for creating new enquiries', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -87,9 +89,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -100,7 +100,9 @@ void main() {
       expect(find.byTooltip('Add New Enquiry'), findsOneWidget);
     });
 
-    testWidgets('should show correct empty state icon based on user role', (WidgetTester tester) async {
+    testWidgets('should show correct empty state icon based on user role', (
+      WidgetTester tester,
+    ) async {
       // Test admin empty state
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -117,9 +119,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -142,9 +142,7 @@ void main() {
               (ref) => Stream.value(staffUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -152,7 +150,9 @@ void main() {
       expect(find.byIcon(Icons.assignment), findsOneWidget);
     });
 
-    testWidgets('should show correct empty state message based on user role', (WidgetTester tester) async {
+    testWidgets('should show correct empty state message based on user role', (
+      WidgetTester tester,
+    ) async {
       // Test admin empty state message
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -169,9 +169,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -194,9 +192,7 @@ void main() {
               (ref) => Stream.value(staffUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -204,7 +200,9 @@ void main() {
       expect(find.text('No enquiries assigned to you'), findsOneWidget);
     });
 
-    testWidgets('should show assignment information for admin users', (WidgetTester tester) async {
+    testWidgets('should show assignment information for admin users', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -222,9 +220,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -236,7 +232,9 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget);
     });
 
-    testWidgets('should not show assignment information for staff users', (WidgetTester tester) async {
+    testWidgets('should not show assignment information for staff users', (
+      WidgetTester tester,
+    ) async {
       // Arrange
       final staffUser = UserModel(
         uid: 'staff_1',
@@ -254,9 +252,7 @@ void main() {
               (ref) => Stream.value(staffUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -267,7 +263,9 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget);
     });
 
-    testWidgets('should handle role-based filtering logic correctly', (WidgetTester tester) async {
+    testWidgets('should handle role-based filtering logic correctly', (
+      WidgetTester tester,
+    ) async {
       // Test admin user
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -284,9 +282,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -311,9 +307,7 @@ void main() {
               (ref) => Stream.value(staffUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -323,7 +317,9 @@ void main() {
       expect(find.text('No enquiries assigned to you'), findsOneWidget);
     });
 
-    testWidgets('should show correct app bar title based on user role', (WidgetTester tester) async {
+    testWidgets('should show correct app bar title based on user role', (
+      WidgetTester tester,
+    ) async {
       // Test admin title
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -340,9 +336,7 @@ void main() {
               (ref) => Stream.value(adminUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -365,9 +359,7 @@ void main() {
               (ref) => Stream.value(staffUser),
             ),
           ],
-          child: const MaterialApp(
-            home: EnquiriesListScreen(),
-          ),
+          child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
 
@@ -375,4 +367,4 @@ void main() {
       expect(find.text('My Enquiries'), findsOneWidget);
     });
   });
-} 
+}

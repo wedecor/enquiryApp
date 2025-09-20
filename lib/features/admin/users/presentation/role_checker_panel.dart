@@ -89,7 +89,7 @@ class RoleCheckerPanel extends StatelessWidget {
                     Text(
                       "You're signed in but not an admin. To access User Management actions, "
                       "make sure your Firestore users/{uid} document has role: 'admin' and active: true, "
-                      "or sign in as the seeded admin user.",
+                      'or sign in as the seeded admin user.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.orange.shade700,
                       ),
@@ -148,10 +148,7 @@ class RoleCheckerPanel extends StatelessWidget {
   Widget _buildInfoChip(String label, String value, IconData icon) {
     return Chip(
       avatar: Icon(icon, size: 16),
-      label: Text(
-        '$label: $value',
-        style: const TextStyle(fontSize: 12),
-      ),
+      label: Text('$label: $value', style: const TextStyle(fontSize: 12)),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
@@ -185,4 +182,3 @@ class RoleCheckerPanel extends StatelessWidget {
     return '${uid.substring(0, 8)}...';
   }
 }
-
