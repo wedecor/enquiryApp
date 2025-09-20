@@ -111,11 +111,7 @@ void main() {
       });
 
       test('should handle special characters and formatting', () {
-        final existingStatuses = [
-          'In Progress & Review',
-          'On-Hold',
-          'Completed',
-        ];
+        final existingStatuses = ['In Progress & Review', 'On-Hold', 'Completed'];
 
         // Test exact matches with special characters
         expect(_isDuplicate('In Progress & Review', existingStatuses), isTrue);

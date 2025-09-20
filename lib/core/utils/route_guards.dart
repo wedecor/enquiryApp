@@ -95,10 +95,7 @@ class RouteGuards {
           'This feature is only available to administrators.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -121,10 +118,7 @@ class RouteGuards {
           'Please sign in to continue.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -137,11 +131,7 @@ class RouteGuards {
       barrierDismissible: false,
       builder: (context) => const AlertDialog(
         content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Loading...'),
-          ],
+          children: [CircularProgressIndicator(), SizedBox(width: 16), Text('Loading...')],
         ),
       ),
     );
@@ -161,10 +151,7 @@ class RouteGuards {
         ),
         content: Text('An error occurred: $error'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -199,10 +186,8 @@ class AdminOnlyScreen extends ConsumerWidget {
           return _buildAccessDeniedScreen();
         }
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, stack) =>
-          Scaffold(body: Center(child: Text('Error: $error'))),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(body: Center(child: Text('Error: $error'))),
     );
   }
 
@@ -221,11 +206,7 @@ class AdminOnlyScreen extends ConsumerWidget {
             SizedBox(height: 16),
             Text(
               'Access Denied',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
             ),
             SizedBox(height: 8),
             Text(

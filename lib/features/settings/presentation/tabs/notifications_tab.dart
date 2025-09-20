@@ -32,15 +32,11 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
         return _buildNotificationsContent(context, settings);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Center(child: Text('Error loading notification settings: $error')),
+      error: (error, stack) => Center(child: Text('Error loading notification settings: $error')),
     );
   }
 
-  Widget _buildNotificationsContent(
-    BuildContext context,
-    UserSettings settings,
-  ) {
+  Widget _buildNotificationsContent(BuildContext context, UserSettings settings) {
     return Column(
       children: [
         Expanded(
@@ -70,10 +66,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Master Controls',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Master Controls', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Enable or disable notification types',
@@ -85,11 +78,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               subtitle: const Text('Receive notifications in the app'),
               value: _currentSettings?.notifications.pushEnabled ?? true,
               onChanged: (value) {
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(pushEnabled: value);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  pushEnabled: value,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
             SwitchListTile(
@@ -97,11 +89,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               subtitle: const Text('Receive notifications via email'),
               value: _currentSettings?.notifications.emailEnabled ?? false,
               onChanged: (value) {
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(emailEnabled: value);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  emailEnabled: value,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
           ],
@@ -111,9 +102,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
   }
 
   Widget _buildChannelSettings(BuildContext context) {
-    final channels =
-        _currentSettings?.notifications.channels ??
-        const NotificationChannels();
+    final channels = _currentSettings?.notifications.channels ?? const NotificationChannels();
     final pushEnabled = _currentSettings?.notifications.pushEnabled ?? true;
     final emailEnabled = _currentSettings?.notifications.emailEnabled ?? false;
     final anyEnabled = pushEnabled || emailEnabled;
@@ -124,10 +113,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Notification Channels',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Notification Channels', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               anyEnabled
@@ -144,11 +130,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               enabled: anyEnabled,
               onChanged: (value) {
                 final newChannels = channels.copyWith(assignment: value);
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(channels: newChannels);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  channels: newChannels,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
             _buildChannelToggle(
@@ -159,11 +144,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               enabled: anyEnabled,
               onChanged: (value) {
                 final newChannels = channels.copyWith(statusChange: value);
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(channels: newChannels);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  channels: newChannels,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
             _buildChannelToggle(
@@ -174,11 +158,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               enabled: anyEnabled,
               onChanged: (value) {
                 final newChannels = channels.copyWith(payment: value);
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(channels: newChannels);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  channels: newChannels,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
             _buildChannelToggle(
@@ -189,11 +172,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
               enabled: anyEnabled,
               onChanged: (value) {
                 final newChannels = channels.copyWith(reminders: value);
-                final newNotifications = _currentSettings!.notifications
-                    .copyWith(channels: newChannels);
-                _updateSettings(
-                  _currentSettings!.copyWith(notifications: newNotifications),
+                final newNotifications = _currentSettings!.notifications.copyWith(
+                  channels: newChannels,
                 );
+                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
               },
             ),
           ],
@@ -232,9 +214,9 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
                 const SizedBox(width: 8),
                 Text(
                   'Important Notes',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.blue.shade600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
                 ),
               ],
             ),
@@ -264,10 +246,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
           margin: const EdgeInsets.only(top: 6),
           width: 4,
           height: 4,
-          decoration: const BoxDecoration(
-            color: Colors.grey,
-            shape: BoxShape.circle,
-          ),
+          decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
@@ -299,10 +278,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
             ),
           ),
           const SizedBox(width: 16),
-          TextButton(
-            onPressed: _isSaving ? null : _discardChanges,
-            child: const Text('Discard'),
-          ),
+          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
         ],
       ),
     );
@@ -374,11 +350,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }

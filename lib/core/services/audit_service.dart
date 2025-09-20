@@ -18,22 +18,16 @@ class AuditService {
       final currentUser = _auth.currentUser;
       final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
 
-      await _firestore
-          .collection('enquiries')
-          .doc(enquiryId)
-          .collection('history')
-          .add({
-            'field_changed': fieldChanged,
-            'old_value': oldValue,
-            'new_value': newValue,
-            'user_id': changeUserId,
-            'timestamp': FieldValue.serverTimestamp(),
-            'user_email': currentUser?.email ?? 'unknown',
-          });
+      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add({
+        'field_changed': fieldChanged,
+        'old_value': oldValue,
+        'new_value': newValue,
+        'user_id': changeUserId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'user_email': currentUser?.email ?? 'unknown',
+      });
 
-      print(
-        'AuditService: Recorded change to $fieldChanged for enquiry $enquiryId',
-      );
+      print('AuditService: Recorded change to $fieldChanged for enquiry $enquiryId');
     } catch (e) {
       print('AuditService: Error recording change: $e');
     }
@@ -71,9 +65,7 @@ class AuditService {
       }
 
       await batch.commit();
-      print(
-        'AuditService: Recorded ${changes.length} changes for enquiry $enquiryId',
-      );
+      print('AuditService: Recorded ${changes.length} changes for enquiry $enquiryId');
     } catch (e) {
       print('AuditService: Error recording multiple changes: $e');
     }
@@ -120,10 +112,7 @@ class AuditService {
   }
 
   /// Get change history for a specific field
-  Future<List<Map<String, dynamic>>> getFieldHistory(
-    String enquiryId,
-    String fieldName,
-  ) async {
+  Future<List<Map<String, dynamic>>> getFieldHistory(String enquiryId, String fieldName) async {
     try {
       final snapshot = await _firestore
           .collection('enquiries')
@@ -155,11 +144,7 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          'enquiry_id': doc.reference.parent.parent?.id,
-          ...data,
-        };
+        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting user changes: $e');
@@ -178,11 +163,7 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          'enquiry_id': doc.reference.parent.parent?.id,
-          ...data,
-        };
+        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting recent changes: $e');
@@ -259,9 +240,7 @@ class AuditService {
       final summary = <String, dynamic>{
         'total_changes': history.length,
         'last_modified': history.isNotEmpty ? history.first['timestamp'] : null,
-        'last_modified_by': history.isNotEmpty
-            ? history.first['user_email']
-            : null,
+        'last_modified_by': history.isNotEmpty ? history.first['user_email'] : null,
         'fields_changed': <String>[],
         'users_involved': <String>[],
       };
@@ -271,14 +250,11 @@ class AuditService {
         final userEmail = change['user_email'] as String?;
 
         if (fieldChanged != null &&
-            !(summary['fields_changed'] as List<String>).contains(
-              fieldChanged,
-            )) {
+            !(summary['fields_changed'] as List<String>).contains(fieldChanged)) {
           (summary['fields_changed'] as List<String>).add(fieldChanged);
         }
 
-        if (userEmail != null &&
-            !(summary['users_involved'] as List<String>).contains(userEmail)) {
+        if (userEmail != null && !(summary['users_involved'] as List<String>).contains(userEmail)) {
           (summary['users_involved'] as List<String>).add(userEmail);
         }
       }

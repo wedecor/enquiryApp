@@ -15,9 +15,7 @@ class CsvExport {
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
   /// Export enquiries to CSV
-  static Future<void> exportEnquiries(
-    List<Map<String, dynamic>> enquiries,
-  ) async {
+  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
@@ -94,9 +92,7 @@ class CsvExport {
   }
 
   /// Export recent enquiries from analytics
-  static Future<void> exportRecentEnquiries(
-    List<RecentEnquiry> enquiries,
-  ) async {
+  static Future<void> exportRecentEnquiries(List<RecentEnquiry> enquiries) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
@@ -206,11 +202,7 @@ class CsvExport {
         ['Status Breakdown'],
         ['Status', 'Count', 'Percentage'],
         ...statusBreakdown.map(
-          (item) => [
-            item.key,
-            item.count.toString(),
-            '${item.percentage.toStringAsFixed(1)}%',
-          ],
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
         ),
         [''],
       ]);
@@ -222,11 +214,7 @@ class CsvExport {
         ['Event Type Breakdown'],
         ['Event Type', 'Count', 'Percentage'],
         ...eventTypeBreakdown.map(
-          (item) => [
-            item.key,
-            item.count.toString(),
-            '${item.percentage.toStringAsFixed(1)}%',
-          ],
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
         ),
         [''],
       ]);
@@ -238,11 +226,7 @@ class CsvExport {
         ['Source Breakdown'],
         ['Source', 'Count', 'Percentage'],
         ...sourceBreakdown.map(
-          (item) => [
-            item.key,
-            item.count.toString(),
-            '${item.percentage.toStringAsFixed(1)}%',
-          ],
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
         ),
       ]);
     }
@@ -344,11 +328,7 @@ class CsvExport {
       SnackBar(
         content: Text('Exported successfully: $filename'),
         backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
@@ -359,11 +339,7 @@ class CsvExport {
       SnackBar(
         content: Text('Export failed: $error'),
         backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }

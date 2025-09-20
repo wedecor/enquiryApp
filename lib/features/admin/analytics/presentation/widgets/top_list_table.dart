@@ -27,9 +27,7 @@ class TopListTable extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
@@ -44,20 +42,14 @@ class TopListTable extends StatelessWidget {
 
     return Table(
       columnWidths: showPercentage
-          ? const {
-              0: FlexColumnWidth(1),
-              1: FixedColumnWidth(60),
-              2: FixedColumnWidth(80),
-            }
+          ? const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60), 2: FixedColumnWidth(80)}
           : const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60)},
       children: [
         // Header row
         TableRow(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-            ),
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
           ),
           children: [
             _buildHeaderCell(context, 'Name'),
@@ -72,11 +64,7 @@ class TopListTable extends StatelessWidget {
             children: [
               _buildDataCell(context, item.key),
               _buildDataCell(context, item.count.toString()),
-              if (showPercentage)
-                _buildDataCell(
-                  context,
-                  '${item.percentage.toStringAsFixed(1)}%',
-                ),
+              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
             ],
           ),
         ),
@@ -118,9 +106,7 @@ class TopListTable extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'No data available',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
             ),
           ],
         ),
@@ -153,9 +139,7 @@ class RecentEnquiriesTable extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
@@ -175,57 +159,43 @@ class RecentEnquiriesTable extends StatelessWidget {
           DataColumn(
             label: Text(
               'Date',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Customer',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Event Type',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Source',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Priority',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Total Cost',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -234,31 +204,20 @@ class RecentEnquiriesTable extends StatelessWidget {
               (enquiry) => DataRow(
                 cells: [
                   DataCell(
-                    Text(
-                      _formatDate(enquiry.date),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(_formatDate(enquiry.date), style: Theme.of(context).textTheme.bodySmall),
                   ),
                   DataCell(
                     Text(
                       enquiry.customerName,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
-                  DataCell(
-                    Text(
-                      enquiry.eventType,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
+                  DataCell(Text(enquiry.eventType, style: Theme.of(context).textTheme.bodyMedium)),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatusColor(enquiry.status),
                         borderRadius: BorderRadius.circular(12),
@@ -273,18 +232,10 @@ class RecentEnquiriesTable extends StatelessWidget {
                       ),
                     ),
                   ),
-                  DataCell(
-                    Text(
-                      enquiry.source,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
+                  DataCell(Text(enquiry.source, style: Theme.of(context).textTheme.bodyMedium)),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getPriorityColor(enquiry.priority),
                         borderRadius: BorderRadius.circular(12),
@@ -301,12 +252,10 @@ class RecentEnquiriesTable extends StatelessWidget {
                   ),
                   DataCell(
                     Text(
-                      enquiry.totalCost != null
-                          ? _formatCurrency(enquiry.totalCost!)
-                          : '—',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      enquiry.totalCost != null ? _formatCurrency(enquiry.totalCost!) : '—',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -327,16 +276,12 @@ class RecentEnquiriesTable extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'No recent enquiries',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
             Text(
               'Select a different date range or filters',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -396,10 +341,7 @@ class RecentEnquiriesTable extends StatelessWidget {
   String _formatStatusName(String status) {
     return status
         .split('_')
-        .map(
-          (word) =>
-              word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '',
-        )
+        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
         .join(' ');
   }
 

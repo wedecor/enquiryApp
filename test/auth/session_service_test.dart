@@ -10,14 +10,11 @@ class MockFirebaseAuth extends Mock implements FirebaseAuth {}
 
 class MockFirebaseFirestore extends Mock implements FirebaseFirestore {}
 
-class MockCollectionReference extends Mock
-    implements CollectionReference<Map<String, dynamic>> {}
+class MockCollectionReference extends Mock implements CollectionReference<Map<String, dynamic>> {}
 
-class MockDocumentReference extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
+class MockDocumentReference extends Mock implements DocumentReference<Map<String, dynamic>> {}
 
-class MockDocumentSnapshot extends Mock
-    implements DocumentSnapshot<Map<String, dynamic>> {}
+class MockDocumentSnapshot extends Mock implements DocumentSnapshot<Map<String, dynamic>> {}
 
 class MockUser extends Mock implements User {}
 
@@ -37,30 +34,25 @@ void main() {
       mockUser = MockUser();
     });
 
-    test(
-      'unprovisioned flow: auth user exists but no Firestore profile',
-      () async {
-        // Arrange
-        const testUid = 'test-uid-123';
-        const testEmail = 'test@example.com';
+    test('unprovisioned flow: auth user exists but no Firestore profile', () async {
+      // Arrange
+      const testUid = 'test-uid-123';
+      const testEmail = 'test@example.com';
 
-        when(() => mockUser.uid).thenReturn(testUid);
-        when(() => mockUser.email).thenReturn(testEmail);
-        when(() => mockUser.emailVerified).thenReturn(true);
+      when(() => mockUser.uid).thenReturn(testUid);
+      when(() => mockUser.email).thenReturn(testEmail);
+      when(() => mockUser.emailVerified).thenReturn(true);
 
-        when(
-          () => mockFirestore.collection('users'),
-        ).thenReturn(mockCollection);
-        when(() => mockCollection.doc(testUid)).thenReturn(mockDoc);
-        when(() => mockDoc.get()).thenAnswer((_) async => mockSnapshot);
-        when(() => mockSnapshot.exists).thenReturn(false);
+      when(() => mockFirestore.collection('users')).thenReturn(mockCollection);
+      when(() => mockCollection.doc(testUid)).thenReturn(mockDoc);
+      when(() => mockDoc.get()).thenAnswer((_) async => mockSnapshot);
+      when(() => mockSnapshot.exists).thenReturn(false);
 
-        // Note: This is a simplified test structure
-        // Full implementation would require dependency injection in SessionService
+      // Note: This is a simplified test structure
+      // Full implementation would require dependency injection in SessionService
 
-        expect(true, isTrue); // Placeholder - proper test requires DI setup
-      },
-    );
+      expect(true, isTrue); // Placeholder - proper test requires DI setup
+    });
 
     test('disabled user: profile exists with active=false', () async {
       // Arrange
@@ -117,58 +109,33 @@ void main() {
 
       expect(const SessionState.unauthenticated().isAuthenticated, isFalse);
       expect(const SessionState.loading().isAuthenticated, isFalse);
-      expect(
-        const SessionState.unprovisioned(
-          email: 'test@example.com',
-        ).isAuthenticated,
-        isFalse,
-      );
-      expect(
-        const SessionState.disabled(email: 'test@example.com').isAuthenticated,
-        isFalse,
-      );
-      expect(
-        const SessionState.error(message: 'Test error').isAuthenticated,
-        isFalse,
-      );
+      expect(const SessionState.unprovisioned(email: 'test@example.com').isAuthenticated, isFalse);
+      expect(const SessionState.disabled(email: 'test@example.com').isAuthenticated, isFalse);
+      expect(const SessionState.error(message: 'Test error').isAuthenticated, isFalse);
     });
 
-    test(
-      'isSignedIn returns true for authenticated, unprovisioned, and disabled',
-      () {
-        expect(
-          const SessionState.authenticated(
-            user: FirebaseUserLite(uid: 'test', email: 'test@example.com'),
-            profile: UserModel(
-              uid: 'test',
-              name: 'Test User',
-              email: 'test@example.com',
-              phone: '+1234567890',
-              role: UserRole.staff,
-            ),
-          ).isSignedIn,
-          isTrue,
-        );
-
-        expect(
-          const SessionState.unprovisioned(
+    test('isSignedIn returns true for authenticated, unprovisioned, and disabled', () {
+      expect(
+        const SessionState.authenticated(
+          user: FirebaseUserLite(uid: 'test', email: 'test@example.com'),
+          profile: UserModel(
+            uid: 'test',
+            name: 'Test User',
             email: 'test@example.com',
-          ).isSignedIn,
-          isTrue,
-        );
-        expect(
-          const SessionState.disabled(email: 'test@example.com').isSignedIn,
-          isTrue,
-        );
+            phone: '+1234567890',
+            role: UserRole.staff,
+          ),
+        ).isSignedIn,
+        isTrue,
+      );
 
-        expect(const SessionState.unauthenticated().isSignedIn, isFalse);
-        expect(const SessionState.loading().isSignedIn, isFalse);
-        expect(
-          const SessionState.error(message: 'Test error').isSignedIn,
-          isFalse,
-        );
-      },
-    );
+      expect(const SessionState.unprovisioned(email: 'test@example.com').isSignedIn, isTrue);
+      expect(const SessionState.disabled(email: 'test@example.com').isSignedIn, isTrue);
+
+      expect(const SessionState.unauthenticated().isSignedIn, isFalse);
+      expect(const SessionState.loading().isSignedIn, isFalse);
+      expect(const SessionState.error(message: 'Test error').isSignedIn, isFalse);
+    });
 
     test('email getter returns correct email for each state', () {
       const testEmail = 'test@example.com';
@@ -187,14 +154,8 @@ void main() {
         equals(testEmail),
       );
 
-      expect(
-        const SessionState.unprovisioned(email: testEmail).email,
-        equals(testEmail),
-      );
-      expect(
-        const SessionState.disabled(email: testEmail).email,
-        equals(testEmail),
-      );
+      expect(const SessionState.unprovisioned(email: testEmail).email, equals(testEmail));
+      expect(const SessionState.disabled(email: testEmail).email, equals(testEmail));
 
       expect(const SessionState.unauthenticated().email, isNull);
       expect(const SessionState.loading().email, isNull);

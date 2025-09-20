@@ -23,10 +23,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
               children: [
                 Icon(Icons.history, size: 64, color: Colors.grey),
                 SizedBox(height: 16),
-                Text(
-                  'No changes recorded',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
+                Text('No changes recorded', style: TextStyle(fontSize: 18, color: Colors.grey)),
                 SizedBox(height: 8),
                 Text(
                   'Changes to this enquiry will appear here',
@@ -77,19 +74,12 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  _getFieldIcon(fieldChanged),
-                  color: _getFieldColor(fieldChanged),
-                  size: 20,
-                ),
+                Icon(_getFieldIcon(fieldChanged), color: _getFieldColor(fieldChanged), size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _getFieldDisplayName(fieldChanged),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 if (timestamp != null) ...[
@@ -117,10 +107,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(4),
@@ -128,10 +115,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                         ),
                         child: Text(
                           _formatValue(oldValue),
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.red[700], fontSize: 14),
                         ),
                       ),
                     ],
@@ -154,10 +138,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.green[50],
                           borderRadius: BorderRadius.circular(4),
@@ -165,10 +146,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                         ),
                         child: Text(
                           _formatValue(newValue),
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.green[700], fontSize: 14),
                         ),
                       ),
                     ],

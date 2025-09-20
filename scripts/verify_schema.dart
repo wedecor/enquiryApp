@@ -12,9 +12,7 @@ void main(List<String> args) async {
     print('================================================');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -33,10 +31,7 @@ void main(List<String> args) async {
           await _runFullVerification(schemaService);
           break;
         case 'report':
-          await _generateReport(
-            schemaService,
-            args.length > 1 ? args[1] : null,
-          );
+          await _generateReport(schemaService, args.length > 1 ? args[1] : null);
           break;
         case 'quick':
           await _runQuickVerification(schemaService);
@@ -56,9 +51,7 @@ void main(List<String> args) async {
 }
 
 /// Run full schema verification
-Future<void> _runFullVerification(
-  SchemaVerificationService schemaService,
-) async {
+Future<void> _runFullVerification(SchemaVerificationService schemaService) async {
   print('\n🚀 Starting full schema verification...');
   print('⏳ This may take a few moments...\n');
 
@@ -139,9 +132,7 @@ Future<void> _runFullVerification(
 }
 
 /// Run quick schema verification
-Future<void> _runQuickVerification(
-  SchemaVerificationService schemaService,
-) async {
+Future<void> _runQuickVerification(SchemaVerificationService schemaService) async {
   print('\n⚡ Starting quick schema verification...');
   print('⏳ Checking collection structure only...\n');
 
@@ -154,13 +145,8 @@ Future<void> _runQuickVerification(
 
     for (final collectionName in collections) {
       try {
-        final snapshot = await firestore
-            .collection(collectionName)
-            .limit(1)
-            .get();
-        print(
-          '✅ $collectionName: Collection exists (${snapshot.docs.length} sample documents)',
-        );
+        final snapshot = await firestore.collection(collectionName).limit(1).get();
+        print('✅ $collectionName: Collection exists (${snapshot.docs.length} sample documents)');
         validCollections++;
       } catch (e) {
         print('❌ $collectionName: Error accessing collection - $e');
@@ -186,10 +172,7 @@ Future<void> _runQuickVerification(
 }
 
 /// Generate detailed report
-Future<void> _generateReport(
-  SchemaVerificationService schemaService,
-  String? outputFile,
-) async {
+Future<void> _generateReport(SchemaVerificationService schemaService, String? outputFile) async {
   print('\n📝 Generating detailed schema report...');
 
   final report = await schemaService.generateSchemaReport();
@@ -206,18 +189,10 @@ Future<void> _generateReport(
 /// Print usage information
 void _printUsage() {
   print('\n📖 Schema Verification Tool Usage:');
-  print(
-    '  dart run scripts/verify_schema.dart              - Run full verification',
-  );
-  print(
-    '  dart run scripts/verify_schema.dart verify        - Run full verification',
-  );
-  print(
-    '  dart run scripts/verify_schema.dart quick         - Run quick verification',
-  );
-  print(
-    '  dart run scripts/verify_schema.dart report [file] - Generate detailed report',
-  );
+  print('  dart run scripts/verify_schema.dart              - Run full verification');
+  print('  dart run scripts/verify_schema.dart verify        - Run full verification');
+  print('  dart run scripts/verify_schema.dart quick         - Run quick verification');
+  print('  dart run scripts/verify_schema.dart report [file] - Generate detailed report');
   print('  dart run scripts/verify_schema.dart help          - Show this help');
   print('\n🔧 Commands:');
   print('  verify - Run complete schema verification (default)');

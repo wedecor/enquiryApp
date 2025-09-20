@@ -36,8 +36,7 @@ class UserFirestoreSyncService {
       return userModel;
     } catch (e) {
       // If user doesn't exist in Firestore, create them with default role
-      if (e.toString().contains('not found') ||
-          e.toString().contains('permission')) {
+      if (e.toString().contains('not found') || e.toString().contains('permission')) {
         return await _createDefaultUser(currentUser);
       }
       rethrow;
@@ -95,10 +94,7 @@ class UserFirestoreSyncService {
   }
 
   /// Update user role (admin only)
-  Future<void> updateUserRole({
-    required String uid,
-    required UserRole role,
-  }) async {
+  Future<void> updateUserRole({required String uid, required UserRole role}) async {
     await _firestoreService.updateUser(uid, {'role': role.name});
   }
 }
@@ -116,9 +112,7 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
 });
 
 /// Provider for user sync service
-final userFirestoreSyncServiceProvider = Provider<UserFirestoreSyncService>((
-  ref,
-) {
+final userFirestoreSyncServiceProvider = Provider<UserFirestoreSyncService>((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return UserFirestoreSyncService(firestoreService);
 });

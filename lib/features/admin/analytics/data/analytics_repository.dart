@@ -10,10 +10,7 @@ class AnalyticsRepository {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Count total enquiries in date range with optional filters
-  Future<int> countEnquiries({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
+  Future<int> countEnquiries({required DateRange dateRange, AnalyticsFilters? filters}) async {
     try {
       // Try using aggregate query first (more efficient)
       final Query query = _buildBaseQuery(dateRange, filters);
@@ -138,17 +135,12 @@ class AnalyticsRepository {
       }
     }
 
-    return dateCounts.entries
-        .map((entry) => SeriesPoint(x: entry.key, count: entry.value))
-        .toList()
+    return dateCounts.entries.map((entry) => SeriesPoint(x: entry.key, count: entry.value)).toList()
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
   /// Sum total revenue from totalCost field
-  Future<double> sumRevenue({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
+  Future<double> sumRevenue({required DateRange dateRange, AnalyticsFilters? filters}) async {
     final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
 
@@ -179,8 +171,7 @@ class AnalyticsRepository {
 
     return snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      final createdAt =
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+      final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
       return RecentEnquiry(
         id: doc.id,
@@ -204,9 +195,7 @@ class AnalyticsRepository {
           .collection('items')
           .get();
 
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
+      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -223,9 +212,7 @@ class AnalyticsRepository {
           .collection('items')
           .get();
 
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
+      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -249,10 +236,7 @@ class AnalyticsRepository {
 
     // Apply date range filter
     query = query
-        .where(
-          'createdAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start),
-        )
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start))
         .where('createdAt', isLessThan: Timestamp.fromDate(dateRange.end));
 
     // Apply additional filters

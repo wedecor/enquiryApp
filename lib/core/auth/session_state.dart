@@ -29,16 +29,13 @@ class SessionState with _$SessionState {
   }) = SessionAuthenticated;
 
   /// User is signed in but has no Firestore profile
-  const factory SessionState.unprovisioned({required String email}) =
-      SessionUnprovisioned;
+  const factory SessionState.unprovisioned({required String email}) = SessionUnprovisioned;
 
   /// User profile exists but is disabled
-  const factory SessionState.disabled({required String email}) =
-      SessionDisabled;
+  const factory SessionState.disabled({required String email}) = SessionDisabled;
 
   /// Error state with message and optional cause
-  const factory SessionState.error({required String message, Object? cause}) =
-      SessionError;
+  const factory SessionState.error({required String message, Object? cause}) = SessionError;
 }
 
 /// Extension methods for SessionState

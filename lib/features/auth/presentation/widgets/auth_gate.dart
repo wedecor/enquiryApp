@@ -22,20 +22,17 @@ class AuthGate extends ConsumerWidget {
     return sessionAsync.when(
       data: (session) => _buildForSessionState(context, session),
       loading: () => _buildLoadingScreen(context, 'Initializing...'),
-      error: (error, stack) =>
-          _buildErrorScreen(context, 'Initialization failed: $error'),
+      error: (error, stack) => _buildErrorScreen(context, 'Initialization failed: $error'),
     );
   }
 
   Widget _buildForSessionState(BuildContext context, SessionState session) {
     return session.when(
       unauthenticated: () => const LoginScreen(),
-      loading: (reason) =>
-          _buildLoadingScreen(context, _getLoadingMessage(reason)),
+      loading: (reason) => _buildLoadingScreen(context, _getLoadingMessage(reason)),
       authenticated: (user, profile) => Column(
         children: [
-          if (kDebugMode)
-            _buildDebugBanner(context, 'Authenticated: ${profile.role.name}'),
+          if (kDebugMode) _buildDebugBanner(context, 'Authenticated: ${profile.role.name}'),
           if (kDebugMode) _buildAndroidConfigBanner(context),
           const Expanded(child: DashboardScreen()),
         ],
@@ -75,11 +72,7 @@ class AuthGate extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.person_off,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              Icon(Icons.person_off, size: 64, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 24),
 
               Text(
@@ -109,10 +102,7 @@ class AuthGate extends ConsumerWidget {
                       children: [
                         Icon(Icons.info_outline, color: Colors.blue.shade600),
                         const SizedBox(width: 8),
-                        const Text(
-                          'Next Steps',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        const Text('Next Steps', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -172,9 +162,9 @@ class AuthGate extends ConsumerWidget {
 
               Text(
                 'Access Disabled',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.red.shade600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineMedium?.copyWith(color: Colors.red.shade600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -235,11 +225,7 @@ class AuthGate extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorScreen(
-    BuildContext context,
-    String message, [
-    Object? cause,
-  ]) {
+  Widget _buildErrorScreen(BuildContext context, String message, [Object? cause]) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
@@ -248,18 +234,14 @@ class AuthGate extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.orange.shade600,
-              ),
+              Icon(Icons.error_outline, size: 64, color: Colors.orange.shade600),
               const SizedBox(height: 24),
 
               Text(
                 'Authentication Error',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.orange.shade600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineMedium?.copyWith(color: Colors.orange.shade600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -280,10 +262,7 @@ class AuthGate extends ConsumerWidget {
                   ),
                   child: Text(
                     'Debug: ${cause.toString()}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                    ),
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                 ),
               ],
@@ -355,11 +334,7 @@ class AuthGate extends ConsumerWidget {
       SnackBar(
         content: Text('Email copied: $email'),
         backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
@@ -373,10 +348,7 @@ class AuthGate extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign out failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Sign out failed: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -386,10 +358,7 @@ class AuthGate extends ConsumerWidget {
     // Trigger a refresh by signing out and back in
     // Or implement a manual session refresh if needed
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Retrying authentication...'),
-        backgroundColor: Colors.blue,
-      ),
+      const SnackBar(content: Text('Retrying authentication...'), backgroundColor: Colors.blue),
     );
   }
 

@@ -15,8 +15,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen>
-    with TickerProviderStateMixin {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -54,9 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     ];
 
     if (isAdmin) {
-      tabs.add(
-        const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'),
-      );
+      tabs.add(const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'));
       tabViews.add(const AdminTab());
 
       // Update tab controller length
@@ -68,11 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: tabs,
-          isScrollable: true,
-        ),
+        bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
       ),
       body: TabBarView(controller: _tabController, children: tabViews),
     );

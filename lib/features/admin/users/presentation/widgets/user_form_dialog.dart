@@ -56,10 +56,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter a name';
@@ -96,10 +93,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _selectedRole,
-              decoration: const InputDecoration(
-                labelText: 'Role',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'staff', child: Text('Staff')),
                 DropdownMenuItem(value: 'admin', child: Text('Admin')),
@@ -128,15 +122,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        if (isAdmin)
-          FilledButton(
-            onPressed: _submit,
-            child: Text(isEdit ? 'Update' : 'Create'),
-          ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        if (isAdmin) FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create')),
       ],
     );
   }
@@ -148,9 +135,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       uid: widget.user?.uid ?? '', // Will be set by Firestore
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       role: _selectedRole,
       active: _isActive,
       // fcmToken removed for security - stored in private subcollection
@@ -173,9 +158,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            widget.user != null
-                ? 'User updated successfully'
-                : 'User created successfully',
+            widget.user != null ? 'User updated successfully' : 'User created successfully',
           ),
           backgroundColor: Colors.green,
         ),

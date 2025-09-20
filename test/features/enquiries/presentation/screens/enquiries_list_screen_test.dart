@@ -7,27 +7,22 @@ import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 void main() {
   group('EnquiryListScreen Widget Tests', () {
-    testWidgets(
-      'should show authentication required message when user is null',
-      (WidgetTester tester) async {
-        // Act
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              currentUserWithFirestoreProvider.overrideWith(
-                (ref) => Stream.value(null),
-              ),
-            ],
-            child: const MaterialApp(home: EnquiriesListScreen()),
-          ),
-        );
+    testWidgets('should show authentication required message when user is null', (
+      WidgetTester tester,
+    ) async {
+      // Act
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(null))],
+          child: const MaterialApp(home: EnquiriesListScreen()),
+        ),
+      );
 
-        await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-        // Assert
-        expect(find.text('Please log in to view enquiries'), findsOneWidget);
-      },
-    );
+      // Assert
+      expect(find.text('Please log in to view enquiries'), findsOneWidget);
+    });
 
     testWidgets('should show loading state while user data is loading', (
       WidgetTester tester,
@@ -35,11 +30,7 @@ void main() {
       // Act
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.empty(),
-            ),
-          ],
+          overrides: [currentUserWithFirestoreProvider.overrideWith((ref) => Stream.empty())],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
       );
@@ -69,9 +60,7 @@ void main() {
       expect(find.textContaining('Error'), findsOneWidget);
     });
 
-    testWidgets('should show add button for creating new enquiries', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should show add button for creating new enquiries', (WidgetTester tester) async {
       // Arrange
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -85,9 +74,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -115,9 +102,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -138,9 +123,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(staffUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(staffUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -165,9 +148,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -188,9 +169,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(staffUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(staffUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -200,9 +179,7 @@ void main() {
       expect(find.text('No enquiries assigned to you'), findsOneWidget);
     });
 
-    testWidgets('should show assignment information for admin users', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should show assignment information for admin users', (WidgetTester tester) async {
       // Arrange
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -216,9 +193,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -248,9 +223,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(staffUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(staffUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -263,9 +236,7 @@ void main() {
       expect(find.byType(AppBar), findsOneWidget);
     });
 
-    testWidgets('should handle role-based filtering logic correctly', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should handle role-based filtering logic correctly', (WidgetTester tester) async {
       // Test admin user
       final adminUser = UserModel(
         uid: 'admin_123',
@@ -278,9 +249,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -303,9 +272,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(staffUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(staffUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -332,9 +299,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(adminUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(adminUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),
@@ -355,9 +320,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            currentUserWithFirestoreProvider.overrideWith(
-              (ref) => Stream.value(staffUser),
-            ),
+            currentUserWithFirestoreProvider.overrideWith((ref) => Stream.value(staffUser)),
           ],
           child: const MaterialApp(home: EnquiriesListScreen()),
         ),

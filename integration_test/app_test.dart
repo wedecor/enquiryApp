@@ -28,9 +28,7 @@ void main() {
       await _clearTestData();
     });
 
-    testWidgets('Complete enquiry workflow: Create → Assign → Complete', (
-      tester,
-    ) async {
+    testWidgets('Complete enquiry workflow: Create → Assign → Complete', (tester) async {
       // Test the complete workflow through database operations
       await _testCompleteWorkflow();
     });
@@ -104,38 +102,30 @@ Future<void> _setupTestData() async {
     });
 
     // Setup default dropdowns
-    await firestore
-        .collection('dropdowns')
-        .doc('event_types')
-        .collection('items')
-        .add({'name': 'Wedding', 'createdAt': FieldValue.serverTimestamp()});
+    await firestore.collection('dropdowns').doc('event_types').collection('items').add({
+      'name': 'Wedding',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-    await firestore
-        .collection('dropdowns')
-        .doc('statuses')
-        .collection('items')
-        .add({'name': 'New', 'createdAt': FieldValue.serverTimestamp()});
+    await firestore.collection('dropdowns').doc('statuses').collection('items').add({
+      'name': 'New',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-    await firestore
-        .collection('dropdowns')
-        .doc('statuses')
-        .collection('items')
-        .add({
-          'name': 'In Progress',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+    await firestore.collection('dropdowns').doc('statuses').collection('items').add({
+      'name': 'In Progress',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-    await firestore
-        .collection('dropdowns')
-        .doc('statuses')
-        .collection('items')
-        .add({'name': 'Completed', 'createdAt': FieldValue.serverTimestamp()});
+    await firestore.collection('dropdowns').doc('statuses').collection('items').add({
+      'name': 'Completed',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-    await firestore
-        .collection('dropdowns')
-        .doc('payment_statuses')
-        .collection('items')
-        .add({'name': 'Pending', 'createdAt': FieldValue.serverTimestamp()});
+    await firestore.collection('dropdowns').doc('payment_statuses').collection('items').add({
+      'name': 'Pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
     print('✅ Test data setup completed');
   } catch (e) {

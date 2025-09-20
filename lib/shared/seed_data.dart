@@ -179,10 +179,7 @@ Future<void> _seedPaymentStatuses(FirebaseFirestore firestore) async {
 /// ```dart
 /// await seedAdminUser(FirebaseAuth.instance, FirebaseFirestore.instance);
 /// ```
-Future<void> seedAdminUser(
-  FirebaseAuth auth,
-  FirebaseFirestore firestore,
-) async {
+Future<void> seedAdminUser(FirebaseAuth auth, FirebaseFirestore firestore) async {
   print('👤 Starting admin user seeding...');
 
   const email = 'ilyas.prime@gmail.com';
@@ -276,10 +273,7 @@ Future<void> seedAdminUser(
 /// ```dart
 /// await seedAllData(FirebaseFirestore.instance);
 /// ```
-Future<void> seedAllData(
-  FirebaseFirestore firestore, {
-  FirebaseAuth? auth,
-}) async {
+Future<void> seedAllData(FirebaseFirestore firestore, {FirebaseAuth? auth}) async {
   print('🚀 Starting complete data seeding...');
 
   final authInstance = auth ?? FirebaseAuth.instance;

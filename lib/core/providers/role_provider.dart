@@ -43,13 +43,10 @@ final roleProvider = StreamProvider<UserRole>((ref) {
         return Stream.value(UserRole.staff);
       }
 
-      final docRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid);
+      final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       return docRef.snapshots().map((snap) {
         final data = snap.data();
-        final roleString =
-            (data != null ? (data['role'] as String?) : null) ?? 'staff';
+        final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
         return roleString == 'admin' ? UserRole.admin : UserRole.staff;
       });
     },
@@ -155,9 +152,7 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
         return Stream.value(null);
       }
 
-      final docRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(authUser.uid);
+      final docRef = FirebaseFirestore.instance.collection('users').doc(authUser.uid);
       return docRef.snapshots().map((snap) {
         final data = snap.data();
         if (data == null) {

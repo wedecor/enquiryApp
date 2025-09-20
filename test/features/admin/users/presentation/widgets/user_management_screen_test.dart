@@ -6,17 +6,13 @@ import 'package:we_decor_enquiries/features/admin/users/presentation/users_provi
 
 void main() {
   group('UserManagementScreen', () {
-    testWidgets('should display empty state when no users', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should display empty state when no users', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             usersStreamProvider.overrideWith((ref, filter) => Stream.value([])),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -30,19 +26,13 @@ void main() {
       expect(find.text('Try adjusting your search or filters'), findsOneWidget);
     });
 
-    testWidgets('should display error state when stream has error', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should display error state when stream has error', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            usersStreamProvider.overrideWith(
-              (ref, filter) => Stream.error('Test error'),
-            ),
+            usersStreamProvider.overrideWith((ref, filter) => Stream.error('Test error')),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -57,19 +47,13 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
     });
 
-    testWidgets('should display loading state initially', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should display loading state initially', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            usersStreamProvider.overrideWith(
-              (ref, filter) => const Stream.empty(),
-            ),
+            usersStreamProvider.overrideWith((ref, filter) => const Stream.empty()),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -81,17 +65,13 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('should display search field and filters', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should display search field and filters', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             usersStreamProvider.overrideWith((ref, filter) => Stream.value([])),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -106,19 +86,13 @@ void main() {
       expect(find.text('Add User'), findsOneWidget);
     });
 
-    testWidgets('should hide Add User button for non-admin users', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should hide Add User button for non-admin users', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             usersStreamProvider.overrideWith((ref, filter) => Stream.value([])),
-            isCurrentUserAdminProvider.overrideWith(
-              (ref) => false,
-            ), // Not admin
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            isCurrentUserAdminProvider.overrideWith((ref) => false), // Not admin
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -144,9 +118,7 @@ void main() {
               ]),
             ),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -158,17 +130,13 @@ void main() {
       expect(find.text('No users found'), findsOneWidget);
     });
 
-    testWidgets('should update search when typing in search field', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should update search when typing in search field', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             usersStreamProvider.overrideWith((ref, filter) => Stream.value([])),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),
@@ -188,17 +156,13 @@ void main() {
       expect(find.text('john'), findsOneWidget);
     });
 
-    testWidgets('should display role and status dropdowns', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('should display role and status dropdowns', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             usersStreamProvider.overrideWith((ref, filter) => Stream.value([])),
             isCurrentUserAdminProvider.overrideWith((ref) => true),
-            paginationStateProvider.overrideWith(
-              (ref) => PaginationStateNotifier(),
-            ),
+            paginationStateProvider.overrideWith((ref) => PaginationStateNotifier()),
           ],
           child: const MaterialApp(home: UserManagementScreen()),
         ),

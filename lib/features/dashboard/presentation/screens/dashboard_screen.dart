@@ -92,11 +92,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(
-              builder: (context) => const EnquiryFormScreen(),
-            ),
-          );
+          Navigator.of(
+            context,
+          ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
         },
         tooltip: 'Add New Enquiry',
         child: const Icon(Icons.add),
@@ -104,11 +102,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildDashboardContent(
-    BuildContext context,
-    UserModel? user,
-    bool isAdmin,
-  ) {
+  Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
     return Column(
       children: [
         // Welcome and Statistics Section
@@ -151,9 +145,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 radius: 25,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
-                  user?.name.isNotEmpty == true
-                      ? user!.name[0].toUpperCase()
-                      : 'U',
+                  user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -168,10 +160,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   children: [
                     Text(
                       'Welcome back, ${user?.name ?? 'User'}!',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       isAdmin ? 'Administrator' : 'Staff Member',
@@ -213,8 +202,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() ==
-              'in_progress';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_progress';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -233,12 +221,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _buildStatCard(
-                'New',
-                newEnquiries.toString(),
-                Icons.fiber_new,
-                Colors.orange,
-              ),
+              child: _buildStatCard('New', newEnquiries.toString(), Icons.fiber_new, Colors.orange),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -264,12 +247,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -278,14 +256,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
+            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
           ],
         ),
       ),
@@ -327,9 +299,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  status == 'All'
-                      ? 'No enquiries found'
-                      : 'No $status enquiries',
+                  status == 'All' ? 'No enquiries found' : 'No $status enquiries',
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -354,28 +324,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: _getStatusColor(
-                    enquiryData['eventStatus'] as String?,
-                  ),
+                  backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
                   child: Text(
                     _getStatusInitial(enquiryData['eventStatus'] as String?),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
                 title: Text(
-                  (enquiryData['customerName'] as String?) ??
-                      'Unknown Customer',
+                  (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      (enquiryData['eventType'] as String?) ?? 'Unknown Event',
-                    ),
+                    Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
                     Text(
                       'Date: ${_formatDate(enquiryData['eventDate'])}',
                       style: const TextStyle(fontSize: 12),
@@ -395,20 +357,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getPriorityColor(
-                          enquiryData['priority'] as String?,
-                        ),
+                        color: _getPriorityColor(enquiryData['priority'] as String?),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _capitalizeFirst(
-                          (enquiryData['priority'] as String?) ?? 'N/A',
-                        ),
+                        _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -423,8 +378,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 onTap: () {
                   Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
-                      builder: (context) =>
-                          EnquiryDetailsScreen(enquiryId: enquiryId),
+                      builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
                     ),
                   );
                 },
@@ -436,11 +390,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(
-    bool isAdmin,
-    String? userId, [
-    String? status,
-  ]) {
+  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
     Query query = FirebaseFirestore.instance.collection('enquiries');
 
     // Apply role-based filtering
@@ -546,10 +496,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Widget _buildNavigationDrawer(
-    AsyncValue<UserModel?> currentUser,
-    bool isAdmin,
-  ) {
+  Widget _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -562,11 +509,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             child: currentUser.when(
               data: (user) => Row(
                 children: [
-                  const Icon(
-                    Icons.account_circle,
-                    size: 20,
-                    color: Colors.white,
-                  ),
+                  const Icon(Icons.account_circle, size: 20, color: Colors.white),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -581,13 +524,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ],
               ),
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-              error: (error, stack) => const Text(
-                'Error loading user',
-                style: TextStyle(color: Colors.white),
-              ),
+              loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
+              error: (error, stack) =>
+                  const Text('Error loading user', style: TextStyle(color: Colors.white)),
             ),
           ),
 
@@ -607,9 +546,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onTap: () {
               Navigator.of(context).pop(); // Close drawer
               Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (context) => const EnquiriesListScreen(),
-                ),
+                MaterialPageRoute<void>(builder: (context) => const EnquiriesListScreen()),
               );
             },
           ),
@@ -620,9 +557,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onTap: () {
               Navigator.of(context).pop(); // Close drawer
               Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (context) => const EnquiryFormScreen(),
-                ),
+                MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
               );
             },
           ),
@@ -634,11 +569,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
                 'Admin Tools',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
               ),
             ),
             _buildMenuItem(
@@ -647,9 +578,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (context) => const UserManagementScreen(),
-                  ),
+                  MaterialPageRoute<void>(builder: (context) => const UserManagementScreen()),
                 );
               },
             ),
@@ -659,9 +588,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (context) => const DropdownManagementScreen(),
-                  ),
+                  MaterialPageRoute<void>(builder: (context) => const DropdownManagementScreen()),
                 );
               },
             ),
@@ -671,9 +598,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onTap: () {
                 Navigator.of(context).pop(); // Close drawer
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (context) => const AnalyticsScreen(),
-                  ),
+                  MaterialPageRoute<void>(builder: (context) => const AnalyticsScreen()),
                 );
               },
             ),
@@ -687,11 +612,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             title: 'Settings',
             onTap: () {
               Navigator.of(context).pop(); // Close drawer
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              );
+              Navigator.of(
+                context,
+              ).push<void>(MaterialPageRoute<void>(builder: (context) => const SettingsScreen()));
             },
           ),
 
@@ -719,5 +642,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       onTap: onTap,
     );
   }
-
 }

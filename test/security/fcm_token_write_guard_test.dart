@@ -12,10 +12,7 @@ void main() {
         .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('.dart'))
-        .where(
-          (f) =>
-              !f.path.endsWith('.g.dart') && !f.path.endsWith('.freezed.dart'),
-        )
+        .where((f) => !f.path.endsWith('.g.dart') && !f.path.endsWith('.freezed.dart'))
         .toList();
 
     final writePattern = RegExp(

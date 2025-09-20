@@ -17,9 +17,7 @@ void main() async {
     print('🚀 Starting seed data test...');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {

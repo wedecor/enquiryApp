@@ -70,10 +70,7 @@ Future<void> runSeedIfNeeded() async {
     print('🔍 Checking if data has already been seeded...');
 
     // Check if seeding has already been completed
-    final seedStatusDoc = await firestore
-        .collection('meta')
-        .doc('seed_status')
-        .get();
+    final seedStatusDoc = await firestore.collection('meta').doc('seed_status').get();
 
     if (seedStatusDoc.exists && seedStatusDoc.data()?['isSeeded'] == true) {
       final timestamp = seedStatusDoc.data()?['timestamp'];
@@ -145,10 +142,7 @@ Future<void> checkSeedStatus() async {
   try {
     print('🔍 Checking current seeding status...');
 
-    final seedStatusDoc = await firestore
-        .collection('meta')
-        .doc('seed_status')
-        .get();
+    final seedStatusDoc = await firestore.collection('meta').doc('seed_status').get();
 
     if (seedStatusDoc.exists) {
       final data = seedStatusDoc.data()!;

@@ -60,10 +60,7 @@ void main() {
         };
 
         final description = _formatChangeDescription(change);
-        expect(
-          description,
-          equals('test@example.com changed Status from "New" to "In Progress"'),
-        );
+        expect(description, equals('test@example.com changed Status from "New" to "In Progress"'));
       });
 
       test('should handle null values in change descriptions', () {
@@ -78,9 +75,7 @@ void main() {
         final description = _formatChangeDescription(change);
         expect(
           description,
-          equals(
-            'test@example.com changed Assignment from "Not Set" to "user123"',
-          ),
+          equals('test@example.com changed Assignment from "Not Set" to "user123"'),
         );
       });
 
@@ -96,9 +91,7 @@ void main() {
         final description = _formatChangeDescription(change);
         expect(
           description,
-          equals(
-            'test@example.com changed Description from "Empty" to "Some description"',
-          ),
+          equals('test@example.com changed Description from "Empty" to "Some description"'),
         );
       });
 
@@ -137,14 +130,8 @@ void main() {
 
       test('should format unknown fields with title case', () {
         expect(_getFieldDisplayName('custom_field'), equals('Custom Field'));
-        expect(
-          _getFieldDisplayName('someOtherField'),
-          equals('Someotherfield'),
-        );
-        expect(
-          _getFieldDisplayName('new_field_name'),
-          equals('New Field Name'),
-        );
+        expect(_getFieldDisplayName('someOtherField'), equals('Someotherfield'));
+        expect(_getFieldDisplayName('new_field_name'), equals('New Field Name'));
       });
 
       test('should handle edge cases', () {
@@ -214,10 +201,7 @@ void main() {
 
         expect(summary['total_changes'], equals(3));
         expect(summary['fields_changed'], containsAll(['status', 'priority']));
-        expect(
-          summary['users_involved'],
-          containsAll(['user1@example.com', 'user2@example.com']),
-        );
+        expect(summary['users_involved'], containsAll(['user1@example.com', 'user2@example.com']));
         expect(summary['last_modified_by'], equals('user1@example.com'));
       });
 
@@ -255,40 +239,25 @@ void main() {
 
         // Test "just now"
         final justNow = now.subtract(const Duration(seconds: 30));
-        expect(
-          _formatRelativeTimestamp(Timestamp.fromDate(justNow)),
-          equals('Just now'),
-        );
+        expect(_formatRelativeTimestamp(Timestamp.fromDate(justNow)), equals('Just now'));
 
         // Test minutes ago
         final minutesAgo = now.subtract(const Duration(minutes: 5));
-        expect(
-          _formatRelativeTimestamp(Timestamp.fromDate(minutesAgo)),
-          equals('5m ago'),
-        );
+        expect(_formatRelativeTimestamp(Timestamp.fromDate(minutesAgo)), equals('5m ago'));
 
         // Test hours ago
         final hoursAgo = now.subtract(const Duration(hours: 2));
-        expect(
-          _formatRelativeTimestamp(Timestamp.fromDate(hoursAgo)),
-          equals('2h ago'),
-        );
+        expect(_formatRelativeTimestamp(Timestamp.fromDate(hoursAgo)), equals('2h ago'));
 
         // Test days ago
         final daysAgo = now.subtract(const Duration(days: 3));
-        expect(
-          _formatRelativeTimestamp(Timestamp.fromDate(daysAgo)),
-          equals('3d ago'),
-        );
+        expect(_formatRelativeTimestamp(Timestamp.fromDate(daysAgo)), equals('3d ago'));
       });
 
       test('should handle future timestamps', () {
         final now = DateTime.now();
         final future = now.add(const Duration(hours: 1));
-        expect(
-          _formatRelativeTimestamp(Timestamp.fromDate(future)),
-          equals('Just now'),
-        );
+        expect(_formatRelativeTimestamp(Timestamp.fromDate(future)), equals('Just now'));
       });
     });
   });
@@ -379,9 +348,7 @@ String _formatValue(dynamic value) {
 }
 
 /// Helper function to calculate change summary
-Map<String, dynamic> _calculateChangeSummary(
-  List<Map<String, dynamic>> changes,
-) {
+Map<String, dynamic> _calculateChangeSummary(List<Map<String, dynamic>> changes) {
   final summary = {
     'total_changes': changes.length,
     'last_modified': changes.isNotEmpty ? changes.first['timestamp'] : null,
@@ -394,13 +361,11 @@ Map<String, dynamic> _calculateChangeSummary(
     final fieldChanged = change['field_changed'] as String?;
     final userEmail = change['user_email'] as String?;
 
-    if (fieldChanged != null &&
-        !(summary['fields_changed'] as List).contains(fieldChanged)) {
+    if (fieldChanged != null && !(summary['fields_changed'] as List).contains(fieldChanged)) {
       summary['fields_changed'].add(fieldChanged);
     }
 
-    if (userEmail != null &&
-        !(summary['users_involved'] as List).contains(userEmail)) {
+    if (userEmail != null && !(summary['users_involved'] as List).contains(userEmail)) {
       summary['users_involved'].add(userEmail);
     }
   }

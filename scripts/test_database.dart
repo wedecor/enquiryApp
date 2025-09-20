@@ -10,9 +10,7 @@ void main() async {
     print('🚀 Testing We Decor Enquiries Database Structure...');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -26,20 +24,14 @@ void main() async {
     print('\n📋 Testing Collection Structure...');
 
     try {
-      await firestore
-          .collection('enquiries')
-          .limit(1)
-          .get();
+      await firestore.collection('enquiries').limit(1).get();
       print('✅ enquiries/ collection exists');
     } catch (e) {
       print('❌ enquiries/ collection not found: $e');
     }
 
     try {
-      await firestore
-          .collection('dropdowns')
-          .limit(1)
-          .get();
+      await firestore.collection('dropdowns').limit(1).get();
       print('✅ dropdowns/ collection exists');
     } catch (e) {
       print('❌ dropdowns/ collection not found: $e');
@@ -49,24 +41,14 @@ void main() async {
     print('\n📊 Testing Dropdown Subcollections...');
 
     try {
-      await firestore
-          .collection('dropdowns')
-          .doc('event_types')
-          .collection('items')
-          .limit(1)
-          .get();
+      await firestore.collection('dropdowns').doc('event_types').collection('items').limit(1).get();
       print('✅ dropdowns/event_types/items/ subcollection exists');
     } catch (e) {
       print('❌ dropdowns/event_types/items/ subcollection not found: $e');
     }
 
     try {
-      await firestore
-          .collection('dropdowns')
-          .doc('statuses')
-          .collection('items')
-          .limit(1)
-          .get();
+      await firestore.collection('dropdowns').doc('statuses').collection('items').limit(1).get();
       print('✅ dropdowns/statuses/items/ subcollection exists');
     } catch (e) {
       print('❌ dropdowns/statuses/items/ subcollection not found: $e');
@@ -145,29 +127,21 @@ void main() async {
       print('✅ Test enquiry created with ID: ${docRef.id}');
 
       // Create financial subcollection
-      await firestore
-          .collection('enquiries')
-          .doc(docRef.id)
-          .collection('financial')
-          .add({
-            'totalCost': 5000.0,
-            'advancePaid': 1000.0,
-            'paymentStatus': 'Partial',
-          });
+      await firestore.collection('enquiries').doc(docRef.id).collection('financial').add({
+        'totalCost': 5000.0,
+        'advancePaid': 1000.0,
+        'paymentStatus': 'Partial',
+      });
       print('✅ Financial subcollection created');
 
       // Create history subcollection
-      await firestore
-          .collection('enquiries')
-          .doc(docRef.id)
-          .collection('history')
-          .add({
-            'fieldChanged': 'eventStatus',
-            'oldValue': '',
-            'newValue': 'Enquired',
-            'changedBy': 'test-user',
-            'timestamp': FieldValue.serverTimestamp(),
-          });
+      await firestore.collection('enquiries').doc(docRef.id).collection('history').add({
+        'fieldChanged': 'eventStatus',
+        'oldValue': '',
+        'newValue': 'Enquired',
+        'changedBy': 'test-user',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
       print('✅ History subcollection created');
 
       // Clean up test data
@@ -185,9 +159,7 @@ void main() async {
     print('   • enquiries/{id}/history/ subcollection (for audit trail)');
     print('   • dropdowns/event_types/items/ (for event type options)');
     print('   • dropdowns/statuses/items/ (for status options)');
-    print(
-      '   • dropdowns/payment_statuses/items/ (for payment status options)',
-    );
+    print('   • dropdowns/payment_statuses/items/ (for payment status options)');
   } catch (e) {
     print('❌ Error during database test: $e');
     exit(1);

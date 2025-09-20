@@ -34,8 +34,7 @@ class FirestoreService {
 
   // Collection references
   /// Reference to the users collection in Firestore.
-  CollectionReference get _usersCollection =>
-      _firestore.collection(FirestoreCollections.users);
+  CollectionReference get _usersCollection => _firestore.collection(FirestoreCollections.users);
 
   /// Reference to the enquiries collection in Firestore.
   CollectionReference get _enquiriesCollection =>
@@ -264,9 +263,7 @@ class FirestoreService {
   /// });
   /// ```
   Stream<QuerySnapshot> getEnquiries() {
-    return _enquiriesCollection
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    return _enquiriesCollection.orderBy('createdAt', descending: true).snapshots();
   }
 
   /// Retrieves a real-time stream of enquiries filtered by status.
@@ -342,10 +339,7 @@ class FirestoreService {
   ///   'assignedTo': 'staff456',
   /// });
   /// ```
-  Future<void> updateEnquiry(
-    String enquiryId,
-    Map<String, dynamic> data,
-  ) async {
+  Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
@@ -513,9 +507,7 @@ class FirestoreService {
   Future<bool> areDropdownsInitialized() async {
     final eventTypesSnapshot = await _eventTypesCollection.limit(1).get();
     final statusesSnapshot = await _statusesCollection.limit(1).get();
-    final paymentStatusesSnapshot = await _paymentStatusesCollection
-        .limit(1)
-        .get();
+    final paymentStatusesSnapshot = await _paymentStatusesCollection.limit(1).get();
 
     return eventTypesSnapshot.docs.isNotEmpty &&
         statusesSnapshot.docs.isNotEmpty &&
