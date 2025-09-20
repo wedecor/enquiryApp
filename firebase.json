@@ -18,16 +18,25 @@
     ]
   },
   "hosting": {
-    "public": "build/web",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+    "headers": [
+      {
+        "source": "**/*.apk",
+        "headers": [
+          { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+          { "key": "Cache-Control", "value": "no-store, max-age=0" }
+        ]
+      }
+    ],
     "rewrites": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/pwa/rc1/**",
+        "destination": "/pwa/rc1/index.html"
       }
     ]
   },
