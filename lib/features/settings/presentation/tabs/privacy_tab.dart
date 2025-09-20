@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../legal/privacy_policy_screen.dart';
 import '../../../legal/terms_of_service_screen.dart';
 import '../../../../core/app_config.dart';
+import '../../../../core/feedback/feedback_sheet.dart';
 import '../../../../core/services/consent_service.dart';
 
 class PrivacyTab extends ConsumerStatefulWidget {
@@ -138,6 +139,25 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 ).push(MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen())),
               ),
             ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Help & Support
+        const Text(
+          'Help & Support',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.feedback),
+            title: const Text('Send Feedback'),
+            subtitle: const Text('Report issues or suggest improvements'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => showFeedbackSheet(context),
           ),
         ),
 
