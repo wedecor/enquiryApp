@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>We Decor Enquiries – Internal RC1</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;margin:24px;max-width:720px;line-height:1.6}
+    h1{color:#2563eb;margin-bottom:8px}
+    .version{background:#f1f5f9;padding:4px 12px;border-radius:16px;font-size:0.9rem;display:inline-block;margin-bottom:16px}
+    .btn{display:inline-block;padding:12px 16px;border-radius:10px;border:1px solid #222;text-decoration:none;background:#2563eb;color:white;font-weight:600;margin:8px 8px 8px 0}
+    .btn:hover{background:#1d4ed8}
+    .btn.secondary{background:white;color:#222;border:1px solid #ccc}
+    .btn.secondary:hover{background:#f8fafc}
+    .card{border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin:16px 0;background:#fafafa}
+    .qr{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+    .qr-code{min-width:160px}
+    code{background:#f6f8fa;padding:2px 6px;border-radius:6px;font-family:Monaco,Consolas,monospace;font-size:0.85rem;word-break:break-all}
+    .security{background:#fef3c7;border:1px solid #f59e0b;color:#92400e}
+    .install{background:#ecfdf5;border:1px solid #10b981;color:#047857}
+    ul{margin:12px 0}
+    li{margin:6px 0}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:0.9rem;color:#64748b}
+    .status{display:inline-block;padding:2px 8px;border-radius:8px;font-size:0.8rem;font-weight:600;margin-left:8px}
+    .status.rc{background:#fef3c7;color:#92400e}
+  </style>
+</head>
+<body>
+  <h1>We Decor Enquiries <span class="status rc">Internal RC1</span></h1>
+  <div class="version">v1.0.1+2 • Build Date: September 21, 2024</div>
+  
+  <p>Download the signed, minified APK for internal testing. Scan the QR code with your Android device or use the direct download link.</p>
+
+  <div class="card qr">
+    <div class="qr-code">
+      <div id="qrcode"></div>
+    </div>
+    <div>
+      <a class="btn" href="./app-release.apk" download>📱 Download APK (54.3MB)</a>
+      <a class="btn secondary" href="./sha256.txt" target="_blank">🔒 Verify Checksum</a>
+      <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
+    </div>
+  </div>
+
+  <div class="card security">
+    <h3>🔐 Security Verification</h3>
+    <p><strong>Always verify the APK integrity before installation:</strong></p>
+    <p>Run: <code>shasum -a 256 app-release.apk</code> and compare with the SHA256 above.</p>
+  </div>
+
+  <div class="card">
+    <h3>✨ What's New in v1.0.1</h3>
+    <ul>
+      <li><strong>Enhanced Monitoring:</strong> Crashlytics + Performance monitoring with user consent</li>
+      <li><strong>Privacy First:</strong> GDPR-compliant analytics, PII redaction in logs</li>
+      <li><strong>Offline Support:</strong> Smart network awareness with retry queue</li>
+      <li><strong>Security:</strong> R8 minification + obfuscation enabled</li>
+      <li><strong>Legal Compliance:</strong> Privacy Policy & Terms screens</li>
+    </ul>
+    <p><a class="btn secondary" href="./RELEASE_NOTES_1.0.1.md" target="_blank">📋 View Full Release Notes</a></p>
+  </div>
+
+  <div class="card install">
+    <h3>📲 Installation Instructions</h3>
+    <ol>
+      <li>Download the APK file to your Android device</li>
+      <li>Go to <strong>Settings → Security → Install unknown apps</strong></li>
+      <li>Enable installation for your browser or file manager</li>
+      <li>Open the downloaded APK file and tap "Install"</li>
+      <li>Launch "We Decor Enquiries" from your app drawer</li>
+    </ol>
+    <p><strong>Note:</strong> This is a signed release build with production monitoring enabled.</p>
+  </div>
+
+  <div class="card">
+    <h3>🌐 Web Version Available</h3>
+    <p>Prefer the web version? Try our Progressive Web App:</p>
+    <a class="btn" href="/pwa/rc1/" target="_blank">🌍 Open Web App</a>
+    <p><small>Works offline and can be added to your home screen!</small></p>
+  </div>
+
+  <div class="footer">
+    <p><strong>⚠️ Internal Release Only</strong> - Do not distribute outside the organization</p>
+    <p><strong>Feedback:</strong> #wedecor-app Slack channel | <strong>Support:</strong> support@wedecor.com</p>
+    <p><strong>Environment:</strong> Production | <strong>Firebase Project:</strong> wedecor-enquiries</p>
+  </div>
+
+  <!-- Lightweight QR lib via CDN -->
+  <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    // Generate QR code for APK download
+    const apkUrl = new URL('./app-release.apk', window.location.href).href;
+    new QRCode(document.getElementById("qrcode"), { 
+      text: apkUrl, 
+      width: 160, 
+      height: 160,
+      colorDark: "#2563eb",
+      colorLight: "#ffffff"
+    });
+
+    // Load SHA256 from file
+    fetch('./sha256.txt')
+      .then(r => r.text())
+      .then(t => {
+        const sha256 = t.trim().split(' ')[0]; // Extract just the hash part
+        document.getElementById('sha256').textContent = sha256;
+      })
+      .catch(e => {
+        console.error('Failed to load SHA256:', e);
+        document.getElementById('sha256').textContent = 'Error loading checksum';
+      });
+  </script>
+</body>
+</html>
