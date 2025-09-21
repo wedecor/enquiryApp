@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/appearance_controller.dart';
 import '../../../../core/theme/tokens.dart';
@@ -279,6 +280,15 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     });
 
     try {
+      // Debug: Check authentication state
+      final uid = ref.read(currentUserUidProvider);
+      print('DEBUG PREFERENCES: Current UID: $uid');
+      print('DEBUG PREFERENCES: Settings to save: ${_currentSettings!.toJson()}');
+      
+      if (uid == null) {
+        throw Exception('User not authenticated - UID is null');
+      }
+
       final updateSettings = ref.read(updateUserSettingsProvider);
       await updateSettings(_currentSettings!);
 
@@ -292,6 +302,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         'theme': _currentSettings!.theme,
         'language': _currentSettings!.language,
         'timezone': _currentSettings!.timezone,
+        'uid': uid,
       });
 
       if (mounted) {
@@ -302,13 +313,17 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         _isSaving = false;
       });
 
+      print('DEBUG PREFERENCES ERROR: $e');
+      print('DEBUG PREFERENCES ERROR TYPE: ${e.runtimeType}');
+
       safeLog('preferences_save_error', {
         'error': e.toString(),
         'errorType': e.runtimeType.toString(),
+        'uid': ref.read(currentUserUidProvider),
       });
 
       if (mounted) {
-        _showSnackBar('Failed to save preferences', isError: true);
+        _showSnackBar('Failed to save preferences: ${e.toString()}', isError: true);
       }
     }
   }
