@@ -1,0 +1,23 @@
+{
+  "version": "1.0.1",
+  "buildNumber": 5,
+  "releaseDate": "2024-09-21",
+  "releaseNotes": "🐛 Critical Fixes:\n• Fixed infinite loading in change history\n• Resolved user invitation memory errors\n• Fixed PWA manifest issues\n• Enhanced Firebase Functions (256MB memory)\n• Better error handling with retry options",
+  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/app-release.apk",
+  "sha256": "2aba1b47a5503356c0f880ba43e164585fcccb58fe9a10b18e9b89b180b52a05",
+  "forceUpdate": false,
+  "minSupportedBuildNumber": 3,
+  "features": [
+    "Dark mode support",
+    "Advanced filters and saved views", 
+    "In-app feedback system",
+    "Accessibility improvements",
+    "Performance monitoring"
+  ],
+  "bugFixes": [
+    "Change history infinite loading",
+    "User invitation memory errors",
+    "PWA manifest 404 errors",
+    "Firebase Functions timeout issues"
+  ]
+}
