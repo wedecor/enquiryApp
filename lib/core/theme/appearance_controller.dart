@@ -89,12 +89,12 @@ class AppearanceController extends StateNotifier<AppearanceMode> {
 final currentThemeProvider = Provider<ThemeData>((ref) {
   final appearanceMode = ref.watch(appearanceModeProvider);
   final context = ref.watch(materialAppContextProvider);
-  
+
   if (context != null) {
     final brightness = appearanceMode.getBrightness(context);
     return brightness == Brightness.dark ? AppTheme.darkTheme : AppTheme.lightTheme;
   }
-  
+
   // Fallback to light theme if context is not available
   return AppTheme.lightTheme;
 });
@@ -109,11 +109,11 @@ final currentColorSchemeProvider = Provider<ColorScheme>((ref) {
 final currentBrightnessProvider = Provider<Brightness>((ref) {
   final appearanceMode = ref.watch(appearanceModeProvider);
   final context = ref.watch(materialAppContextProvider);
-  
+
   if (context != null) {
     return appearanceMode.getBrightness(context);
   }
-  
+
   return Brightness.light;
 });
 
@@ -148,12 +148,9 @@ class ThemeUtils {
   ThemeUtils._();
 
   /// Get semantic color based on current theme
-  static Color getSemanticColor(
-    BuildContext context,
-    SemanticColorType type,
-  ) {
+  static Color getSemanticColor(BuildContext context, SemanticColorType type) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     switch (type) {
       case SemanticColorType.success:
         return AppColorScheme.success;
@@ -167,13 +164,10 @@ class ThemeUtils {
   }
 
   /// Get semantic container color based on current theme
-  static Color getSemanticContainerColor(
-    BuildContext context,
-    SemanticColorType type,
-  ) {
+  static Color getSemanticContainerColor(BuildContext context, SemanticColorType type) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    
+
     switch (type) {
       case SemanticColorType.success:
         return isDark ? AppColorScheme.successContainerDark : AppColorScheme.successContainerLight;
@@ -187,13 +181,10 @@ class ThemeUtils {
   }
 
   /// Get semantic on-color based on current theme
-  static Color getSemanticOnColor(
-    BuildContext context,
-    SemanticColorType type,
-  ) {
+  static Color getSemanticOnColor(BuildContext context, SemanticColorType type) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    
+
     switch (type) {
       case SemanticColorType.success:
         return isDark ? AppColorScheme.onSuccessDark : AppColorScheme.onSuccessLight;
@@ -208,9 +199,4 @@ class ThemeUtils {
 }
 
 /// Enum for semantic color types
-enum SemanticColorType {
-  success,
-  warning,
-  info,
-  error,
-}
+enum SemanticColorType { success, warning, info, error }

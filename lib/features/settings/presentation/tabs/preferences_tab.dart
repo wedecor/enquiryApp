@@ -73,10 +73,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Appearance',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             Text(
               'Choose how the app looks',

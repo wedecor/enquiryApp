@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
@@ -38,18 +39,16 @@ class ErrorState extends StatelessWidget {
               size: AppTokens.iconXLarge * 2,
               color: colorScheme.error,
             ),
-            
+
             SizedBox(height: AppTokens.space6),
-            
+
             // Error message
             Text(
               message,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
-              ),
+              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
               textAlign: TextAlign.center,
             ),
-            
+
             // Error details (if provided and in debug mode)
             if (error != null && kDebugMode) ...[
               SizedBox(height: AppTokens.space4),
@@ -69,7 +68,7 @@ class ErrorState extends StatelessWidget {
                 ),
               ),
             ],
-            
+
             // Retry button
             if (onRetry != null) ...[
               SizedBox(height: AppTokens.space6),
@@ -92,11 +91,7 @@ class ErrorState extends StatelessWidget {
 
 /// Error state for network connectivity issues
 class NetworkErrorState extends StatelessWidget {
-  const NetworkErrorState({
-    super.key,
-    this.onRetry,
-    this.padding,
-  });
+  const NetworkErrorState({super.key, this.onRetry, this.padding});
 
   final VoidCallback? onRetry;
   final EdgeInsetsGeometry? padding;
@@ -115,11 +110,7 @@ class NetworkErrorState extends StatelessWidget {
 
 /// Error state for authentication issues
 class AuthErrorState extends StatelessWidget {
-  const AuthErrorState({
-    super.key,
-    this.onRetry,
-    this.padding,
-  });
+  const AuthErrorState({super.key, this.onRetry, this.padding});
 
   final VoidCallback? onRetry;
   final EdgeInsetsGeometry? padding;
@@ -138,11 +129,7 @@ class AuthErrorState extends StatelessWidget {
 
 /// Error state for permission issues
 class PermissionErrorState extends StatelessWidget {
-  const PermissionErrorState({
-    super.key,
-    this.onRetry,
-    this.padding,
-  });
+  const PermissionErrorState({super.key, this.onRetry, this.padding});
 
   final VoidCallback? onRetry;
   final EdgeInsetsGeometry? padding;
@@ -189,12 +176,7 @@ class DataLoadErrorState extends StatelessWidget {
 
 /// Error state for export failures
 class ExportErrorState extends StatelessWidget {
-  const ExportErrorState({
-    super.key,
-    this.error,
-    this.onRetry,
-    this.padding,
-  });
+  const ExportErrorState({super.key, this.error, this.onRetry, this.padding});
 
   final Object? error;
   final VoidCallback? onRetry;
@@ -215,12 +197,7 @@ class ExportErrorState extends StatelessWidget {
 
 /// Error state for upload failures
 class UploadErrorState extends StatelessWidget {
-  const UploadErrorState({
-    super.key,
-    this.error,
-    this.onRetry,
-    this.padding,
-  });
+  const UploadErrorState({super.key, this.error, this.onRetry, this.padding});
 
   final Object? error;
   final VoidCallback? onRetry;
@@ -241,12 +218,7 @@ class UploadErrorState extends StatelessWidget {
 
 /// Error state for validation failures
 class ValidationErrorState extends StatelessWidget {
-  const ValidationErrorState({
-    super.key,
-    required this.message,
-    this.onRetry,
-    this.padding,
-  });
+  const ValidationErrorState({super.key, required this.message, this.onRetry, this.padding});
 
   final String message;
   final VoidCallback? onRetry;
@@ -266,12 +238,7 @@ class ValidationErrorState extends StatelessWidget {
 
 /// Error state for server errors
 class ServerErrorState extends StatelessWidget {
-  const ServerErrorState({
-    super.key,
-    this.error,
-    this.onRetry,
-    this.padding,
-  });
+  const ServerErrorState({super.key, this.error, this.onRetry, this.padding});
 
   final Object? error;
   final VoidCallback? onRetry;
@@ -280,7 +247,7 @@ class ServerErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ErrorState(
-      icon: Icons.server_outlined,
+      icon: Icons.dns_outlined,
       message: 'Server error occurred.\nPlease try again later.',
       error: error,
       onRetry: onRetry,
@@ -292,11 +259,7 @@ class ServerErrorState extends StatelessWidget {
 
 /// Error state for timeout errors
 class TimeoutErrorState extends StatelessWidget {
-  const TimeoutErrorState({
-    super.key,
-    this.onRetry,
-    this.padding,
-  });
+  const TimeoutErrorState({super.key, this.onRetry, this.padding});
 
   final VoidCallback? onRetry;
   final EdgeInsetsGeometry? padding;

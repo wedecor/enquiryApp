@@ -95,7 +95,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentTheme = ref.watch(currentThemeProvider);
-    
+
     return ThemeContextProvider(
       child: MaterialApp(
         title: 'We Decor Enquiries',

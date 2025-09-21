@@ -7,7 +7,9 @@ import '../../domain/enquiry.dart';
 import 'filters_state.dart';
 
 /// Provider for the current enquiry filters
-final enquiryFiltersProvider = StateNotifierProvider<EnquiryFiltersController, EnquiryFilters>((ref) {
+final enquiryFiltersProvider = StateNotifierProvider<EnquiryFiltersController, EnquiryFilters>((
+  ref,
+) {
   return EnquiryFiltersController(ref);
 });
 
@@ -15,7 +17,7 @@ final enquiryFiltersProvider = StateNotifierProvider<EnquiryFiltersController, E
 final filteredEnquiriesProvider = FutureProvider<List<Enquiry>>((ref) {
   final filters = ref.watch(enquiryFiltersProvider);
   final repository = ref.watch(enquiryRepositoryProvider);
-  
+
   return repository.getFilteredEnquiries(filters);
 });
 
@@ -23,7 +25,7 @@ final filteredEnquiriesProvider = FutureProvider<List<Enquiry>>((ref) {
 final locallyFilteredEnquiriesProvider = Provider<List<Enquiry>>((ref) {
   final allEnquiriesAsync = ref.watch(enquiryRepositoryProvider).getEnquiries();
   final filters = ref.watch(enquiryFiltersProvider);
-  
+
   return allEnquiriesAsync.when(
     data: (enquiries) => _applyLocalFilters(enquiries, filters),
     loading: () => [],
@@ -143,13 +145,16 @@ class EnquiryFiltersController extends StateNotifier<EnquiryFilters> {
     if (state.searchQuery?.isNotEmpty ?? false) {
       // Note: Firestore doesn't support full-text search natively
       // This would need to be handled client-side or with a search service
-      Logger.warning('Search query not applied to Firestore query (client-side filtering)', tag: 'Filters');
+      Logger.warning(
+        'Search query not applied to Firestore query (client-side filtering)',
+        tag: 'Filters',
+      );
     }
 
     // Apply sorting
     final orderByField = state.sortBy.field;
     final descending = state.sortOrder == SortOrder.descending;
-    
+
     if (orderByField == 'createdAt' || orderByField == 'updatedAt') {
       query = query.orderBy(orderByField, descending: descending);
     } else {
@@ -191,34 +196,30 @@ List<Enquiry> _applyLocalFilters(List<Enquiry> enquiries, EnquiryFilters filters
 
   // Apply date range filter
   if (filters.dateRange != null) {
-    filteredEnquiries = filteredEnquiries
-        .where((enquiry) {
-          if (enquiry.eventDate == null) return false;
-          final eventDate = enquiry.eventDate!;
-          return eventDate.isAfter(filters.dateRange!.start) &&
-                 eventDate.isBefore(filters.dateRange!.end);
-        })
-        .toList();
+    filteredEnquiries = filteredEnquiries.where((enquiry) {
+      if (enquiry.eventDate == null) return false;
+      final eventDate = enquiry.eventDate!;
+      return eventDate.isAfter(filters.dateRange!.start) &&
+          eventDate.isBefore(filters.dateRange!.end);
+    }).toList();
   }
 
   // Apply search query
   if (filters.searchQuery?.isNotEmpty ?? false) {
     final query = filters.searchQuery!.toLowerCase();
-    filteredEnquiries = filteredEnquiries
-        .where((enquiry) {
-          return enquiry.customerName.toLowerCase().contains(query) ||
-                 enquiry.customerEmail.toLowerCase().contains(query) ||
-                 enquiry.customerPhone.toLowerCase().contains(query) ||
-                 enquiry.eventType.toLowerCase().contains(query) ||
-                 enquiry.notes.toLowerCase().contains(query);
-        })
-        .toList();
+    filteredEnquiries = filteredEnquiries.where((enquiry) {
+      return enquiry.customerName.toLowerCase().contains(query) ||
+          enquiry.customerEmail.toLowerCase().contains(query) ||
+          enquiry.customerPhone.toLowerCase().contains(query) ||
+          enquiry.eventType.toLowerCase().contains(query) ||
+          enquiry.notes.toLowerCase().contains(query);
+    }).toList();
   }
 
   // Apply sorting
   filteredEnquiries.sort((a, b) {
     int comparison = 0;
-    
+
     switch (filters.sortBy) {
       case EnquirySortBy.createdAt:
         comparison = a.createdAt.compareTo(b.createdAt);
@@ -255,7 +256,7 @@ List<Enquiry> _applyLocalFilters(List<Enquiry> enquiries, EnquiryFilters filters
 final filterOptionsProvider = FutureProvider<FilterOptions>((ref) async {
   final repository = ref.watch(enquiryRepositoryProvider);
   final enquiries = await repository.getEnquiries();
-  
+
   return FilterOptions.fromEnquiries(enquiries);
 });
 
@@ -276,16 +277,17 @@ class FilterOptions {
   factory FilterOptions.fromEnquiries(List<Enquiry> enquiries) {
     final statuses = enquiries.map((e) => e.status).toSet().toList()..sort();
     final eventTypes = enquiries.map((e) => e.eventType).toSet().toList()..sort();
-    final assignees = enquiries
-        .map((e) => e.assignedTo)
-        .where((assignee) => assignee != null && assignee.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
+    final assignees =
+        enquiries
+            .map((e) => e.assignedTo)
+            .where((assignee) => assignee != null && assignee.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     DateTime? earliestDate;
     DateTime? latestDate;
-    
+
     for (final enquiry in enquiries) {
       if (enquiry.eventDate != null) {
         if (earliestDate == null || enquiry.eventDate!.isBefore(earliestDate)) {

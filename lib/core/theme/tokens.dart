@@ -1,16 +1,18 @@
+import 'package:flutter/material.dart';
+
 /// Design tokens for consistent spacing, sizing, and visual elements
 class AppTokens {
   // Prevent instantiation
   AppTokens._();
 
   // === SPACING ===
-  static const double space1 = 4.0;   // 0.25rem
-  static const double space2 = 8.0;   // 0.5rem
-  static const double space3 = 12.0;  // 0.75rem
-  static const double space4 = 16.0;  // 1rem
-  static const double space5 = 20.0;  // 1.25rem
-  static const double space6 = 24.0;  // 1.5rem
-  static const double space8 = 32.0;  // 2rem
+  static const double space1 = 4.0; // 0.25rem
+  static const double space2 = 8.0; // 0.5rem
+  static const double space3 = 12.0; // 0.75rem
+  static const double space4 = 16.0; // 1rem
+  static const double space5 = 20.0; // 1.25rem
+  static const double space6 = 24.0; // 1.5rem
+  static const double space8 = 32.0; // 2rem
   static const double space10 = 40.0; // 2.5rem
   static const double space12 = 48.0; // 3rem
   static const double space16 = 64.0; // 4rem
@@ -215,42 +217,22 @@ class AppShadows {
   AppShadows._();
 
   static List<BoxShadow> get elevation1 => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 1,
-      offset: const Offset(0, 1),
-    ),
+    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 1, offset: const Offset(0, 1)),
   ];
 
   static List<BoxShadow> get elevation2 => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 3,
-      offset: const Offset(0, 2),
-    ),
+    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 3, offset: const Offset(0, 2)),
   ];
 
   static List<BoxShadow> get elevation3 => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 6,
-      offset: const Offset(0, 4),
-    ),
+    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 4)),
   ];
 
   static List<BoxShadow> get elevation4 => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 8,
-      offset: const Offset(0, 6),
-    ),
+    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 6)),
   ];
 
   static List<BoxShadow> get elevation5 => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.1),
-      blurRadius: 12,
-      offset: const Offset(0, 8),
-    ),
+    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 12, offset: const Offset(0, 8)),
   ];
 }
