@@ -29,16 +29,16 @@
 </head>
 <body>
   <h1>We Decor Enquiries <span class="status rc3">RC3 - Updated</span></h1>
-  <div class="version">v1.0.1+5 • Build Date: September 21, 2024 • Critical Fixes Applied</div>
+  <div class="version">v1.0.1+6 • Build Date: September 21, 2024 • All Critical Fixes Applied</div>
   
-  <p>Download updated RC3 with critical bug fixes for history loading and user invitations. Production-ready with enhanced stability.</p>
+  <p>Download final RC3 with all critical fixes: email invitations, user management, preferences saving, and manual update checking. Production-ready with enhanced stability.</p>
 
   <div class="card qr">
     <div class="qr-code">
       <div id="qrcode"></div>
     </div>
     <div>
-      <a class="btn" href="./app-release.apk" download>📱 Download RC3 APK (55.6MB)</a>
+      <a class="btn" href="./app-release.apk" download>📱 Download RC3 APK (55.7MB)</a>
       <a class="btn secondary" href="./sha256.txt" target="_blank">🔒 Verify Checksum</a>
       <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
     </div>
@@ -50,16 +50,18 @@
     <p>Run: <code>shasum -a 256 app-release.apk</code> and compare with the SHA256 above.</p>
   </div>
 
-  <div class="card" style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e">
-    <h3>🔄 RC3 Critical Updates (v1.0.1+5)</h3>
+  <div class="card" style="background:#dcfce7;border:1px solid #16a34a;color:#166534">
+    <h3>✅ RC3 Final - All Issues Fixed (v1.0.1+6)</h3>
     <ul>
+      <li><strong>Email Invitations Fixed:</strong> Firebase Functions v2 compatibility - emails now working!</li>
+      <li><strong>User Management Fixed:</strong> No more type casting crashes when loading users</li>
+      <li><strong>Preferences Saving Fixed:</strong> Resolved provider conflicts preventing saves</li>
       <li><strong>Change History Fixed:</strong> No more infinite loading in enquiry details</li>
-      <li><strong>User Invitations Fixed:</strong> Resolved memory errors and AppCheck issues</li>
       <li><strong>PWA Improvements:</strong> Web version manifest.json issues resolved</li>
-      <li><strong>Enhanced Error Handling:</strong> Better user feedback with retry mechanisms</li>
+      <li><strong>Update Notifications:</strong> Added manual "Check for Updates" button</li>
       <li><strong>Firebase Functions:</strong> Increased memory (256MB) and timeout (60s)</li>
     </ul>
-    <p><strong>⚠️ Important:</strong> If you have the previous RC3 version, please update to get these critical fixes.</p>
+    <p><strong>🎉 Status:</strong> Production ready - all critical issues resolved!</p>
   </div>
 
   <div class="card improvements">
@@ -67,6 +69,7 @@
     <ul>
       <li><strong>Dark Mode Support:</strong> Settings → Preferences → Appearance</li>
       <li><strong>Advanced Filters:</strong> Faceted search with saved views</li>
+      <li><strong>Manual Update Check:</strong> Settings → Account → Check for Updates</li>
       <li><strong>In-App Feedback:</strong> Settings → Privacy → Send Feedback</li>
       <li><strong>Accessibility:</strong> Screen reader support and proper tap targets</li>
       <li><strong>Performance Monitoring:</strong> Real-time health dashboards</li>
