@@ -46,6 +46,12 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- URL scheme allowlist for external app integration -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>whatsapp</string>
+	</array>
+	
 	<!-- Permission usage descriptions required by App Store -->
 	<key>NSCameraUsageDescription</key>
 	<string>We Decor needs camera access to capture event and enquiry photos.</string>

@@ -472,6 +472,25 @@ flutter build apk --release
 - **[RBAC Quick Reference](docs/RBAC_QUICKREF.md)**: Role matrix and 3-layer gating checklist  
 - **[Planned Features](docs/PLANNED_FEATURES.md)**: Future role enhancements and roadmap
 
+## 📞 Contact Shortcuts
+
+The app includes integrated contact functionality for better customer communication:
+
+- **Call Integration**: Direct phone dialer access from enquiry details
+- **WhatsApp Integration**: Native app or web fallback with prefilled messages
+- **Cross-platform Support**: Works on Android, iOS, and Web with appropriate fallbacks
+- **Accessibility**: Full screen reader support and minimum 48dp tap targets
+
+### **Platform Requirements**
+- **iOS**: Requires `LSApplicationQueriesSchemes` for WhatsApp (already configured)
+- **Web/Desktop**: Falls back to WhatsApp Web and may not support calling (copy number fallback provided)
+- **Android**: Full native support for both calling and WhatsApp
+
+### **Privacy & Security**
+- **No PII Logging**: Phone numbers are not logged in audit trails
+- **Audit Trail**: Contact attempts are logged for admin users
+- **Error Handling**: Graceful fallbacks with copy-to-clipboard options
+
 ## 📚 Documentation
 
 - **API Documentation**: Run `dart doc` to generate documentation

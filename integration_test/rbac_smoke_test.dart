@@ -4,10 +4,10 @@ import 'package:integration_test/integration_test.dart';
 import 'package:we_decor_enquiries/main.dart' as app;
 
 /// RBAC Integration Smoke Tests
-/// 
+///
 /// These tests verify that Role-Based Access Control is properly enforced
 /// in the UI layer by testing Staff vs Admin user experiences.
-/// 
+///
 /// Test Coverage:
 /// - Staff users cannot see admin-only UI elements
 /// - Admin users can see all UI elements
@@ -220,7 +220,7 @@ Future<void> _verifyAdminEnquiryListAccess(WidgetTester tester) async {
   // Verify admin can see all action buttons
   expect(find.byIcon(Icons.edit), findsWidgets);
   expect(find.text('Export All'), findsOneWidget);
-  
+
   // Check for admin-only actions (if enquiries exist)
   final enquiryCards = find.byType(Card);
   if (enquiryCards.evaluate().isNotEmpty) {
