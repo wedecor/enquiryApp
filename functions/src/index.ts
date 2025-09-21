@@ -10,8 +10,8 @@ import * as nodemailer from "nodemailer";
 
 setGlobalOptions({
   region: "asia-south1",
-  memory: "128MiB",
-  timeoutSeconds: 30,
+  memory: "256MiB", // Increased from 128MiB to handle email operations
+  timeoutSeconds: 60, // Increased timeout for email sending
   maxInstances: 5
 });
 
@@ -92,6 +92,9 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
   {
     cors: true, // Enable CORS for all origins in v2
     region: "asia-south1", // Explicit region
+    memory: "256MiB", // Increased memory for this function
+    timeoutSeconds: 60, // Increased timeout for email operations
+    enforceAppCheck: false, // Disable AppCheck enforcement to avoid token issues
   },
   async (request) => {
     // Ensure user is authenticated

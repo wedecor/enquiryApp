@@ -59,10 +59,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text(
-                'Loading change history...',
-                style: TextStyle(color: Colors.grey),
-              ),
+              Text('Loading change history...', style: TextStyle(color: Colors.grey)),
             ],
           ),
         ),
