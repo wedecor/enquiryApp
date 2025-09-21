@@ -247,11 +247,36 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
         _isLoading = false;
       });
 
+      // Parse specific error messages for better user feedback
+      String errorMessage = 'Failed to invite user';
+      
+      if (e.toString().contains('memory limit')) {
+        errorMessage = 'Server is busy. Please try again in a moment.';
+      } else if (e.toString().contains('timeout')) {
+        errorMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (e.toString().contains('permission-denied')) {
+        errorMessage = 'You don\'t have permission to invite users.';
+      } else if (e.toString().contains('invalid-argument')) {
+        errorMessage = 'Please check the email and role are valid.';
+      } else if (e.toString().contains('already-exists')) {
+        errorMessage = 'A user with this email already exists.';
+      } else if (e.toString().contains('unauthenticated')) {
+        errorMessage = 'Please sign in again and try.';
+      } else {
+        errorMessage = 'Failed to invite user: ${e.toString()}';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to invite user: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _inviteUser(),
+            ),
           ),
         );
       }
