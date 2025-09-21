@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
 import 'core/notifications/fcm_bootstrap.dart';
+import 'core/services/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
@@ -102,7 +103,7 @@ class MyApp extends ConsumerWidget {
         theme: currentTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
-        home: const AuthGate(),
+        home: const AuthGate().withUpdateChecker(),
         debugShowCheckedModeBanner: false,
       ),
     );

@@ -28,17 +28,17 @@
   </style>
 </head>
 <body>
-  <h1>We Decor Enquiries <span class="status rc3">RC3 - Pilot Ready</span></h1>
-  <div class="version">v1.0.1+4 • Build Date: September 21, 2024</div>
+  <h1>We Decor Enquiries <span class="status rc3">RC3 - Updated</span></h1>
+  <div class="version">v1.0.1+5 • Build Date: September 21, 2024 • Critical Fixes Applied</div>
   
-  <p>Download RC3 with enhanced feedback collection and monitoring improvements. Ready for pilot program rollout.</p>
+  <p>Download updated RC3 with critical bug fixes for history loading and user invitations. Production-ready with enhanced stability.</p>
 
   <div class="card qr">
     <div class="qr-code">
       <div id="qrcode"></div>
     </div>
     <div>
-      <a class="btn" href="./app-release.apk" download>📱 Download RC3 APK (54.6MB)</a>
+      <a class="btn" href="./app-release.apk" download>📱 Download RC3 APK (55.6MB)</a>
       <a class="btn secondary" href="./sha256.txt" target="_blank">🔒 Verify Checksum</a>
       <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
     </div>
@@ -50,14 +50,26 @@
     <p>Run: <code>shasum -a 256 app-release.apk</code> and compare with the SHA256 above.</p>
   </div>
 
-  <div class="card improvements">
-    <h3>🚀 RC3 New Features</h3>
+  <div class="card" style="background:#fef3c7;border:1px solid #f59e0b;color:#92400e">
+    <h3>🔄 RC3 Critical Updates (v1.0.1+5)</h3>
     <ul>
+      <li><strong>Change History Fixed:</strong> No more infinite loading in enquiry details</li>
+      <li><strong>User Invitations Fixed:</strong> Resolved memory errors and AppCheck issues</li>
+      <li><strong>PWA Improvements:</strong> Web version manifest.json issues resolved</li>
+      <li><strong>Enhanced Error Handling:</strong> Better user feedback with retry mechanisms</li>
+      <li><strong>Firebase Functions:</strong> Increased memory (256MB) and timeout (60s)</li>
+    </ul>
+    <p><strong>⚠️ Important:</strong> If you have the previous RC3 version, please update to get these critical fixes.</p>
+  </div>
+
+  <div class="card improvements">
+    <h3>🚀 RC3 Features</h3>
+    <ul>
+      <li><strong>Dark Mode Support:</strong> Settings → Preferences → Appearance</li>
+      <li><strong>Advanced Filters:</strong> Faceted search with saved views</li>
       <li><strong>In-App Feedback:</strong> Settings → Privacy → Send Feedback</li>
-      <li><strong>Device Info Collection:</strong> Automatic device/app info for bug reports</li>
-      <li><strong>Log Bundle:</strong> Recent app logs attached to feedback (PII-safe)</li>
-      <li><strong>Enhanced Monitoring:</strong> Better performance tracking and health dashboards</li>
-      <li><strong>Type Safety:</strong> Fixed critical type errors from RC2</li>
+      <li><strong>Accessibility:</strong> Screen reader support and proper tap targets</li>
+      <li><strong>Performance Monitoring:</strong> Real-time health dashboards</li>
     </ul>
     <p><a class="btn secondary" href="./RELEASE_NOTES_1.0.1+4.md" target="_blank">📋 View RC3 Release Notes</a></p>
   </div>
