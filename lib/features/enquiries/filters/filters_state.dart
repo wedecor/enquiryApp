@@ -22,7 +22,8 @@ class EnquiryFilters with _$EnquiryFilters {
 /// Date range for filtering enquiries
 @freezed
 class FilterDateRange with _$FilterDateRange {
-  const factory FilterDateRange({required DateTime start, required DateTime end}) = _FilterDateRange;
+  const factory FilterDateRange({required DateTime start, required DateTime end}) =
+      _FilterDateRange;
 
   factory FilterDateRange.fromJson(Map<String, dynamic> json) => _$FilterDateRangeFromJson(json);
 }

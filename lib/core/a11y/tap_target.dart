@@ -153,8 +153,8 @@ class TextTapTarget extends StatelessWidget {
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding: padding ?? 
-          EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
       semanticLabel: semanticLabel ?? text,
       semanticHint: semanticHint,
       enabled: enabled,
@@ -247,8 +247,8 @@ class ListItemTapTarget extends StatelessWidget {
     return TapTarget(
       onTap: enabled ? onTap : null,
       minSize: minSize,
-      padding: padding ?? 
-          EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
       decoration: decoration,
       semanticLabel: semanticLabel,
       semanticHint: semanticHint,

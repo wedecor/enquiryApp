@@ -23,9 +23,7 @@ class EnquiryRepository {
         .collection('enquiries')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Enquiry.fromFirestore(doc))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
   }
 
   /// Get filtered enquiries
