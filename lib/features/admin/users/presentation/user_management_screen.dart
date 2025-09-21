@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/auth/role_guards.dart';
 import '../domain/user_model.dart';
 import 'invite_user_dialog.dart';
 import 'role_checker_panel.dart';
@@ -491,7 +492,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   void _showInviteUserDialog(BuildContext context) {
-    showDialog<void>(context: context, builder: (context) => const InviteUserDialog());
+    try {
+      requireAdmin(ref);
+      logAdminAction(ref, 'invite_user_dialog_opened', {
+        'screen': 'user_management',
+        'action_type': 'ui_access',
+      });
+      showDialog<void>(context: context, builder: (context) => const InviteUserDialog());
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Access denied: ${e.toString()}')),
+      );
+    }
   }
 
   void _showEditUserDialog(BuildContext context, UserModel user) {
@@ -514,16 +526,30 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   void _toggleUserStatus(UserModel user) {
-    final action = user.active ? 'deactivate' : 'activate';
-    showDialog<void>(
-      context: context,
-      builder: (context) => ConfirmDialog(
-        title: '${action.capitalize()} User',
-        content: 'Are you sure you want to $action ${user.name}?',
-        onConfirm: () {
-          Navigator.of(context).pop();
-          ref
-              .read(userFormControllerProvider.notifier)
+    try {
+      requireAdmin(ref);
+      final action = user.active ? 'deactivate' : 'activate';
+      
+      logAdminAction(ref, 'user_status_toggle_initiated', {
+        'targetUserId': user.uid,
+        'targetUserEmail': user.email,
+        'action': action,
+        'currentActive': user.active,
+      });
+      
+      showDialog<void>(
+        context: context,
+        builder: (context) => ConfirmDialog(
+          title: '${action.capitalize()} User',
+          content: 'Are you sure you want to $action ${user.name}?',
+          onConfirm: () {
+            Navigator.of(context).pop();
+            logAdminAction(ref, 'user_status_toggle_confirmed', {
+              'targetUserId': user.uid,
+              'action': action,
+            });
+            ref
+                .read(userFormControllerProvider.notifier)
               .toggleActive(user.uid, !user.active)
               .then((_) {
                 _showSnackBar('User ${action}d successfully', isError: false);
@@ -534,6 +560,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         },
       ),
     );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Access denied: ${e.toString()}')),
+      );
+    }
   }
 
   void _showSnackBar(String message, {required bool isError}) {

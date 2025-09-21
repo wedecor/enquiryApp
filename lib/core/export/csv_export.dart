@@ -5,82 +5,138 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../features/admin/analytics/domain/analytics_models.dart';
+import '../auth/role_guards.dart';
 
 /// Utility class for exporting data to CSV format
 class CsvExport {
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
-  /// Export enquiries to CSV
-  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries) async {
+  /// Export enquiries to CSV with role-based filtering and column restrictions
+  static Future<void> exportEnquiries(
+    List<Map<String, dynamic>> enquiries, 
+    WidgetRef ref,
+  ) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
 
-    // Define CSV headers
-    final headers = [
-      'ID',
-      'Customer Name',
-      'Customer Email',
-      'Customer Phone',
-      'Event Type',
-      'Event Date',
-      'Event Location',
-      'Guest Count',
-      'Budget Range',
-      'Description',
-      'Status',
-      'Payment Status',
-      'Total Cost',
-      'Advance Paid',
-      'Assigned To',
-      'Priority',
-      'Source',
-      'Staff Notes',
-      'Created At',
-      'Created By',
-      'Updated At',
-    ];
+    final isAdminUser = isAdmin(ref);
+    
+    // Log the export action
+    await logAdminAction(ref, 'csv_export_enquiries', {
+      'recordCount': enquiries.length,
+      'isAdmin': isAdminUser,
+      'exportType': isAdminUser ? 'full_access' : 'staff_restricted',
+    });
+
+    // Define CSV headers based on role
+    final List<String> headers;
+    if (isAdminUser) {
+      // Admin gets all fields including financial data
+      headers = [
+        'ID',
+        'Customer Name',
+        'Customer Email',
+        'Customer Phone',
+        'Event Type',
+        'Event Date',
+        'Event Location',
+        'Guest Count',
+        'Budget Range',
+        'Description',
+        'Status',
+        'Payment Status',
+        'Total Cost',
+        'Advance Paid',
+        'Assigned To',
+        'Priority',
+        'Source',
+        'Staff Notes',
+        'Created At',
+        'Created By',
+        'Updated At',
+      ];
+    } else {
+      // Staff gets limited fields (no financial data)
+      headers = [
+        'ID',
+        'Customer Name',
+        'Customer Phone',
+        'Event Type',
+        'Event Date',
+        'Event Location',
+        'Guest Count',
+        'Description',
+        'Status',
+        'Priority',
+        'Source',
+        'Staff Notes',
+        'Created At',
+      ];
+    }
 
     // Convert enquiries to CSV rows
     final rows = <List<String>>[headers];
 
     for (final enquiry in enquiries) {
-      rows.add([
-        enquiry['id']?.toString() ?? '',
-        enquiry['customerName']?.toString() ?? '',
-        enquiry['customerEmail']?.toString() ?? '',
-        enquiry['customerPhone']?.toString() ?? '',
-        enquiry['eventType']?.toString() ?? '',
-        _formatTimestamp(enquiry['eventDate']),
-        enquiry['eventLocation']?.toString() ?? '',
-        enquiry['guestCount']?.toString() ?? '',
-        enquiry['budgetRange']?.toString() ?? '',
-        enquiry['description']?.toString() ?? '',
-        enquiry['eventStatus']?.toString() ?? '',
-        enquiry['paymentStatus']?.toString() ?? '',
-        enquiry['totalCost']?.toString() ?? '',
-        enquiry['advancePaid']?.toString() ?? '',
-        enquiry['assignedTo']?.toString() ?? '',
-        enquiry['priority']?.toString() ?? '',
-        enquiry['source']?.toString() ?? '',
-        enquiry['staffNotes']?.toString() ?? '',
-        _formatTimestamp(enquiry['createdAt']),
-        enquiry['createdBy']?.toString() ?? '',
-        _formatTimestamp(enquiry['updatedAt']),
-      ]);
+      if (isAdminUser) {
+        // Admin export: all fields including financial data
+        rows.add([
+          enquiry['id']?.toString() ?? '',
+          enquiry['customerName']?.toString() ?? '',
+          enquiry['customerEmail']?.toString() ?? '',
+          enquiry['customerPhone']?.toString() ?? '',
+          enquiry['eventType']?.toString() ?? '',
+          _formatTimestamp(enquiry['eventDate']),
+          enquiry['eventLocation']?.toString() ?? '',
+          enquiry['guestCount']?.toString() ?? '',
+          enquiry['budgetRange']?.toString() ?? '',
+          enquiry['description']?.toString() ?? '',
+          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['paymentStatus']?.toString() ?? '',
+          enquiry['totalCost']?.toString() ?? '',
+          enquiry['advancePaid']?.toString() ?? '',
+          enquiry['assignedTo']?.toString() ?? '',
+          enquiry['priority']?.toString() ?? '',
+          enquiry['source']?.toString() ?? '',
+          enquiry['staffNotes']?.toString() ?? '',
+          _formatTimestamp(enquiry['createdAt']),
+          enquiry['createdBy']?.toString() ?? '',
+          _formatTimestamp(enquiry['updatedAt']),
+        ]);
+      } else {
+        // Staff export: limited fields (no financial data, customer email, budget)
+        rows.add([
+          enquiry['id']?.toString() ?? '',
+          enquiry['customerName']?.toString() ?? '',
+          enquiry['customerPhone']?.toString() ?? '',
+          enquiry['eventType']?.toString() ?? '',
+          _formatTimestamp(enquiry['eventDate']),
+          enquiry['eventLocation']?.toString() ?? '',
+          enquiry['guestCount']?.toString() ?? '',
+          enquiry['description']?.toString() ?? '',
+          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['priority']?.toString() ?? '',
+          enquiry['source']?.toString() ?? '',
+          enquiry['staffNotes']?.toString() ?? '',
+          _formatTimestamp(enquiry['createdAt']),
+        ]);
+      }
     }
 
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
 
-    // Generate filename with timestamp
+    // Generate filename with timestamp and role indicator
     final timestamp = _fileNameDateFormat.format(DateTime.now());
-    final filename = 'enquiries_$timestamp.csv';
+    final rolePrefix = isAdminUser ? 'all' : 'assigned';
+    final filename = 'enquiries_${rolePrefix}_$timestamp.csv';
 
     // Save file
     await FileSaver.instance.saveFile(

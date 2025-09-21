@@ -210,6 +210,26 @@ class AuditService {
     }
   }
 
+  /// Log admin-specific actions for compliance and audit trail
+  Future<void> logAdminAction(String action, Map<String, Object?> data) async {
+    try {
+      final currentUser = _auth.currentUser;
+      
+      await _firestore.collection('admin_audit').add({
+        'action': action,
+        'user_id': currentUser?.uid ?? 'unknown',
+        'user_email': currentUser?.email ?? 'unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'data': data,
+        'app_version': '1.0.1+10', // TODO: Get from package_info
+      });
+      
+      print('AuditService: Admin action logged - $action');
+    } catch (e) {
+      print('AuditService: Error logging admin action: $e');
+    }
+  }
+
   /// Format change description for display
   String formatChangeDescription(Map<String, dynamic> change) {
     final fieldChanged = change['field_changed'] as String? ?? 'Unknown Field';

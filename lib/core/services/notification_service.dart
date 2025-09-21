@@ -165,9 +165,9 @@ class NotificationService {
         },
       );
 
-      print('NotificationService: Sent status update notifications to ${adminUsers.length} admins');
+      print('NotificationService: Sent status change notifications to ${adminUsers.length} admins');
     } catch (e) {
-      print('NotificationService: Error sending status update notifications: $e');
+      print('NotificationService: Error sending status change notifications: $e');
     }
   }
 

@@ -67,5 +67,11 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // Admin Audit Trail - admins can read, system can write
+    match /admin_audit/{auditId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn(); // Allow creation for audit logging
+    }
   }
 }
