@@ -29,9 +29,9 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                   Text(
                     'No changes recorded',
                     style: TextStyle(
-                      fontSize: 16, 
-                      color: theme.colorScheme.onSurfaceVariant, 
-                      fontWeight: FontWeight.w500
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -67,8 +67,8 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 const CircularProgressIndicator(),
                 const SizedBox(height: 16),
                 Text(
-                  'Loading change history...', 
-                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant)
+                  'Loading change history...',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -88,9 +88,9 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 Text(
                   'Change history not available',
                   style: TextStyle(
-                    fontSize: 16, 
-                    color: theme.colorScheme.primary, 
-                    fontWeight: FontWeight.w500
+                    fontSize: 16,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 8),

@@ -75,7 +75,7 @@ class AuditService {
   Stream<List<Map<String, dynamic>>> getEnquiryHistoryStream(String enquiryId) {
     try {
       print('AuditService: Starting history stream for enquiry $enquiryId');
-      
+
       // Try subcollection approach first (simpler, doesn't require index)
       return _firestore
           .collection('enquiries')
@@ -84,35 +84,37 @@ class AuditService {
           .snapshots()
           .timeout(const Duration(seconds: 10))
           .map((snapshot) {
-            print('AuditService: Received ${snapshot.docs.length} history documents for $enquiryId');
-            
+            print(
+              'AuditService: Received ${snapshot.docs.length} history documents for $enquiryId',
+            );
+
             if (snapshot.docs.isEmpty) {
               print('AuditService: No history found for enquiry $enquiryId');
               return <Map<String, dynamic>>[];
             }
-            
+
             // Manual sorting since orderBy might require index
             final docs = snapshot.docs.map((doc) {
               final data = doc.data();
               return {'id': doc.id, ...data};
             }).toList();
-            
+
             // Sort by timestamp if available
             docs.sort((a, b) {
               final aTime = a['timestamp'];
               final bTime = b['timestamp'];
-              
+
               if (aTime == null && bTime == null) return 0;
               if (aTime == null) return 1;
               if (bTime == null) return -1;
-              
+
               if (aTime is Timestamp && bTime is Timestamp) {
                 return bTime.compareTo(aTime); // Descending order
               }
-              
+
               return 0;
             });
-            
+
             print('AuditService: Returning ${docs.length} sorted history items');
             return docs;
           })
