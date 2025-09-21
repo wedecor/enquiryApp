@@ -37,6 +37,15 @@ repos:
         pass_filenames: false
         description: Verify admin features have proper security guards
 
+      - id: semgrep-security
+        name: Semgrep Security Scan
+        entry: semgrep --config=p/ci --error --exclude=build --exclude=.dart_tool
+        language: system
+        files: \.dart$
+        pass_filenames: false
+        stages: [pre-push]
+        description: Run security static analysis with Semgrep
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

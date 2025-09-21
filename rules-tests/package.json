@@ -3,19 +3,23 @@
   "version": "1.0.0",
   "description": "Firestore security rules tests for We Decor Enquiries RBAC system",
   "scripts": {
-    "test": "jest --testEnvironment=node",
-    "test:verbose": "jest --testEnvironment=node --verbose",
+    "test": "jest --testEnvironment=node --runInBand",
+    "test:verbose": "jest --testEnvironment=node --verbose --runInBand",
     "test:watch": "jest --testEnvironment=node --watch",
-    "emulator:start": "firebase emulators:start --only firestore --project demo-project",
-    "emulator:stop": "firebase emulators:exec --only firestore --project demo-project 'echo stopped'"
+    "emulators:start": "firebase emulators:start --only firestore --project demo-test --import=./seed --export-on-exit --quiet",
+    "ci": "concurrently -k -s first \"npm:emulators:start\" \"npm:wait-then-test\"",
+    "wait-then-test": "wait-on tcp:8080 && npm run test",
+    "emulator:stop": "firebase emulators:exec --only firestore --project demo-test 'echo stopped'"
   },
   "dependencies": {
-    "@firebase/rules-unit-testing": "^3.0.3",
-    "firebase": "^10.12.2"
+    "@firebase/rules-unit-testing": "3.0.3",
+    "firebase": "10.12.2"
   },
   "devDependencies": {
-    "firebase-tools": "^13.11.2",
-    "jest": "^29.7.0"
+    "firebase-tools": "13.11.2",
+    "jest": "29.7.0",
+    "concurrently": "8.2.2",
+    "wait-on": "7.2.0"
   },
   "engines": {
     "node": ">=18.0.0"

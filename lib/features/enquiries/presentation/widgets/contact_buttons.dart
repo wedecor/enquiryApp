@@ -7,7 +7,7 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/theme/tokens.dart';
 
 /// Contact action buttons for calling and messaging customers
-/// 
+///
 /// Provides accessible Call and WhatsApp buttons with proper error handling,
 /// audit logging, and platform-appropriate fallbacks.
 class ContactButtons extends ConsumerWidget {
@@ -49,12 +49,12 @@ class ContactButtons extends ConsumerWidget {
               child: Container(
                 height: AppTokens.minTapTarget,
                 decoration: BoxDecoration(
-                  color: enabled 
+                  color: enabled
                       ? theme.colorScheme.primary.withOpacity(0.1)
                       : theme.colorScheme.onSurface.withOpacity(0.05),
                   borderRadius: AppRadius.medium,
                   border: Border.all(
-                    color: enabled 
+                    color: enabled
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface.withOpacity(0.2),
                   ),
@@ -65,7 +65,7 @@ class ContactButtons extends ConsumerWidget {
                     Icon(
                       Icons.call,
                       size: AppTokens.iconSmall,
-                      color: enabled 
+                      color: enabled
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
@@ -73,7 +73,7 @@ class ContactButtons extends ConsumerWidget {
                     Text(
                       'Call',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: enabled 
+                        color: enabled
                             ? theme.colorScheme.primary
                             : theme.colorScheme.onSurface.withOpacity(0.4),
                         fontWeight: FontWeight.w600,
@@ -84,9 +84,9 @@ class ContactButtons extends ConsumerWidget {
               ),
             ),
           ),
-          
+
           SizedBox(width: AppTokens.space3),
-          
+
           // WhatsApp Button
           Expanded(
             child: TapTarget(
@@ -98,12 +98,12 @@ class ContactButtons extends ConsumerWidget {
               child: Container(
                 height: AppTokens.minTapTarget,
                 decoration: BoxDecoration(
-                  color: enabled 
+                  color: enabled
                       ? const Color(0xFF25D366).withOpacity(0.1) // WhatsApp green
                       : theme.colorScheme.onSurface.withOpacity(0.05),
                   borderRadius: AppRadius.medium,
                   border: Border.all(
-                    color: enabled 
+                    color: enabled
                         ? const Color(0xFF25D366)
                         : theme.colorScheme.onSurface.withOpacity(0.2),
                   ),
@@ -114,7 +114,7 @@ class ContactButtons extends ConsumerWidget {
                     Icon(
                       Icons.chat,
                       size: AppTokens.iconSmall,
-                      color: enabled 
+                      color: enabled
                           ? const Color(0xFF25D366)
                           : theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
@@ -122,7 +122,7 @@ class ContactButtons extends ConsumerWidget {
                     Text(
                       'WhatsApp',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: enabled 
+                        color: enabled
                             ? const Color(0xFF25D366)
                             : theme.colorScheme.onSurface.withOpacity(0.4),
                         fontWeight: FontWeight.w600,
@@ -156,7 +156,7 @@ class ContactButtons extends ConsumerWidget {
         case ContactLaunchStatus.opened:
           // Success - no UI feedback needed
           break;
-        
+
         case ContactLaunchStatus.invalidNumber:
           _showErrorSnackBar(
             context,
@@ -165,7 +165,7 @@ class ContactButtons extends ConsumerWidget {
             onAction: () => _copyToClipboard(context, customerPhone!),
           );
           break;
-        
+
         case ContactLaunchStatus.notInstalled:
           _showErrorSnackBar(
             context,
@@ -174,7 +174,7 @@ class ContactButtons extends ConsumerWidget {
             onAction: () => _copyToClipboard(context, customerPhone!),
           );
           break;
-        
+
         case ContactLaunchStatus.failed:
           _showErrorSnackBar(
             context,
@@ -203,8 +203,9 @@ class ContactButtons extends ConsumerWidget {
     ContactLauncher contactLauncher,
   ) async {
     try {
-      final prefillText = 'Hi $customerName, I\'m following up on your enquiry with We Decor. How can I help you today?';
-      
+      final prefillText =
+          'Hi $customerName, I\'m following up on your enquiry with We Decor. How can I help you today?';
+
       final status = await contactLauncher.openWhatsAppWithAudit(
         customerPhone!,
         prefillText: prefillText,
@@ -217,7 +218,7 @@ class ContactButtons extends ConsumerWidget {
         case ContactLaunchStatus.opened:
           // Success - no UI feedback needed
           break;
-        
+
         case ContactLaunchStatus.invalidNumber:
           _showErrorSnackBar(
             context,
@@ -226,7 +227,7 @@ class ContactButtons extends ConsumerWidget {
             onAction: () => _copyToClipboard(context, customerPhone!),
           );
           break;
-        
+
         case ContactLaunchStatus.notInstalled:
           _showErrorSnackBar(
             context,
@@ -234,7 +235,7 @@ class ContactButtons extends ConsumerWidget {
             isError: false,
           );
           break;
-        
+
         case ContactLaunchStatus.failed:
           _showErrorSnackBar(
             context,
@@ -267,13 +268,13 @@ class ContactButtons extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError 
+        backgroundColor: isError
             ? Theme.of(context).colorScheme.error
             : Theme.of(context).colorScheme.primary,
         action: action != null && onAction != null
             ? SnackBarAction(
                 label: action,
-                textColor: isError 
+                textColor: isError
                     ? Theme.of(context).colorScheme.onError
                     : Theme.of(context).colorScheme.onPrimary,
                 onPressed: onAction,
@@ -287,7 +288,7 @@ class ContactButtons extends ConsumerWidget {
   Future<void> _copyToClipboard(BuildContext context, String phoneNumber) async {
     try {
       await Clipboard.setData(ClipboardData(text: phoneNumber));
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
