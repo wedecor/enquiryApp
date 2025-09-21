@@ -74,8 +74,9 @@ class AccountTab extends ConsumerWidget {
   }
 
   Widget _buildRoleSection(BuildContext context, String role) {
+    final theme = Theme.of(context);
     final roleIcon = role == 'admin' ? Icons.admin_panel_settings : Icons.person;
-    final roleColor = role == 'admin' ? Colors.purple : Colors.blue;
+    final roleColor = role == 'admin' ? theme.colorScheme.tertiary : theme.colorScheme.primary;
 
     return Card(
       child: Padding(

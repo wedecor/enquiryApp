@@ -104,28 +104,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo/Icon
-                const Icon(
+                Icon(
                   Icons.home,
                   size: 80,
-                  color: Color(0xFF2563EB), // Blue
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 32),
 
                 // Title
-                const Text(
+                Text(
                   'Welcome to We Decor',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2563EB), // Blue
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
 
-                const Text(
+                Text(
                   'Sign in to your account',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 16, 
+                    color: Theme.of(context).colorScheme.onSurfaceVariant
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -177,9 +180,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _forgotPassword,
-                    child: const Text(
+                    child: Text(
                       'Forgot Password?',
-                      style: TextStyle(color: Color(0xFF2563EB)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
                 ),
@@ -206,8 +209,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2563EB), // Blue
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
