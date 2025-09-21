@@ -5,6 +5,7 @@ import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/appearance_controller.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/widgets/appearance_setting.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 
@@ -48,9 +49,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildAppearanceSection(context),
-                const SizedBox(height: 24),
-                _buildThemeSection(context),
+                const AppearanceSetting(),
                 const SizedBox(height: 24),
                 _buildLanguageSection(context),
                 const SizedBox(height: 24),
@@ -64,108 +63,9 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     );
   }
 
-  Widget _buildAppearanceSection(BuildContext context) {
-    final appearanceMode = ref.watch(appearanceModeProvider);
-    final appearanceController = ref.read(appearanceModeProvider.notifier);
 
-    return Card(
-      child: Padding(
-        padding: AppSpacing.space4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            Text(
-              'Choose how the app looks',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...AppearanceMode.values.map((mode) {
-              return RadioListTile<AppearanceMode>(
-                title: Text(_getAppearanceModeTitle(mode)),
-                subtitle: Text(_getAppearanceModeDescription(mode)),
-                value: mode,
-                groupValue: appearanceMode,
-                onChanged: (value) {
-                  if (value != null) {
-                    appearanceController.setMode(value);
-                  }
-                },
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
 
-  String _getAppearanceModeTitle(AppearanceMode mode) {
-    switch (mode) {
-      case AppearanceMode.system:
-        return 'System';
-      case AppearanceMode.light:
-        return 'Light';
-      case AppearanceMode.dark:
-        return 'Dark';
-    }
-  }
 
-  String _getAppearanceModeDescription(AppearanceMode mode) {
-    switch (mode) {
-      case AppearanceMode.system:
-        return 'Follow system setting';
-      case AppearanceMode.light:
-        return 'Always use light theme';
-      case AppearanceMode.dark:
-        return 'Always use dark theme';
-    }
-  }
-
-  Widget _buildThemeSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Theme', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('Choose how the app looks', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 16),
-            _buildThemeOptions(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeOptions() {
-    final themes = [
-      ('system', 'System', Icons.brightness_auto, 'Follow system setting'),
-      ('light', 'Light', Icons.brightness_high, 'Always light theme'),
-      ('dark', 'Dark', Icons.brightness_2, 'Always dark theme'),
-    ];
-
-    return Column(
-      children: themes.map((theme) {
-        final (value, title, icon, subtitle) = theme;
-        return RadioListTile<String>(
-          value: value,
-          groupValue: _currentSettings?.theme ?? 'system',
-          onChanged: (newTheme) {
-            if (newTheme != null) {
-              _updateSettings(_currentSettings!.copyWith(theme: newTheme));
-            }
-          },
-          title: Row(children: [Icon(icon, size: 20), const SizedBox(width: 8), Text(title)]),
-          subtitle: Text(subtitle),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildLanguageSection(BuildContext context) {
     return Card(

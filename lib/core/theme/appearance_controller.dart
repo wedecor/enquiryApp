@@ -2,201 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'app_theme.dart';
+enum AppearanceMode { system, light, dark }
 
-/// Appearance mode options
-enum AppearanceMode {
-  system('system'),
-  light('light'),
-  dark('dark');
+extension AppearanceModeExtension on AppearanceMode {
+  ThemeMode get asThemeMode => switch (this) {
+    AppearanceMode.system => ThemeMode.system,
+    AppearanceMode.light  => ThemeMode.light,
+    AppearanceMode.dark   => ThemeMode.dark,
+  };
+}
 
-  const AppearanceMode(this.value);
-  final String value;
+const _kAppearanceKey = 'appearance.mode.v2';
 
-  static AppearanceMode fromString(String value) {
-    return AppearanceMode.values.firstWhere(
-      (mode) => mode.value == value,
-      orElse: () => AppearanceMode.system,
-    );
+class AppearanceController extends Notifier<AppearanceMode> {
+  @override
+  AppearanceMode build() {
+    // lazy init from prefs (non-blocking) with fallback to system
+    _load();
+    return AppearanceMode.system;
   }
 
-  /// Get the actual brightness based on system preference
-  Brightness getBrightness(BuildContext context) {
-    switch (this) {
-      case AppearanceMode.light:
-        return Brightness.light;
-      case AppearanceMode.dark:
-        return Brightness.dark;
-      case AppearanceMode.system:
-        return MediaQuery.of(context).platformBrightness;
-    }
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kAppearanceKey);
+      final parsed = AppearanceMode.values.firstWhere(
+        (e) => e.name == raw,
+        orElse: () => AppearanceMode.system,
+      );
+      if (state != parsed) state = parsed;
+    } catch (_) { /* ignore, keep default */ }
+  }
+
+  Future<void> set(AppearanceMode mode) async {
+    state = mode; // immediate rebuild for MaterialApp
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kAppearanceKey, mode.name);
+    } catch (_) { /* ignore persist errors */ }
   }
 }
 
-/// Riverpod provider for appearance mode state
-final appearanceModeProvider = StateNotifierProvider<AppearanceController, AppearanceMode>((ref) {
-  return AppearanceController();
+final appearanceControllerProvider =
+    NotifierProvider<AppearanceController, AppearanceMode>(AppearanceController.new);
+
+/// Provider for the current ThemeMode to be used by MaterialApp
+final themeModeProvider = Provider<ThemeMode>((ref) {
+  final appearanceMode = ref.watch(appearanceControllerProvider);
+  return appearanceMode.asThemeMode;
 });
 
-/// Controller for managing app appearance (light/dark/system)
-class AppearanceController extends StateNotifier<AppearanceMode> {
-  AppearanceController() : super(AppearanceMode.system) {
-    _loadSavedMode();
+/// Legacy provider for backward compatibility
+/// @deprecated Use appearanceControllerProvider instead
+final appearanceModeProvider = StateNotifierProvider<_LegacyAppearanceController, AppearanceMode>((ref) {
+  return _LegacyAppearanceController(ref);
+});
+
+/// Legacy controller that delegates to the new Notifier-based controller
+class _LegacyAppearanceController extends StateNotifier<AppearanceMode> {
+  _LegacyAppearanceController(this.ref) : super(AppearanceMode.system) {
+    // Sync with new controller
+    ref.listen(appearanceControllerProvider, (previous, next) {
+      state = next;
+    });
   }
 
-  static const String _prefsKey = 'appearance_mode';
+  final Ref ref;
 
-  /// Load saved appearance mode from SharedPreferences
-  Future<void> _loadSavedMode() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedMode = prefs.getString(_prefsKey);
-      if (savedMode != null) {
-        state = AppearanceMode.fromString(savedMode);
-      }
-    } catch (e) {
-      // Default to system mode if loading fails
-      state = AppearanceMode.system;
-    }
-  }
-
-  /// Set appearance mode and persist to SharedPreferences
   Future<void> setMode(AppearanceMode mode) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefsKey, mode.value);
-      state = mode;
-    } catch (e) {
-      // If saving fails, still update the state
-      state = mode;
-    }
+    await ref.read(appearanceControllerProvider.notifier).set(mode);
   }
 
-  /// Get the current appearance mode
   AppearanceMode get currentMode => state;
-
-  /// Check if current mode is system
   bool get isSystemMode => state == AppearanceMode.system;
-
-  /// Check if current mode is light
   bool get isLightMode => state == AppearanceMode.light;
-
-  /// Check if current mode is dark
   bool get isDarkMode => state == AppearanceMode.dark;
 }
-
-/// Provider for the current theme based on appearance mode
-final currentThemeProvider = Provider<ThemeData>((ref) {
-  final appearanceMode = ref.watch(appearanceModeProvider);
-  final context = ref.watch(materialAppContextProvider);
-
-  if (context != null) {
-    final brightness = appearanceMode.getBrightness(context);
-    return brightness == Brightness.dark ? AppTheme.darkTheme : AppTheme.lightTheme;
-  }
-
-  // Fallback to light theme if context is not available
-  return AppTheme.lightTheme;
-});
-
-/// Provider for current color scheme based on theme
-final currentColorSchemeProvider = Provider<ColorScheme>((ref) {
-  final theme = ref.watch(currentThemeProvider);
-  return theme.colorScheme;
-});
-
-/// Provider for current brightness
-final currentBrightnessProvider = Provider<Brightness>((ref) {
-  final appearanceMode = ref.watch(appearanceModeProvider);
-  final context = ref.watch(materialAppContextProvider);
-
-  if (context != null) {
-    return appearanceMode.getBrightness(context);
-  }
-
-  return Brightness.light;
-});
-
-/// Provider to access MaterialApp context
-final materialAppContextProvider = StateProvider<BuildContext?>((ref) {
-  // This will be set by the MaterialApp widget
-  return null;
-});
-
-/// Extension to easily access appearance controller
-extension AppearanceControllerExtension on WidgetRef {
-  AppearanceController get appearanceController => read(appearanceModeProvider.notifier);
-  AppearanceMode get currentAppearanceMode => read(appearanceModeProvider);
-}
-
-/// Widget to set the MaterialApp context for theme providers
-class ThemeContextProvider extends ConsumerWidget {
-  final Widget child;
-
-  const ThemeContextProvider({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Store the context for theme providers
-    ref.read(materialAppContextProvider.notifier).state = context;
-    return child;
-  }
-}
-
-/// Helper class for theme-related utilities
-class ThemeUtils {
-  ThemeUtils._();
-
-  /// Get semantic color based on current theme
-  static Color getSemanticColor(BuildContext context, SemanticColorType type) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    switch (type) {
-      case SemanticColorType.success:
-        return AppColorScheme.success;
-      case SemanticColorType.warning:
-        return AppColorScheme.warning;
-      case SemanticColorType.info:
-        return AppColorScheme.info;
-      case SemanticColorType.error:
-        return colorScheme.error;
-    }
-  }
-
-  /// Get semantic container color based on current theme
-  static Color getSemanticContainerColor(BuildContext context, SemanticColorType type) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
-
-    switch (type) {
-      case SemanticColorType.success:
-        return isDark ? AppColorScheme.successContainerDark : AppColorScheme.successContainerLight;
-      case SemanticColorType.warning:
-        return isDark ? AppColorScheme.warningContainerDark : AppColorScheme.warningContainerLight;
-      case SemanticColorType.info:
-        return colorScheme.primaryContainer;
-      case SemanticColorType.error:
-        return colorScheme.errorContainer;
-    }
-  }
-
-  /// Get semantic on-color based on current theme
-  static Color getSemanticOnColor(BuildContext context, SemanticColorType type) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
-
-    switch (type) {
-      case SemanticColorType.success:
-        return isDark ? AppColorScheme.onSuccessDark : AppColorScheme.onSuccessLight;
-      case SemanticColorType.warning:
-        return isDark ? AppColorScheme.onWarningDark : AppColorScheme.onWarningLight;
-      case SemanticColorType.info:
-        return colorScheme.onPrimary;
-      case SemanticColorType.error:
-        return colorScheme.onError;
-    }
-  }
-}
-
-/// Enum for semantic color types
-enum SemanticColorType { success, warning, info, error }
