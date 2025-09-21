@@ -4,74 +4,36 @@ import 'package:flutter/material.dart';
 extension SemanticsExtension on Widget {
   /// Add semantic label to a widget
   Widget withSemanticLabel(String label) {
-    return Semantics(
-      label: label,
-      child: this,
-    );
+    return Semantics(label: label, child: this);
   }
 
   /// Add semantic hint to a widget
   Widget withSemanticHint(String hint) {
-    return Semantics(
-      hint: hint,
-      child: this,
-    );
+    return Semantics(hint: hint, child: this);
   }
 
   /// Add semantic button role to a widget
-  Widget withButtonSemantics({
-    String? label,
-    String? hint,
-    VoidCallback? onTap,
-  }) {
-    return Semantics(
-      button: true,
-      label: label,
-      hint: hint,
-      onTap: onTap,
-      child: this,
-    );
+  Widget withButtonSemantics({String? label, String? hint, VoidCallback? onTap}) {
+    return Semantics(button: true, label: label, hint: hint, onTap: onTap, child: this);
   }
 
   /// Add semantic header role to a widget
   Widget withHeaderSemantics({String? label}) {
-    return Semantics(
-      header: true,
-      label: label,
-      child: this,
-    );
+    return Semantics(header: true, label: label, child: this);
   }
 
   /// Add semantic image role to a widget
   Widget withImageSemantics({String? label}) {
-    return Semantics(
-      image: true,
-      label: label,
-      child: this,
-    );
+    return Semantics(image: true, label: label, child: this);
   }
 
   /// Add semantic text field role to a widget
-  Widget withTextFieldSemantics({
-    String? label,
-    String? hint,
-    String? value,
-  }) {
-    return Semantics(
-      textField: true,
-      label: label,
-      hint: hint,
-      value: value,
-      child: this,
-    );
+  Widget withTextFieldSemantics({String? label, String? hint, String? value}) {
+    return Semantics(textField: true, label: label, hint: hint, value: value, child: this);
   }
 
   /// Add semantic switch role to a widget
-  Widget withSwitchSemantics({
-    String? label,
-    bool? value,
-    VoidCallback? onTap,
-  }) {
+  Widget withSwitchSemantics({String? label, bool? value, VoidCallback? onTap}) {
     return Semantics(
       button: true,
       label: label,
@@ -83,11 +45,7 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic checkbox role to a widget
-  Widget withCheckboxSemantics({
-    String? label,
-    bool? value,
-    VoidCallback? onTap,
-  }) {
+  Widget withCheckboxSemantics({String? label, bool? value, VoidCallback? onTap}) {
     return Semantics(
       button: true,
       label: label,
@@ -99,11 +57,7 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic radio button role to a widget
-  Widget withRadioSemantics({
-    String? label,
-    bool? value,
-    VoidCallback? onTap,
-  }) {
+  Widget withRadioSemantics({String? label, bool? value, VoidCallback? onTap}) {
     return Semantics(
       button: true,
       label: label,
@@ -133,24 +87,12 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic progress indicator role to a widget
-  Widget withProgressSemantics({
-    String? label,
-    double? value,
-  }) {
-    return Semantics(
-      progressBar: true,
-      label: label,
-      value: value?.toString(),
-      child: this,
-    );
+  Widget withProgressSemantics({String? label, double? value}) {
+    return Semantics(progressBar: true, label: label, value: value?.toString(), child: this);
   }
 
   /// Add semantic tab role to a widget
-  Widget withTabSemantics({
-    String? label,
-    bool? selected,
-    VoidCallback? onTap,
-  }) {
+  Widget withTabSemantics({String? label, bool? selected, VoidCallback? onTap}) {
     return Semantics(
       button: true,
       label: label,
@@ -162,10 +104,7 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic menu role to a widget
-  Widget withMenuSemantics({
-    String? label,
-    VoidCallback? onTap,
-  }) {
+  Widget withMenuSemantics({String? label, VoidCallback? onTap}) {
     return Semantics(
       button: true,
       label: label,
@@ -176,11 +115,7 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic link role to a widget
-  Widget withLinkSemantics({
-    String? label,
-    String? hint,
-    VoidCallback? onTap,
-  }) {
+  Widget withLinkSemantics({String? label, String? hint, VoidCallback? onTap}) {
     return Semantics(
       link: true,
       label: label,
@@ -243,87 +178,36 @@ class A11yHelper {
     String? value,
     Widget? child,
   }) {
-    return Semantics(
-      textField: true,
-      label: label,
-      hint: hint,
-      value: value,
-      child: child,
-    );
+    return Semantics(textField: true, label: label, hint: hint, value: value, child: child);
   }
 
   /// Create a semantic card with proper labeling
-  static Widget semanticCard({
-    required String label,
-    String? hint,
-    Widget? child,
-  }) {
-    return Semantics(
-      button: true,
-      label: label,
-      hint: hint,
-      child: child,
-    );
+  static Widget semanticCard({required String label, String? hint, Widget? child}) {
+    return Semantics(button: true, label: label, hint: hint, child: child);
   }
 
   /// Create a semantic list item with proper labeling
-  static Widget semanticListItem({
-    required String label,
-    String? hint,
-    Widget? child,
-  }) {
-    return Semantics(
-      button: true,
-      label: label,
-      hint: hint,
-      child: child,
-    );
+  static Widget semanticListItem({required String label, String? hint, Widget? child}) {
+    return Semantics(button: true, label: label, hint: hint, child: child);
   }
 
   /// Create a semantic header with proper labeling
-  static Widget semanticHeader({
-    required String label,
-    Widget? child,
-  }) {
-    return Semantics(
-      header: true,
-      label: label,
-      child: child,
-    );
+  static Widget semanticHeader({required String label, Widget? child}) {
+    return Semantics(header: true, label: label, child: child);
   }
 
   /// Create a semantic image with proper labeling
-  static Widget semanticImage({
-    required String label,
-    Widget? child,
-  }) {
-    return Semantics(
-      image: true,
-      label: label,
-      child: child,
-    );
+  static Widget semanticImage({required String label, Widget? child}) {
+    return Semantics(image: true, label: label, child: child);
   }
 
   /// Create a semantic progress indicator with proper labeling
-  static Widget semanticProgress({
-    required String label,
-    double? value,
-    Widget? child,
-  }) {
-    return Semantics(
-      progressBar: true,
-      label: label,
-      value: value?.toString(),
-      child: child,
-    );
+  static Widget semanticProgress({required String label, double? value, Widget? child}) {
+    return Semantics(progressBar: true, label: label, value: value?.toString(), child: child);
   }
 
   /// Create a semantic tab with proper labeling
-  static Widget semanticTab({
-    required String label,
-    bool selected = false,
-    Widget? child,
-  }) {
+  static Widget semanticTab({required String label, bool selected = false, Widget? child}) {
     return Semantics(
       button: true,
       label: label,
@@ -334,24 +218,12 @@ class A11yHelper {
   }
 
   /// Create a semantic menu with proper labeling
-  static Widget semanticMenu({
-    required String label,
-    Widget? child,
-  }) {
-    return Semantics(
-      button: true,
-      label: label,
-      hint: 'Double tap to open menu',
-      child: child,
-    );
+  static Widget semanticMenu({required String label, Widget? child}) {
+    return Semantics(button: true, label: label, hint: 'Double tap to open menu', child: child);
   }
 
   /// Create a semantic link with proper labeling
-  static Widget semanticLink({
-    required String label,
-    String? hint,
-    Widget? child,
-  }) {
+  static Widget semanticLink({required String label, String? hint, Widget? child}) {
     return Semantics(
       link: true,
       label: label,
@@ -409,7 +281,14 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// Add semantic slider role to a widget
-  Widget asSlider(Widget child, {String? label, double? value, double? min, double? max, VoidCallback? onTap}) {
+  Widget asSlider(
+    Widget child, {
+    String? label,
+    double? value,
+    double? min,
+    double? max,
+    VoidCallback? onTap,
+  }) {
     return child.withSliderSemantics(label: label, value: value, min: min, max: max, onTap: onTap);
   }
 

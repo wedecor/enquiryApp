@@ -30,18 +30,17 @@ class TapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     Widget tapWidget = GestureDetector(
       onTap: enabled ? onTap : null,
       behavior: hitTestBehavior,
       child: Container(
-        constraints: BoxConstraints(
-          minWidth: minSize,
-          minHeight: minSize,
-        ),
-        padding: padding ?? EdgeInsets.all(
-          (minSize - _getChildSize()) / 2,
-        ).clamp(EdgeInsets.zero, const EdgeInsets.all(24)),
+        constraints: BoxConstraints(minWidth: minSize, minHeight: minSize),
+        padding:
+            padding ??
+            EdgeInsets.all(
+              (minSize - _getChildSize()) / 2,
+            ).clamp(EdgeInsets.zero, const EdgeInsets.all(24)),
         decoration: decoration,
         child: Center(child: child),
       ),
@@ -102,7 +101,7 @@ class IconTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     Widget iconWidget = Icon(
       icon,
       size: size,
@@ -110,10 +109,7 @@ class IconTapTarget extends StatelessWidget {
     );
 
     if (tooltip != null) {
-      iconWidget = Tooltip(
-        message: tooltip!,
-        child: iconWidget,
-      );
+      iconWidget = Tooltip(message: tooltip!, child: iconWidget);
     }
 
     return TapTarget(
@@ -153,21 +149,18 @@ class TextTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding: padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(
-        vertical: AppTokens.space2,
-      ),
+      padding:
+          padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(vertical: AppTokens.space2),
       semanticLabel: semanticLabel ?? text,
       semanticHint: semanticHint,
       enabled: enabled,
       child: Text(
         text,
-        style: style?.copyWith(
-          color: enabled ? style?.color : theme.colorScheme.onSurfaceVariant,
-        ),
+        style: style?.copyWith(color: enabled ? style?.color : theme.colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -201,20 +194,20 @@ class CardTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Container(
       margin: margin,
       child: TapTarget(
         onTap: enabled ? onTap : null,
         minSize: minSize,
         padding: padding,
-        decoration: decoration ?? BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: AppRadius.medium,
-          border: Border.all(
-            color: theme.colorScheme.outline.withOpacity(0.2),
-          ),
-        ),
+        decoration:
+            decoration ??
+            BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: AppRadius.medium,
+              border: Border.all(color: theme.colorScheme.outline.withOpacity(0.2)),
+            ),
         semanticLabel: semanticLabel,
         semanticHint: semanticHint,
         enabled: enabled,
@@ -250,13 +243,12 @@ class ListItemTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return TapTarget(
       onTap: enabled ? onTap : null,
       minSize: minSize,
-      padding: padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(
-        vertical: AppTokens.space3,
-      ),
+      padding:
+          padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(vertical: AppTokens.space3),
       decoration: decoration,
       semanticLabel: semanticLabel,
       semanticHint: semanticHint,
@@ -292,13 +284,15 @@ class FloatingTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
       padding: AppSpacing.space4,
       decoration: BoxDecoration(
-        color: enabled ? backgroundColor ?? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+        color: enabled
+            ? backgroundColor ?? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
@@ -313,7 +307,9 @@ class FloatingTapTarget extends StatelessWidget {
       enabled: enabled,
       child: IconTheme(
         data: IconThemeData(
-          color: enabled ? foregroundColor ?? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+          color: enabled
+              ? foregroundColor ?? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurfaceVariant,
         ),
         child: child,
       ),
@@ -349,31 +345,25 @@ class ToggleTapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     final effectiveSelectedColor = selectedColor ?? theme.colorScheme.primary;
     final effectiveUnselectedColor = unselectedColor ?? theme.colorScheme.surfaceContainerHighest;
-    
+
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding: AppSpacing.horizontal(AppTokens.space3).copyWith(
-        vertical: AppTokens.space2,
-      ),
+      padding: AppSpacing.horizontal(AppTokens.space3).copyWith(vertical: AppTokens.space2),
       decoration: BoxDecoration(
         color: isSelected ? effectiveSelectedColor : effectiveUnselectedColor,
         borderRadius: AppRadius.medium,
-        border: Border.all(
-          color: isSelected ? effectiveSelectedColor : theme.colorScheme.outline,
-        ),
+        border: Border.all(color: isSelected ? effectiveSelectedColor : theme.colorScheme.outline),
       ),
       semanticLabel: semanticLabel,
       semanticHint: semanticHint ?? 'Double tap to ${isSelected ? 'deselect' : 'select'}',
       enabled: enabled,
       child: DefaultTextStyle(
         style: TextStyle(
-          color: isSelected 
-              ? theme.colorScheme.onPrimary 
-              : theme.colorScheme.onSurface,
+          color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
         ),
         child: child,
       ),

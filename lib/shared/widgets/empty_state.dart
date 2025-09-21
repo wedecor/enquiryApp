@@ -32,30 +32,21 @@ class EmptyState extends StatelessWidget {
           children: [
             // Icon
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: AppTokens.iconXLarge * 2,
-                color: colorScheme.onSurfaceVariant,
-              ),
+              Icon(icon, size: AppTokens.iconXLarge * 2, color: colorScheme.onSurfaceVariant),
               SizedBox(height: AppTokens.space6),
             ],
-            
+
             // Message
             Text(
               message,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
-            
+
             // Action button
             if (action != null && actionText != null) ...[
               SizedBox(height: AppTokens.space6),
-              ElevatedButton(
-                onPressed: action,
-                child: Text(actionText!),
-              ),
+              ElevatedButton(onPressed: action, child: Text(actionText!)),
             ],
           ],
         ),
@@ -66,10 +57,7 @@ class EmptyState extends StatelessWidget {
 
 /// Empty state for enquiries list
 class EnquiriesEmptyState extends StatelessWidget {
-  const EnquiriesEmptyState({
-    super.key,
-    this.onAddEnquiry,
-  });
+  const EnquiriesEmptyState({super.key, this.onAddEnquiry});
 
   final VoidCallback? onAddEnquiry;
 
@@ -86,10 +74,7 @@ class EnquiriesEmptyState extends StatelessWidget {
 
 /// Empty state for filtered results
 class FilteredEmptyState extends StatelessWidget {
-  const FilteredEmptyState({
-    super.key,
-    this.onClearFilters,
-  });
+  const FilteredEmptyState({super.key, this.onClearFilters});
 
   final VoidCallback? onClearFilters;
 
@@ -106,10 +91,7 @@ class FilteredEmptyState extends StatelessWidget {
 
 /// Empty state for saved views
 class SavedViewsEmptyState extends StatelessWidget {
-  const SavedViewsEmptyState({
-    super.key,
-    this.onCreateView,
-  });
+  const SavedViewsEmptyState({super.key, this.onCreateView});
 
   final VoidCallback? onCreateView;
 
@@ -126,10 +108,7 @@ class SavedViewsEmptyState extends StatelessWidget {
 
 /// Empty state for exports
 class ExportsEmptyState extends StatelessWidget {
-  const ExportsEmptyState({
-    super.key,
-    this.onExport,
-  });
+  const ExportsEmptyState({super.key, this.onExport});
 
   final VoidCallback? onExport;
 
@@ -159,11 +138,7 @@ class NotificationsEmptyState extends StatelessWidget {
 
 /// Empty state for search results
 class SearchEmptyState extends StatelessWidget {
-  const SearchEmptyState({
-    super.key,
-    required this.query,
-    this.onClearSearch,
-  });
+  const SearchEmptyState({super.key, required this.query, this.onClearSearch});
 
   final String query;
   final VoidCallback? onClearSearch;
@@ -181,10 +156,7 @@ class SearchEmptyState extends StatelessWidget {
 
 /// Empty state for analytics
 class AnalyticsEmptyState extends StatelessWidget {
-  const AnalyticsEmptyState({
-    super.key,
-    this.onRefresh,
-  });
+  const AnalyticsEmptyState({super.key, this.onRefresh});
 
   final VoidCallback? onRefresh;
 

@@ -16,20 +16,15 @@ class EnquiryFilters with _$EnquiryFilters {
     @Default(SortOrder.descending) SortOrder sortOrder,
   }) = _EnquiryFilters;
 
-  factory EnquiryFilters.fromJson(Map<String, dynamic> json) =>
-      _$EnquiryFiltersFromJson(json);
+  factory EnquiryFilters.fromJson(Map<String, dynamic> json) => _$EnquiryFiltersFromJson(json);
 }
 
 /// Date range for filtering enquiries
 @freezed
 class DateTimeRange with _$DateTimeRange {
-  const factory DateTimeRange({
-    required DateTime start,
-    required DateTime end,
-  }) = _DateTimeRange;
+  const factory DateTimeRange({required DateTime start, required DateTime end}) = _DateTimeRange;
 
-  factory DateTimeRange.fromJson(Map<String, dynamic> json) =>
-      _$DateTimeRangeFromJson(json);
+  factory DateTimeRange.fromJson(Map<String, dynamic> json) => _$DateTimeRangeFromJson(json);
 }
 
 /// Sort options for enquiries
@@ -69,8 +64,7 @@ class SavedView with _$SavedView {
     required DateTime updatedAt,
   }) = _SavedView;
 
-  factory SavedView.fromJson(Map<String, dynamic> json) =>
-      _$SavedViewFromJson(json);
+  factory SavedView.fromJson(Map<String, dynamic> json) => _$SavedViewFromJson(json);
 }
 
 /// State for saved views management
@@ -118,38 +112,37 @@ extension EnquiryFiltersExtension on EnquiryFilters {
 
   /// Create a copy with reset to default sorting
   EnquiryFilters resetSorting() {
-    return copyWith(
-      sortBy: EnquirySortBy.createdAt,
-      sortOrder: SortOrder.descending,
-    );
+    return copyWith(sortBy: EnquirySortBy.createdAt, sortOrder: SortOrder.descending);
   }
 
   /// Get display text for active filters
   List<String> get activeFilterDescriptions {
     final descriptions = <String>[];
-    
+
     if (statuses.isNotEmpty) {
       descriptions.add('Status: ${statuses.join(', ')}');
     }
-    
+
     if (eventTypes.isNotEmpty) {
       descriptions.add('Event Type: ${eventTypes.join(', ')}');
     }
-    
+
     if (assigneeId != null) {
       descriptions.add('Assignee: $assigneeId');
     }
-    
+
     if (dateRange != null) {
       final start = dateRange!.start;
       final end = dateRange!.end;
-      descriptions.add('Date: ${start.day}/${start.month}/${start.year} - ${end.day}/${end.month}/${end.year}');
+      descriptions.add(
+        'Date: ${start.day}/${start.month}/${start.year} - ${end.day}/${end.month}/${end.year}',
+      );
     }
-    
+
     if (searchQuery?.isNotEmpty ?? false) {
       descriptions.add('Search: "$searchQuery"');
     }
-    
+
     return descriptions;
   }
 }

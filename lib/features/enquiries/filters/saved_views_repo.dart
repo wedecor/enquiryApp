@@ -30,9 +30,7 @@ class SavedViewsRepository {
           .orderBy('createdAt', descending: false)
           .get();
 
-      return doc.docs
-          .map((doc) => SavedView.fromJson(doc.data()))
-          .toList();
+      return doc.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
     } catch (e) {
       Logger.error('Failed to get saved views', error: e, tag: 'SavedViews');
       rethrow;
@@ -153,7 +151,9 @@ class SavedViewsRepository {
 
       // Check if name already exists (excluding current view)
       final existingViews = await getSavedViews();
-      if (existingViews.any((v) => v.id != view.id && v.name.toLowerCase() == view.name.toLowerCase())) {
+      if (existingViews.any(
+        (v) => v.id != view.id && v.name.toLowerCase() == view.name.toLowerCase(),
+      )) {
         throw Exception('A view with this name already exists');
       }
 
@@ -218,10 +218,7 @@ class SavedViewsRepository {
           .doc(user.uid)
           .collection('savedViews')
           .doc(id)
-          .update({
-        'isDefault': true,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+          .update({'isDefault': true, 'updatedAt': FieldValue.serverTimestamp()});
 
       Logger.info('Set default view: $id', tag: 'SavedViews');
     } catch (e) {
@@ -274,10 +271,8 @@ class SavedViewsRepository {
         .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => SavedView.fromJson(doc.data()))
-          .toList();
-    });
+          return snapshot.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
+        });
   }
 }
 
@@ -288,7 +283,9 @@ final savedViewsProvider = StreamProvider<List<SavedView>>((ref) {
 });
 
 /// Provider for saved views state management
-final savedViewsStateProvider = StateNotifierProvider<SavedViewsStateController, SavedViewsState>((ref) {
+final savedViewsStateProvider = StateNotifierProvider<SavedViewsStateController, SavedViewsState>((
+  ref,
+) {
   return SavedViewsStateController(ref);
 });
 
@@ -304,20 +301,13 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
   Future<void> _loadSavedViews() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
-      
+
       final repository = ref.read(savedViewsRepositoryProvider);
       final views = await repository.getSavedViews();
-      
-      state = state.copyWith(
-        views: views,
-        isLoading: false,
-        error: null,
-      );
+
+      state = state.copyWith(views: views, isLoading: false, error: null);
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -334,7 +324,7 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
         filters: filters,
         isDefault: isDefault,
       );
-      
+
       final updatedViews = List<SavedView>.from(state.views)..add(newView);
       state = state.copyWith(views: updatedViews);
     } catch (e) {
@@ -348,7 +338,7 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
       final updatedView = await repository.updateView(view);
-      
+
       final updatedViews = state.views.map((v) => v.id == view.id ? updatedView : v).toList();
       state = state.copyWith(views: updatedViews);
     } catch (e) {
@@ -362,7 +352,7 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
       await repository.deleteView(id);
-      
+
       final updatedViews = state.views.where((v) => v.id != id).toList();
       state = state.copyWith(views: updatedViews);
     } catch (e) {
@@ -376,7 +366,7 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
       await repository.setDefaultView(id);
-      
+
       // Update local state
       final updatedViews = state.views.map((v) {
         return v.id == id ? v.copyWith(isDefault: true) : v.copyWith(isDefault: false);
