@@ -104,11 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo/Icon
-                Icon(
-                  Icons.home,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                Icon(Icons.home, size: 80, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 32),
 
                 // Title
@@ -126,8 +122,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'Sign in to your account',
                   style: TextStyle(
-                    fontSize: 16, 
-                    color: Theme.of(context).colorScheme.onSurfaceVariant
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
