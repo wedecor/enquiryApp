@@ -88,7 +88,7 @@ extension SemanticsExtension on Widget {
 
   /// Add semantic progress indicator role to a widget
   Widget withProgressSemantics({String? label, double? value}) {
-    return Semantics(progressBar: true, label: label, value: value?.toString(), child: this);
+    return Semantics(label: label, value: value?.toString(), child: this);
   }
 
   /// Add semantic tab role to a widget
@@ -203,7 +203,7 @@ class A11yHelper {
 
   /// Create a semantic progress indicator with proper labeling
   static Widget semanticProgress({required String label, double? value, Widget? child}) {
-    return Semantics(progressBar: true, label: label, value: value?.toString(), child: child);
+    return Semantics(label: label, value: value?.toString(), child: child);
   }
 
   /// Create a semantic tab with proper labeling

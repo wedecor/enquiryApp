@@ -153,8 +153,8 @@ class TextTapTarget extends StatelessWidget {
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding:
-          padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(vertical: AppTokens.space2),
+      padding: padding ?? 
+          EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
       semanticLabel: semanticLabel ?? text,
       semanticHint: semanticHint,
       enabled: enabled,
@@ -247,8 +247,8 @@ class ListItemTapTarget extends StatelessWidget {
     return TapTarget(
       onTap: enabled ? onTap : null,
       minSize: minSize,
-      padding:
-          padding ?? AppSpacing.horizontal(AppTokens.space4).copyWith(vertical: AppTokens.space3),
+      padding: padding ?? 
+          EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
       decoration: decoration,
       semanticLabel: semanticLabel,
       semanticHint: semanticHint,
@@ -352,7 +352,7 @@ class ToggleTapTarget extends StatelessWidget {
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding: AppSpacing.horizontal(AppTokens.space3).copyWith(vertical: AppTokens.space2),
+      padding: EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space2),
       decoration: BoxDecoration(
         color: isSelected ? effectiveSelectedColor : effectiveUnselectedColor,
         borderRadius: AppRadius.medium,
@@ -406,17 +406,20 @@ extension TapTargetExtension on Widget {
   }) {
     if (this is Icon) {
       final icon = this as Icon;
-      return IconTapTarget(
-        icon: icon.icon,
-        onPressed: onPressed,
-        size: icon.size ?? AppTokens.iconMedium,
-        color: icon.color,
-        tooltip: tooltip,
-        semanticLabel: semanticLabel,
-        semanticHint: semanticHint,
-        enabled: enabled,
-        minSize: minSize,
-      );
+      final iconData = icon.icon;
+      if (iconData != null) {
+        return IconTapTarget(
+          icon: iconData,
+          onPressed: onPressed,
+          size: icon.size ?? AppTokens.iconMedium,
+          color: icon.color,
+          tooltip: tooltip,
+          semanticLabel: semanticLabel,
+          semanticHint: semanticHint,
+          enabled: enabled,
+          minSize: minSize,
+        );
+      }
     }
     return asTapTarget(
       onTap: onPressed,

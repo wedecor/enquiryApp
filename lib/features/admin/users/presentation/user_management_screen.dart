@@ -500,9 +500,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       });
       showDialog<void>(context: context, builder: (context) => const InviteUserDialog());
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Access denied: ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Access denied: ${e.toString()}')));
     }
   }
 
@@ -529,14 +529,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     try {
       requireAdmin(ref);
       final action = user.active ? 'deactivate' : 'activate';
-      
+
       logAdminAction(ref, 'user_status_toggle_initiated', {
         'targetUserId': user.uid,
         'targetUserEmail': user.email,
         'action': action,
         'currentActive': user.active,
       });
-      
+
       showDialog<void>(
         context: context,
         builder: (context) => ConfirmDialog(
@@ -550,20 +550,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             });
             ref
                 .read(userFormControllerProvider.notifier)
-              .toggleActive(user.uid, !user.active)
-              .then((_) {
-                _showSnackBar('User ${action}d successfully', isError: false);
-              })
-              .catchError((Object error) {
-                _showSnackBar('Failed to $action user: $error', isError: true);
-              });
-        },
-      ),
-    );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Access denied: ${e.toString()}')),
+                .toggleActive(user.uid, !user.active)
+                .then((_) {
+                  _showSnackBar('User ${action}d successfully', isError: false);
+                })
+                .catchError((Object error) {
+                  _showSnackBar('Failed to $action user: $error', isError: true);
+                });
+          },
+        ),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Access denied: ${e.toString()}')));
     }
   }
 

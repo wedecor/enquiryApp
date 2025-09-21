@@ -17,16 +17,13 @@ class CsvExport {
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
   /// Export enquiries to CSV with role-based filtering and column restrictions
-  static Future<void> exportEnquiries(
-    List<Map<String, dynamic>> enquiries, 
-    WidgetRef ref,
-  ) async {
+  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries, WidgetRef ref) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
 
     final isAdminUser = isAdmin(ref);
-    
+
     // Log the export action
     await logAdminAction(ref, 'csv_export_enquiries', {
       'recordCount': enquiries.length,

@@ -1,9 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/logging/logger.dart';
-import '../../data/enquiry_repository.dart';
-import '../../domain/enquiry.dart';
+import '../../../core/logging/logger.dart';
+import '../../../core/services/firestore_service.dart';
+import '../data/enquiry_repository.dart';
+import '../domain/enquiry.dart';
 import 'filters_state.dart';
 
 /// Provider for the current enquiry filters
@@ -145,7 +146,7 @@ class EnquiryFiltersController extends StateNotifier<EnquiryFilters> {
     if (state.searchQuery?.isNotEmpty ?? false) {
       // Note: Firestore doesn't support full-text search natively
       // This would need to be handled client-side or with a search service
-      Logger.warning(
+      Logger.info(
         'Search query not applied to Firestore query (client-side filtering)',
         tag: 'Filters',
       );

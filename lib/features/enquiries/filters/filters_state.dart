@@ -10,7 +10,7 @@ class EnquiryFilters with _$EnquiryFilters {
     @Default([]) List<String> statuses,
     @Default([]) List<String> eventTypes,
     String? assigneeId,
-    DateTimeRange? dateRange,
+    FilterDateRange? dateRange,
     String? searchQuery,
     @Default(EnquirySortBy.createdAt) EnquirySortBy sortBy,
     @Default(SortOrder.descending) SortOrder sortOrder,
@@ -21,10 +21,10 @@ class EnquiryFilters with _$EnquiryFilters {
 
 /// Date range for filtering enquiries
 @freezed
-class DateTimeRange with _$DateTimeRange {
-  const factory DateTimeRange({required DateTime start, required DateTime end}) = _DateTimeRange;
+class FilterDateRange with _$FilterDateRange {
+  const factory FilterDateRange({required DateTime start, required DateTime end}) = _FilterDateRange;
 
-  factory DateTimeRange.fromJson(Map<String, dynamic> json) => _$DateTimeRangeFromJson(json);
+  factory FilterDateRange.fromJson(Map<String, dynamic> json) => _$FilterDateRangeFromJson(json);
 }
 
 /// Sort options for enquiries
