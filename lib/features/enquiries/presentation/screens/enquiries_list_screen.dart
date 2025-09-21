@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/role_guards.dart';
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../shared/models/user_model.dart';
@@ -277,7 +276,7 @@ class EnquiriesListScreen extends ConsumerWidget {
     try {
       final userRole = ref.read(currentUserWithFirestoreProvider).value?.role;
       final userId = ref.read(currentUserWithFirestoreProvider).value?.uid;
-      
+
       // Show loading indicator
       showDialog(
         context: context,

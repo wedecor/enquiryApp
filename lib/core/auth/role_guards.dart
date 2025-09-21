@@ -19,17 +19,16 @@ final isStaffValueProvider = Provider<bool>((ref) {
 /// Check if current user has admin role
 bool isAdmin(WidgetRef ref) => ref.read(isAdminValueProvider);
 
-/// Check if current user has staff role  
+/// Check if current user has staff role
 bool isStaff(WidgetRef ref) => ref.read(isStaffValueProvider);
 
 /// Require admin role - throws StateError if not admin
 void requireAdmin(WidgetRef ref) {
   final adminStatus = ref.read(isAdminValueProvider);
   final currentRole = ref.read(currentUserRoleProvider);
-  final userId = ref.read(firebaseAuthUserProvider).valueOrNull?.uid;
-  
+
   Logger.info('Role check: requireAdmin called', tag: 'RoleGuards');
-  
+
   if (!adminStatus) {
     Logger.error('Admin-only action attempted by non-admin', tag: 'RoleGuards');
     throw StateError('Admin access required. Current role: $currentRole');
@@ -44,13 +43,13 @@ bool canEditEnquiry(WidgetRef ref, {required String? assigneeId}) {
     Logger.debug('Admin can edit any enquiry', tag: 'RoleGuards');
     return true;
   }
-  
+
   // Staff can only edit enquiries assigned to them
   final currentUserId = ref.read(firebaseAuthUserProvider).valueOrNull?.uid;
   final canEdit = currentUserId != null && assigneeId == currentUserId;
-  
+
   Logger.debug('Staff enquiry edit check', tag: 'RoleGuards');
-  
+
   return canEdit;
 }
 
@@ -83,15 +82,11 @@ bool canConfigureSystem(WidgetRef ref) {
 }
 
 /// Helper to log admin actions for audit trail
-Future<void> logAdminAction(
-  WidgetRef ref, 
-  String action, 
-  Map<String, Object?> data,
-) async {
+Future<void> logAdminAction(WidgetRef ref, String action, Map<String, Object?> data) async {
   try {
     final userId = ref.read(firebaseAuthUserProvider).valueOrNull?.uid;
     final userEmail = ref.read(firebaseAuthUserProvider).valueOrNull?.email;
-    
+
     final auditData = {
       'action': action,
       'userId': userId,
@@ -100,13 +95,12 @@ Future<void> logAdminAction(
       'isAdmin': isAdmin(ref),
       ...data,
     };
-    
+
     Logger.info('Admin action logged', tag: 'AdminAudit');
-    
+
     // Also log to audit service if available
     final auditService = ref.read(auditServiceProvider);
     await auditService.logAdminAction(action, auditData);
-    
   } catch (e) {
     Logger.error('Failed to log admin action', tag: 'AdminAudit');
   }
@@ -120,9 +114,9 @@ bool validateEnquiryAccess(
   required String operation,
 }) {
   final canAccess = isAdmin(ref) || canEditEnquiry(ref, assigneeId: assigneeId);
-  
+
   Logger.info('Enquiry access validation', tag: 'RoleGuards');
-  
+
   return canAccess;
 }
 

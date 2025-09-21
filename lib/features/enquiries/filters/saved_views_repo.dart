@@ -19,7 +19,7 @@ class SavedViewsRepository {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        Logger.warning('No authenticated user for saved views', tag: 'SavedViews');
+        Logger.error('No authenticated user for saved views', tag: 'SavedViews');
         return [];
       }
 
@@ -42,7 +42,7 @@ class SavedViewsRepository {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        Logger.warning('No authenticated user for saved view', tag: 'SavedViews');
+        Logger.error('No authenticated user for saved view', tag: 'SavedViews');
         return null;
       }
 
