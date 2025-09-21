@@ -339,15 +339,15 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError 
-            ? Theme.of(context).colorScheme.error 
+        backgroundColor: isError
+            ? Theme.of(context).colorScheme.error
             : Theme.of(context).colorScheme.primary,
         action: SnackBarAction(
-          label: 'OK', 
-          textColor: isError 
-              ? Theme.of(context).colorScheme.onError 
-              : Theme.of(context).colorScheme.onPrimary, 
-          onPressed: () {}
+          label: 'OK',
+          textColor: isError
+              ? Theme.of(context).colorScheme.onError
+              : Theme.of(context).colorScheme.onPrimary,
+          onPressed: () {},
         ),
       ),
     );
