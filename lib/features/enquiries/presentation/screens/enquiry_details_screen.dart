@@ -92,21 +92,21 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 final currentUserId = user.uid;
 
                 if (assignedTo != null && assignedTo != currentUserId) {
-                  return const Center(
+                  return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.lock, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
+                        Icon(Icons.lock, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        const SizedBox(height: 16),
+                        const Text(
                           'Access Denied',
                           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'You can only view enquiries assigned to you.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -289,7 +289,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     ),
                     child: Text(
                       _capitalizeFirst(enquiryData['eventStatus'] as String? ?? 'N/A'),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -298,7 +298,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             const SizedBox(height: 8),
             Text(
               'Customer: ${(enquiryData['customerName'] as String?) ?? 'N/A'}',
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -398,9 +398,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Status updated successfully'),
-                      backgroundColor: Colors.green,
+                    SnackBar(
+                      content: const Text('Status updated successfully'),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                     ),
                   );
                 }
@@ -411,7 +411,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error updating status: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 }
@@ -433,7 +433,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
             ),
             const SizedBox(height: 12),
             ...children,
@@ -453,7 +453,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             width: 120,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+              style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
           Expanded(
@@ -497,24 +497,26 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   }
 
   Color _getStatusColor(String? status) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
     switch (status) {
       case 'new':
-        return Colors.orange;
+        return const Color(0xFFFF9800); // Orange
       case 'in_progress':
-        return Colors.blue;
+        return colorScheme.primary;
       case 'quote_sent':
-        return Colors.teal;
+        return const Color(0xFF009688); // Teal
       case 'approved':
-        return Colors.indigo;
+        return const Color(0xFF3F51B5); // Indigo
       case 'scheduled':
-        return Colors.purple;
+        return const Color(0xFF9C27B0); // Purple
       case 'completed':
-        return Colors.green;
+        return const Color(0xFF4CAF50); // Green
       case 'cancelled':
       case 'closed_lost':
-        return Colors.red;
+        return colorScheme.error;
       default:
-        return Colors.grey;
+        return colorScheme.outline;
     }
   }
 

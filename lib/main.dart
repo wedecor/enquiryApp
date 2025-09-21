@@ -95,17 +95,15 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentTheme = ref.watch(currentThemeProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
-    return ThemeContextProvider(
-      child: MaterialApp(
-        title: 'We Decor Enquiries',
-        theme: currentTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: const AuthGate().withUpdateChecker(),
-        debugShowCheckedModeBanner: false,
-      ),
+    return MaterialApp(
+      title: 'We Decor Enquiries',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      home: const AuthGate().withUpdateChecker(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

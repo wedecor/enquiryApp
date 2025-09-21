@@ -94,16 +94,16 @@ void main() {
     group('Business Logic Validation', () {
       test('user status change validation', () {
         const currentUserId = 'admin-123';
-        
+
         // Should allow deactivating others
         expect(_validateStatusChange(currentUserId, 'staff-456', false), isNull);
-        
+
         // Should prevent self-deactivation
         expect(_validateStatusChange(currentUserId, currentUserId, false), isNotNull);
-        
+
         // Should allow self-activation (recovery case)
         expect(_validateStatusChange(currentUserId, currentUserId, true), isNull);
-        
+
         // Should allow activating others
         expect(_validateStatusChange(currentUserId, 'staff-456', true), isNull);
       });
@@ -174,11 +174,10 @@ void main() {
       });
 
       test('user pagination logic', () {
-        final users = List.generate(25, (i) => {
-          'name': 'User $i',
-          'email': 'user$i@test.com',
-          'role': 'staff'
-        });
+        final users = List.generate(
+          25,
+          (i) => {'name': 'User $i', 'email': 'user$i@test.com', 'role': 'staff'},
+        );
 
         final page1 = _paginateUsers(users, 0, 10);
         expect(page1.length, 10);
@@ -222,10 +221,19 @@ class _SimpleWidgetRef implements WidgetRef {
   BuildContext get context => throw UnimplementedError();
 
   @override
-  void listen<T>(ProviderListenable<T> provider, void Function(T?, T) listener, {void Function(Object, StackTrace)? onError}) {}
+  void listen<T>(
+    ProviderListenable<T> provider,
+    void Function(T?, T) listener, {
+    void Function(Object, StackTrace)? onError,
+  }) {}
 
   @override
-  ProviderSubscription<T> listenManual<T>(ProviderListenable<T> provider, void Function(T?, T) listener, {void Function(Object, StackTrace)? onError, bool fireImmediately = false}) {
+  ProviderSubscription<T> listenManual<T>(
+    ProviderListenable<T> provider,
+    void Function(T?, T) listener, {
+    void Function(Object, StackTrace)? onError,
+    bool fireImmediately = false,
+  }) {
     throw UnimplementedError();
   }
 
@@ -282,10 +290,10 @@ String? _validateRoleChange(String currentRole, String newRole) {
 String? _validateInvitation(String email, String role) {
   final emailError = _validateEmail(email);
   if (emailError != null) return emailError;
-  
+
   final roleError = _validateRole(role);
   if (roleError != null) return roleError;
-  
+
   return null;
 }
 
@@ -301,27 +309,38 @@ bool _hasRoleChangePermission(String? role) => role == 'admin';
 
 List<Map<String, dynamic>> _filterUsersByQuery(List<Map<String, dynamic>> users, String query) {
   final lowercaseQuery = query.toLowerCase();
-  return users.where((user) =>
-    user['name'].toString().toLowerCase().contains(lowercaseQuery) ||
-    user['email'].toString().toLowerCase().contains(lowercaseQuery)
-  ).toList();
+  return users
+      .where(
+        (user) =>
+            user['name'].toString().toLowerCase().contains(lowercaseQuery) ||
+            user['email'].toString().toLowerCase().contains(lowercaseQuery),
+      )
+      .toList();
 }
 
-List<Map<String, dynamic>> _paginateUsers(List<Map<String, dynamic>> users, int page, int pageSize) {
+List<Map<String, dynamic>> _paginateUsers(
+  List<Map<String, dynamic>> users,
+  int page,
+  int pageSize,
+) {
   final startIndex = page * pageSize;
   if (startIndex >= users.length) return [];
-  
+
   final endIndex = (startIndex + pageSize).clamp(0, users.length);
   return users.sublist(startIndex, endIndex);
 }
 
-List<Map<String, dynamic>> _sortUsers(List<Map<String, dynamic>> users, String sortBy, bool ascending) {
+List<Map<String, dynamic>> _sortUsers(
+  List<Map<String, dynamic>> users,
+  String sortBy,
+  bool ascending,
+) {
   final sorted = List<Map<String, dynamic>>.from(users);
-  
+
   sorted.sort((a, b) {
     final comparison = a[sortBy].toString().compareTo(b[sortBy].toString());
     return ascending ? comparison : -comparison;
   });
-  
+
   return sorted;
 }
