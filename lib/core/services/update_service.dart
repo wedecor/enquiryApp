@@ -23,8 +23,9 @@ class UpdateService {
       final prefs = await SharedPreferences.getInstance();
       final lastChecked = prefs.getInt(_lastCheckedKey) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      
-      if (now - lastChecked < 3600000) { // 1 hour
+
+      if (now - lastChecked < 3600000) {
+        // 1 hour
         Logger.debug('Update check skipped - rate limited', tag: 'UpdateService');
         return null;
       }
@@ -34,13 +35,15 @@ class UpdateService {
       final currentVersion = packageInfo.version;
       final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-      Logger.info('Checking for updates - current: $currentVersion+$currentBuildNumber', tag: 'UpdateService');
+      Logger.info(
+        'Checking for updates - current: $currentVersion+$currentBuildNumber',
+        tag: 'UpdateService',
+      );
 
       // Fetch remote version info
-      final response = await http.get(
-        Uri.parse(_updateCheckUrl),
-        headers: {'Cache-Control': 'no-cache'},
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(Uri.parse(_updateCheckUrl), headers: {'Cache-Control': 'no-cache'})
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
         Logger.warn('Update check failed - HTTP ${response.statusCode}', tag: 'UpdateService');
@@ -65,7 +68,7 @@ class UpdateService {
       // Check if update is available
       if (remoteBuildNumber > currentBuildNumber) {
         Logger.info('Update available: $remoteVersion+$remoteBuildNumber', tag: 'UpdateService');
-        
+
         return UpdateInfo(
           currentVersion: currentVersion,
           currentBuildNumber: currentBuildNumber,
@@ -92,7 +95,8 @@ class UpdateService {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Don't show again if dismissed within last 24 hours (unless forced)
-    if (!updateInfo.isForced && now - lastDismissed < 86400000) { // 24 hours
+    if (!updateInfo.isForced && now - lastDismissed < 86400000) {
+      // 24 hours
       return;
     }
 
@@ -180,9 +184,7 @@ class UpdateDialog extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             updateInfo.isForced ? 'Update Required' : 'Update Available',
-            style: TextStyle(
-              color: updateInfo.isForced ? Colors.red : theme.colorScheme.onSurface,
-            ),
+            style: TextStyle(color: updateInfo.isForced ? Colors.red : theme.colorScheme.onSurface),
           ),
         ],
       ),
@@ -227,15 +229,9 @@ class UpdateDialog extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Release notes
-            Text(
-              'What\'s New:',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('What\'s New:', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(
-              updateInfo.releaseNotes,
-              style: theme.textTheme.bodyMedium,
-            ),
+            Text(updateInfo.releaseNotes, style: theme.textTheme.bodyMedium),
 
             if (updateInfo.isForced) ...[
               const SizedBox(height: 16),
@@ -253,10 +249,7 @@ class UpdateDialog extends StatelessWidget {
                     Expanded(
                       child: Text(
                         'This update is required to continue using the app.',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -268,10 +261,7 @@ class UpdateDialog extends StatelessWidget {
       ),
       actions: [
         if (!updateInfo.isForced)
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Later'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Later')),
         TextButton(
           onPressed: () {
             UpdateService.copyDownloadUrl(updateInfo.downloadUrl);
@@ -305,11 +295,7 @@ class UpdateChecker extends StatefulWidget {
   final Widget child;
   final bool checkOnStart;
 
-  const UpdateChecker({
-    super.key,
-    required this.child,
-    this.checkOnStart = true,
-  });
+  const UpdateChecker({super.key, required this.child, this.checkOnStart = true});
 
   @override
   State<UpdateChecker> createState() => _UpdateCheckerState();
@@ -347,9 +333,6 @@ class _UpdateCheckerState extends State<UpdateChecker> {
 extension UpdateCheckExtension on Widget {
   /// Wrap widget with update checker
   Widget withUpdateChecker({bool checkOnStart = true}) {
-    return UpdateChecker(
-      checkOnStart: checkOnStart,
-      child: this,
-    );
+    return UpdateChecker(checkOnStart: checkOnStart, child: this);
   }
 }
