@@ -2,9 +2,9 @@
   "version": "1.0.1",
   "buildNumber": 6,
   "releaseDate": "2024-09-21",
-  "releaseNotes": "🐛 Critical Fixes:\n• Fixed infinite loading in change history\n• Resolved user invitation memory errors\n• Fixed user management type casting errors\n• Fixed preferences saving issue\n• Fixed PWA manifest issues\n• Enhanced Firebase Functions (256MB memory)\n• Better error handling with retry options\n• Added automatic update notifications\n• Added manual 'Check for Updates' button in Settings",
+  "releaseNotes": "🐛 Critical Fixes:\n• Fixed infinite loading in change history\n• Resolved user invitation memory errors\n• Fixed user management type casting errors\n• Fixed preferences saving issue\n• Fixed new user login after password setup\n• Fixed PWA manifest issues\n• Enhanced Firebase Functions (256MB memory)\n• Better error handling with retry options\n• Added automatic update notifications\n• Added manual 'Check for Updates' button in Settings",
   "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/app-release.apk",
-  "sha256": "b743145235972460eed9682c401eec653468fa69fde4bce84eb494f484120542",
+  "sha256": "137e5556a109434b6343bc2d989183b35480f9f931eaf9cb7dcec31a3a3d9754",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
