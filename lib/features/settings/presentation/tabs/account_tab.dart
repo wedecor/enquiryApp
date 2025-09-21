@@ -220,7 +220,7 @@ class AccountTab extends ConsumerWidget {
 
       // Force check by bypassing rate limiting
       final updateInfo = await UpdateService.checkForUpdate(forceCheck: true);
-      
+
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
@@ -253,17 +253,12 @@ class AccountTab extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ],
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
+                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
               ],
             ),
           );
@@ -272,7 +267,8 @@ class AccountTab extends ConsumerWidget {
 
       safeLog('manual_update_check', {
         'has_update': updateInfo != null,
-        'current_version': '${(await PackageInfo.fromPlatform()).version}+${(await PackageInfo.fromPlatform()).buildNumber}',
+        'current_version':
+            '${(await PackageInfo.fromPlatform()).version}+${(await PackageInfo.fromPlatform()).buildNumber}',
       });
     } catch (e) {
       // Close loading dialog if still open
