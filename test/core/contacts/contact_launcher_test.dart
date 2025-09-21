@@ -40,7 +40,7 @@ void main() {
       test('works with different country codes', () {
         final usLauncher = ContactLauncher(defaultCountryCode: '+1');
         expect(usLauncher.normalize('9876543210'), '+19876543210');
-        
+
         final ukLauncher = ContactLauncher(defaultCountryCode: '+44');
         expect(ukLauncher.normalize('2071838750'), '+442071838750');
       });
@@ -89,7 +89,10 @@ void main() {
         final prefillText = 'Hi! Following up on your enquiry.';
         final encodedText = Uri.encodeComponent(prefillText);
         final expectedWebUrl = 'https://wa.me/$whatsappPhone?text=$encodedText';
-        expect(expectedWebUrl, 'https://wa.me/442071838750?text=Hi!%20Following%20up%20on%20your%20enquiry.');
+        expect(
+          expectedWebUrl,
+          'https://wa.me/442071838750?text=Hi!%20Following%20up%20on%20your%20enquiry.',
+        );
       });
     });
 
@@ -188,7 +191,8 @@ void main() {
       });
 
       test('handles long prefill text', () {
-        const longText = 'This is a very long message that might exceed normal limits but should still be handled gracefully by the URL encoding mechanism.';
+        const longText =
+            'This is a very long message that might exceed normal limits but should still be handled gracefully by the URL encoding mechanism.';
         final encoded = Uri.encodeComponent(longText);
         expect(encoded.length, greaterThan(longText.length));
         expect(encoded, isNot(contains(' '))); // Spaces should be encoded

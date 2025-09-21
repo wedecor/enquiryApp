@@ -1,0 +1,115 @@
+rules:
+  - id: hardcoded-firebase-config
+    patterns:
+      - pattern: |
+          const FirebaseOptions(
+            apiKey: "...",
+            ...
+          )
+      - pattern: |
+          apiKey: "$API_KEY"
+    message: Potential hardcoded Firebase API key detected
+    languages: [dart]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [secrets]
+
+  - id: hardcoded-credentials
+    patterns:
+      - pattern: |
+          password: "$PASSWORD"
+      - pattern: |
+          secret: "$SECRET"
+      - pattern: |
+          token: "$TOKEN"
+    message: Potential hardcoded credentials detected
+    languages: [dart]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [secrets]
+
+  - id: missing-admin-guard
+    patterns:
+      - pattern: |
+          Future<void> $FUNC(...) async {
+            ...
+            await $SERVICE.deleteUser(...);
+            ...
+          }
+      - pattern: |
+          Future<void> $FUNC(...) async {
+            ...
+            await $SERVICE.updateUserRole(...);
+            ...
+          }
+    message: Admin-only operation may be missing requireAdmin() guard
+    languages: [dart]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [rbac]
+
+  - id: sql-injection-risk
+    patterns:
+      - pattern: |
+          query("... $USER_INPUT ...")
+      - pattern: |
+          rawQuery("... $USER_INPUT ...")
+    message: Potential SQL injection risk with user input
+    languages: [dart]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [injection]
+
+  - id: unsafe-url-launch
+    patterns:
+      - pattern: |
+          launchUrl($URL)
+      - pattern: |
+          launch($URL)
+    message: URL launch without validation - ensure URL is trusted
+    languages: [dart]
+    severity: INFO
+    metadata:
+      category: security
+      subcategory: [url-validation]
+
+  - id: missing-input-validation
+    patterns:
+      - pattern: |
+          TextFormField(
+            ...
+          )
+    message: TextFormField should have input validation
+    languages: [dart]
+    severity: INFO
+    metadata:
+      category: security
+      subcategory: [input-validation]
+
+  - id: debug-print-in-production
+    patterns:
+      - pattern: print($MSG)
+      - pattern: debugPrint($MSG)
+    message: Debug print statements should not be in production code
+    languages: [dart]
+    severity: WARNING
+    metadata:
+      category: security
+      subcategory: [information-disclosure]
+
+  - id: unsafe-html-rendering
+    patterns:
+      - pattern: |
+          Html.fromDom($HTML)
+      - pattern: |
+          WebView(..., javascriptMode: JavascriptMode.unrestricted, ...)
+    message: Unsafe HTML rendering or unrestricted JavaScript execution
+    languages: [dart]
+    severity: ERROR
+    metadata:
+      category: security
+      subcategory: [xss]

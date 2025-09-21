@@ -5,12 +5,7 @@ import '../logging/logger.dart';
 import '../providers/role_provider.dart';
 
 /// Status of contact launch operations
-enum ContactLaunchStatus {
-  opened,
-  notInstalled,
-  invalidNumber,
-  failed,
-}
+enum ContactLaunchStatus { opened, notInstalled, invalidNumber, failed }
 
 /// Provider for the contact launcher service
 final contactLauncherProvider = Provider<ContactLauncher>((ref) {
@@ -21,19 +16,17 @@ final contactLauncherProvider = Provider<ContactLauncher>((ref) {
 /// Service for launching contact applications (phone, WhatsApp)
 /// Handles phone number normalization, URL scheme launching, and audit logging
 class ContactLauncher {
-  ContactLauncher({
-    this.defaultCountryCode = '+91',
-  });
+  ContactLauncher({this.defaultCountryCode = '+91'});
 
   final String defaultCountryCode;
 
   /// Normalizes raw phone number to E.164-like format
-  /// 
+  ///
   /// Rules:
   /// - Removes spaces, dashes, parentheses, dots
   /// - Keeps leading '+' if present
   /// - Adds defaultCountryCode if no '+' prefix
-  /// 
+  ///
   /// Examples:
   /// - "9876543210" + "+91" → "+919876543210"
   /// - "(987) 654-3210" + "+1" → "+19876543210"
@@ -54,26 +47,23 @@ class ContactLauncher {
   }
 
   /// Launch phone dialer with the given number
-  /// 
+  ///
   /// Uses tel: scheme to open native phone app
   /// Returns status indicating success or failure reason
   Future<ContactLaunchStatus> callNumber(String rawPhone) async {
     try {
       final normalizedPhone = normalize(rawPhone);
-      
+
       if (normalizedPhone.isEmpty || normalizedPhone.length < 8) {
         Logger.error('Invalid phone number for calling', tag: 'ContactLauncher');
         return ContactLaunchStatus.invalidNumber;
       }
 
       final telUri = Uri.parse('tel:$normalizedPhone');
-      
+
       if (await canLaunchUrl(telUri)) {
-        final launched = await launchUrl(
-          telUri,
-          mode: LaunchMode.externalApplication,
-        );
-        
+        final launched = await launchUrl(telUri, mode: LaunchMode.externalApplication);
+
         if (launched) {
           Logger.info('Phone dialer launched successfully', tag: 'ContactLauncher');
           return ContactLaunchStatus.opened;
@@ -92,30 +82,25 @@ class ContactLauncher {
   }
 
   /// Open WhatsApp chat with the given number
-  /// 
+  ///
   /// Tries native WhatsApp app first, falls back to WhatsApp Web
   /// Supports optional prefilled message text
-  Future<ContactLaunchStatus> openWhatsApp(
-    String rawPhone, {
-    String? prefillText,
-  }) async {
+  Future<ContactLaunchStatus> openWhatsApp(String rawPhone, {String? prefillText}) async {
     try {
       final normalizedPhone = normalize(rawPhone);
-      
+
       if (normalizedPhone.isEmpty || normalizedPhone.length < 8) {
         Logger.error('Invalid phone number for WhatsApp', tag: 'ContactLauncher');
         return ContactLaunchStatus.invalidNumber;
       }
 
       // Remove '+' for WhatsApp URLs (they expect just digits)
-      final whatsappPhone = normalizedPhone.startsWith('+') 
-          ? normalizedPhone.substring(1) 
+      final whatsappPhone = normalizedPhone.startsWith('+')
+          ? normalizedPhone.substring(1)
           : normalizedPhone;
 
       // Encode prefill text for URL
-      final encodedText = prefillText != null 
-          ? Uri.encodeComponent(prefillText)
-          : '';
+      final encodedText = prefillText != null ? Uri.encodeComponent(prefillText) : '';
 
       // Try native WhatsApp app first
       final nativeUri = Uri.parse(
@@ -123,11 +108,8 @@ class ContactLauncher {
       );
 
       if (await canLaunchUrl(nativeUri)) {
-        final launched = await launchUrl(
-          nativeUri,
-          mode: LaunchMode.externalApplication,
-        );
-        
+        final launched = await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
+
         if (launched) {
           Logger.info('WhatsApp app launched successfully', tag: 'ContactLauncher');
           return ContactLaunchStatus.opened;
@@ -139,10 +121,7 @@ class ContactLauncher {
         'https://wa.me/$whatsappPhone${encodedText.isNotEmpty ? '?text=$encodedText' : ''}',
       );
 
-      final webLaunched = await launchUrl(
-        webUri,
-        mode: LaunchMode.externalApplication,
-      );
+      final webLaunched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
 
       if (webLaunched) {
         Logger.info('WhatsApp Web launched successfully', tag: 'ContactLauncher');
@@ -163,10 +142,7 @@ class ContactLauncher {
   }
 
   /// Launch phone call with audit logging
-  Future<ContactLaunchStatus> callNumberWithAudit(
-    String rawPhone, {
-    String? enquiryId,
-  }) async {
+  Future<ContactLaunchStatus> callNumberWithAudit(String rawPhone, {String? enquiryId}) async {
     final status = await callNumber(rawPhone);
     _logContactAction('call', status == ContactLaunchStatus.opened);
     return status;
