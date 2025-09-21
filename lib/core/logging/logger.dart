@@ -40,9 +40,9 @@ class Logger {
   static void _addToBuffer(String level, String message, {String? tag}) {
     final timestamp = DateTime.now().toIso8601String();
     final logEntry = '[$timestamp] [$level] [${tag ?? _name}] $message';
-    
+
     _logBuffer.add(logEntry);
-    
+
     // Keep buffer size manageable
     if (_logBuffer.length > _maxLogBufferSize) {
       _logBuffer.removeAt(0);
@@ -55,7 +55,7 @@ class Logger {
 
     final redactedMessage = _redactPII(message);
     _addToBuffer('DEBUG', redactedMessage, tag: tag);
-    
+
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -69,7 +69,7 @@ class Logger {
   static void info(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
     _addToBuffer('INFO', redactedMessage, tag: tag);
-    
+
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -83,7 +83,7 @@ class Logger {
   static void warn(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
     _addToBuffer('WARN', redactedMessage, tag: tag);
-    
+
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -97,7 +97,7 @@ class Logger {
   static void error(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     final redactedMessage = _redactPII(message);
     _addToBuffer('ERROR', redactedMessage, tag: tag);
-    
+
     developer.log(
       redactedMessage,
       name: tag ?? _name,
@@ -117,14 +117,14 @@ class Logger {
     buffer.writeln('=== RECENT APP LOGS (LAST ${_logBuffer.length} ENTRIES) ===');
     buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
     buffer.writeln('');
-    
+
     for (final logEntry in _logBuffer) {
       buffer.writeln(logEntry);
     }
-    
+
     buffer.writeln('');
     buffer.writeln('=== END LOGS ===');
-    
+
     return buffer.toString();
   }
 

@@ -145,10 +145,7 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
         const SizedBox(height: 24),
 
         // Help & Support
-        const Text(
-          'Help & Support',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
+        const Text('Help & Support', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
         const SizedBox(height: 12),
 
         Card(

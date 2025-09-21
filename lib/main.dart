@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
 import 'core/notifications/fcm_bootstrap.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
 import 'firebase_options.dart';
 
@@ -92,64 +94,17 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
-      title: 'We Decor Enquiries',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB), // Blue
-          brightness: Brightness.light,
-          primary: const Color(0xFF2563EB), // Blue
-          secondary: const Color(0xFF059669), // Green
-          tertiary: const Color(0xFFF59E0B), // Amber
-          surface: const Color(0xFFF8FAFC), // Light gray
-          error: const Color(0xFFDC2626), // Red
-          onPrimary: const Color(0xFFFFFFFF), // White
-          onSecondary: const Color(0xFFFFFFFF), // White
-          onSurface: const Color(0xFF1E293B), // Dark gray
-        ),
-        useMaterial3: true,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF2563EB),
-          foregroundColor: Color(0xFFFFFFFF),
-          elevation: 0,
-          centerTitle: true,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2563EB),
-            foregroundColor: const Color(0xFFFFFFFF),
-            elevation: 2,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: Color(0xFF059669),
-          foregroundColor: Color(0xFFFFFFFF),
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-          color: Color(0xFFFFFFFF),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
-          ),
-          filled: true,
-          fillColor: const Color(0xFFF8FAFC),
-        ),
+    final currentTheme = ref.watch(currentThemeProvider);
+    
+    return ThemeContextProvider(
+      child: MaterialApp(
+        title: 'We Decor Enquiries',
+        theme: currentTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        home: const AuthGate(),
+        debugShowCheckedModeBanner: false,
       ),
-      home: const AuthGate(),
     );
   }
 }
