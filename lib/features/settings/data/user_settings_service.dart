@@ -51,17 +51,31 @@ class UserSettingsService {
   /// Update user settings with merge
   Future<void> update(String uid, UserSettings settings) async {
     try {
+      // Log the attempt with detailed info
+      safeLog('user_settings_update_attempt', {
+        'uid': uid,
+        'theme': settings.theme,
+        'language': settings.language,
+        'timezone': settings.timezone,
+        'docPath': 'users/$uid/settings/preferences',
+      });
+
       await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
+      
       safeLog('user_settings_updated', {
         'uid': uid,
         'theme': settings.theme,
         'language': settings.language,
       });
     } catch (e, stackTrace) {
+      // Enhanced error logging
       safeLog('user_settings_update_error', {
         'uid': uid,
         'error': e.toString(),
-        'hasStackTrace': stackTrace.toString().isNotEmpty,
+        'errorType': e.runtimeType.toString(),
+        'stackTrace': stackTrace.toString(),
+        'docPath': 'users/$uid/settings/preferences',
+        'settingsData': settings.toFirestore(),
       });
       rethrow;
     }

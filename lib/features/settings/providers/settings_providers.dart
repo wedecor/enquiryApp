@@ -55,10 +55,18 @@ final updateUserSettingsProvider = Provider<Future<void> Function(UserSettings)>
       throw Exception('User not authenticated - cannot save preferences');
     }
 
+    // Log authentication state
+    print('DEBUG: Saving preferences for UID: $uid');
+    print('DEBUG: Settings theme: ${settings.theme}');
+    print('DEBUG: Settings language: ${settings.language}');
+
     final service = ref.read(userSettingsServiceProvider);
     try {
       await service.update(uid, settings);
+      print('DEBUG: Preferences saved successfully');
     } catch (e) {
+      print('DEBUG: Error saving preferences: $e');
+      print('DEBUG: Error type: ${e.runtimeType}');
       throw Exception('Failed to save preferences: $e');
     }
   };

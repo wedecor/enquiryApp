@@ -1,1 +1,1 @@
-9403436a35777d022442408f08dc4b1edb6dd8757e10e4cd2d066834e7b887c8  public/internal/rc3/app-release.apk
+b743145235972460eed9682c401eec653468fa69fde4bce84eb494f484120542  public/internal/rc3/app-release.apk
