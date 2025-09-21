@@ -73,22 +73,32 @@ class AuditService {
 
   /// Get change history for an enquiry (real-time stream)
   Stream<List<Map<String, dynamic>>> getEnquiryHistoryStream(String enquiryId) {
-    return _firestore
-        .collection('enquiries')
-        .doc(enquiryId)
-        .collection('history')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) {
-            final data = doc.data();
-            return {'id': doc.id, ...data};
-          }).toList();
-        })
-        .handleError((error) {
-          print('AuditService: Error getting enquiry history stream: $error');
-          return <Map<String, dynamic>>[];
-        });
+    try {
+      return _firestore
+          .collection('enquiries')
+          .doc(enquiryId)
+          .collection('history')
+          .orderBy('timestamp', descending: true)
+          .snapshots()
+          .timeout(const Duration(seconds: 5))
+          .map((snapshot) {
+            if (snapshot.docs.isEmpty) {
+              print('AuditService: No history found for enquiry $enquiryId');
+            }
+            return snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {'id': doc.id, ...data};
+            }).toList();
+          })
+          .handleError((error) {
+            print('AuditService: History stream error for $enquiryId: $error');
+            // Don't return here, let the error propagate to the UI
+          });
+    } catch (e) {
+      print('AuditService: Failed to create history stream for $enquiryId: $e');
+      // Return a stream with empty list if setup fails
+      return Stream.value(<Map<String, dynamic>>[]);
+    }
   }
 
   /// Get change history for an enquiry (one-time fetch)

@@ -186,7 +186,10 @@ class AppTheme {
         borderRadius: AppRadius.medium,
         borderSide: BorderSide(color: AppColorScheme.light.error, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppTokens.space4,
+        vertical: AppTokens.space3,
+      ),
     ),
 
     // Text theme
@@ -314,7 +317,10 @@ class AppTheme {
         borderRadius: AppRadius.medium,
         borderSide: BorderSide(color: AppColorScheme.dark.error, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppTokens.space4,
+        vertical: AppTokens.space3,
+      ),
     ),
 
     // Text theme
