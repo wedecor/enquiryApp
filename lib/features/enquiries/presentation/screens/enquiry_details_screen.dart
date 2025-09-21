@@ -3,22 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/audit_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import 'enquiry_form_screen.dart';
-
-// Placeholder services - TODO: Implement proper services
-class AuditService {
-  Future<void> recordChange({
-    required String enquiryId,
-    required String fieldChanged,
-    required String oldValue,
-    required String newValue,
-  }) async {
-    // TODO: Implement audit trail
-    print('Audit: $fieldChanged changed from $oldValue to $newValue');
-  }
-}
 
 class NotificationService {
   Future<void> notifyStatusUpdated({

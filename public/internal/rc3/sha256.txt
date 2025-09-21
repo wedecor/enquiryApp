@@ -1,1 +1,1 @@
-f0b279663fee881052ad3fca0176f7bd51288e9ebf9066ee52613eda01f1ef05  public/internal/rc3/app-release.apk
+bc5ca895bf7f90bade8420910089b17b5b83cd657913bdad0ab72bb523a574fa  public/internal/rc3/app-release.apk
