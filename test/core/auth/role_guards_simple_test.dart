@@ -9,9 +9,7 @@ void main() {
   group('Role Guards - Core Functionality Tests', () {
     test('isAdminValueProvider returns true for admin role', () {
       final container = ProviderContainer(
-        overrides: [
-          currentUserRoleProvider.overrideWith((ref) => 'admin'),
-        ],
+        overrides: [currentUserRoleProvider.overrideWith((ref) => 'admin')],
       );
 
       final result = container.read(isAdminValueProvider);
@@ -22,9 +20,7 @@ void main() {
 
     test('isAdminValueProvider returns false for staff role', () {
       final container = ProviderContainer(
-        overrides: [
-          currentUserRoleProvider.overrideWith((ref) => 'staff'),
-        ],
+        overrides: [currentUserRoleProvider.overrideWith((ref) => 'staff')],
       );
 
       final result = container.read(isAdminValueProvider);
@@ -35,9 +31,7 @@ void main() {
 
     test('isAdminValueProvider returns false for null role', () {
       final container = ProviderContainer(
-        overrides: [
-          currentUserRoleProvider.overrideWith((ref) => null),
-        ],
+        overrides: [currentUserRoleProvider.overrideWith((ref) => null)],
       );
 
       final result = container.read(isAdminValueProvider);
@@ -48,9 +42,7 @@ void main() {
 
     test('isStaffValueProvider returns true for staff role', () {
       final container = ProviderContainer(
-        overrides: [
-          currentUserRoleProvider.overrideWith((ref) => 'staff'),
-        ],
+        overrides: [currentUserRoleProvider.overrideWith((ref) => 'staff')],
       );
 
       final result = container.read(isStaffValueProvider);
@@ -61,9 +53,7 @@ void main() {
 
     test('isStaffValueProvider returns false for admin role', () {
       final container = ProviderContainer(
-        overrides: [
-          currentUserRoleProvider.overrideWith((ref) => 'admin'),
-        ],
+        overrides: [currentUserRoleProvider.overrideWith((ref) => 'admin')],
       );
 
       final result = container.read(isStaffValueProvider);
@@ -226,7 +216,11 @@ class _SimpleWidgetRef implements WidgetRef {
   BuildContext get context => throw UnimplementedError('Context not available in unit tests');
 
   @override
-  void listen<T>(ProviderListenable<T> provider, void Function(T?, T) listener, {void Function(Object, StackTrace)? onError}) {
+  void listen<T>(
+    ProviderListenable<T> provider,
+    void Function(T?, T) listener, {
+    void Function(Object, StackTrace)? onError,
+  }) {
     throw UnimplementedError('listen not implemented in simple test mock');
   }
 

@@ -22,13 +22,13 @@ void main() {
         ];
 
         const adminOnlyColumns = [
-          'Customer Email',      // PII - admin only
-          'Budget Range',        // Financial - admin only
-          'Payment Status',      // Financial - admin only
-          'Total Cost',          // Financial - admin only
-          'Advance Paid',        // Financial - admin only
-          'Created By',          // System metadata - admin only
-          'Updated At',          // System metadata - admin only
+          'Customer Email', // PII - admin only
+          'Budget Range', // Financial - admin only
+          'Payment Status', // Financial - admin only
+          'Total Cost', // Financial - admin only
+          'Advance Paid', // Financial - admin only
+          'Created By', // System metadata - admin only
+          'Updated At', // System metadata - admin only
         ];
 
         // Verify staff columns don't include sensitive data
@@ -49,25 +49,25 @@ void main() {
         const adminColumns = [
           'ID',
           'Customer Name',
-          'Customer Email',       // Admin can see PII
+          'Customer Email', // Admin can see PII
           'Customer Phone',
           'Event Type',
           'Event Date',
           'Event Location',
           'Guest Count',
-          'Budget Range',         // Admin can see financial
+          'Budget Range', // Admin can see financial
           'Description',
           'Status',
-          'Payment Status',       // Admin can see financial
-          'Total Cost',           // Admin can see financial
-          'Advance Paid',         // Admin can see financial
+          'Payment Status', // Admin can see financial
+          'Total Cost', // Admin can see financial
+          'Advance Paid', // Admin can see financial
           'Assigned To',
           'Priority',
           'Source',
           'Staff Notes',
           'Created At',
-          'Created By',           // Admin can see system metadata
-          'Updated At',           // Admin can see system metadata
+          'Created By', // Admin can see system metadata
+          'Updated At', // Admin can see system metadata
         ];
 
         // Verify admin has access to financial data
@@ -88,21 +88,11 @@ void main() {
       });
 
       test('financial fields are properly categorized', () {
-        const financialFields = [
-          'Total Cost',
-          'Advance Paid',
-          'Payment Status',
-          'Budget Range',
-        ];
+        const financialFields = ['Total Cost', 'Advance Paid', 'Payment Status', 'Budget Range'];
 
-        const piiFields = [
-          'Customer Email',
-        ];
+        const piiFields = ['Customer Email'];
 
-        const metadataFields = [
-          'Created By',
-          'Updated At',
-        ];
+        const metadataFields = ['Created By', 'Updated At'];
 
         // Verify categorization
         expect(financialFields.length, 4, reason: 'Should have 4 financial fields');
@@ -118,7 +108,7 @@ void main() {
     group('Staff Data Filtering', () {
       test('staff should only see assigned enquiries', () {
         const staffUserId = 'staff-123';
-        
+
         // Sample data with mixed assignments
         final sampleEnquiries = [
           {'id': 'enq-1', 'assignedTo': staffUserId, 'customerName': 'John'},
@@ -156,28 +146,39 @@ void main() {
       test('staff export filename indicates restricted scope', () {
         const timestamp = '20240921_143022';
         const staffFilename = 'enquiries_assigned_$timestamp.csv';
-        
-        expect(staffFilename, contains('assigned'), reason: 'Staff filename should indicate assigned scope');
-        expect(staffFilename, isNot(contains('all')), reason: 'Staff filename should not indicate full access');
+
+        expect(
+          staffFilename,
+          contains('assigned'),
+          reason: 'Staff filename should indicate assigned scope',
+        );
+        expect(
+          staffFilename,
+          isNot(contains('all')),
+          reason: 'Staff filename should not indicate full access',
+        );
       });
 
       test('admin export filename indicates full access', () {
         const timestamp = '20240921_143022';
         const adminFilename = 'enquiries_all_$timestamp.csv';
-        
-        expect(adminFilename, contains('all'), reason: 'Admin filename should indicate full access');
-        expect(adminFilename, isNot(contains('assigned')), reason: 'Admin filename should not indicate restricted scope');
+
+        expect(
+          adminFilename,
+          contains('all'),
+          reason: 'Admin filename should indicate full access',
+        );
+        expect(
+          adminFilename,
+          isNot(contains('assigned')),
+          reason: 'Admin filename should not indicate restricted scope',
+        );
       });
     });
 
     group('Data Security Validation', () {
       test('staff cannot access financial data in any scenario', () {
-        const forbiddenFields = [
-          'totalCost',
-          'advancePaid', 
-          'paymentStatus',
-          'budgetRange',
-        ];
+        const forbiddenFields = ['totalCost', 'advancePaid', 'paymentStatus', 'budgetRange'];
 
         // Simulate staff data access check
         for (final field in forbiddenFields) {
@@ -205,9 +206,15 @@ void main() {
 
       test('admin has access to all data fields', () {
         const allFields = [
-          'customerName', 'customerEmail', 'customerPhone',
-          'totalCost', 'advancePaid', 'paymentStatus', 'budgetRange',
-          'createdBy', 'updatedAt',
+          'customerName',
+          'customerEmail',
+          'customerPhone',
+          'totalCost',
+          'advancePaid',
+          'paymentStatus',
+          'budgetRange',
+          'createdBy',
+          'updatedAt',
         ];
 
         for (final field in allFields) {
@@ -222,11 +229,21 @@ void main() {
 /// Simulate staff field access logic
 bool _staffCanAccessField(String fieldName) {
   const staffAllowedFields = [
-    'id', 'customerName', 'customerPhone', 'eventType', 'eventDate',
-    'eventLocation', 'guestCount', 'description', 'status', 'priority',
-    'source', 'staffNotes', 'createdAt',
+    'id',
+    'customerName',
+    'customerPhone',
+    'eventType',
+    'eventDate',
+    'eventLocation',
+    'guestCount',
+    'description',
+    'status',
+    'priority',
+    'source',
+    'staffNotes',
+    'createdAt',
   ];
-  
+
   return staffAllowedFields.contains(fieldName);
 }
 
