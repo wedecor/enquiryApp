@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/theme/appearance_controller.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 
@@ -45,6 +47,8 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildAppearanceSection(context),
+                const SizedBox(height: 24),
                 _buildThemeSection(context),
                 const SizedBox(height: 24),
                 _buildLanguageSection(context),
@@ -57,6 +61,69 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         if (_hasChanges) _buildSaveSection(context),
       ],
     );
+  }
+
+  Widget _buildAppearanceSection(BuildContext context) {
+    final appearanceMode = ref.watch(appearanceModeProvider);
+    final appearanceController = ref.read(appearanceModeProvider.notifier);
+
+    return Card(
+      child: Padding(
+        padding: AppSpacing.space4,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Appearance',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Choose how the app looks',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...AppearanceMode.values.map((mode) {
+              return RadioListTile<AppearanceMode>(
+                title: Text(_getAppearanceModeTitle(mode)),
+                subtitle: Text(_getAppearanceModeDescription(mode)),
+                value: mode,
+                groupValue: appearanceMode,
+                onChanged: (value) {
+                  if (value != null) {
+                    appearanceController.setMode(value);
+                  }
+                },
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getAppearanceModeTitle(AppearanceMode mode) {
+    switch (mode) {
+      case AppearanceMode.system:
+        return 'System';
+      case AppearanceMode.light:
+        return 'Light';
+      case AppearanceMode.dark:
+        return 'Dark';
+    }
+  }
+
+  String _getAppearanceModeDescription(AppearanceMode mode) {
+    switch (mode) {
+      case AppearanceMode.system:
+        return 'Follow system setting';
+      case AppearanceMode.light:
+        return 'Always use light theme';
+      case AppearanceMode.dark:
+        return 'Always use dark theme';
+    }
   }
 
   Widget _buildThemeSection(BuildContext context) {

@@ -26,7 +26,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
   final _stepsController = TextEditingController();
   final _expectedController = TextEditingController();
   final _actualController = TextEditingController();
-  
+
   bool _isSubmitting = false;
   bool _includeLogs = true;
   String _deviceInfo = 'Loading...';
@@ -83,7 +83,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -103,7 +103,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                   ],
                 ),
               ),
-              
+
               // Form
               Expanded(
                 child: SingleChildScrollView(
@@ -130,9 +130,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Steps to reproduce
                         TextFormField(
                           controller: _stepsController,
@@ -143,9 +143,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ),
                           maxLines: 4,
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Expected behavior
                         TextFormField(
                           controller: _expectedController,
@@ -156,9 +156,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ),
                           maxLines: 2,
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Actual behavior
                         TextFormField(
                           controller: _actualController,
@@ -169,13 +169,15 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ),
                           maxLines: 2,
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Include logs toggle
                         SwitchListTile(
                           title: const Text('Include Debug Information'),
-                          subtitle: const Text('Attach device info and recent logs (no personal data)'),
+                          subtitle: const Text(
+                            'Attach device info and recent logs (no personal data)',
+                          ),
                           value: _includeLogs,
                           onChanged: (value) {
                             setState(() {
@@ -183,9 +185,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                             });
                           },
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Device info preview
                         if (_includeLogs) ...[
                           Card(
@@ -201,10 +203,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                   const SizedBox(height: 8),
                                   Text(
                                     _deviceInfo,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontFamily: 'monospace',
-                                    ),
+                                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                                   ),
                                 ],
                               ),
@@ -212,7 +211,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                        
+
                         // Submit button
                         SizedBox(
                           width: double.infinity,
@@ -245,9 +244,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                   ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Privacy note
                         Card(
                           color: Colors.blue[50],
@@ -289,7 +288,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
     try {
       final feedback = await _prepareFeedbackData();
       await _submitToGitHub(feedback);
-      
+
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -303,10 +302,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       Logger.error('Failed to submit feedback', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to submit feedback: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Failed to submit feedback: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -405,8 +401,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
     final title = Uri.encodeComponent('[FEEDBACK] ${feedback['summary']}');
     final body = _formatGitHubIssueBody(feedback);
     final encodedBody = Uri.encodeComponent(body);
-    
-    final githubUrl = 'https://github.com/your-org/wedecor-enquiries/issues/new'
+
+    final githubUrl =
+        'https://github.com/your-org/wedecor-enquiries/issues/new'
         '?template=bug_report.md'
         '&title=$title'
         '&body=$encodedBody'
@@ -414,34 +411,34 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
 
     // Copy to clipboard for easy pasting
     await Clipboard.setData(ClipboardData(text: githubUrl));
-    
+
     Logger.info('Feedback prepared for GitHub submission');
   }
 
   String _formatGitHubIssueBody(Map<String, dynamic> feedback) {
     final buffer = StringBuffer();
-    
+
     buffer.writeln('## 🐛 Bug Description');
     buffer.writeln(feedback['summary'] ?? 'No summary provided');
     buffer.writeln();
-    
+
     buffer.writeln('## 🔄 Steps to Reproduce');
     buffer.writeln(feedback['steps_to_reproduce'] ?? 'No steps provided');
     buffer.writeln();
-    
+
     buffer.writeln('## ✅ Expected Behavior');
     buffer.writeln(feedback['expected_behavior'] ?? 'No expected behavior provided');
     buffer.writeln();
-    
+
     buffer.writeln('## ❌ Actual Behavior');
     buffer.writeln(feedback['actual_behavior'] ?? 'No actual behavior provided');
     buffer.writeln();
-    
+
     buffer.writeln('## 📱 Environment');
     buffer.writeln('- **Source**: In-app feedback form');
     buffer.writeln('- **Timestamp**: ${feedback['timestamp']}');
     buffer.writeln();
-    
+
     if (feedback.containsKey('device_info')) {
       buffer.writeln('## 🔍 Device Information');
       buffer.writeln('```');
@@ -449,7 +446,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       buffer.writeln('```');
       buffer.writeln();
     }
-    
+
     if (feedback.containsKey('app_logs')) {
       buffer.writeln('## 📋 Recent Logs');
       buffer.writeln('```');
@@ -457,7 +454,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       buffer.writeln('```');
       buffer.writeln();
     }
-    
+
     buffer.writeln('## 🏷️ Suggested Priority');
     buffer.writeln('- [ ] **P0**: Blocks core functionality');
     buffer.writeln('- [ ] **P1**: Important for RC3');
