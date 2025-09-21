@@ -63,10 +63,6 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     );
   }
 
-
-
-
-
   Widget _buildLanguageSection(BuildContext context) {
     return Card(
       child: Padding(

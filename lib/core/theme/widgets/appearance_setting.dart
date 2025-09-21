@@ -5,7 +5,7 @@ import '../appearance_controller.dart';
 import '../tokens.dart';
 
 /// Appearance setting widget for selecting light/dark/system theme
-/// 
+///
 /// Provides a segmented button interface for theme selection with
 /// immediate visual feedback and persistence across app restarts.
 class AppearanceSetting extends ConsumerWidget {
@@ -30,9 +30,7 @@ class AppearanceSetting extends ConsumerWidget {
           children: [
             Text(
               'Appearance',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             SizedBox(height: AppTokens.space2),
             Text(
@@ -42,7 +40,7 @@ class AppearanceSetting extends ConsumerWidget {
               ),
             ),
             SizedBox(height: AppTokens.space4),
-            
+
             // Segmented Button for theme selection
             SizedBox(
               width: double.infinity,
@@ -76,9 +74,9 @@ class AppearanceSetting extends ConsumerWidget {
                 ),
               ),
             ),
-            
+
             SizedBox(height: AppTokens.space3),
-            
+
             // Current mode description
             Container(
               width: double.infinity,

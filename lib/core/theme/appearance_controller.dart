@@ -7,8 +7,8 @@ enum AppearanceMode { system, light, dark }
 extension AppearanceModeExtension on AppearanceMode {
   ThemeMode get asThemeMode => switch (this) {
     AppearanceMode.system => ThemeMode.system,
-    AppearanceMode.light  => ThemeMode.light,
-    AppearanceMode.dark   => ThemeMode.dark,
+    AppearanceMode.light => ThemeMode.light,
+    AppearanceMode.dark => ThemeMode.dark,
   };
 }
 
@@ -31,7 +31,9 @@ class AppearanceController extends Notifier<AppearanceMode> {
         orElse: () => AppearanceMode.system,
       );
       if (state != parsed) state = parsed;
-    } catch (_) { /* ignore, keep default */ }
+    } catch (_) {
+      /* ignore, keep default */
+    }
   }
 
   Future<void> set(AppearanceMode mode) async {
@@ -39,12 +41,15 @@ class AppearanceController extends Notifier<AppearanceMode> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kAppearanceKey, mode.name);
-    } catch (_) { /* ignore persist errors */ }
+    } catch (_) {
+      /* ignore persist errors */
+    }
   }
 }
 
-final appearanceControllerProvider =
-    NotifierProvider<AppearanceController, AppearanceMode>(AppearanceController.new);
+final appearanceControllerProvider = NotifierProvider<AppearanceController, AppearanceMode>(
+  AppearanceController.new,
+);
 
 /// Provider for the current ThemeMode to be used by MaterialApp
 final themeModeProvider = Provider<ThemeMode>((ref) {
@@ -54,7 +59,9 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
 
 /// Legacy provider for backward compatibility
 /// @deprecated Use appearanceControllerProvider instead
-final appearanceModeProvider = StateNotifierProvider<_LegacyAppearanceController, AppearanceMode>((ref) {
+final appearanceModeProvider = StateNotifierProvider<_LegacyAppearanceController, AppearanceMode>((
+  ref,
+) {
   return _LegacyAppearanceController(ref);
 });
 
