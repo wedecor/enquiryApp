@@ -1,0 +1,32 @@
+{
+  "name": "firestore-rules-tests",
+  "version": "1.0.0",
+  "description": "Firestore security rules tests for We Decor Enquiries RBAC system",
+  "scripts": {
+    "test": "jest --testEnvironment=node",
+    "test:verbose": "jest --testEnvironment=node --verbose",
+    "test:watch": "jest --testEnvironment=node --watch",
+    "emulator:start": "firebase emulators:start --only firestore --project demo-project",
+    "emulator:stop": "firebase emulators:exec --only firestore --project demo-project 'echo stopped'"
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^3.0.3",
+    "firebase": "^10.12.2"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.11.2",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "firebase",
+    "firestore",
+    "security-rules",
+    "rbac",
+    "testing"
+  ],
+  "author": "We Decor Enquiries Team",
+  "license": "MIT"
+}

@@ -95,7 +95,8 @@ class FiltersBar extends ConsumerWidget {
                   // Date range filter
                   if (filters.dateRange != null) ...[
                     _FilterChip(
-                      label: 'Date: ${_formatDateRange(_convertToFlutterDateRange(filters.dateRange!))}',
+                      label:
+                          'Date: ${_formatDateRange(_convertToFlutterDateRange(filters.dateRange!))}',
                       onDeleted: () =>
                           ref.read(enquiryFiltersProvider.notifier).updateDateRangeFilter(null),
                     ),
