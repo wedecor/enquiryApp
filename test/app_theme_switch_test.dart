@@ -13,7 +13,7 @@ void main() {
 
     testWidgets('switching appearance updates MaterialApp.themeMode', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      
+
       await tester.pumpWidget(const ProviderScope(child: MyApp()));
       await tester.pumpAndSettle();
 
@@ -23,7 +23,7 @@ void main() {
 
       // Get the provider container
       final container = ProviderScope.containerOf(tester.element(find.byType(MyApp)));
-      
+
       // Switch to dark mode
       await container.read(appearanceControllerProvider.notifier).set(AppearanceMode.dark);
       await tester.pumpAndSettle();
@@ -51,7 +51,7 @@ void main() {
 
     testWidgets('appearance setting widget responds to changes', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      
+
       // Create a test app with the appearance setting
       await tester.pumpWidget(
         ProviderScope(
@@ -107,7 +107,7 @@ void main() {
     testWidgets('theme persists across app restarts', (tester) async {
       // Start with clean preferences
       SharedPreferences.setMockInitialValues({});
-      
+
       // First app instance - set dark mode
       await tester.pumpWidget(const ProviderScope(child: MyApp()));
       await tester.pumpAndSettle();
@@ -127,9 +127,9 @@ void main() {
 
     testWidgets('theme mode provider updates immediately', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      
+
       late ThemeMode currentThemeMode;
-      
+
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -161,7 +161,7 @@ void main() {
 
     testWidgets('appearance setting widget shows current selection', (tester) async {
       SharedPreferences.setMockInitialValues({});
-      
+
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(

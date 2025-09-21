@@ -1,13 +1,15 @@
 {
   "version": "1.0.1",
-  "buildNumber": 10,
+  "buildNumber": 11,
   "releaseDate": "2024-09-21",
-  "releaseNotes": "🐛 Critical Fixes:\n• ✅ FIXED: Staff can now change enquiry status (assigned enquiries)\n• ✅ FIXED: Change history infinite loading issue\n• ✅ FIXED: Color contrast issues for better text visibility\n• Resolved user invitation memory errors\n• Fixed user management type casting errors\n• Fixed preferences saving issue\n• Fixed new user login after password setup\n• Fixed PWA manifest issues\n• Enhanced Firebase Functions (256MB memory)\n• Better error handling with retry options\n• Added automatic update notifications\n• Added manual 'Check for Updates' button in Settings",
+  "releaseNotes": "🎨 MAJOR UPDATE: Contact Shortcuts + Theme Fixes\n\n📞 NEW: CONTACT SHORTCUTS:\n• Call and WhatsApp buttons in enquiry details\n• One-tap calling with native phone dialer\n• WhatsApp messaging with prefilled context\n• Cross-platform support with smart fallbacks\n• Accessibility compliant with proper semantics\n\n🎨 THEME SYSTEM OVERHAUL:\n• Fixed theme switching - changes apply instantly\n• Improved Settings → Appearance with modern design\n• Fixed hardcoded colors for better dark mode\n• Theme selection persists across app restarts\n\n🛡️ CI/CD ENHANCEMENTS:\n• Enterprise-grade CI pipeline with security scanning\n• Automated builds with integrity verification\n• Preview deployments for testing\n\n✅ PREVIOUS FIXES MAINTAINED:\n• Staff can change enquiry status (assigned enquiries)\n• Change history loads properly\n• Color contrast improvements\n• User invitation and login fixes\n• Manual 'Check for Updates' button",
   "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/app-release.apk",
-  "sha256": "38d84cdcdeb33b301f8e24b3a81eaddc989c50fd541b9d424a45735875cba1fd",
+  "sha256": "9010bfbc62297a185f30973d6fa3a8c31a6560e9e3a6fd2149f7a7ced823e90c",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
+    "Contact shortcuts (Call & WhatsApp)",
+    "Instant theme switching",
     "Dark mode support",
     "Advanced filters and saved views", 
     "In-app feedback system",
@@ -15,6 +17,8 @@
     "Performance monitoring"
   ],
   "bugFixes": [
+    "Theme switching now applies immediately",
+    "Hardcoded colors replaced with theme-aware colors",
     "Change history infinite loading",
     "User invitation memory errors",
     "PWA manifest 404 errors",
