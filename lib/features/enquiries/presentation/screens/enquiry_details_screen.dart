@@ -6,6 +6,7 @@ import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
+import '../widgets/contact_buttons.dart';
 import 'enquiry_form_screen.dart';
 
 class NotificationService {
@@ -131,6 +132,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           (enquiryData['customerName'] as String?) ?? 'N/A',
                         ),
                         _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
+                        // Contact shortcuts - Call and WhatsApp buttons
+                        ContactButtons(
+                          customerPhone: enquiryData['customerPhone'] as String?,
+                          customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+                          enquiryId: widget.enquiryId,
+                        ),
                         _buildInfoRow(
                           'Location',
                           (enquiryData['eventLocation'] as String?) ??
