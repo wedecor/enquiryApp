@@ -1,6 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/current_user_role_provider.dart';
 import '../data/app_config_service.dart';
 import '../data/user_settings_service.dart';
 import '../domain/app_config.dart';
@@ -13,11 +13,6 @@ final userSettingsServiceProvider = Provider<UserSettingsService>((ref) {
 
 final appConfigServiceProvider = Provider<AppConfigService>((ref) {
   return AppConfigService();
-});
-
-// Current user UID
-final currentUserUidProvider = Provider<String?>((ref) {
-  return FirebaseAuth.instance.currentUser?.uid;
 });
 
 // User Settings Providers
@@ -56,10 +51,16 @@ final appSecurityConfigProvider = StreamProvider<AppSecurityConfig>((ref) {
 final updateUserSettingsProvider = Provider<Future<void> Function(UserSettings)>((ref) {
   return (UserSettings settings) async {
     final uid = ref.read(currentUserUidProvider);
-    if (uid == null) throw Exception('User not authenticated');
+    if (uid == null) {
+      throw Exception('User not authenticated - cannot save preferences');
+    }
 
     final service = ref.read(userSettingsServiceProvider);
-    await service.update(uid, settings);
+    try {
+      await service.update(uid, settings);
+    } catch (e) {
+      throw Exception('Failed to save preferences: $e');
+    }
   };
 });
 
