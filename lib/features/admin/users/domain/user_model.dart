@@ -22,22 +22,22 @@ class UserModel with _$UserModel {
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
-    
+
     if (data == null) {
       throw Exception('User document ${doc.id} has no data');
     }
-    
+
     // Safe type casting with null checks and defaults
     final name = data['name'] as String? ?? 'Unknown User';
     final email = data['email'] as String? ?? '';
     final phone = data['phone'] as String?;
     final role = data['role'] as String? ?? 'staff';
     final active = data['active'] as bool? ?? true;
-    
+
     // Handle timestamp fields safely
     DateTime createdAt;
     DateTime updatedAt;
-    
+
     try {
       final createdAtData = data['createdAt'];
       if (createdAtData is Timestamp) {
@@ -48,7 +48,7 @@ class UserModel with _$UserModel {
     } catch (e) {
       createdAt = DateTime.now();
     }
-    
+
     try {
       final updatedAtData = data['updatedAt'];
       if (updatedAtData is Timestamp) {
@@ -59,7 +59,7 @@ class UserModel with _$UserModel {
     } catch (e) {
       updatedAt = DateTime.now();
     }
-    
+
     return UserModel(
       uid: doc.id,
       name: name,

@@ -36,35 +36,38 @@ class UsersRepository {
     // Apply limit
     query = query.limit(limit);
 
-    return query.snapshots().map((snapshot) {
-      List<UserModel> users = [];
-      
-      // Process each document with error handling
-      for (final doc in snapshot.docs) {
-        try {
-          final user = UserModel.fromFirestore(doc);
-          users.add(user);
-        } catch (e) {
-          print('Error parsing user document ${doc.id}: $e');
-          // Skip invalid documents instead of crashing
-          continue;
-        }
-      }
+    return query
+        .snapshots()
+        .map((snapshot) {
+          List<UserModel> users = [];
 
-      // Apply search filter on client side (for name and email)
-      if (search != null && search.isNotEmpty) {
-        final searchLower = search.toLowerCase();
-        users = users.where((user) {
-          return user.name.toLowerCase().contains(searchLower) ||
-              user.email.toLowerCase().contains(searchLower);
-        }).toList();
-      }
+          // Process each document with error handling
+          for (final doc in snapshot.docs) {
+            try {
+              final user = UserModel.fromFirestore(doc);
+              users.add(user);
+            } catch (e) {
+              print('Error parsing user document ${doc.id}: $e');
+              // Skip invalid documents instead of crashing
+              continue;
+            }
+          }
 
-      return users;
-    }).handleError((error) {
-      print('Error in users stream: $error');
-      return <UserModel>[]; // Return empty list on stream error
-    });
+          // Apply search filter on client side (for name and email)
+          if (search != null && search.isNotEmpty) {
+            final searchLower = search.toLowerCase();
+            users = users.where((user) {
+              return user.name.toLowerCase().contains(searchLower) ||
+                  user.email.toLowerCase().contains(searchLower);
+            }).toList();
+          }
+
+          return users;
+        })
+        .handleError((error) {
+          print('Error in users stream: $error');
+          return <UserModel>[]; // Return empty list on stream error
+        });
   }
 
   /// Create a new user document
