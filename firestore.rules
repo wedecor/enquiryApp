@@ -48,7 +48,7 @@ service cloud.firestore {
     function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
     
     match /users/{uid}/settings/{docId} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read, write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
     }
 
     // App Config - read for all signed-in users, write for admins only

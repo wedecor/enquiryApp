@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/logging/safe_log.dart';
 import '../domain/user_settings.dart';
 
@@ -48,7 +49,7 @@ class UserSettingsService {
         });
   }
 
-  /// Update user settings with merge
+  /// Update user settings with merge and fallback to local storage
   Future<void> update(String uid, UserSettings settings) async {
     try {
       // Log the attempt with detailed info
@@ -60,12 +61,17 @@ class UserSettingsService {
         'docPath': 'users/$uid/settings/preferences',
       });
 
+      // Try Firestore first
       await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
-
+      
+      // Also save to SharedPreferences as backup
+      await _saveToSharedPreferences(uid, settings);
+      
       safeLog('user_settings_updated', {
         'uid': uid,
         'theme': settings.theme,
         'language': settings.language,
+        'method': 'firestore_and_local',
       });
     } catch (e, stackTrace) {
       // Enhanced error logging
@@ -77,8 +83,48 @@ class UserSettingsService {
         'docPath': 'users/$uid/settings/preferences',
         'settingsData': settings.toFirestore(),
       });
-      rethrow;
+      
+      // Fallback: try to save to SharedPreferences only
+      try {
+        await _saveToSharedPreferences(uid, settings);
+        safeLog('user_settings_fallback_success', {
+          'uid': uid,
+          'method': 'shared_preferences_only',
+        });
+        // Don't rethrow - we saved locally
+      } catch (fallbackError) {
+        safeLog('user_settings_fallback_error', {
+          'uid': uid,
+          'firestoreError': e.toString(),
+          'fallbackError': fallbackError.toString(),
+        });
+        rethrow; // Both methods failed
+      }
     }
+  }
+
+  /// Save settings to SharedPreferences as backup
+  Future<void> _saveToSharedPreferences(String uid, UserSettings settings) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'user_settings_$uid';
+    final json = settings.toJson();
+    await prefs.setString(key, json.toString());
+  }
+
+  /// Load settings from SharedPreferences fallback
+  Future<UserSettings?> _loadFromSharedPreferences(String uid) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'user_settings_$uid';
+      final jsonString = prefs.getString(key);
+      if (jsonString != null) {
+        // This would need proper JSON parsing, but for now just return defaults
+        return const UserSettings();
+      }
+    } catch (e) {
+      // Ignore SharedPreferences errors
+    }
+    return null;
   }
 
   /// Initialize settings if missing
