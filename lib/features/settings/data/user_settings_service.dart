@@ -63,10 +63,10 @@ class UserSettingsService {
 
       // Try Firestore first
       await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
-      
+
       // Also save to SharedPreferences as backup
       await _saveToSharedPreferences(uid, settings);
-      
+
       safeLog('user_settings_updated', {
         'uid': uid,
         'theme': settings.theme,
@@ -83,7 +83,7 @@ class UserSettingsService {
         'docPath': 'users/$uid/settings/preferences',
         'settingsData': settings.toFirestore(),
       });
-      
+
       // Fallback: try to save to SharedPreferences only
       try {
         await _saveToSharedPreferences(uid, settings);

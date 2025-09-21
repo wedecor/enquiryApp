@@ -43,19 +43,19 @@ class AppColorScheme {
   static const ColorScheme dark = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFF60A5FA), // Blue 400
-    onPrimary: Color(0xFF1E3A8A), // Blue 800
+    onPrimary: Color(0xFF000000), // Black for better contrast
     primaryContainer: Color(0xFF1E40AF), // Blue 700
     onPrimaryContainer: Color(0xFFDBEAFE), // Blue 100
     secondary: Color(0xFF34D399), // Emerald 400
-    onSecondary: Color(0xFF064E3B), // Emerald 800
+    onSecondary: Color(0xFF000000), // Black for better contrast
     secondaryContainer: Color(0xFF047857), // Emerald 700
     onSecondaryContainer: Color(0xFFD1FAE5), // Emerald 100
     tertiary: Color(0xFFA78BFA), // Violet 400
-    onTertiary: Color(0xFF4C1D95), // Violet 800
+    onTertiary: Color(0xFF000000), // Black for better contrast
     tertiaryContainer: Color(0xFF6D28D9), // Violet 700
     onTertiaryContainer: Color(0xFFEDE9FE), // Violet 100
     error: Color(0xFFF87171), // Red 400
-    onError: Color(0xFF991B1B), // Red 800
+    onError: Color(0xFF000000), // Black for better contrast
     errorContainer: Color(0xFFB91C1C), // Red 700
     onErrorContainer: Color(0xFFFEE2E2), // Red 100
     surface: Color(0xFF111827), // Gray 900

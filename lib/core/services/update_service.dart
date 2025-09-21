@@ -179,12 +179,12 @@ class UpdateDialog extends StatelessWidget {
         children: [
           Icon(
             updateInfo.isForced ? Icons.system_update : Icons.system_update_alt,
-            color: updateInfo.isForced ? Colors.red : theme.colorScheme.primary,
+            color: updateInfo.isForced ? theme.colorScheme.error : theme.colorScheme.primary,
           ),
           const SizedBox(width: 12),
           Text(
             updateInfo.isForced ? 'Update Required' : 'Update Available',
-            style: TextStyle(color: updateInfo.isForced ? Colors.red : theme.colorScheme.onSurface),
+            style: TextStyle(color: updateInfo.isForced ? theme.colorScheme.error : theme.colorScheme.onSurface),
           ),
         ],
       ),
@@ -235,23 +235,26 @@ class UpdateDialog extends StatelessWidget {
 
             if (updateInfo.isForced) ...[
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  border: Border.all(color: Colors.red[200]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.red[700], size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This update is required to continue using the app.',
-                        style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.w500),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    border: Border.all(color: theme.colorScheme.error),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: theme.colorScheme.error, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'This update is required to continue using the app.',
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer, 
+                            fontWeight: FontWeight.w500
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -280,8 +283,8 @@ class UpdateDialog extends StatelessWidget {
             Navigator.of(context).pop(true);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: updateInfo.isForced ? Colors.red : theme.colorScheme.primary,
-            foregroundColor: Colors.white,
+            backgroundColor: updateInfo.isForced ? theme.colorScheme.error : theme.colorScheme.primary,
+            foregroundColor: updateInfo.isForced ? theme.colorScheme.onError : theme.colorScheme.onPrimary,
           ),
           child: const Text('Download'),
         ),

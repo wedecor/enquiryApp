@@ -284,7 +284,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       final uid = ref.read(currentUserUidProvider);
       print('DEBUG PREFERENCES: Current UID: $uid');
       print('DEBUG PREFERENCES: Settings to save: ${_currentSettings!.toJson()}');
-      
+
       if (uid == null) {
         throw Exception('User not authenticated - UID is null');
       }
@@ -339,8 +339,16 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        backgroundColor: isError 
+            ? Theme.of(context).colorScheme.error 
+            : Theme.of(context).colorScheme.primary,
+        action: SnackBarAction(
+          label: 'OK', 
+          textColor: isError 
+              ? Theme.of(context).colorScheme.onError 
+              : Theme.of(context).colorScheme.onPrimary, 
+          onPressed: () {}
+        ),
       ),
     );
   }
