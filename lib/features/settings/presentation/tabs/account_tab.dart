@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/services/update_service.dart';
 import '../../../../shared/models/user_model.dart';
 
 class AccountTab extends ConsumerWidget {
@@ -116,6 +118,14 @@ class AccountTab extends ConsumerWidget {
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () => _sendPasswordReset(context),
           ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.system_update),
+            title: const Text('Check for Updates'),
+            subtitle: const Text('Check if a newer version is available'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () => _checkForUpdates(context),
+          ),
         ],
       ),
     );
@@ -186,6 +196,97 @@ class AccountTab extends ConsumerWidget {
 
       if (context.mounted) {
         _showSnackBar(context, 'Failed to send password reset email', isError: true);
+      }
+    }
+  }
+
+  Future<void> _checkForUpdates(BuildContext context) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Checking for updates...'),
+            ],
+          ),
+        ),
+      );
+
+      // Force check by bypassing rate limiting
+      final updateInfo = await UpdateService.checkForUpdate(forceCheck: true);
+      
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      if (updateInfo != null) {
+        // Update available - show update dialog
+        if (context.mounted) {
+          await UpdateService.showUpdateDialog(context, updateInfo);
+        }
+      } else {
+        // No updates available - show current version info
+        final packageInfo = await PackageInfo.fromPlatform();
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Up to Date'),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('You\'re running the latest version!'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
+      safeLog('manual_update_check', {
+        'has_update': updateInfo != null,
+        'current_version': '${(await PackageInfo.fromPlatform()).version}+${(await PackageInfo.fromPlatform()).buildNumber}',
+      });
+    } catch (e) {
+      // Close loading dialog if still open
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      safeLog('manual_update_check_error', {
+        'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
+      });
+
+      if (context.mounted) {
+        _showSnackBar(context, 'Failed to check for updates. Please try again.', isError: true);
       }
     }
   }

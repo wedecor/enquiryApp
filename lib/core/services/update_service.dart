@@ -17,14 +17,14 @@ class UpdateService {
   static const String _lastCheckedKey = 'last_update_check';
 
   /// Check for available updates
-  static Future<UpdateInfo?> checkForUpdate() async {
+  static Future<UpdateInfo?> checkForUpdate({bool forceCheck = false}) async {
     try {
       // Rate limit: only check once per hour
       final prefs = await SharedPreferences.getInstance();
       final lastChecked = prefs.getInt(_lastCheckedKey) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      if (now - lastChecked < 3600000) {
+      if (!forceCheck && now - lastChecked < 3600000) {
         // 1 hour
         Logger.debug('Update check skipped - rate limited', tag: 'UpdateService');
         return null;
