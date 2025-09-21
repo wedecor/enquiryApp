@@ -125,7 +125,7 @@ class UserModel with _$UserModel {
     /// - Contact information in enquiries
     /// - Emergency communications
     /// - User verification processes
-    required String phone,
+    String? phone,
 
     /// User's role in the application.
     ///

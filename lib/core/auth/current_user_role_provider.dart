@@ -43,11 +43,7 @@ final currentUserRoleProvider = Provider<String?>((ref) {
 /// Current user uid (or null)
 final currentUserUidProvider = Provider<String?>((ref) {
   final authAsync = ref.watch(firebaseAuthUserProvider);
-  return authAsync.when(
-    data: (user) => user?.uid,
-    loading: () => null,
-    error: (_, __) => null,
-  );
+  return authAsync.when(data: (user) => user?.uid, loading: () => null, error: (_, __) => null);
 });
 
 /// Convenience: is admin?

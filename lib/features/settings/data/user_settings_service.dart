@@ -61,7 +61,7 @@ class UserSettingsService {
       });
 
       await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
-      
+
       safeLog('user_settings_updated', {
         'uid': uid,
         'theme': settings.theme,

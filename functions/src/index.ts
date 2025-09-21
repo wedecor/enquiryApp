@@ -161,9 +161,9 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         uid: userRecord.uid,
         name: name || email.split('@')[0],
         email,
-        phone: null,
+        phone: '', // UserModel expects string, not null
         role,
-        active: true,
+        // Remove 'active' field as UserModel doesn't have it
         createdAt: isExistingUser ? undefined : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
