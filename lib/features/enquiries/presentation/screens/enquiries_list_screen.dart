@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/role_guards.dart';
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../shared/models/user_model.dart';
@@ -262,7 +263,7 @@ class EnquiriesListScreen extends ConsumerWidget {
   ) {
     switch (action) {
       case 'export':
-        _exportEnquiries(context, userRole, userId);
+        _exportEnquiries(context, ref);
         break;
       case 'add':
         Navigator.of(
@@ -272,8 +273,11 @@ class EnquiriesListScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _exportEnquiries(BuildContext context, UserRole? userRole, String? userId) async {
+  Future<void> _exportEnquiries(BuildContext context, WidgetRef ref) async {
     try {
+      final userRole = ref.read(currentUserWithFirestoreProvider).value?.role;
+      final userId = ref.read(currentUserWithFirestoreProvider).value?.uid;
+      
       // Show loading indicator
       showDialog(
         context: context,
@@ -289,10 +293,11 @@ class EnquiriesListScreen extends ConsumerWidget {
         ),
       );
 
-      // Fetch all enquiries for export
+      // Fetch enquiries based on role - Staff only gets assigned enquiries
       Query query = FirebaseFirestore.instance.collection('enquiries');
 
       if (userRole != UserRole.admin && userId != null) {
+        // Staff: only assigned enquiries
         query = query.where('assignedTo', isEqualTo: userId);
       }
 
@@ -318,8 +323,8 @@ class EnquiriesListScreen extends ConsumerWidget {
         return;
       }
 
-      // Export to CSV
-      await CsvExport.exportEnquiries(enquiries);
+      // Export to CSV with role-based filtering
+      await CsvExport.exportEnquiries(enquiries, ref);
 
       if (context.mounted) {
         CsvExport.showExportSuccess(

@@ -466,6 +466,12 @@ flutter clean && flutter pub get
 flutter build apk --release
 ```
 
+## 🔐 RBAC & Permissions
+
+- **[Feature Matrix](docs/FEATURE_MATRIX.md)**: Complete Staff vs Admin capabilities comparison
+- **[RBAC Quick Reference](docs/RBAC_QUICKREF.md)**: Role matrix and 3-layer gating checklist  
+- **[Planned Features](docs/PLANNED_FEATURES.md)**: Future role enhancements and roadmap
+
 ## 📚 Documentation
 
 - **API Documentation**: Run `dart doc` to generate documentation
