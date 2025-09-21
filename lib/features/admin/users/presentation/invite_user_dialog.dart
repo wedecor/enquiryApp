@@ -249,7 +249,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
       // Parse specific error messages for better user feedback
       String errorMessage = 'Failed to invite user';
-      
+
       if (e.toString().contains('memory limit')) {
         errorMessage = 'Server is busy. Please try again in a moment.';
       } else if (e.toString().contains('timeout')) {

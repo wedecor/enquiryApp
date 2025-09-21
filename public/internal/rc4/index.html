@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>We Decor Enquiries – Internal RC4</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;margin:24px;max-width:720px;line-height:1.6}
+    h1{color:#2563eb;margin-bottom:8px}
+    .version{background:#f1f5f9;padding:4px 12px;border-radius:16px;font-size:0.9rem;display:inline-block;margin-bottom:16px}
+    .btn{display:inline-block;padding:12px 16px;border-radius:10px;border:1px solid #222;text-decoration:none;background:#2563eb;color:white;font-weight:600;margin:8px 8px 8px 0}
+    .btn:hover{background:#1d4ed8}
+    .btn.secondary{background:white;color:#222;border:1px solid #ccc}
+    .btn.secondary:hover{background:#f8fafc}
+    .card{border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin:16px 0;background:#fafafa}
+    .qr{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+    .qr-code{min-width:160px}
+    code{background:#f6f8fa;padding:2px 6px;border-radius:6px;font-family:Monaco,Consolas,monospace;font-size:0.85rem;word-break:break-all}
+    .security{background:#fef3c7;border:1px solid #f59e0b;color:#92400e}
+    .install{background:#ecfdf5;border:1px solid #10b981;color:#047857}
+    .improvements{background:#f0f9ff;border:1px solid #0ea5e9;color:#0c4a6e}
+    .fixes{background:#fdf2f8;border:1px solid #ec4899;color:#be185d}
+    ul{margin:12px 0}
+    li{margin:6px 0}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:0.9rem;color:#64748b}
+    .status{display:inline-block;padding:2px 8px;border-radius:8px;font-size:0.8rem;font-weight:600;margin-left:8px}
+    .status.rc4{background:#dcfce7;color:#166534}
+    .status.stable{background:#dbeafe;color:#1e40af}
+  </style>
+</head>
+<body>
+  <h1>We Decor Enquiries <span class="status rc4">RC4 - Production Ready</span></h1>
+  <div class="version">v1.0.1+5 • Build Date: September 21, 2024</div>
+  
+  <p>Download RC4 with critical bug fixes for history loading and user invitations. Production-ready with enhanced stability.</p>
+
+  <div class="card qr">
+    <div class="qr-code">
+      <div id="qrcode"></div>
+    </div>
+    <div>
+      <a class="btn" href="./app-release.apk" download>📱 Download RC4 APK (54.7MB)</a>
+      <a class="btn secondary" href="./sha256.txt" target="_blank">🔒 Verify Checksum</a>
+      <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
+    </div>
+  </div>
+
+  <div class="card security">
+    <h3>🔐 Security Verification</h3>
+    <p><strong>Always verify the APK integrity before installation:</strong></p>
+    <p>Run: <code>shasum -a 256 app-release.apk</code> and compare with the SHA256 above.</p>
+  </div>
+
+  <div class="card fixes">
+    <h3>🐛 RC4 Critical Fixes</h3>
+    <ul>
+      <li><strong>Change History Fixed:</strong> No more infinite loading in enquiry details</li>
+      <li><strong>User Invitations Fixed:</strong> Resolved memory errors and AppCheck issues</li>
+      <li><strong>PWA Manifest Fixed:</strong> Web version now works properly</li>
+      <li><strong>Firebase Functions:</strong> Increased memory (256MB) and timeout (60s)</li>
+      <li><strong>Error Handling:</strong> Better user feedback with retry mechanisms</li>
+    </ul>
+    <p><a class="btn secondary" href="./RELEASE_NOTES_1.0.1+5.md" target="_blank">📋 View RC4 Release Notes</a></p>
+  </div>
+
+  <div class="card improvements">
+    <h3>🚀 Enhanced Features (from RC3)</h3>
+    <ul>
+      <li><strong>Dark Mode Support:</strong> Settings → Preferences → Appearance</li>
+      <li><strong>Advanced Filters:</strong> Faceted search with saved views</li>
+      <li><strong>Accessibility:</strong> Screen reader support and proper tap targets</li>
+      <li><strong>In-App Feedback:</strong> Settings → Privacy → Send Feedback</li>
+      <li><strong>Performance Monitoring:</strong> Real-time health dashboards</li>
+    </ul>
+  </div>
+
+  <div class="card install">
+    <h3>📲 Installation Instructions</h3>
+    <ol>
+      <li>Download the APK file to your Android device</li>
+      <li>Go to <strong>Settings → Security → Install unknown apps</strong></li>
+      <li>Enable installation for your browser or file manager</li>
+      <li>Open the downloaded APK file and tap "Install"</li>
+      <li>Launch "We Decor Enquiries" from your app drawer</li>
+    </ol>
+    <p><strong>Note:</strong> RC4 includes critical stability fixes for production use.</p>
+  </div>
+
+  <div class="card">
+    <h3>🧪 What to Test</h3>
+    <ul>
+      <li><strong>Change History:</strong> Open enquiry details → Check history section (should load quickly)</li>
+      <li><strong>User Invitations:</strong> Settings → Admin → User Management → Invite (should work without errors)</li>
+      <li><strong>Dark Mode:</strong> Settings → Preferences → Appearance (instant switching)</li>
+      <li><strong>Filters:</strong> Enquiries screen → Filter options and saved views</li>
+      <li><strong>Feedback:</strong> Settings → Privacy → Send Feedback (device info collection)</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🌐 Web Version Available</h3>
+    <p>Test the enhanced web version with all RC4 fixes:</p>
+    <a class="btn" href="/pwa/rc4/" target="_blank">🌍 Open RC4 Web App</a>
+    <p><small>Same features and fixes as the APK version!</small></p>
+  </div>
+
+  <div class="footer">
+    <p><strong>🚀 Production Ready</strong> - Critical bug fixes for stable operation</p>
+    <p><strong>Feedback:</strong> In-app form or #wedecor-app Slack | <strong>Health:</strong> Firebase Console</p>
+    <p><strong>Previous:</strong> <a href="/internal/rc3/">RC3</a> | <strong>Next:</strong> v1.1.0 (feature release)</p>
+  </div>
+
+  <!-- Lightweight QR lib via CDN -->
+  <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    // Generate QR code for APK download
+    const apkUrl = new URL('./app-release.apk', window.location.href).href;
+    new QRCode(document.getElementById("qrcode"), { 
+      text: apkUrl, 
+      width: 160, 
+      height: 160,
+      colorDark: "#2563eb",
+      colorLight: "#ffffff"
+    });
+
+    // Load SHA256 from file
+    fetch('./sha256.txt')
+      .then(r => r.text())
+      .then(t => {
+        const sha256 = t.trim().split(' ')[0]; // Extract just the hash part
+        document.getElementById('sha256').textContent = sha256;
+      })
+      .catch(e => {
+        console.error('Failed to load SHA256:', e);
+        document.getElementById('sha256').textContent = 'Error loading checksum';
+      });
+  </script>
+</body>
+</html>
