@@ -5,7 +5,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
-import { config } from "firebase-functions";
+// Removed deprecated config import for Firebase Functions v2
 import * as nodemailer from "nodemailer";
 
 setGlobalOptions({
@@ -23,28 +23,34 @@ const ACTION_CODE_SETTINGS = {
   handleCodeInApp: false,
 };
 
-// SMTP Configuration from environment
+// SMTP Configuration using environment variables (Firebase Functions v2)
 const createEmailTransporter = () => {
-  const smtpConfig = config().smtp;
+  // Try to get SMTP config from environment variables
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpPort = process.env.SMTP_PORT;
   
-  if (!smtpConfig?.host || !smtpConfig?.user || !smtpConfig?.pass) {
-    // Fallback to Gmail with app password for development
+  if (smtpHost && smtpUser && smtpPass) {
+    logger.info('Using custom SMTP configuration from environment variables');
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: smtpHost,
+      port: parseInt(smtpPort || '587'),
+      secure: smtpPort === '465',
       auth: {
-        user: 'connect2wedecor@gmail.com',
-        pass: 'sdit fdqa gfee nzdy' // App password
+        user: smtpUser,
+        pass: smtpPass,
       }
     });
   }
 
+  // Fallback to Gmail with app password
+  logger.info('Using Gmail SMTP configuration');
   return nodemailer.createTransport({
-    host: smtpConfig.host,
-    port: parseInt(smtpConfig.port || '587'),
-    secure: smtpConfig.port === '465',
+    service: 'gmail',
     auth: {
-      user: smtpConfig.user,
-      pass: smtpConfig.pass,
+      user: 'connect2wedecor@gmail.com',
+      pass: 'sdit fdqa gfee nzdy' // App password
     }
   });
 };
