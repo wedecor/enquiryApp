@@ -28,7 +28,7 @@ class FiltersBar extends ConsumerWidget {
         children: [
           // Active filters count
           Container(
-            padding: AppSpacing.horizontal(AppTokens.space3).copyWith(vertical: AppTokens.space1),
+            padding: EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
               borderRadius: AppRadius.medium,
@@ -95,7 +95,7 @@ class FiltersBar extends ConsumerWidget {
                   // Date range filter
                   if (filters.dateRange != null) ...[
                     _FilterChip(
-                      label: 'Date: ${_formatDateRange(filters.dateRange!)}',
+                      label: 'Date: ${_formatDateRange(_convertToFlutterDateRange(filters.dateRange!))}',
                       onDeleted: () =>
                           ref.read(enquiryFiltersProvider.notifier).updateDateRangeFilter(null),
                     ),
@@ -128,6 +128,11 @@ class FiltersBar extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Convert FilterDateRange to Flutter's DateTimeRange
+  DateTimeRange _convertToFlutterDateRange(FilterDateRange range) {
+    return DateTimeRange(start: range.start, end: range.end);
   }
 
   String _formatDateRange(DateTimeRange range) {
@@ -302,7 +307,7 @@ class QuickFilters extends ConsumerWidget {
 
     ref
         .read(enquiryFiltersProvider.notifier)
-        .updateDateRangeFilter(DateTimeRange(start: today, end: tomorrow));
+        .updateDateRangeFilter(FilterDateRange(start: today, end: tomorrow));
   }
 
   void _applyThisWeekFilter(WidgetRef ref) {
@@ -313,7 +318,7 @@ class QuickFilters extends ConsumerWidget {
 
     ref
         .read(enquiryFiltersProvider.notifier)
-        .updateDateRangeFilter(DateTimeRange(start: startOfWeekDay, end: endOfWeek));
+        .updateDateRangeFilter(FilterDateRange(start: startOfWeekDay, end: endOfWeek));
   }
 
   void _toggleAssignedToMeFilter(WidgetRef ref) {

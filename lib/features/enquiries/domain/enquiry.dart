@@ -35,7 +35,7 @@ class Enquiry with _$Enquiry {
 
   factory Enquiry.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
-    
+
     return Enquiry(
       id: doc.id,
       customerName: data['customerName'] as String? ?? '',

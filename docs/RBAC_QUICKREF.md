@@ -291,6 +291,93 @@ firebase emulators:exec --only firestore "npm run test:rules"
 
 ---
 
+## 🧪 Quick Rules Check Procedure
+
+### **Firestore Rules Validation**
+
+To verify that Firestore security rules are working correctly, follow this procedure:
+
+```bash
+# 1. Start Firebase emulators
+firebase emulators:start --only firestore &
+
+# 2. In another terminal, run basic rule tests
+# Test staff reading assigned doc (should succeed)
+curl -X GET "http://localhost:8080/v1/projects/test-project/databases/(default)/documents/enquiries/test-enquiry-1" \
+  -H "Authorization: Bearer $(firebase auth:print-access-token)"
+
+# Test staff reading unassigned doc (should fail with permission denied)
+curl -X GET "http://localhost:8080/v1/projects/test-project/databases/(default)/documents/enquiries/unassigned-enquiry" \
+  -H "Authorization: Bearer $(firebase auth:print-access-token)"
+
+# Test staff deleting enquiry (should fail with permission denied)
+curl -X DELETE "http://localhost:8080/v1/projects/test-project/databases/(default)/documents/enquiries/test-enquiry-1" \
+  -H "Authorization: Bearer $(firebase auth:print-access-token)"
+
+# Test admin deleting enquiry (should succeed)
+curl -X DELETE "http://localhost:8080/v1/projects/test-project/databases/(default)/documents/enquiries/admin-test-enquiry" \
+  -H "Authorization: Bearer $(firebase auth:print-access-token)"
+```
+
+### **Manual Testing Checklist**
+
+#### **Staff User Testing**
+- [ ] Can only see enquiries with `assignedTo == currentUserId`
+- [ ] Can update status of assigned enquiries
+- [ ] Cannot create new enquiries
+- [ ] Cannot delete enquiries
+- [ ] Cannot see financial fields in enquiry details
+- [ ] CSV export only includes assigned enquiries
+- [ ] CSV export excludes financial columns
+
+#### **Admin User Testing**
+- [ ] Can see all enquiries regardless of assignment
+- [ ] Can create, update, delete any enquiry
+- [ ] Can see all financial fields
+- [ ] Can manage users (invite, role changes, activate/deactivate)
+- [ ] Can access analytics dashboard
+- [ ] Can configure system settings (dropdowns, defaults)
+- [ ] CSV export includes all enquiries and all columns
+
+#### **Security Boundary Testing**
+- [ ] Staff cannot access `/admin/*` routes
+- [ ] Staff cannot modify `assignedTo` field
+- [ ] Staff cannot access other users' data
+- [ ] Admin actions are logged in `admin_audit` collection
+- [ ] Firestore rules block unauthorized access attempts
+
+### **Automated Rules Testing**
+
+For comprehensive rules testing, create a test script:
+
+```bash
+# test_firestore_rules.sh
+#!/bin/bash
+
+echo "🔥 Testing Firestore Security Rules..."
+
+# Start emulator
+firebase emulators:start --only firestore --project test-project &
+EMULATOR_PID=$!
+
+# Wait for emulator to start
+sleep 5
+
+# Run test cases
+echo "✅ Testing staff permissions..."
+# Add your test cases here
+
+echo "✅ Testing admin permissions..."
+# Add your test cases here
+
+# Stop emulator
+kill $EMULATOR_PID
+
+echo "🎉 Rules testing complete!"
+```
+
+---
+
 ## 📚 Related Documentation
 
 - [Feature Matrix](FEATURE_MATRIX.md) - Complete capabilities comparison
