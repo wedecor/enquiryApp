@@ -36,6 +36,8 @@
     "fn:install": "cd functions && npm ci && cd -",
     "fn:build": "cd functions && npm run build && cd -",
     "fn:deploy": "cd functions && npm run deploy && cd -",
+    "seed:statuses": "tsx scripts/populate_statuses.ts",
+    "seed:statuses:dry": "DRY_RUN=1 tsx scripts/populate_statuses.ts",
     "prepare": "husky"
   },
   "devDependencies": {
