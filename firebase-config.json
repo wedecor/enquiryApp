@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "result": {
+    "fileName": "firebase-js-config.json",
+    "fileContents": "{\n  \"projectId\": \"wedecorenquries\",\n  \"appId\": \"1:747327664982:web:98e5e0d4bed9a1526edcf7\",\n  \"storageBucket\": \"wedecorenquries.firebasestorage.app\",\n  \"apiKey\": \"AIzaSyCB1Zln4VM1fXtEoJSXIRzguxVPJAWV8ZI\",\n  \"authDomain\": \"wedecorenquries.firebaseapp.com\",\n  \"messagingSenderId\": \"747327664982\"\n}",
+    "sdkConfig": {
+      "projectId": "wedecorenquries",
+      "appId": "1:747327664982:web:98e5e0d4bed9a1526edcf7",
+      "storageBucket": "wedecorenquries.firebasestorage.app",
+      "apiKey": "AIzaSyCB1Zln4VM1fXtEoJSXIRzguxVPJAWV8ZI",
+      "authDomain": "wedecorenquries.firebaseapp.com",
+      "messagingSenderId": "747327664982"
+    }
+  }
+}

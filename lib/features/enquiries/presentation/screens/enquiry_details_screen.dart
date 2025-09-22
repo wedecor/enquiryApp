@@ -39,14 +39,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   // Allowed status transitions for staff users
   static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_progress', 'cancelled'],
-    'in_progress': ['quote_sent', 'cancelled'],
-    'quote_sent': ['confirmed', 'closed_lost'],
-    'confirmed': ['scheduled', 'cancelled'],
-    'scheduled': ['completed', 'cancelled'],
+    'new': ['in_talks', 'cancelled', 'not_interested'],
+    'in_talks': ['quotation_sent', 'confirmed', 'cancelled', 'not_interested'],
+    'quotation_sent': ['confirmed', 'in_talks', 'cancelled', 'not_interested'],
+    'confirmed': ['completed', 'cancelled'],
     'completed': [],
     'cancelled': [],
-    'closed_lost': [],
+    'not_interested': [],
   };
 
   @override
@@ -359,13 +358,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           // Fallback to default statuses
           statuses = [
             {'value': 'new', 'label': 'New', 'order': 1},
-            {'value': 'in_progress', 'label': 'In Progress', 'order': 2},
-            {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3},
-            {'value': 'approved', 'label': 'Approved', 'order': 4},
-            {'value': 'scheduled', 'label': 'Scheduled', 'order': 5},
-            {'value': 'completed', 'label': 'Completed', 'order': 6},
-            {'value': 'cancelled', 'label': 'Cancelled', 'order': 7},
-            {'value': 'closed_lost', 'label': 'Closed Lost', 'order': 8},
+            {'value': 'in_talks', 'label': 'In Talks', 'order': 2},
+            {'value': 'quotation_sent', 'label': 'Quotation Sent', 'order': 3},
+            {'value': 'confirmed', 'label': 'Confirmed', 'order': 4},
+            {'value': 'completed', 'label': 'Completed', 'order': 5},
+            {'value': 'cancelled', 'label': 'Cancelled', 'order': 6},
+            {'value': 'not_interested', 'label': 'Not Interested', 'order': 7},
           ];
         } else {
           statuses = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
@@ -602,18 +600,16 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     switch (status) {
       case 'new':
         return const Color(0xFFFF9800); // Orange
-      case 'in_progress':
+      case 'in_talks':
         return colorScheme.primary;
-      case 'quote_sent':
+      case 'quotation_sent':
         return const Color(0xFF009688); // Teal
-      case 'approved':
+      case 'confirmed':
         return const Color(0xFF3F51B5); // Indigo
-      case 'scheduled':
-        return const Color(0xFF9C27B0); // Purple
       case 'completed':
         return const Color(0xFF4CAF50); // Green
       case 'cancelled':
-      case 'closed_lost':
+      case 'not_interested':
         return colorScheme.error;
       default:
         return colorScheme.outline;

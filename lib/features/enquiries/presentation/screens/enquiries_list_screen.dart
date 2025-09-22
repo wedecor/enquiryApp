@@ -109,23 +109,36 @@ class EnquiriesListScreen extends ConsumerWidget {
                       ),
                       title: Text(
                         (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                          Text(
+                            (enquiryData['eventType'] as String?) ?? 'Unknown Event',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           Text(
                             'Date: ${_formatDate(enquiryData['eventDate'])}',
-                            style: const TextStyle(fontSize: 12),
+                            style: Theme.of(context).textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: TextStyle(
-                                fontSize: 12,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ],
@@ -227,14 +240,20 @@ class EnquiriesListScreen extends ConsumerWidget {
 
   Color _getStatusColor(BuildContext context, String? status) {
     switch (status?.toLowerCase()) {
-      case 'pending':
+      case 'new':
         return Colors.orange;
-      case 'in progress':
+      case 'in_talks':
         return Theme.of(context).colorScheme.primary;
+      case 'quotation_sent':
+        return const Color(0xFF009688); // Teal
+      case 'confirmed':
+        return Colors.indigo;
       case 'completed':
         return Colors.green;
       case 'cancelled':
         return Colors.red;
+      case 'not_interested':
+        return Colors.red.shade300;
       default:
         return Colors.grey;
     }

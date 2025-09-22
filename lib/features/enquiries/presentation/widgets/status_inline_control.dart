@@ -11,13 +11,13 @@ class StatusInlineControl extends ConsumerWidget {
   final Enquiry enquiry;
 
   static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['contacted', 'cancelled'],
-    'contacted': ['quoted', 'cancelled'],
-    'quoted': ['confirmed', 'cancelled'],
-    'confirmed': ['in_progress', 'cancelled'],
-    'in_progress': ['completed', 'cancelled'],
+    'new': ['in_talks', 'cancelled', 'not_interested'],
+    'in_talks': ['quotation_sent', 'confirmed', 'cancelled', 'not_interested'],
+    'quotation_sent': ['confirmed', 'in_talks', 'cancelled', 'not_interested'],
+    'confirmed': ['completed', 'cancelled'],
     'completed': [],
     'cancelled': [],
+    'not_interested': [],
   };
 
   @override
@@ -49,11 +49,7 @@ class StatusInlineControl extends ConsumerWidget {
                   if (next == null || next == current) return;
                   final prev = current;
                   final uid = meUid ?? '';
-                  await repo.updateStatus(
-                    id: enquiry.id,
-                    nextStatus: next,
-                    userId: uid,
-                  );
+                  await repo.updateStatus(id: enquiry.id, nextStatus: next, userId: uid);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -61,11 +57,7 @@ class StatusInlineControl extends ConsumerWidget {
                         action: SnackBarAction(
                           label: 'Undo',
                           onPressed: () async {
-                            await repo.updateStatus(
-                              id: enquiry.id,
-                              nextStatus: prev,
-                              userId: uid,
-                            );
+                            await repo.updateStatus(id: enquiry.id, nextStatus: prev, userId: uid);
                           },
                         ),
                       ),

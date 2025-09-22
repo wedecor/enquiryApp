@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/clamped_text.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
@@ -30,11 +31,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   final List<Map<String, String>> _statusTabs = [
     {'label': 'All', 'value': 'All'},
     {'label': 'New', 'value': 'new'},
-    {'label': 'In Progress', 'value': 'in_progress'},
-    {'label': 'Quote Sent', 'value': 'quote_sent'},
+    {'label': 'In Talks', 'value': 'in_talks'},
+    {'label': 'Quotation Sent', 'value': 'quotation_sent'},
     {'label': 'Confirmed', 'value': 'confirmed'},
     {'label': 'Completed', 'value': 'completed'},
     {'label': 'Cancelled', 'value': 'cancelled'},
+    {'label': 'Not Interested', 'value': 'not_interested'},
   ];
 
   @override
@@ -73,7 +75,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: _statusTabs.map((s) => Tab(text: s['label']!)).toList(),
+          tabs: _statusTabs.map((s) => Tab(child: ClampedText(s['label']!))).toList(),
         ),
       ),
       drawer: _buildNavigationDrawer(currentUser, isAdmin),
@@ -162,11 +164,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   children: [
                     Text(
                       'Welcome back, ${user?.name ?? 'User'}!',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       isAdmin ? 'Administrator' : 'Staff Member',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -202,9 +210,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           final data = doc.data() as Map<String, dynamic>;
           return (data['eventStatus'] as String?)?.toLowerCase() == 'new';
         }).length;
-        final inProgressEnquiries = enquiries.where((doc) {
+        final inTalksEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_progress';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_talks';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -228,8 +236,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'In Progress',
-                inProgressEnquiries.toString(),
+                'In Talks',
+                inTalksEnquiries.toString(),
                 Icons.pending,
                 Theme.of(context).colorScheme.primary,
               ),
@@ -255,11 +263,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 24),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),
@@ -334,15 +357,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 title: Text(
                   (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                    Text(
+                      (enquiryData['eventType'] as String?) ?? 'Unknown Event',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     Text(
                       'Date: ${_formatDate(enquiryData['eventDate'])}',
-                      style: const TextStyle(fontSize: 12),
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (isAdmin && enquiryData['assignedTo'] != null) ...[
                       _buildAssignedToLabel(enquiryData['assignedTo'] as String),
@@ -424,16 +459,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     switch (status?.toLowerCase()) {
       case 'new':
         return Colors.orange;
-      case 'in_progress':
+      case 'in_talks':
         return Theme.of(context).colorScheme.primary;
-      case 'quote_sent':
-        return Theme.of(context).colorScheme.primary;
+      case 'quotation_sent':
+        return const Color(0xFF009688); // Teal
       case 'confirmed':
         return Colors.indigo;
       case 'completed':
         return Colors.green;
       case 'cancelled':
         return Colors.red;
+      case 'not_interested':
+        return Colors.red.shade300;
       default:
         return Colors.grey;
     }

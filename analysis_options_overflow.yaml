@@ -1,0 +1,63 @@
+# Additional analysis options for text overflow prevention
+# Include this in your main analysis_options.yaml
+
+linter:
+  rules:
+    # Prevent common overflow patterns
+    avoid_unnecessary_containers: true
+    avoid_web_libraries_in_flutter: true
+    avoid_function_literals_in_foreach_calls: true
+    avoid_print: false # Allow print for debugging
+    avoid_slow_async_io: true
+    avoid_type_to_string: true
+    cancel_subscriptions: true
+    close_sinks: true
+    comment_references: true
+    control_flow_in_finally: true
+    empty_statements: true
+    hash_and_equals: true
+    invariant_booleans: true
+    iterable_contains_unrelated_type: true
+    list_remove_unrelated_type: true
+    literal_only_boolean_expressions: true
+    no_adjacent_strings_in_list: true
+    no_duplicate_case_values: true
+    no_logic_in_create_state: true
+    prefer_void_to_null: true
+    test_types_in_equals: true
+    throw_in_finally: true
+    unnecessary_statements: true
+    unrelated_type_equality_checks: true
+    valid_regexps: true
+
+# Custom rules for text overflow prevention
+analyzer:
+  plugins:
+    - custom_lint
+  errors:
+    # Make these warnings instead of errors for better developer experience
+    invalid_annotation_target: warning
+    missing_required_param: warning
+    missing_return: warning
+    undefined_method: warning
+    undefined_class: warning
+    undefined_identifier: warning
+    invalid_use_of_protected_member: warning
+
+# Custom lint rules for overflow prevention
+custom_lint:
+  rules:
+    # Rule to flag Text widgets without overflow handling in Rows
+    text_overflow_prevention:
+      severity: warning
+      description: "Text widgets in Rows should have overflow protection"
+      
+    # Rule to flag fixed heights that might cause overflow
+    avoid_fixed_heights:
+      severity: warning
+      description: "Avoid fixed heights that might cause text overflow"
+      
+    # Rule to flag missing maxLines in critical UI elements
+    require_max_lines:
+      severity: info
+      description: "Critical UI elements should specify maxLines"

@@ -10,6 +10,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/user_firestore_sync_service.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/clamped_text.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
 
 /// Screen for creating and editing enquiries
@@ -738,9 +739,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : Text(
+                    : ClampedText(
                         widget.mode == 'edit' ? 'Update Enquiry' : 'Create Enquiry',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
               ),
             ],

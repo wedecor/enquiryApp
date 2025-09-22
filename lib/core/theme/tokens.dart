@@ -41,12 +41,13 @@ class AppTokens {
   static const double iconXLarge = 32.0;
 
   // === TYPOGRAPHY ===
+  // Reduced font sizes to prevent overflow on small screens
   static const double fontSizeSmall = 12.0;
   static const double fontSizeBody = 14.0;
   static const double fontSizeBodyLarge = 16.0;
-  static const double fontSizeTitle = 18.0;
-  static const double fontSizeHeadline = 20.0;
-  static const double fontSizeDisplay = 24.0;
+  static const double fontSizeTitle = 17.0; // Reduced from 18.0
+  static const double fontSizeHeadline = 19.0; // Reduced from 20.0
+  static const double fontSizeDisplay = 22.0; // Reduced from 24.0
 
   // === LINE HEIGHTS ===
   static const double lineHeightTight = 1.2;
@@ -78,55 +79,106 @@ class AppTokens {
 }
 
 /// Typography styles using design tokens
+///
+/// These styles are optimized to prevent text overflow while maintaining
+/// good readability and accessibility across different screen sizes.
 class AppTypography {
   AppTypography._();
 
+  // Display styles - for large headlines
   static const TextStyle displayLarge = TextStyle(
     fontSize: AppTokens.fontSizeDisplay,
     fontWeight: FontWeight.w700,
     height: AppTokens.lineHeightTight,
+    letterSpacing: -0.5,
+  );
+
+  // Headline styles - for section headers
+  static const TextStyle headlineLarge = TextStyle(
+    fontSize: AppTokens.fontSizeHeadline + 1.0, // 20.0
+    fontWeight: FontWeight.w600,
+    height: AppTokens.lineHeightNormal,
+    letterSpacing: -0.25,
   );
 
   static const TextStyle headlineMedium = TextStyle(
     fontSize: AppTokens.fontSizeHeadline,
     fontWeight: FontWeight.w600,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.0,
   );
 
+  static const TextStyle headlineSmall = TextStyle(
+    fontSize: AppTokens.fontSizeTitle,
+    fontWeight: FontWeight.w600,
+    height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.0,
+  );
+
+  // Title styles - for card titles and important labels
   static const TextStyle titleLarge = TextStyle(
     fontSize: AppTokens.fontSizeTitle,
     fontWeight: FontWeight.w600,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.0,
   );
 
+  static const TextStyle titleMedium = TextStyle(
+    fontSize: AppTokens.fontSizeBodyLarge,
+    fontWeight: FontWeight.w600,
+    height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.15,
+  );
+
+  static const TextStyle titleSmall = TextStyle(
+    fontSize: AppTokens.fontSizeBody,
+    fontWeight: FontWeight.w600,
+    height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.1,
+  );
+
+  // Body styles - for regular content
   static const TextStyle bodyLarge = TextStyle(
     fontSize: AppTokens.fontSizeBodyLarge,
     fontWeight: FontWeight.w400,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.15,
   );
 
   static const TextStyle bodyMedium = TextStyle(
     fontSize: AppTokens.fontSizeBody,
     fontWeight: FontWeight.w400,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.25,
   );
 
   static const TextStyle bodySmall = TextStyle(
     fontSize: AppTokens.fontSizeSmall,
     fontWeight: FontWeight.w400,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.4,
   );
 
+  // Label styles - for buttons, chips, and UI elements
   static const TextStyle labelLarge = TextStyle(
     fontSize: AppTokens.fontSizeBody,
     fontWeight: FontWeight.w500,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.1,
   );
 
   static const TextStyle labelMedium = TextStyle(
     fontSize: AppTokens.fontSizeSmall,
     fontWeight: FontWeight.w500,
     height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.5,
+  );
+
+  static const TextStyle labelSmall = TextStyle(
+    fontSize: 11.0,
+    fontWeight: FontWeight.w500,
+    height: AppTokens.lineHeightNormal,
+    letterSpacing: 0.5,
   );
 }
 

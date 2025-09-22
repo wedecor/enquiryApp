@@ -2,16 +2,23 @@
 bool canStaffTransition(String from, String to) {
   switch (from) {
     case 'new':
-      return to == 'contacted' || to == 'cancelled';
-    case 'contacted':
-      return to == 'quoted' || to == 'cancelled';
-    case 'quoted':
-      return to == 'confirmed' || to == 'cancelled';
+      return to == 'in_talks' || to == 'cancelled' || to == 'not_interested';
+    case 'in_talks':
+      return to == 'quotation_sent' ||
+          to == 'confirmed' ||
+          to == 'cancelled' ||
+          to == 'not_interested';
+    case 'quotation_sent':
+      return to == 'confirmed' || to == 'in_talks' || to == 'cancelled' || to == 'not_interested';
     case 'confirmed':
-      return to == 'in_progress' || to == 'cancelled';
-    case 'in_progress':
       return to == 'completed' || to == 'cancelled';
+    case 'completed':
+      return false; // terminal state
+    case 'cancelled':
+      return false; // terminal state
+    case 'not_interested':
+      return false; // terminal state
     default:
-      return false; // completed/cancelled are terminal
+      return false;
   }
 }

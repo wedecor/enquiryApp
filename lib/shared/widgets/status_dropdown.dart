@@ -78,6 +78,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             };
           })
           .where((e) => (e['value'] ?? '').isNotEmpty)
+          .where((e) => e['value'] != 'approved') // Filter out 'approved' status
           .toList();
 
       setState(() {
@@ -99,14 +100,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       case 'statuses':
         return [
           {'label': 'New', 'value': 'new'},
-          {'label': 'Contacted', 'value': 'contacted'},
-          {'label': 'In Progress', 'value': 'in_progress'},
-          {'label': 'Quote Sent', 'value': 'quote_sent'},
-          {'label': 'Approved', 'value': 'approved'},
-          {'label': 'Scheduled', 'value': 'scheduled'},
+          {'label': 'In Talks', 'value': 'in_talks'},
+          {'label': 'Quotation Sent', 'value': 'quotation_sent'},
+          {'label': 'Confirmed', 'value': 'confirmed'},
           {'label': 'Completed', 'value': 'completed'},
-          {'label': 'Closed - Lost', 'value': 'closed_lost'},
           {'label': 'Cancelled', 'value': 'cancelled'},
+          {'label': 'Not Interested', 'value': 'not_interested'},
         ];
       case 'payment_statuses':
         return [

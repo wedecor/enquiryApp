@@ -108,6 +108,19 @@ class MyApp extends ConsumerWidget {
       themeMode: themeMode,
       home: const AuthGate().withUpdateChecker(),
       debugShowCheckedModeBanner: false,
+      // Global text scale guard to prevent overflow
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        // Clamp text scaler to prevent overflow on small screens
+        final clampedTextScaler = mediaQuery.textScaler.clamp(
+          minScaleFactor: 0.85,
+          maxScaleFactor: 1.30,
+        );
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: clampedTextScaler),
+          child: child!,
+        );
+      },
     );
   }
 }

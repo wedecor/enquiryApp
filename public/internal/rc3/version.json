@@ -1,10 +1,10 @@
 {
-  "version": "1.0.1",
-  "buildNumber": 13,
-  "releaseDate": "2025-09-22",
-  "releaseNotes": "🎨 MAJOR UPDATE: Contact Shortcuts + Theme Fixes\n\n📞 NEW: CONTACT SHORTCUTS:\n• Call and WhatsApp buttons in enquiry details\n• One-tap calling with native phone dialer\n• WhatsApp messaging with prefilled context\n• Cross-platform support with smart fallbacks\n• Accessibility compliant with proper semantics\n\n🎨 THEME SYSTEM OVERHAUL:\n• Fixed theme switching - changes apply instantly\n• Improved Settings → Appearance with modern design\n• Fixed hardcoded colors for better dark mode\n• Theme selection persists across app restarts\n\n🛡️ CI/CD ENHANCEMENTS:\n• Enterprise-grade CI pipeline with security scanning\n• Automated builds with integrity verification\n• Preview deployments for testing\n\n✅ PREVIOUS FIXES MAINTAINED:\n• Staff can change enquiry status (assigned enquiries)\n• Change history loads properly\n• Color contrast improvements\n• User invitation and login fixes\n• Manual 'Check for Updates' button",
-  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-20250922-173633.apk",
-  "sha256": "859114219fb26bd39e2605949ca86a6e271f477d0c4e3bfbbf6590cc999c1348",
+  "version": "1.0.3",
+  "buildNumber": 16,
+  "releaseDate": "2025-09-23",
+  "releaseNotes": "✅ STATUS STANDARDIZATION COMPLETE: All 7 Statuses Unified\n\n📋 COMPREHENSIVE UPDATES:\n• Standardized ALL status references across entire codebase\n• Updated dashboard tabs, analytics, and color mappings\n• Fixed status transition logic and validation\n• Updated settings and user preferences\n• All components now use exact 7 statuses\n\n🎨 STATUS MAPPING:\n• 'new' → 'New' (Orange)\n• 'in_talks' → 'In Talks' (Primary Blue)\n• 'quotation_sent' → 'Quotation Sent' (Teal)\n• 'confirmed' → 'Confirmed' (Indigo)\n• 'completed' → 'Completed' (Green)\n• 'cancelled' → 'Cancelled' (Red)\n• 'not_interested' → 'Not Interested' (Light Red)\n\n✅ PERFECT CONSISTENCY:\n• Code and database will be perfectly aligned\n• All UI components use consistent status values\n• Analytics and reporting updated accordingly\n• Build 16 ready for production deployment",
+  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-rc3-20250923-033118.apk",
+  "sha256": "1afd852d765469bcce1a0d93c1bd1fe9c69734da24f58dc0b8605255fbec9334",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [

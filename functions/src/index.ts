@@ -116,14 +116,30 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
 
     const { email, name, role } = request.data;
 
-    // Validate input
-    if (!email || !email.includes('@')) {
-      throw new HttpsError('invalid-argument', 'Valid email is required');
+    // Validate input with better email validation
+    if (!email || typeof email !== 'string') {
+      throw new HttpsError('invalid-argument', 'Email is required and must be a string');
+    }
+
+    // More robust email validation
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    if (!emailRegex.test(trimmedEmail)) {
+      logger.error('Invalid email format provided', { 
+        providedEmail: email,
+        trimmedEmail: trimmedEmail,
+        emailLength: email.length 
+      });
+      throw new HttpsError('invalid-argument', `Invalid email format: ${email}`);
     }
 
     if (!role || !['staff', 'admin'].includes(role)) {
       throw new HttpsError('invalid-argument', 'Role must be either "staff" or "admin"');
     }
+
+    // Use the trimmed and lowercased email
+    const validatedEmail = trimmedEmail;
 
     try {
       const auth = getAuth();
@@ -134,7 +150,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
 
       // Check if user already exists in Firebase Auth
       try {
-        userRecord = await auth.getUserByEmail(email);
+        userRecord = await auth.getUserByEmail(validatedEmail);
         isExistingUser = true;
         logger.info('User already exists in Firebase', { emailProvided: true, userFound: true });
       } catch (error: any) {
@@ -142,10 +158,10 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
           // Create new user in Firebase Auth
           logger.info('Creating new Firebase user', { emailProvided: true, newUserCreation: true });
           userRecord = await auth.createUser({
-            email,
+            email: validatedEmail,
             emailVerified: false,
             disabled: false,
-            displayName: name || email.split('@')[0],
+            displayName: name || validatedEmail.split('@')[0],
           });
           logger.info('Firebase user created successfully', { userCreated: true, hasUid: !!userRecord.uid });
         } else {
@@ -154,13 +170,13 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
       }
 
       // Generate password reset link
-      const resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
+      const resetLink = await auth.generatePasswordResetLink(validatedEmail, ACTION_CODE_SETTINGS);
 
       // Create/update Firestore user document
       const userData = {
         uid: userRecord.uid,
-        name: name || email.split('@')[0],
-        email,
+        name: name || validatedEmail.split('@')[0],
+        email: validatedEmail,
         phone: '', // UserModel expects string, not null
         role,
         // Remove 'active' field as UserModel doesn't have it
@@ -177,7 +193,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
 
       logger.info('User invitation completed', {
         uid: userRecord.uid,
-        email,
+        email: validatedEmail,
         role,
         isExistingUser,
         resetLinkGenerated: !!resetLink,
@@ -191,7 +207,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         
         const mailOptions = {
           from: '"WeDecor Events" <connect2wedecor@gmail.com>',
-          to: email,
+          to: validatedEmail,
           subject: '🏠 Welcome to WeDecor Events - Set Your Password',
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
@@ -214,7 +230,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
                   <ol style="color: #4a5568; margin: 0; padding-left: 20px; line-height: 1.8;">
                     <li>Click the "Set Password" button below</li>
                     <li>Create a secure password for your account</li>
-                    <li>Login with your email: <strong>${email}</strong></li>
+                    <li>Login with your email: <strong>${validatedEmail}</strong></li>
                     <li>Start managing enquiries and events!</li>
                   </ol>
                 </div>
@@ -273,7 +289,7 @@ Set your password here: ${resetLink}
 
 This link will expire in 1 hour for security.
 
-Login email: ${email}
+Login email: ${validatedEmail}
 
 Best regards,
 WeDecor Events Team
@@ -285,7 +301,7 @@ If you didn't expect this invitation, please ignore this email.`
         emailSent = true;
         
         logger.info('Invitation email sent successfully', {
-          to: email,
+          to: validatedEmail,
           role,
           hasResetLink: !!resetLink,
           emailDelivered: true
@@ -294,7 +310,7 @@ If you didn't expect this invitation, please ignore this email.`
       } catch (emailError: any) {
         logger.error('Failed to send invitation email', {
           error: emailError.message,
-          to: email,
+          to: validatedEmail,
           hasResetLink: !!resetLink
         });
         // Don't fail the function - admin can still share the link manually
@@ -302,7 +318,7 @@ If you didn't expect this invitation, please ignore this email.`
       
       return {
         uid: userRecord.uid,
-        email,
+        email: validatedEmail,
         role,
         resetLink,
         emailSent,
@@ -310,7 +326,7 @@ If you didn't expect this invitation, please ignore this email.`
 
     } catch (error: any) {
       logger.error('Error in inviteUser function', { 
-        email: email.includes('@'), 
+        email: validatedEmail || email, 
         role, 
         error: error.message,
         code: error.code 

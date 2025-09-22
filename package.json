@@ -36,8 +36,9 @@
     "fn:install": "cd functions && npm ci && cd -",
     "fn:build": "cd functions && npm run build && cd -",
     "fn:deploy": "cd functions && npm run deploy && cd -",
-    "seed:statuses": "tsx scripts/populate_statuses.ts",
-    "seed:statuses:dry": "DRY_RUN=1 tsx scripts/populate_statuses.ts",
+    "seed:statuses:dry": "DRY_RUN=1 ts-node --transpile-only scripts/populate_statuses.ts --path dropdowns/statuses/items --project wedecorenquries",
+    "seed:statuses": "ts-node --transpile-only scripts/populate_statuses.ts --path dropdowns/statuses/items --project wedecorenquries",
+    "seed:probe": "ts-node --transpile-only scripts/probe_firestore.ts --path dropdowns/statuses/items --project wedecorenquries",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -46,6 +47,7 @@
     "glob": "^10.3.10",
     "husky": "^9.1.7",
     "picocolors": "^1.0.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3"
   },

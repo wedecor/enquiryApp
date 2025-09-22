@@ -103,25 +103,31 @@ Future<void> _seedEventTypes(FirebaseFirestore firestore) async {
 Future<void> _seedStatuses(FirebaseFirestore firestore) async {
   print('📝 Seeding statuses...');
 
-  final statuses = {
-    'enquired': 'Enquired',
-    'confirmed': 'Confirmed',
-    'assigned': 'Assigned',
-    'not_interested': 'Not Interested',
-    'completed': 'Completed',
-  };
+  final statuses = [
+    {'id': 'new', 'label': 'New', 'order': 1},
+    {'id': 'in_talks', 'label': 'In Talks', 'order': 2},
+    {'id': 'confirmed', 'label': 'Confirmed', 'order': 3},
+    {'id': 'completed', 'label': 'Completed', 'order': 4},
+    {'id': 'cancelled', 'label': 'Cancelled', 'order': 5},
+    {'id': 'not_interested', 'label': 'Not Interested', 'order': 6},
+    {'id': 'quotation_sent', 'label': 'Quotation Sent', 'order': 7},
+  ];
 
   final batch = firestore.batch();
 
-  for (final entry in statuses.entries) {
+  for (final status in statuses) {
     final docRef = firestore
         .collection('dropdowns')
         .doc('statuses')
         .collection('items')
-        .doc(entry.key);
+        .doc(status['id']!);
 
     batch.set(docRef, {
-      'value': entry.value,
+      'id': status['id'],
+      'label': status['label'],
+      'value': status['id'], // Use id as value for consistency
+      'order': status['order'],
+      'active': true,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

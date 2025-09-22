@@ -308,17 +308,17 @@ class RecentEnquiriesTable extends StatelessWidget {
     switch (status.toLowerCase().replaceAll(' ', '_')) {
       case 'new':
         return Colors.orange;
-      case 'in_progress':
+      case 'in_talks':
         return const Color(0xFF2563EB);
-      case 'quote_sent':
-        return Colors.blue;
+      case 'quotation_sent':
+        return const Color(0xFF009688); // Teal
       case 'confirmed':
         return Colors.indigo;
       case 'completed':
         return Colors.green;
       case 'cancelled':
         return Colors.red;
-      case 'closed_lost':
+      case 'not_interested':
         return Colors.red.shade300;
       default:
         return Colors.grey;

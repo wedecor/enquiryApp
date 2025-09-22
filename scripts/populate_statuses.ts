@@ -1,281 +1,164 @@
-#!/usr/bin/env tsx
+import * as fs from 'fs';
+import * as pathMod from 'path';
+import admin from 'firebase-admin';
 
-import * as admin from 'firebase-admin';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+type Status = { 
+  id: string; 
+  label: string; 
+  order: number; 
+  active: boolean; 
+  createdAt?: any; 
+  updatedAt?: any; 
+};
 
-// Configuration
-const PROJECT_ID = 'wedecorenquries';
-const PATH = 'dropdowns/statuses/items';
-const BACKUP_DIR = 'backups';
-
-// Target statuses - exactly what should exist
-const DESIRED_STATUSES = [
-  { id: "new", label: "New" },
-  { id: "in_talks", label: "In Talks" },
-  { id: "confirmed", label: "Confirmed" },
-  { id: "completed", label: "Completed" },
-  { id: "cancelled", label: "Cancelled" },
-  { id: "not_interested", label: "Not Interested" },
-  { id: "quotation_sent", label: "Quotation Sent" },
-] as const;
-
-// Safety and environment checks
-interface Environment {
-  isDryRun: boolean;
-  isProductionConfirmed: boolean;
-  credentialsPath: string;
+function arg(k: string, d?: string) {
+  const v = process.argv.find(a => a.startsWith(`--${k}=`));
+  return v ? v.split('=')[1] : d;
 }
 
-function checkEnvironment(): Environment {
-  const isDryRun = process.env.DRY_RUN === '1';
-  const isProductionConfirmed = process.env.CONFIRM_PROD === 'YES';
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
+const DRY_RUN = !!process.env.DRY_RUN;
+const CONFIRM_PROD = process.env.CONFIRM_PROD === 'YES';
+const projectId = arg('project', process.env.GCLOUD_PROJECT || 'wedecorenquries')!;
+const collectionPath = arg('path', 'dropdowns/statuses/items')!;
+const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-  console.log('🔍 Environment Check:');
-  console.log(`  DRY_RUN: ${isDryRun ? '✅ YES' : '❌ NO'}`);
-  console.log(`  CONFIRM_PROD: ${isProductionConfirmed ? '✅ YES' : '❌ NO'}`);
-  console.log(`  GOOGLE_APPLICATION_CREDENTIALS: ${credentialsPath ? '✅ Set' : '❌ Missing'}`);
+const DESIRED = [
+  { id: 'new', label: 'New' },
+  { id: 'in_talks', label: 'In Talks' },
+  { id: 'confirmed', label: 'Confirmed' },
+  { id: 'completed', label: 'Completed' },
+  { id: 'cancelled', label: 'Cancelled' },
+  { id: 'not_interested', label: 'Not Interested' },
+  { id: 'quotation_sent', label: 'Quotation Sent' },
+];
 
-  // Safety checks
-  if (!credentialsPath) {
-    console.error('❌ FATAL: GOOGLE_APPLICATION_CREDENTIALS environment variable is required');
-    console.error('   Set it to the path of your service account JSON file');
+if (!creds) { 
+  console.error('GOOGLE_APPLICATION_CREDENTIALS not set'); 
+  process.exit(1); 
+}
+
+admin.initializeApp({ 
+  credential: admin.credential.applicationDefault(), 
+  projectId 
+});
+const db = admin.firestore();
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
+(async () => {
+  console.log('[Seeder] projectId:', projectId);
+  console.log('[Seeder] path:', collectionPath);
+  console.log('[Seeder] creds:', creds);
+  console.log('[Seeder] DRY_RUN:', DRY_RUN, 'CONFIRM_PROD:', CONFIRM_PROD);
+
+  if (!DRY_RUN && !CONFIRM_PROD) {
+    console.error('Refusing to modify production without CONFIRM_PROD=YES'); 
     process.exit(1);
   }
 
-  if (!isDryRun && !isProductionConfirmed) {
-    console.error('❌ FATAL: Production run requires CONFIRM_PROD=YES');
-    console.error('   This is a safety measure to prevent accidental production changes');
-    console.error('   Run with: CONFIRM_PROD=YES npm run seed:statuses');
-    process.exit(1);
+  // Read existing
+  const snap = await db.collection(collectionPath).get();
+  const existingDocs = snap.docs;
+  const existingIds = existingDocs.map(d => d.id);
+  console.log('[Seeder] Existing count:', existingIds.length, 'IDs:', existingIds);
+
+  // Backup
+  const backupsDir = pathMod.join(process.cwd(), 'backups');
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
   }
+  const ts = new Date().toISOString().replace(/[:-]/g, '').replace(/\..+/, '');
+  const backupFile = pathMod.join(backupsDir, `statuses-${ts}.json`);
+  const backupPayload = existingDocs.map(d => ({ id: d.id, ...d.data() }));
+  fs.writeFileSync(backupFile, JSON.stringify(backupPayload, null, 2));
+  console.log('[Seeder] Backup saved:', backupFile);
 
-  // Verify credentials file exists
-  try {
-    fs.accessSync(credentialsPath);
-  } catch (error) {
-    console.error(`❌ FATAL: Credentials file not found: ${credentialsPath}`);
-    process.exit(1);
-  }
-
-  return { isDryRun, isProductionConfirmed, credentialsPath };
-}
-
-// Initialize Firebase Admin
-function initializeFirebase(): admin.firestore.Firestore {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId: PROJECT_ID,
-    });
-    console.log(`✅ Firebase Admin initialized for project: ${PROJECT_ID}`);
-    return admin.firestore();
-  } catch (error) {
-    console.error('❌ FATAL: Failed to initialize Firebase Admin:', error);
-    process.exit(1);
-  }
-}
-
-// Create backup directory and save existing data
-async function createBackup(db: admin.firestore.Firestore): Promise<string> {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const backupFileName = `statuses-${timestamp}.json`;
-  const backupPath = path.join(BACKUP_DIR, backupFileName);
-
-  // Create backup directory if it doesn't exist
-  await fs.mkdir(BACKUP_DIR, { recursive: true });
-
-  console.log('📦 Creating backup of existing data...');
-  
-  try {
-    const snapshot = await db.collection(PATH).get();
-    const existingDocs: Record<string, any> = {};
-    
-    snapshot.forEach(doc => {
-      existingDocs[doc.id] = doc.data();
-    });
-
-    await fs.writeFile(backupPath, JSON.stringify(existingDocs, null, 2));
-    console.log(`✅ Backup created: ${backupPath}`);
-    console.log(`   Documents backed up: ${Object.keys(existingDocs).length}`);
-    
-    return backupPath;
-  } catch (error) {
-    console.error('❌ Failed to create backup:', error);
-    throw error;
-  }
-}
-
-// Batch operations helper
-async function executeBatch(
-  db: admin.firestore.Firestore,
-  operations: Array<{ type: 'upsert' | 'delete'; id: string; data?: any }>,
-  isDryRun: boolean
-): Promise<{ upserts: number; deletions: number; errors: number }> {
-  if (isDryRun) {
-    console.log('🔍 DRY RUN - Operations that would be executed:');
-    operations.forEach(op => {
-      if (op.type === 'upsert') {
-        console.log(`  📝 UPSERT: ${op.id} -> ${JSON.stringify(op.data, null, 2)}`);
-      } else {
-        console.log(`  🗑️  DELETE: ${op.id}`);
-      }
-    });
-    return { upserts: 0, deletions: 0, errors: 0 };
-  }
-
-  const batchSize = 400; // Conservative batch size
-  let upserts = 0;
-  let deletions = 0;
-  let errors = 0;
-
-  for (let i = 0; i < operations.length; i += batchSize) {
-    const batch = db.batch();
-    const batchOps = operations.slice(i, i + batchSize);
-    
-    console.log(`📦 Executing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(operations.length / batchSize)} (${batchOps.length} operations)`);
-
-    try {
-      for (const op of batchOps) {
-        const docRef = db.collection(PATH).doc(op.id);
-        
-        if (op.type === 'upsert') {
-          batch.set(docRef, op.data!, { merge: true });
-          upserts++;
-        } else if (op.type === 'delete') {
-          batch.delete(docRef);
-          deletions++;
-        }
-      }
-
-      await batch.commit();
-      console.log(`✅ Batch committed successfully`);
-    } catch (error) {
-      console.error(`❌ Batch failed:`, error);
-      errors += batchOps.length;
-    }
-  }
-
-  return { upserts, deletions, errors };
-}
-
-// Main execution function
-async function main() {
-  console.log('🚀 WeDecor Enquiries - Status Population Script');
-  console.log('=' .repeat(50));
-
-  // Environment and safety checks
-  const env = checkEnvironment();
-  
-  // Initialize Firebase
-  const db = initializeFirebase();
-
-  // Create backup
-  const backupPath = await createBackup(db);
-
-  // Read existing documents
-  console.log('📖 Reading existing status documents...');
-  const snapshot = await db.collection(PATH).get();
-  const existingDocs = new Map<string, admin.firestore.DocumentData>();
-  
-  snapshot.forEach(doc => {
-    existingDocs.set(doc.id, doc.data());
-  });
-
-  console.log(`📊 Found ${existingDocs.size} existing documents`);
-
-  // Determine operations needed
-  const desiredIds = new Set(DESIRED_STATUSES.map(s => s.id));
-  const existingIds = new Set(existingDocs.keys());
-  
-  // Upsert operations (all desired statuses)
-  const toUpsert = DESIRED_STATUSES.map((status, index) => ({
-    type: 'upsert' as const,
-    id: status.id,
-    data: {
-      id: status.id,
-      label: status.label,
-      order: index + 1,
-      active: true,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: existingDocs.get(status.id)?.createdAt ?? admin.firestore.FieldValue.serverTimestamp(),
-    }
+  // Plan
+  const desiredIds = DESIRED.map(x => x.id);
+  const toDelete = existingIds.filter(id => !desiredIds.includes(id));
+  const toUpsert = DESIRED.map((x, i) => ({
+    ...x,
+    order: i + 1,
+    active: true,
   }));
 
-  // Delete operations (existing docs not in desired set)
-  const toDelete = Array.from(existingIds)
-    .filter(id => !desiredIds.has(id))
-    .map(id => ({
-      type: 'delete' as const,
-      id
-    }));
+  console.log('[Seeder] To upsert:', toUpsert.map(d => d.id));
+  console.log('[Seeder] To delete:', toDelete);
 
-  const operations = [...toUpsert, ...toDelete];
-
-  console.log('\n📋 Operation Summary:');
-  console.log(`  📝 Upserts: ${toUpsert.length}`);
-  console.log(`  🗑️  Deletions: ${toDelete.length}`);
-  console.log(`  📦 Total operations: ${operations.length}`);
-
-  if (toDelete.length > 0) {
-    console.log(`\n🗑️  Documents to be deleted:`);
-    toDelete.forEach(op => console.log(`    - ${op.id}`));
+  if (DRY_RUN) {
+    console.log('[Seeder] DRY RUN complete. No writes performed.'); 
+    process.exit(0);
   }
 
-  // Execute operations
-  const results = await executeBatch(db, operations, env.isDryRun);
+  // Batched writes
+  const batched: admin.firestore.WriteBatch[] = [];
+  const now = admin.firestore.FieldValue.serverTimestamp();
 
-  // Final summary
-  console.log('\n' + '='.repeat(50));
-  console.log('📊 FINAL SUMMARY:');
-  console.log(`  📦 Backup file: ${backupPath}`);
-  console.log(`  📝 Upserts: ${results.upserts}`);
-  console.log(`  🗑️  Deletions: ${results.deletions}`);
-  console.log(`  ❌ Errors: ${results.errors}`);
-  console.log(`  🎯 Target documents: ${DESIRED_STATUSES.length}`);
-  
-  if (env.isDryRun) {
-    console.log('\n🔍 This was a DRY RUN - no changes were made');
-    console.log('   To apply changes, run: CONFIRM_PROD=YES npm run seed:statuses');
-  } else {
-    console.log('\n✅ Production changes completed successfully!');
-  }
-
-  // Verify final state
-  if (!env.isDryRun) {
-    console.log('\n🔍 Verifying final state...');
-    const finalSnapshot = await db.collection(PATH).get();
-    const finalIds = Array.from(finalSnapshot.docs.map(doc => doc.id)).sort();
-    const expectedIds = Array.from(desiredIds).sort();
-    
-    if (JSON.stringify(finalIds) === JSON.stringify(expectedIds)) {
-      console.log('✅ VERIFICATION PASSED: Database contains exactly the expected statuses');
-      console.log(`   Statuses: ${finalIds.join(', ')}`);
-    } else {
-      console.log('❌ VERIFICATION FAILED: Database state does not match expectations');
-      console.log(`   Expected: ${expectedIds.join(', ')}`);
-      console.log(`   Actual: ${finalIds.join(', ')}`);
+  // Upsert operations
+  const upsertChunks = chunk(toUpsert, 400);
+  for (const uc of upsertChunks) {
+    const b = db.batch();
+    for (const s of uc) {
+      const ref = db.collection(collectionPath).doc(s.id);
+      const existing = snap.docs.find(d => d.id === s.id)?.data() as Partial<Status> | undefined;
+      b.set(ref, {
+        id: s.id,
+        label: s.label,
+        order: s.order,
+        active: true,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      }, { merge: true });
     }
+    batched.push(b);
   }
 
-  console.log('\n🎉 Script completed successfully!');
-  process.exit(0);
-}
+  // Delete operations
+  const delChunks = chunk(toDelete, 400);
+  for (const dc of delChunks) {
+    const b = db.batch();
+    for (const id of dc) {
+      const ref = db.collection(collectionPath).doc(id);
+      b.delete(ref);
+    }
+    batched.push(b);
+  }
 
-// Error handling
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
+  // Execute batches
+  for (let i = 0; i < batched.length; i++) {
+    const b = batched[i];
+    await b.commit();
+    console.log(`[Seeder] Batch ${i + 1}/${batched.length} committed`);
+  }
 
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
-});
+  console.log('[Seeder] DONE. Upserts:', toUpsert.length, 'Deletions:', toDelete.length, 'Backup:', backupFile);
 
-// Run the script
-main().catch(error => {
-  console.error('❌ Script failed:', error);
+  // Verify
+  const verify = await db.collection(collectionPath).get();
+  const finalIds = verify.docs.map(d => d.id).sort();
+  console.log('[Seeder] Final IDs:', finalIds);
+  
+  // Check if all desired statuses are present
+  const missing = desiredIds.filter(id => !finalIds.includes(id));
+  const extra = finalIds.filter(id => !desiredIds.includes(id));
+  
+  if (missing.length > 0) {
+    console.error('[Seeder] WARNING: Missing statuses:', missing);
+  }
+  if (extra.length > 0) {
+    console.error('[Seeder] WARNING: Extra statuses:', extra);
+  }
+  
+  if (missing.length === 0 && extra.length === 0) {
+    console.log('[Seeder] SUCCESS: All statuses match expected state');
+  }
+})().catch(e => {
+  console.error('[Seeder] ERROR:', e);
   process.exit(1);
 });

@@ -226,14 +226,14 @@ enum EnquiryStatusCategory {
 
     switch (normalizedStatus) {
       case 'new':
-      case 'in_progress':
-      case 'quote_sent':
+      case 'in_talks':
+      case 'quotation_sent':
         return EnquiryStatusCategory.active;
       case 'confirmed':
       case 'completed':
         return EnquiryStatusCategory.won;
       case 'cancelled':
-      case 'closed_lost':
+      case 'not_interested':
         return EnquiryStatusCategory.lost;
       default:
         return null; // Unknown status

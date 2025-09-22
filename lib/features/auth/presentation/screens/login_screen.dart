@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../shared/widgets/auto_size_headline.dart';
+import '../../../../shared/widgets/clamped_text.dart';
 
 /// Screen for user authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -108,24 +110,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Title
-                Text(
+                AutoSizeHeadline(
                   'Welcome to We Decor',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineLarge?.copyWith(color: Theme.of(context).colorScheme.primary),
                   textAlign: TextAlign.center,
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 8),
 
                 Text(
                   'Sign in to your account',
-                  style: TextStyle(
-                    fontSize: 16,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 32),
 
@@ -176,7 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: _forgotPassword,
-                    child: Text(
+                    child: ClampedText(
                       'Forgot Password?',
                       style: TextStyle(color: Theme.of(context).colorScheme.primary),
                     ),

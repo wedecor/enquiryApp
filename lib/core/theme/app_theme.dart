@@ -192,16 +192,30 @@ class AppTheme {
       ),
     ),
 
-    // Text theme
+    // Text theme - comprehensive typography system
     textTheme: TextTheme(
+      // Display styles
       displayLarge: AppTypography.displayLarge.copyWith(color: AppColorScheme.light.onSurface),
+
+      // Headline styles
+      headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColorScheme.light.onSurface),
       headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColorScheme.light.onSurface),
+      headlineSmall: AppTypography.headlineSmall.copyWith(color: AppColorScheme.light.onSurface),
+
+      // Title styles
       titleLarge: AppTypography.titleLarge.copyWith(color: AppColorScheme.light.onSurface),
+      titleMedium: AppTypography.titleMedium.copyWith(color: AppColorScheme.light.onSurface),
+      titleSmall: AppTypography.titleSmall.copyWith(color: AppColorScheme.light.onSurface),
+
+      // Body styles
       bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColorScheme.light.onSurface),
       bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColorScheme.light.onSurface),
       bodySmall: AppTypography.bodySmall.copyWith(color: AppColorScheme.light.onSurfaceVariant),
+
+      // Label styles
       labelLarge: AppTypography.labelLarge.copyWith(color: AppColorScheme.light.onSurface),
       labelMedium: AppTypography.labelMedium.copyWith(color: AppColorScheme.light.onSurfaceVariant),
+      labelSmall: AppTypography.labelSmall.copyWith(color: AppColorScheme.light.onSurfaceVariant),
     ),
 
     // Chip theme
@@ -323,16 +337,30 @@ class AppTheme {
       ),
     ),
 
-    // Text theme
+    // Text theme - comprehensive typography system
     textTheme: TextTheme(
+      // Display styles
       displayLarge: AppTypography.displayLarge.copyWith(color: AppColorScheme.dark.onSurface),
+
+      // Headline styles
+      headlineLarge: AppTypography.headlineLarge.copyWith(color: AppColorScheme.dark.onSurface),
       headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColorScheme.dark.onSurface),
+      headlineSmall: AppTypography.headlineSmall.copyWith(color: AppColorScheme.dark.onSurface),
+
+      // Title styles
       titleLarge: AppTypography.titleLarge.copyWith(color: AppColorScheme.dark.onSurface),
+      titleMedium: AppTypography.titleMedium.copyWith(color: AppColorScheme.dark.onSurface),
+      titleSmall: AppTypography.titleSmall.copyWith(color: AppColorScheme.dark.onSurface),
+
+      // Body styles
       bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColorScheme.dark.onSurface),
       bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColorScheme.dark.onSurface),
       bodySmall: AppTypography.bodySmall.copyWith(color: AppColorScheme.dark.onSurfaceVariant),
+
+      // Label styles
       labelLarge: AppTypography.labelLarge.copyWith(color: AppColorScheme.dark.onSurface),
       labelMedium: AppTypography.labelMedium.copyWith(color: AppColorScheme.dark.onSurfaceVariant),
+      labelSmall: AppTypography.labelSmall.copyWith(color: AppColorScheme.dark.onSurfaceVariant),
     ),
 
     // Chip theme
