@@ -90,3 +90,4 @@ class NotificationChannels with _$NotificationChannels {
   factory NotificationChannels.fromJson(Map<String, dynamic> json) =>
       _$NotificationChannelsFromJson(json);
 }
+

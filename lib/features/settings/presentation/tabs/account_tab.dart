@@ -18,36 +18,38 @@ class AccountTab extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Profile Information', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Profile Information', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
 
-          currentUserAsync.when(
-            data: (user) => _buildProfileSection(context, user),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Text('Error loading profile: $error'),
-          ),
+            currentUserAsync.when(
+              data: (user) => _buildProfileSection(context, user),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Text('Error loading profile: $error'),
+            ),
 
-          const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-          Text('Role Information', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
+            Text('Role Information', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
 
-          _buildRoleSection(context, currentUserRole ?? 'staff'),
+            _buildRoleSection(context, currentUserRole ?? 'staff'),
 
-          const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-          Text('Account Actions', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 16),
+            Text('Account Actions', style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
 
-          _buildActionsSection(context),
+            _buildActionsSection(context),
 
-          const Spacer(),
+            const SizedBox(height: 24),
 
-          _buildSignOutSection(context),
-        ],
+            _buildSignOutSection(context),
+          ],
+        ),
       ),
     );
   }
@@ -62,11 +64,11 @@ class AccountTab extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildReadOnlyField('Email', user.email),
+            _buildReadOnlyField(context, 'Email', user.email),
             const SizedBox(height: 16),
-            _buildReadOnlyField('Name', user.name),
+            _buildReadOnlyField(context, 'Name', user.name),
             const SizedBox(height: 16),
-            _buildReadOnlyField('Phone', user.phone ?? 'Not provided'),
+            _buildReadOnlyField(context, 'Phone', user.phone ?? 'Not provided'),
           ],
         ),
       ),
@@ -148,24 +150,38 @@ class AccountTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildReadOnlyField(String label, String value) {
+  Widget _buildReadOnlyField(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 4),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
             borderRadius: BorderRadius.circular(8),
-            color: Colors.grey.shade50,
+            color: theme.colorScheme.surface,
           ),
-          child: Text(value, style: const TextStyle(fontSize: 16)),
+          child: Text(
+            (value.trim().isEmpty) ? 'Not provided' : value,
+            style: TextStyle(
+              fontSize: 16,
+              color: (value.trim().isEmpty)
+                  ? theme.colorScheme.onSurfaceVariant
+                  : theme.colorScheme.onSurface,
+              fontStyle: (value.trim().isEmpty) ? FontStyle.italic : FontStyle.normal,
+            ),
+          ),
         ),
       ],
     );

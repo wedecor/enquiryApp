@@ -33,6 +33,21 @@ class EnquiryDetailsScreen extends ConsumerStatefulWidget {
 
 class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   String? _selectedStatus;
+  // Cache user display strings (name · phone) by uid to reduce lookups
+  final Map<String, String> _userDisplayCache = <String, String>{};
+  bool _isUpdatingStatus = false;
+
+  // Allowed status transitions for staff users
+  static const Map<String, List<String>> _allowedTransitions = {
+    'new': ['in_progress', 'cancelled'],
+    'in_progress': ['quote_sent', 'cancelled'],
+    'quote_sent': ['confirmed', 'closed_lost'],
+    'confirmed': ['scheduled', 'cancelled'],
+    'scheduled': ['completed', 'cancelled'],
+    'completed': [],
+    'cancelled': [],
+    'closed_lost': [],
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +57,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Enquiry Details'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (userRole == UserRole.admin) ...[
             IconButton(
@@ -124,7 +138,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header with status
-                    _buildHeader(enquiryData, userRole),
+                    _buildHeader(enquiryData, userRole, user.uid),
                     const SizedBox(height: 24),
 
                     // Basic Information (Visible to all)
@@ -177,13 +191,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       _buildSection(
                         title: 'Assignment',
                         children: [
-                          _buildInfoRow(
-                            'Assigned To',
-                            _getAssignedUserName(enquiryData['assignedTo'] as String?),
+                          _buildAsyncUserRow(
+                            label: 'Assigned To',
+                            userId: enquiryData['assignedTo'] as String?,
+                            currentUserId: currentUser.value?.uid,
                           ),
-                          _buildInfoRow(
-                            'Created By',
-                            _getCreatedByUserName(enquiryData['createdBy'] as String?),
+                          _buildAsyncUserRow(
+                            label: 'Created By',
+                            userId: enquiryData['createdBy'] as String?,
                           ),
                         ],
                       ),
@@ -192,12 +207,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       _buildSection(
                         title: 'Assignment',
                         children: [
-                          _buildInfoRow(
-                            'Assigned To',
-                            _getAssignmentStatusForStaff(
-                              enquiryData['assignedTo'] as String?,
-                              user.uid,
-                            ),
+                          _buildAsyncUserRow(
+                            label: 'Assigned To',
+                            userId: enquiryData['assignedTo'] as String?,
+                            currentUserId: user.uid,
                           ),
                         ],
                       ),
@@ -260,7 +273,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> enquiryData, UserRole? userRole) {
+  Widget _buildHeader(Map<String, dynamic> enquiryData, UserRole? userRole, String currentUserId) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -279,10 +292,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 ),
                 if (userRole == UserRole.admin) ...[
                   // Admin can edit status
-                  _buildStatusDropdown(enquiryData),
+                  _buildStatusDropdown(enquiryData, isAdmin: true),
                 ] else if (userRole == UserRole.staff) ...[
-                  // Staff can edit status (but only status)
-                  _buildStatusDropdown(enquiryData),
+                  // Staff can edit status (but only status) if assigned
+                  _buildStatusDropdown(
+                    enquiryData,
+                    isAdmin: false,
+                    isAssignee: (enquiryData['assignedTo'] as String?) == currentUserId,
+                  ),
                 ] else ...[
                   // Read-only status for other users
                   Container(
@@ -313,7 +330,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildStatusDropdown(Map<String, dynamic> enquiryData) {
+  Widget _buildStatusDropdown(Map<String, dynamic> enquiryData, {required bool isAdmin, bool isAssignee = true}) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('dropdowns')
@@ -356,75 +373,135 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             ? currentStatus
             : (values.isNotEmpty ? values.first : 'new');
 
-        return DropdownButton<String>(
-          value: safeValue,
-          items: statuses.map((status) {
-            final value = (status['value'] as String?) ?? '';
-            final label = (status['label'] as String?) ?? value;
-            return DropdownMenuItem<String>(value: value, child: Text(label));
-          }).toList(),
-          onChanged: (value) async {
-            if (value != null && value != enquiryData['eventStatus']) {
-              setState(() {});
+        // Limit staff to allowed transitions
+        final nextOptions = <Map<String, dynamic>>[
+          ...statuses,
+        ];
+        if (!isAdmin) {
+          final allowed = _allowedTransitions[safeValue] ?? const <String>[];
+          // Keep current value plus allowed next states only
+          nextOptions.retainWhere((s) {
+            final v = (s['value'] as String?) ?? '';
+            return v == safeValue || allowed.contains(v);
+          });
+        }
 
-              try {
-                final oldStatus = (enquiryData['eventStatus'] as String?) ?? 'Unknown';
+        final canChange = isAdmin || (!isAdmin && isAssignee);
 
-                await FirebaseFirestore.instance
-                    .collection('enquiries')
-                    .doc(widget.enquiryId)
-                    .update({
-                      'eventStatus': value,
-                      'updatedAt': FieldValue.serverTimestamp(),
-                      'updatedBy':
-                          ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                    });
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButton<String>(
+              key: const Key('statusDropdown'),
+              value: safeValue,
+              items: nextOptions.map((status) {
+                final value = (status['value'] as String?) ?? '';
+                final label = (status['label'] as String?) ?? value;
+                return DropdownMenuItem<String>(value: value, child: Text(label));
+              }).toList(),
+              onChanged: (!canChange || _isUpdatingStatus)
+                  ? null
+                  : (value) async {
+                      if (value == null || value == enquiryData['eventStatus']) return;
 
-                // Record audit trail for status change
-                final auditService = AuditService();
-                await auditService.recordChange(
-                  enquiryId: widget.enquiryId,
-                  fieldChanged: 'eventStatus',
-                  oldValue: oldStatus,
-                  newValue: value,
-                );
+                      // Staff transition guard
+                      if (!isAdmin) {
+                        final allowed = _allowedTransitions[safeValue] ?? const <String>[];
+                        if (!allowed.contains(value)) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('This status change is not allowed'),
+                                backgroundColor: Theme.of(context).colorScheme.error,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                      }
 
-                // Send notification for status update
-                final notificationService = NotificationService();
-                await notificationService.notifyStatusUpdated(
-                  enquiryId: widget.enquiryId,
-                  customerName: enquiryData['customerName'] as String? ?? 'Unknown Customer',
-                  oldStatus: oldStatus,
-                  newStatus: value,
-                  updatedBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                );
+                      setState(() {
+                        _isUpdatingStatus = true;
+                        _selectedStatus = value; // optimistic
+                      });
 
-                setState(() {
-                  _selectedStatus = value;
-                });
+                      try {
+                        final oldStatus = (enquiryData['eventStatus'] as String?) ?? 'Unknown';
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Status updated successfully'),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                    ),
-                  );
-                }
-              } catch (e) {
-                setState(() {});
+                        await FirebaseFirestore.instance
+                            .collection('enquiries')
+                            .doc(widget.enquiryId)
+                            .update({
+                              'eventStatus': value,
+                              'updatedAt': FieldValue.serverTimestamp(),
+                              'updatedBy':
+                                  ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                            });
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error updating status: $e'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                }
-              }
-            }
-          },
+                        // Record audit trail for status change
+                        final auditService = AuditService();
+                        await auditService.recordChange(
+                          enquiryId: widget.enquiryId,
+                          fieldChanged: 'eventStatus',
+                          oldValue: oldStatus,
+                          newValue: value,
+                        );
+
+                        // Send notification for status update
+                        final notificationService = NotificationService();
+                        await notificationService.notifyStatusUpdated(
+                          enquiryId: widget.enquiryId,
+                          customerName:
+                              enquiryData['customerName'] as String? ?? 'Unknown Customer',
+                          oldStatus: oldStatus,
+                          newStatus: value,
+                          updatedBy:
+                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                        );
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('Status updated'),
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        // Rollback optimistic selection on error
+                        setState(() {
+                          _selectedStatus = enquiryData['eventStatus'] as String?;
+                        });
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to update status: $e'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isUpdatingStatus = false;
+                          });
+                        }
+                      }
+                    },
+            ),
+            if (_isUpdatingStatus) ...[
+              const SizedBox(width: 8),
+              const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+            if (!isAdmin && !isAssignee) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Only the assigned user can change status',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
         );
       },
     );
@@ -481,6 +558,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
+  // Note: edit-mode helpers removed as part of revert
+
   String _formatDate(dynamic date) {
     if (date == null) return 'N/A';
     if (date is Timestamp) {
@@ -534,25 +613,77 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     }
   }
 
-  String _getAssignedUserName(String? assignedTo) {
-    if (assignedTo == null) return 'Unassigned';
-    // TODO: Fetch user name from Firestore
-    return 'User ID: $assignedTo';
+  Widget _buildAsyncUserRow({
+    required String label,
+    required String? userId,
+    String? currentUserId,
+  }) {
+    // Layout mirrors _buildInfoRow styling
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: _buildUserDisplay(userId, currentUserId),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getCreatedByUserName(String? createdBy) {
-    if (createdBy == null) return 'Unknown';
-    // TODO: Fetch user name from Firestore
-    return 'User ID: $createdBy';
+  Widget _buildUserDisplay(String? userId, String? currentUserId) {
+    if (userId == null || userId.isEmpty) {
+      return const Text('Unassigned', style: TextStyle(fontSize: 16));
+    }
+    if (currentUserId != null && userId == currentUserId) {
+      return const Text('You', style: TextStyle(fontSize: 16));
+    }
+
+    return FutureBuilder<String>(
+      future: _getUserDisplayName(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 12,
+            child: LinearProgressIndicator(minHeight: 2),
+          );
+        }
+        final value = snapshot.data ?? 'Unknown';
+        return Text(value, style: const TextStyle(fontSize: 16));
+      },
+    );
   }
 
-  String _getAssignmentStatusForStaff(String? assignedTo, String currentUserId) {
-    if (assignedTo == null) {
-      return 'Unassigned';
+  Future<String> _getUserDisplayName(String userId) async {
+    final cached = _userDisplayCache[userId];
+    if (cached != null) return cached;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!doc.exists) {
+        _userDisplayCache[userId] = 'Unknown';
+        return 'Unknown';
+      }
+      final data = doc.data() as Map<String, dynamic>?;
+      final name = (data?['name'] as String?)?.trim();
+      final phone = (data?['phone'] as String?)?.trim();
+      final display = [name, phone].where((e) => e != null && e!.isNotEmpty).join(' · ');
+      final result = display.isNotEmpty ? display : 'Unknown';
+      _userDisplayCache[userId] = result;
+      return result;
+    } catch (_) {
+      return 'Unknown';
     }
-    if (assignedTo == currentUserId) {
-      return 'You';
-    }
-    return 'User ID: $assignedTo';
   }
 }

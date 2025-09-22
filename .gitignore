@@ -1,3 +1,11 @@
+# Secrets / keys
+.env*
+*_secrets.*
+serviceAccount*.json
+**/keys/**
+*.pem
+*.p12
+id_rsa*
 # Flutter/Dart specific
 .dart_tool/
 .flutter-plugins

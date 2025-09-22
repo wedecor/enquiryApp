@@ -9,18 +9,18 @@ class AppColorScheme {
   /// Light color scheme
   static const ColorScheme light = ColorScheme(
     brightness: Brightness.light,
-    primary: Color(0xFF2563EB), // Blue 600
+    primary: Color(0xFF7C3AED), // Purple 600
     onPrimary: Color(0xFFFFFFFF), // White
-    primaryContainer: Color(0xFFDBEAFE), // Blue 100
-    onPrimaryContainer: Color(0xFF1E3A8A), // Blue 800
+    primaryContainer: Color(0xFFEDE9FE), // Purple 100
+    onPrimaryContainer: Color(0xFF4C1D95), // Purple 800
     secondary: Color(0xFF059669), // Emerald 600
     onSecondary: Color(0xFFFFFFFF), // White
     secondaryContainer: Color(0xFFD1FAE5), // Emerald 100
     onSecondaryContainer: Color(0xFF064E3B), // Emerald 800
-    tertiary: Color(0xFF7C3AED), // Violet 600
+    tertiary: Color(0xFF6366F1), // Indigo 500
     onTertiary: Color(0xFFFFFFFF), // White
-    tertiaryContainer: Color(0xFFEDE9FE), // Violet 100
-    onTertiaryContainer: Color(0xFF4C1D95), // Violet 800
+    tertiaryContainer: Color(0xFFE0E7FF), // Indigo 100
+    onTertiaryContainer: Color(0xFF3730A3), // Indigo 800
     error: Color(0xFFDC2626), // Red 600
     onError: Color(0xFFFFFFFF), // White
     errorContainer: Color(0xFFFEE2E2), // Red 100
@@ -35,25 +35,25 @@ class AppColorScheme {
     scrim: Color(0xFF000000), // Black
     inverseSurface: Color(0xFF111827), // Gray 900
     onInverseSurface: Color(0xFFF9FAFB), // Gray 50
-    inversePrimary: Color(0xFF60A5FA), // Blue 400
-    surfaceTint: Color(0xFF2563EB), // Blue 600
+    inversePrimary: Color(0xFFA78BFA), // Purple 400
+    surfaceTint: Color(0xFF7C3AED), // Purple 600
   );
 
   /// Dark color scheme
   static const ColorScheme dark = ColorScheme(
     brightness: Brightness.dark,
-    primary: Color(0xFF60A5FA), // Blue 400
+    primary: Color(0xFFA78BFA), // Purple 400
     onPrimary: Color(0xFF000000), // Black for better contrast
-    primaryContainer: Color(0xFF1E40AF), // Blue 700
-    onPrimaryContainer: Color(0xFFDBEAFE), // Blue 100
+    primaryContainer: Color(0xFF6D28D9), // Purple 700
+    onPrimaryContainer: Color(0xFFEDE9FE), // Purple 100
     secondary: Color(0xFF34D399), // Emerald 400
     onSecondary: Color(0xFF000000), // Black for better contrast
     secondaryContainer: Color(0xFF047857), // Emerald 700
     onSecondaryContainer: Color(0xFFD1FAE5), // Emerald 100
-    tertiary: Color(0xFFA78BFA), // Violet 400
+    tertiary: Color(0xFF818CF8), // Indigo 400
     onTertiary: Color(0xFF000000), // Black for better contrast
-    tertiaryContainer: Color(0xFF6D28D9), // Violet 700
-    onTertiaryContainer: Color(0xFFEDE9FE), // Violet 100
+    tertiaryContainer: Color(0xFF3730A3), // Indigo 800
+    onTertiaryContainer: Color(0xFFE0E7FF), // Indigo 100
     error: Color(0xFFF87171), // Red 400
     onError: Color(0xFF000000), // Black for better contrast
     errorContainer: Color(0xFFB91C1C), // Red 700
@@ -68,8 +68,8 @@ class AppColorScheme {
     scrim: Color(0xFF000000), // Black
     inverseSurface: Color(0xFFF9FAFB), // Gray 50
     onInverseSurface: Color(0xFF111827), // Gray 900
-    inversePrimary: Color(0xFF2563EB), // Blue 600
-    surfaceTint: Color(0xFF60A5FA), // Blue 400
+    inversePrimary: Color(0xFF7C3AED), // Purple 600
+    surfaceTint: Color(0xFFA78BFA), // Purple 400
   );
 
   /// Additional semantic colors

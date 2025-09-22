@@ -98,7 +98,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
+                        backgroundColor: _getStatusColor(context, enquiryData['eventStatus'] as String?),
                         child: Text(
                           _getStatusInitial(enquiryData['eventStatus'] as String?),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -119,7 +119,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                           if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: const TextStyle(fontSize: 12, color: Colors.blue),
+                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
                             ),
                           ],
                         ],
@@ -219,12 +219,12 @@ class EnquiriesListScreen extends ConsumerWidget {
     return status[0].toUpperCase();
   }
 
-  Color _getStatusColor(String? status) {
+  Color _getStatusColor(BuildContext context, String? status) {
     switch (status?.toLowerCase()) {
       case 'pending':
         return Colors.orange;
       case 'in progress':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'completed':
         return Colors.green;
       case 'cancelled':

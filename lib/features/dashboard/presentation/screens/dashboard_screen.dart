@@ -24,6 +24,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  // Simple in-memory cache to avoid refetching user names repeatedly
+  final Map<String, String> _userNameCache = <String, String>{};
   // Use value keys that match Firestore (snake_case), plus display labels
   final List<Map<String, String>> _statusTabs = [
     {'label': 'All', 'value': 'All'},
@@ -216,7 +218,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 'Total',
                 totalEnquiries.toString(),
                 Icons.inbox,
-                const Color(0xFF2563EB), // Our new blue color
+                Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -229,7 +231,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 'In Progress',
                 inProgressEnquiries.toString(),
                 Icons.pending,
-                const Color(0xFF2563EB), // Blue
+                Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -343,13 +345,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       style: const TextStyle(fontSize: 12),
                     ),
                     if (isAdmin && enquiryData['assignedTo'] != null) ...[
-                      Text(
-                        'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF2563EB), // Our new blue color
-                        ),
-                      ),
+                      _buildAssignedToLabel(enquiryData['assignedTo'] as String),
                     ],
                   ],
                 ),
@@ -429,9 +425,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case 'new':
         return Colors.orange;
       case 'in_progress':
-        return const Color(0xFF2563EB); // Our new blue color
+        return Theme.of(context).colorScheme.primary;
       case 'quote_sent':
-        return const Color(0xFF2563EB); // Blue
+        return Theme.of(context).colorScheme.primary;
       case 'confirmed':
         return Colors.indigo;
       case 'completed':
@@ -456,10 +452,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  String _getAssignedUserName(String? assignedTo) {
-    if (assignedTo == null) return 'Unassigned';
-    // TODO: Fetch user name from Firestore
-    return 'User ID: $assignedTo';
+  Widget _buildAssignedToLabel(String assignedUserId) {
+    return FutureBuilder<String>(
+      future: _getUserDisplayName(assignedUserId),
+      builder: (context, snapshot) {
+        final textStyle = TextStyle(
+          fontSize: 12,
+          color: Theme.of(context).colorScheme.primary,
+        );
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 14,
+            width: 100,
+            child: LinearProgressIndicator(minHeight: 2),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Text('Assigned: Unknown', style: textStyle);
+        }
+
+        final display = snapshot.data ?? 'Unassigned';
+        return Text('Assigned: $display', style: textStyle);
+      },
+    );
+  }
+
+  Future<String> _getUserDisplayName(String userId) async {
+    // Return cached value if present
+    final cached = _userNameCache[userId];
+    if (cached != null) return cached;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!doc.exists) {
+        _userNameCache[userId] = 'Unknown';
+        return 'Unknown';
+      }
+      final data = doc.data() as Map<String, dynamic>?;
+      final name = (data?['name'] as String?)?.trim();
+      final phone = (data?['phone'] as String?)?.trim();
+      final display = [name, phone].where((e) => e != null && e!.isNotEmpty).join(' · ');
+      final result = display.isNotEmpty ? display : 'Unknown';
+      _userNameCache[userId] = result;
+      return result;
+    } catch (_) {
+      return 'Unknown';
+    }
   }
 
   Widget _buildErrorWidget(BuildContext context, Object error) {
@@ -505,7 +545,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(color: Color(0xFF2563EB)),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
             child: currentUser.when(
               data: (user) => Row(
                 children: [
@@ -637,7 +677,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF2563EB)),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),
       onTap: onTap,
     );
