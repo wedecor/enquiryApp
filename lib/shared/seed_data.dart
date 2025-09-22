@@ -120,7 +120,7 @@ Future<void> _seedStatuses(FirebaseFirestore firestore) async {
         .collection('dropdowns')
         .doc('statuses')
         .collection('items')
-        .doc(status['id']!);
+        .doc(status['id']! as String);
 
     batch.set(docRef, {
       'id': status['id']!,
