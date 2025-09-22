@@ -29,7 +29,7 @@
 </head>
 <body>
         <h1>We Decor Enquiries <span class="status rc3">RC3 - Final</span></h1>
-        <div class="version">v1.0.1+11 • Build Date: September 21, 2024 • Contact Shortcuts + Theme Fixes</div>
+        <div id="version" class="version">Loading version…</div>
   
   <p>Download RC3 with major new features: Contact shortcuts for calling/WhatsApp customers, instant theme switching, and comprehensive CI/CD enhancements. Production-ready with all previous fixes maintained.</p>
 
@@ -38,8 +38,8 @@
       <div id="qrcode"></div>
     </div>
     <div>
-      <a class="btn" href="./WeDecorEnquiries-v1.0.1+11.apk" download>📱 Download RC3 APK (60.0MB)</a>
-      <a class="btn secondary" href="./sha256.txt" target="_blank">🔒 Verify Checksum</a>
+      <a id="apkLink" class="btn" href="#" download>📱 Download RC3 APK</a>
+      <a id="shaLink" class="btn secondary" href="#" target="_blank">🔒 Verify Checksum</a>
       <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
     </div>
   </div>
@@ -47,11 +47,11 @@
   <div class="card security">
     <h3>🔐 Security Verification</h3>
     <p><strong>Always verify the APK integrity before installation:</strong></p>
-    <p>Run: <code>shasum -a 256 app-release.apk</code> and compare with the SHA256 above.</p>
+    <p>Run: <code id="shaCmd">shasum -a 256 &lt;apk-name&gt;.apk</code> and compare with the SHA256 above.</p>
   </div>
 
         <div class="card" style="background:#dcfce7;border:1px solid #16a34a;color:#166534">
-            <h3>🎨 RC3 Major Update - Contact Shortcuts + Theme Fixes (v1.0.1+11)</h3>
+            <h3>🎨 RC3 Major Update - Contact Shortcuts + Theme Fixes (<span id="headingVersion">v1.0.1+..</span>)</h3>
             <ul>
                 <li><strong>📞 NEW: Contact Shortcuts:</strong> Call and WhatsApp buttons in enquiry details for instant customer communication!</li>
                 <li><strong>🎨 Theme System Overhaul:</strong> Instant theme switching that applies immediately across all screens!</li>
@@ -114,30 +114,34 @@
     <p><strong>Previous:</strong> <a href="/internal/rc2/">RC2</a> | <strong>Next:</strong> RC4 (based on pilot feedback)</p>
   </div>
 
-  <!-- Lightweight QR lib via CDN -->
   <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script>
-    // Generate QR code for APK download
-    const apkUrl = new URL('./app-release.apk', window.location.href).href;
-    new QRCode(document.getElementById("qrcode"), { 
-      text: apkUrl, 
-      width: 160, 
-      height: 160,
-      colorDark: "#2563eb",
-      colorLight: "#ffffff"
-    });
+    async function loadVersion() {
+      try {
+        const res = await fetch('./version.json', { cache: 'no-store' });
+        const v = await res.json();
+        const versionStr = `v${v.version}+${v.buildNumber} • Release: ${v.releaseDate}`;
+        document.getElementById('version').textContent = versionStr;
+        document.getElementById('headingVersion').textContent = `v${v.version}+${v.buildNumber}`;
+        document.getElementById('apkLink').href = v.downloadUrl;
+        document.getElementById('shaLink').href = v.downloadUrl.replace(/\.apk$/, '.apk.sha256.txt');
+        document.getElementById('sha256').textContent = v.sha256 || 'unknown';
+        document.getElementById('shaCmd').textContent = `shasum -a 256 ${v.downloadUrl.split('/').pop()}`;
 
-    // Load SHA256 from file
-    fetch('./sha256.txt')
-      .then(r => r.text())
-      .then(t => {
-        const sha256 = t.trim().split(' ')[0]; // Extract just the hash part
-        document.getElementById('sha256').textContent = sha256;
-      })
-      .catch(e => {
-        console.error('Failed to load SHA256:', e);
-        document.getElementById('sha256').textContent = 'Error loading checksum';
-      });
+        // QR code for APK URL
+        new QRCode(document.getElementById('qrcode'), {
+          text: v.downloadUrl,
+          width: 160,
+          height: 160,
+          colorDark: '#2563eb',
+          colorLight: '#ffffff'
+        });
+      } catch (e) {
+        document.getElementById('version').textContent = 'Failed to load version info';
+        console.error(e);
+      }
+    }
+    loadVersion();
   </script>
 </body>
 </html>

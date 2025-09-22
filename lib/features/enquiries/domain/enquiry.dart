@@ -29,6 +29,14 @@ class Enquiry with _$Enquiry {
     String? priority,
     String? source,
     String? notes,
+    // New denormalized and search fields (optional for back-compat)
+    String? customerNameLower,
+    String? phoneNormalized,
+    String? assigneeName,
+    String? createdByName,
+    DateTime? statusUpdatedAt,
+    String? statusUpdatedBy,
+    String? textIndex,
   }) = _Enquiry;
 
   factory Enquiry.fromJson(Map<String, dynamic> json) => _$EnquiryFromJson(json);
@@ -47,7 +55,7 @@ class Enquiry with _$Enquiry {
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
       description: data['description'] as String?,
-      status: data['eventStatus'] as String? ?? 'new',
+      status: (data['status'] ?? data['eventStatus']) as String? ?? 'new',
       paymentStatus: data['paymentStatus'] as String?,
       totalCost: (data['totalCost'] as num?)?.toDouble(),
       advancePaid: (data['advancePaid'] as num?)?.toDouble(),
@@ -58,6 +66,13 @@ class Enquiry with _$Enquiry {
       priority: data['priority'] as String?,
       source: data['source'] as String?,
       notes: data['notes'] as String?,
+      customerNameLower: (data['customerNameLower'] as String?) ?? (data['customerName'] as String? ?? '').toLowerCase(),
+      phoneNormalized: data['phoneNormalized'] as String?,
+      assigneeName: data['assigneeName'] as String?,
+      createdByName: data['createdByName'] as String?,
+      statusUpdatedAt: (data['statusUpdatedAt'] as Timestamp?)?.toDate(),
+      statusUpdatedBy: data['statusUpdatedBy'] as String?,
+      textIndex: (data['textIndex'] as String?) ?? '',
     );
   }
 }

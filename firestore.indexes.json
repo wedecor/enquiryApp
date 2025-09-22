@@ -1,5 +1,22 @@
 {
   "indexes": [
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"status","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"assignedTo","order":"ASCENDING"}, {"fieldPath":"status","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"eventType","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"eventDate","order":"DESCENDING"} ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"phoneNormalized","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
+    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
+      "fields": [ {"fieldPath":"customerNameLower","order":"ASCENDING"} ] }
+  ],
+  "fieldOverrides": []
+}
+{
+  "indexes": [
     {
       "collectionGroup": "items",
       "queryScope": "COLLECTION",

@@ -29,9 +29,29 @@ class ContactButtons extends ConsumerWidget {
     final theme = Theme.of(context);
     final contactLauncher = ref.read(contactLauncherProvider);
 
-    // Don't show buttons if no phone number
+    // Don't show buttons if no phone number — show a subtle hint instead
     if (customerPhone == null || customerPhone!.trim().isEmpty) {
-      return const SizedBox.shrink();
+      return Container(
+        margin: EdgeInsets.only(top: AppTokens.space2),
+        padding: EdgeInsets.all(AppTokens.space2),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: AppRadius.medium,
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: AppTokens.iconSmall, color: theme.colorScheme.onSurfaceVariant),
+            SizedBox(width: AppTokens.space2),
+            Expanded(
+              child: Text(
+                'Add a phone number to enable Call and WhatsApp actions',
+                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(

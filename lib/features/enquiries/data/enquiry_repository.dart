@@ -32,7 +32,7 @@ class EnquiryRepository {
 
     // Apply filters
     if (filters.statuses.isNotEmpty) {
-      query = query.where('eventStatus', whereIn: filters.statuses);
+      query = query.where('status', whereIn: filters.statuses);
     }
 
     if (filters.eventTypes.isNotEmpty) {
@@ -55,5 +55,44 @@ class EnquiryRepository {
 
     final snapshot = await query.get();
     return snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList();
+  }
+
+  /// Update status fields with server timestamps (rules-compliant for staff)
+  Future<void> updateStatus({
+    required String id,
+    required String nextStatus,
+    required String userId,
+  }) async {
+    await FirebaseFirestore.instance.collection('enquiries').doc(id).update({
+      'status': nextStatus,
+      'statusUpdatedAt': FieldValue.serverTimestamp(),
+      'statusUpdatedBy': userId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Create enquiry (admin): normalizes denormalized/search fields
+  Future<void> createEnquiry(Map<String, dynamic> data) async {
+    final name = (data['customerName'] as String?) ?? '';
+    final phone = data['customerPhone'] as String?;
+    final email = (data['customerEmail'] as String?)?.toLowerCase();
+    final createdBy = data['createdBy'] as String? ?? '';
+    final createdByName = data['createdByName'] as String? ?? '';
+
+    String normalizePhone(String? p) => p == null ? '' : p.replaceAll(RegExp(r'[^0-9]'), '');
+    String makeTextIndex({required String name, String? phone, String? email, String? notes}) =>
+        [name, phone ?? '', email ?? '', (notes ?? '')].join(' ').toLowerCase();
+
+    await FirebaseFirestore.instance.collection('enquiries').add({
+      ...data,
+      'customerNameLower': name.toLowerCase(),
+      'phoneNormalized': normalizePhone(phone),
+      'customerEmail': email,
+      'textIndex': makeTextIndex(name: name, phone: phone, email: email, notes: data['notes'] as String?),
+      'createdBy': createdBy,
+      'createdByName': createdByName,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

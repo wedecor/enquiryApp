@@ -123,7 +123,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(_getFieldIcon(fieldChanged), color: _getFieldColor(fieldChanged), size: 20),
+                Icon(_getFieldIcon(fieldChanged), color: _getFieldColor(context, fieldChanged), size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -251,12 +251,12 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     }
   }
 
-  Color _getFieldColor(String fieldName) {
+  Color _getFieldColor(BuildContext context, String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
-        return const Color(0xFF2563EB); // Our new blue color
+        return Theme.of(context).colorScheme.primary;
       case 'assignedto':
-        return const Color(0xFF2563EB); // Blue
+        return Theme.of(context).colorScheme.primary;
       case 'priority':
         return Colors.orange;
       case 'totalcost':
@@ -269,7 +269,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
       case 'eventtype':
       case 'eventdate':
       case 'eventlocation':
-        return const Color(0xFF059669); // Our new green color
+        return Theme.of(context).colorScheme.secondary;
       case 'description':
         return Colors.brown;
       default:

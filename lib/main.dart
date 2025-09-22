@@ -40,17 +40,21 @@ Future<void> _bootstrap() async {
   }
 
   // Configure Crashlytics (gated by environment)
-  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
-    kReleaseMode && AppConfig.enableCrashlytics,
-  );
+  if (!kIsWeb) {
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      kReleaseMode && AppConfig.enableCrashlytics,
+    );
+  }
 
   // Configure Performance Monitoring (gated by environment)
-  await FirebasePerformance.instance.setPerformanceCollectionEnabled(
-    kReleaseMode && AppConfig.enablePerformance,
-  );
+  if (!kIsWeb) {
+    await FirebasePerformance.instance.setPerformanceCollectionEnabled(
+      kReleaseMode && AppConfig.enablePerformance,
+    );
+  }
 
   // Global error handlers (only in release with Crashlytics enabled)
-  if (kReleaseMode && AppConfig.enableCrashlytics) {
+  if (!kIsWeb && kReleaseMode && AppConfig.enableCrashlytics) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
