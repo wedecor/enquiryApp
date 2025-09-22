@@ -205,7 +205,7 @@ class LayoutHelpers {
   }
 
   /// Creates a responsive bottom navigation bar item.
-  static Widget responsiveBottomNavItem({
+  static BottomNavigationBarItem responsiveBottomNavItem({
     required String label,
     required IconData icon,
     TextStyle? labelStyle,

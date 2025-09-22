@@ -123,10 +123,10 @@ Future<void> _seedStatuses(FirebaseFirestore firestore) async {
         .doc(status['id']!);
 
     batch.set(docRef, {
-      'id': status['id'],
-      'label': status['label'],
-      'value': status['id'], // Use id as value for consistency
-      'order': status['order'],
+      'id': status['id']!,
+      'label': status['label']!,
+      'value': status['id']!, // Use id as value for consistency
+      'order': status['order']!,
       'active': true,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
