@@ -456,10 +456,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return FutureBuilder<String>(
       future: _getUserDisplayName(assignedUserId),
       builder: (context, snapshot) {
-        final textStyle = TextStyle(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.primary,
-        );
+        final textStyle = TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary);
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(

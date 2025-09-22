@@ -41,12 +41,18 @@ class ContactButtons extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.info_outline, size: AppTokens.iconSmall, color: theme.colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.info_outline,
+              size: AppTokens.iconSmall,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             SizedBox(width: AppTokens.space2),
             Expanded(
               child: Text(
                 'Add a phone number to enable Call and WhatsApp actions',
-                style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

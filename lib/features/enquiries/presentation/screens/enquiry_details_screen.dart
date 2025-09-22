@@ -330,7 +330,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildStatusDropdown(Map<String, dynamic> enquiryData, {required bool isAdmin, bool isAssignee = true}) {
+  Widget _buildStatusDropdown(
+    Map<String, dynamic> enquiryData, {
+    required bool isAdmin,
+    bool isAssignee = true,
+  }) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('dropdowns')
@@ -374,9 +378,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             : (values.isNotEmpty ? values.first : 'new');
 
         // Limit staff to allowed transitions
-        final nextOptions = <Map<String, dynamic>>[
-          ...statuses,
-        ];
+        final nextOptions = <Map<String, dynamic>>[...statuses];
         if (!isAdmin) {
           final allowed = _allowedTransitions[safeValue] ?? const <String>[];
           // Keep current value plus allowed next states only
@@ -436,7 +438,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               'eventStatus': value,
                               'updatedAt': FieldValue.serverTimestamp(),
                               'updatedBy':
-                                  ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                                  ref.read(currentUserWithFirestoreProvider).value?.uid ??
+                                  'unknown',
                             });
 
                         // Record audit trail for status change
@@ -492,7 +495,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             ),
             if (_isUpdatingStatus) ...[
               const SizedBox(width: 8),
-              const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ],
             if (!isAdmin && !isAssignee) ...[
               const SizedBox(height: 6),
@@ -634,9 +641,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: _buildUserDisplay(userId, currentUserId),
-          ),
+          Expanded(child: _buildUserDisplay(userId, currentUserId)),
         ],
       ),
     );
@@ -654,10 +659,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       future: _getUserDisplayName(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 12,
-            child: LinearProgressIndicator(minHeight: 2),
-          );
+          return const SizedBox(height: 12, child: LinearProgressIndicator(minHeight: 2));
         }
         final value = snapshot.data ?? 'Unknown';
         return Text(value, style: const TextStyle(fontSize: 16));
