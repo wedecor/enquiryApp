@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -35,6 +36,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   final _notesController = TextEditingController();
   final _totalCostController = TextEditingController();
   final _advancePaidController = TextEditingController();
+  final _budgetController = TextEditingController();
 
   DateTime? _selectedDate;
   String? _selectedEventType;
@@ -149,18 +151,189 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _pickImages() async {
+    // Check if we're already at the maximum limit
+    if (_selectedImages.length >= 10) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Maximum 10 attachments allowed.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
+    }
+
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
-      setState(() {
-        _selectedImages.addAll(images);
-      });
+      final remainingSlots = 10 - _selectedImages.length;
+      final imagesToAdd = images.take(remainingSlots).toList();
+      
+      if (images.length > remainingSlots) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Only ${remainingSlots} more images can be added.'),
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+            ),
+          );
+        }
+      }
+
+      // Validate each image before adding
+      final validImages = <XFile>[];
+      for (final image in imagesToAdd) {
+        if (_isValidImageFile(image)) {
+          validImages.add(image);
+        }
+      }
+
+      if (validImages.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(validImages);
+        });
+      }
     }
+  }
+
+  /// Validate image file before adding to selection
+  bool _isValidImageFile(XFile image) {
+    final fileName = image.name.toLowerCase();
+    final fileExtension = fileName.split('.').last;
+    final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
+    
+    if (!allowedExtensions.contains(fileExtension)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${image.name} has unsupported format. Only images and PDFs are allowed.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return false;
+    }
+    
+    return true;
   }
 
   void _removeImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
     });
+  }
+
+  Future<List<String>> _uploadImages(String userId) async {
+    if (_selectedImages.isEmpty) return [];
+
+    final List<String> imageUrls = [];
+    final storage = FirebaseStorage.instance;
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+    final allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    final allowedPdfTypes = ['application/pdf'];
+
+    for (int i = 0; i < _selectedImages.length; i++) {
+      try {
+        final file = File(_selectedImages[i].path);
+        final fileSize = await file.length();
+        
+        // Validate file size (AC-Intake-3)
+        if (fileSize > maxFileSize) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Image ${i + 1} is too large. Maximum size is 5MB.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+          continue; // Skip this file
+        }
+
+        // Get file extension and validate type
+        final fileName = _selectedImages[i].name.toLowerCase();
+        final fileExtension = fileName.split('.').last;
+        final mimeType = _getMimeTypeFromExtension(fileExtension);
+        
+        // Validate file type (AC-Intake-3)
+        if (!allowedImageTypes.contains(mimeType) && !allowedPdfTypes.contains(mimeType)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Image ${i + 1} has unsupported format. Only images and PDFs are allowed.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+          continue; // Skip this file
+        }
+
+        // Validate maximum number of files (AC-Intake-3)
+        if (imageUrls.length >= 10) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Maximum 10 attachments allowed.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+          break; // Stop processing more files
+        }
+
+        final storageFileName = 'enquiry_${timestamp}_${i}_${_selectedImages[i].name}';
+        final ref = storage.ref().child('enquiry_images/$userId/$storageFileName');
+
+        // Set metadata for content type
+        final metadata = SettableMetadata(
+          contentType: mimeType,
+          customMetadata: {
+            'originalName': _selectedImages[i].name,
+            'uploadedBy': userId,
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        );
+
+        final uploadTask = await ref.putFile(file, metadata);
+        final downloadUrl = await uploadTask.ref.getDownloadURL();
+        imageUrls.add(downloadUrl);
+        
+        print('Successfully uploaded image ${i + 1}: ${_selectedImages[i].name}');
+      } catch (e) {
+        print('Error uploading image $i: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to upload image ${i + 1}: ${e.toString()}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+        // Continue with other images even if one fails
+      }
+    }
+
+    return imageUrls;
+  }
+
+  /// Get MIME type from file extension
+  String _getMimeTypeFromExtension(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   double? _parseDouble(String? value) {
@@ -220,18 +393,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _createEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
 
-    // TODO: Upload images to Firebase Storage and get URLs
-    // For now, we'll skip image upload
+    // Upload images to Firebase Storage and get URLs
+    final List<String> imageUrls = await _uploadImages(currentUser.uid);
 
     final enquiryId = await firestoreService.createEnquiry(
       customerName: _nameController.text.trim(),
-      customerEmail: '', // TODO: Add email field if needed
+      customerEmail: '', // Email field not needed
       customerPhone: _phoneController.text.trim(),
       eventType: _selectedEventType!,
       eventDate: _selectedDate!,
       eventLocation: _locationController.text.trim(),
-      guestCount: 0, // TODO: Add guest count field
-      budgetRange: '', // TODO: Add budget field
+      guestCount: 0, // Guest count field not needed
+      budgetRange: _budgetController.text.trim(),
       description: _notesController.text.trim(),
       createdBy: currentUser.uid,
       priority: _selectedPriority ?? 'medium',
@@ -240,6 +413,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       advancePaid: _parseDouble(_advancePaidController.text),
       paymentStatus: _selectedPaymentStatus,
       assignedTo: _selectedAssignedTo,
+      imageUrls: imageUrls,
     );
 
     // Send notification for new enquiry creation
@@ -385,6 +559,19 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+
+              // Budget Field
+              TextFormField(
+                controller: _budgetController,
+                keyboardType: TextInputType.text,
+                decoration: const InputDecoration(
+                  labelText: 'Budget Range',
+                  prefixIcon: Icon(Icons.attach_money),
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., 50k-100k, Under 25k, etc.',
+                ),
               ),
               const SizedBox(height: 24),
 

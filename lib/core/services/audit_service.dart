@@ -13,6 +13,7 @@ class AuditService {
     required dynamic oldValue,
     required dynamic newValue,
     String? userId,
+    String? notes,
   }) async {
     try {
       final currentUser = _auth.currentUser;
@@ -25,6 +26,7 @@ class AuditService {
         'user_id': changeUserId,
         'timestamp': FieldValue.serverTimestamp(),
         'user_email': currentUser?.email ?? 'unknown',
+        if (notes != null) 'notes': notes,
       });
 
       print('AuditService: Recorded change to $fieldChanged for enquiry $enquiryId');
