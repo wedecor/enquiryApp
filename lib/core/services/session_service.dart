@@ -14,7 +14,39 @@ class SessionService {
 
   StreamController<SessionState>? _sessionController;
   Timer? _debounceTimer;
+  Timer? _sessionTimeoutTimer;
   User? _lastUser;
+  DateTime? _lastActivity;
+  
+  // Session timeout duration (24 hours)
+  static const Duration _sessionTimeout = Duration(hours: 24);
+
+  /// Update last activity timestamp and reset session timeout
+  void updateActivity() {
+    _lastActivity = DateTime.now();
+    _resetSessionTimeout();
+    safeLog('session_activity_updated', {'timestamp': _lastActivity!.toIso8601String()});
+  }
+
+  /// Reset the session timeout timer
+  void _resetSessionTimeout() {
+    _sessionTimeoutTimer?.cancel();
+    _sessionTimeoutTimer = Timer(_sessionTimeout, () {
+      _handleSessionTimeout();
+    });
+  }
+
+  /// Handle session timeout - sign out user
+  void _handleSessionTimeout() {
+    safeLog('session_timeout', {'lastActivity': _lastActivity?.toIso8601String()});
+    _auth.signOut();
+  }
+
+  /// Check if session has expired based on last activity
+  bool get isSessionExpired {
+    if (_lastActivity == null) return false;
+    return DateTime.now().difference(_lastActivity!) > _sessionTimeout;
+  }
 
   /// Stream of session states with debouncing and profile fetching
   Stream<SessionState> get sessionStream {
@@ -84,6 +116,9 @@ class SessionService {
       // Note: UserModel doesn't have active field in current implementation
       // If needed, check if user exists in a disabled users collection
       // For now, assume all found profiles are active
+
+      // Start session tracking for authenticated user
+      updateActivity();
 
       _emitSessionState(SessionState.authenticated(user: userLite, profile: profile));
 
@@ -169,6 +204,7 @@ class SessionService {
 
   void dispose() {
     _debounceTimer?.cancel();
+    _sessionTimeoutTimer?.cancel();
     _sessionController?.close();
   }
 }

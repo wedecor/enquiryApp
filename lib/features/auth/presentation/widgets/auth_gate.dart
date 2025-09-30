@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/auth/session_state.dart';
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/services/session_activity_tracker.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../dashboard/presentation/screens/dashboard_screen.dart';
 import '../screens/login_screen.dart';
@@ -20,6 +21,10 @@ class AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch the deactivation guard to automatically log out deactivated users
     ref.watch(userDeactivationGuardProvider);
+    
+    // Initialize session activity tracking
+    final activityTracker = ref.read(sessionActivityTrackerProvider);
+    activityTracker.initialize();
     
     final sessionAsync = ref.watch(sessionStateProvider);
 
