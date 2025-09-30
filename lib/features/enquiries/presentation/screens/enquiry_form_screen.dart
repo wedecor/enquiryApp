@@ -168,7 +168,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     if (images.isNotEmpty) {
       final remainingSlots = 10 - _selectedImages.length;
       final imagesToAdd = images.take(remainingSlots).toList();
-      
+
       if (images.length > remainingSlots) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -201,19 +201,21 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final fileName = image.name.toLowerCase();
     final fileExtension = fileName.split('.').last;
     final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'];
-    
+
     if (!allowedExtensions.contains(fileExtension)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${image.name} has unsupported format. Only images and PDFs are allowed.'),
+            content: Text(
+              '${image.name} has unsupported format. Only images and PDFs are allowed.',
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
       return false;
     }
-    
+
     return true;
   }
 
@@ -237,7 +239,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       try {
         final file = File(_selectedImages[i].path);
         final fileSize = await file.length();
-        
+
         // Validate file size (AC-Intake-3)
         if (fileSize > maxFileSize) {
           if (mounted) {
@@ -255,13 +257,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         final fileName = _selectedImages[i].name.toLowerCase();
         final fileExtension = fileName.split('.').last;
         final mimeType = _getMimeTypeFromExtension(fileExtension);
-        
+
         // Validate file type (AC-Intake-3)
         if (!allowedImageTypes.contains(mimeType) && !allowedPdfTypes.contains(mimeType)) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Image ${i + 1} has unsupported format. Only images and PDFs are allowed.'),
+                content: Text(
+                  'Image ${i + 1} has unsupported format. Only images and PDFs are allowed.',
+                ),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -298,7 +302,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         final uploadTask = await ref.putFile(file, metadata);
         final downloadUrl = await uploadTask.ref.getDownloadURL();
         imageUrls.add(downloadUrl);
-        
+
         print('Successfully uploaded image ${i + 1}: ${_selectedImages[i].name}');
       } catch (e) {
         print('Error uploading image $i: $e');
@@ -334,6 +338,23 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       default:
         return 'application/octet-stream';
     }
+  }
+
+  /// Get list of updated fields for audit logging
+  List<String> _getUpdatedFields() {
+    final updatedFields = <String>[];
+    
+    if (_customerNameController.text.isNotEmpty) updatedFields.add('customerName');
+    if (_customerPhoneController.text.isNotEmpty) updatedFields.add('customerPhone');
+    if (_customerEmailController.text.isNotEmpty) updatedFields.add('customerEmail');
+    if (_eventTypeController.text.isNotEmpty) updatedFields.add('eventType');
+    if (_eventDateController.text.isNotEmpty) updatedFields.add('eventDate');
+    if (_eventLocationController.text.isNotEmpty) updatedFields.add('eventLocation');
+    if (_descriptionController.text.isNotEmpty) updatedFields.add('description');
+    if (_budgetController.text.isNotEmpty) updatedFields.add('budgetRange');
+    if (_selectedImages.isNotEmpty) updatedFields.add('imageUrls');
+    
+    return updatedFields;
   }
 
   double? _parseDouble(String? value) {
@@ -479,6 +500,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       fieldChanged: 'general_update',
       oldValue: 'Previous values',
       newValue: 'Updated enquiry data',
+      changeType: 'edit',
+      notes: 'Enquiry updated via form',
+      additionalContext: {
+        'update_type': 'form_submission',
+        'fields_updated': _getUpdatedFields(),
+        'has_images': _selectedImages.isNotEmpty,
+        'budget_provided': _budgetController.text.isNotEmpty,
+      },
     );
 
     if (mounted) {

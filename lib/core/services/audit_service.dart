@@ -14,22 +14,45 @@ class AuditService {
     required dynamic newValue,
     String? userId,
     String? notes,
+    String? changeType, // 'status_update', 'assignment', 'edit', 'create', 'delete'
+    Map<String, dynamic>? additionalContext,
   }) async {
     try {
       final currentUser = _auth.currentUser;
       final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
 
-      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add({
+      // Enhanced audit record with more context
+      final auditRecord = {
         'field_changed': fieldChanged,
         'old_value': oldValue,
         'new_value': newValue,
         'user_id': changeUserId,
         'timestamp': FieldValue.serverTimestamp(),
         'user_email': currentUser?.email ?? 'unknown',
+        'change_type': changeType ?? 'edit',
+        'session_id': _generateSessionId(),
+        'device_info': {
+          'platform': 'mobile',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
         if (notes != null) 'notes': notes,
-      });
+        if (additionalContext != null) 'context': additionalContext,
+      };
 
-      print('AuditService: Recorded change to $fieldChanged for enquiry $enquiryId');
+      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add(auditRecord);
+
+      // Also log to admin audit for important changes
+      if (_isImportantChange(fieldChanged, changeType)) {
+        await _logToAdminAudit('enquiry_change', {
+          'enquiry_id': enquiryId,
+          'field_changed': fieldChanged,
+          'change_type': changeType,
+          'old_value': oldValue,
+          'new_value': newValue,
+        });
+      }
+
+      print('AuditService: Recorded change to $fieldChanged for enquiry $enquiryId (type: ${changeType ?? 'edit'})');
     } catch (e) {
       print('AuditService: Error recording change: $e');
     }
@@ -330,6 +353,38 @@ class AuditService {
         'fields_changed': <String>[],
         'users_involved': <String>[],
       };
+    }
+  }
+
+  /// Generate a unique session ID for tracking related changes
+  String _generateSessionId() {
+    return 'session_${DateTime.now().millisecondsSinceEpoch}_${_auth.currentUser?.uid ?? 'anonymous'}';
+  }
+
+  /// Check if a change is important enough to log to admin audit
+  bool _isImportantChange(String fieldChanged, String? changeType) {
+    final importantFields = ['status', 'assignedTo', 'priority', 'totalCost', 'paymentStatus'];
+    final importantTypes = ['status_update', 'assignment', 'payment_change'];
+    
+    return importantFields.contains(fieldChanged) || importantTypes.contains(changeType);
+  }
+
+  /// Log to admin audit collection
+  Future<void> _logToAdminAudit(String action, Map<String, Object?> data) async {
+    try {
+      final currentUser = _auth.currentUser;
+
+      await _firestore.collection('admin_audit').add({
+        'action': action,
+        'user_id': currentUser?.uid ?? 'unknown',
+        'user_email': currentUser?.email ?? 'unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'data': data,
+        'session_id': _generateSessionId(),
+        'app_version': '1.0.1+10', // TODO: Get from package_info
+      });
+    } catch (e) {
+      print('AuditService: Error logging to admin audit: $e');
     }
   }
 }

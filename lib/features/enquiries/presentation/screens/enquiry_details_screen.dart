@@ -24,27 +24,23 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   // Cache user display strings (name · phone) by uid to reduce lookups
   final Map<String, String> _userDisplayCache = <String, String>{};
   bool _isUpdatingStatus = false;
-  
+
   // Undo functionality state
   String? _previousStatus;
-  bool _showUndo = false;
+  DateTime? _lastStatusChangeTime;
 
   /// Undoes the last status change (AC-Details-2)
   Future<void> _undoStatusChange() async {
     if (_previousStatus == null) return;
-    
+
     setState(() {
       _isUpdatingStatus = true;
-      _showUndo = false;
     });
 
     try {
       final currentStatus = _selectedStatus;
-      
-      await FirebaseFirestore.instance
-          .collection('enquiries')
-          .doc(widget.enquiryId)
-          .update({
+
+      await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId).update({
         'eventStatus': _previousStatus,
         'updatedAt': FieldValue.serverTimestamp(),
         'updatedBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
@@ -57,7 +53,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         fieldChanged: 'eventStatus',
         oldValue: currentStatus,
         newValue: _previousStatus,
-        notes: 'Undo operation',
+        changeType: 'undo',
+        notes: 'Undo operation - reverted from $currentStatus to $_previousStatus',
+        additionalContext: {
+          'undo_reason': 'user_requested',
+          'original_change_type': 'status_update',
+          'time_since_change': DateTime.now().difference(_lastStatusChangeTime ?? DateTime.now()).inSeconds,
+        },
       );
 
       if (mounted) {
@@ -480,6 +482,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       setState(() {
                         _isUpdatingStatus = true;
                         _previousStatus = enquiryData['eventStatus'] as String?; // Store for undo
+                        _lastStatusChangeTime = DateTime.now(); // Record timestamp
                         _selectedStatus = value; // optimistic
                       });
 
@@ -504,6 +507,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           fieldChanged: 'eventStatus',
                           oldValue: oldStatus,
                           newValue: value,
+                          changeType: 'status_update',
+                          notes: 'Status changed from $oldStatus to $value',
+                          additionalContext: {
+                            'previous_status': oldStatus,
+                            'new_status': value,
+                            'follow_up_suggested': (value == 'contacted' || value == 'quoted'),
+                            'transition_allowed': _allowedTransitions[oldStatus]?.contains(value) ?? false,
+                          },
                         );
 
                         // Send notification for status update
@@ -519,20 +530,20 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         );
 
                         // Suggest follow-up date for contacted/quoted status (AC-Lifecycle-4)
-                        if ((value == 'contacted' || value == 'quoted') && 
+                        if ((value == 'contacted' || value == 'quoted') &&
                             (enquiryData['followUpDate'] == null)) {
                           final followUpDate = DateTime.now().add(const Duration(days: 3));
                           await FirebaseFirestore.instance
                               .collection('enquiries')
                               .doc(widget.enquiryId)
-                              .update({
-                            'followUpDate': Timestamp.fromDate(followUpDate),
-                          });
-                          
+                              .update({'followUpDate': Timestamp.fromDate(followUpDate)});
+
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Follow-up date set to ${followUpDate.day}/${followUpDate.month}/${followUpDate.year}'),
+                                content: Text(
+                                  'Follow-up date set to ${followUpDate.day}/${followUpDate.month}/${followUpDate.year}',
+                                ),
                                 backgroundColor: Theme.of(context).colorScheme.secondary,
                                 duration: const Duration(seconds: 3),
                               ),
@@ -541,10 +552,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         }
 
                         if (mounted) {
-                          setState(() {
-                            _showUndo = true;
-                          });
-                          
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: const Text('Status updated'),
@@ -557,12 +564,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               duration: const Duration(seconds: 5),
                             ),
                           );
-                          
+
                           // Auto-hide undo after 5 seconds
                           Future.delayed(const Duration(seconds: 5), () {
                             if (mounted) {
                               setState(() {
-                                _showUndo = false;
                                 _previousStatus = null;
                               });
                             }
@@ -572,7 +578,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         // Rollback optimistic selection on error
                         setState(() {
                           _selectedStatus = enquiryData['eventStatus'] as String?;
-                          _showUndo = false;
                           _previousStatus = null;
                         });
                         if (mounted) {
