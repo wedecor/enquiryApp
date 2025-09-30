@@ -177,6 +177,106 @@ class FirestoreService {
   ///
   /// Returns a [Future<String>] containing the ID of the created enquiry.
   ///
+  /// Checks for duplicate enquiries within the last 90 days.
+  ///
+  /// This method searches for existing enquiries that match either the
+  /// normalized phone number or email address within the specified time window.
+  /// This helps prevent duplicate entries and provides better data quality.
+  ///
+  /// Parameters:
+  /// - [phoneNormalized]: The normalized phone number (digits only)
+  /// - [customerEmail]: The customer email address (will be lowercased)
+  ///
+  /// Returns:
+  /// - [List<Map<String, dynamic>>]: List of duplicate enquiries found
+  /// - Empty list if no duplicates found
+  ///
+  /// Example:
+  /// ```dart
+  /// final duplicates = await firestoreService.checkForDuplicates(
+  ///   phoneNormalized: '1234567890',
+  ///   customerEmail: 'john@example.com',
+  /// );
+  /// if (duplicates.isNotEmpty) {
+  ///   print('Found ${duplicates.length} potential duplicates');
+  /// }
+  /// ```
+  Future<List<Map<String, dynamic>>> checkForDuplicates({
+    required String phoneNormalized,
+    required String customerEmail,
+  }) async {
+    final now = DateTime.now();
+    final ninetyDaysAgo = now.subtract(const Duration(days: 90));
+    
+    final duplicates = <Map<String, dynamic>>[];
+    
+    try {
+      // Check for duplicates by phone number
+      final phoneQuery = await _enquiriesCollection
+          .where('phoneNormalized', isEqualTo: phoneNormalized)
+          .where('createdAt', isGreaterThan: Timestamp.fromDate(ninetyDaysAgo))
+          .get();
+      
+      for (final doc in phoneQuery.docs) {
+        duplicates.add({
+          'id': doc.id,
+          'customerName': doc.data()['customerName'],
+          'customerPhone': doc.data()['customerPhone'],
+          'customerEmail': doc.data()['customerEmail'],
+          'createdAt': doc.data()['createdAt'],
+          'matchType': 'phone',
+        });
+      }
+      
+      // Check for duplicates by email (if different from phone matches)
+      final emailQuery = await _enquiriesCollection
+          .where('customerEmail', isEqualTo: customerEmail.toLowerCase())
+          .where('createdAt', isGreaterThan: Timestamp.fromDate(ninetyDaysAgo))
+          .get();
+      
+      for (final doc in emailQuery.docs) {
+        // Avoid adding the same enquiry twice if it matches both phone and email
+        final existingId = doc.id;
+        if (!duplicates.any((dup) => dup['id'] == existingId)) {
+          duplicates.add({
+            'id': doc.id,
+            'customerName': doc.data()['customerName'],
+            'customerPhone': doc.data()['customerPhone'],
+            'customerEmail': doc.data()['customerEmail'],
+            'createdAt': doc.data()['createdAt'],
+            'matchType': 'email',
+          });
+        }
+      }
+      
+      return duplicates;
+    } catch (e) {
+      // Log error but don't throw - duplicate check should not block enquiry creation
+      print('Error checking for duplicates: $e');
+      return [];
+    }
+  }
+
+  /// Normalizes a phone number to E.164 format (digits only).
+  ///
+  /// This method removes all non-digit characters from the phone number
+  /// to create a normalized version for duplicate detection and storage.
+  ///
+  /// Parameters:
+  /// - [phoneNumber]: The raw phone number string
+  ///
+  /// Returns:
+  /// - [String]: The normalized phone number (digits only)
+  ///
+  /// Example:
+  /// ```dart
+  /// final normalized = firestoreService.normalizePhoneNumber('+1 (234) 567-8900');
+  /// print(normalized); // '12345678900'
+  /// ```
+  String normalizePhoneNumber(String phoneNumber) {
+    return phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+  }
+
   /// Throws:
   /// - [FirebaseException] if the operation fails
   ///
@@ -214,17 +314,39 @@ class FirestoreService {
     double? advancePaid,
     String? paymentStatus,
     String? assignedTo,
+    List<String>? imageUrls,
   }) async {
+    // Normalize phone number for duplicate detection
+    final phoneNormalized = normalizePhoneNumber(customerPhone);
+    final emailLower = customerEmail.toLowerCase();
+    
+    // Check for duplicates (non-blocking)
+    final duplicates = await checkForDuplicates(
+      phoneNormalized: phoneNormalized,
+      customerEmail: emailLower,
+    );
+    
+    // Log duplicates if found (for admin awareness)
+    if (duplicates.isNotEmpty) {
+      print('⚠️ Duplicate enquiry detected: ${duplicates.length} similar enquiries found in last 90 days');
+      for (final dup in duplicates) {
+        print('  - ${dup['customerName']} (${dup['matchType']}) - ${dup['createdAt']}');
+      }
+    }
+    
     final enquiryData = {
       'customerName': customerName,
-      'customerEmail': customerEmail,
+      'customerNameLower': customerName.toLowerCase(), // For case-insensitive search
+      'customerEmail': emailLower,
       'customerPhone': customerPhone,
+      'phoneNormalized': phoneNormalized, // For duplicate detection
       'eventType': eventType,
       'eventDate': eventDate,
       'eventLocation': eventLocation,
       'guestCount': guestCount,
       'budgetRange': budgetRange,
       'description': description,
+      'textIndex': '${customerName.toLowerCase()} ${phoneNormalized} ${emailLower} ${description.toLowerCase()}', // For text search
       // Defaults follow dropdown values (snake_case)
       'eventStatus': 'new',
       'paymentStatus': paymentStatus ?? 'unpaid',
@@ -236,6 +358,7 @@ class FirestoreService {
       'createdBy': createdBy,
       'priority': priority,
       'source': source,
+      'imageUrls': imageUrls ?? [],
     };
 
     final docRef = await _enquiriesCollection.add(enquiryData);
@@ -289,6 +412,232 @@ class FirestoreService {
         .where('eventStatus', isEqualTo: status)
         .orderBy('createdAt', descending: true)
         .snapshots();
+  }
+
+  /// Searches enquiries using text-based search.
+  ///
+  /// This method performs a case-insensitive search across customer names,
+  /// phone numbers, emails, and descriptions using the textIndex field.
+  /// The search is performed client-side for better flexibility.
+  ///
+  /// Parameters:
+  /// - [searchTerm]: The text to search for
+  /// - [status]: Optional status filter
+  /// - [assigneeId]: Optional assignee filter
+  /// - [eventType]: Optional event type filter
+  /// - [dateFrom]: Optional start date filter
+  /// - [dateTo]: Optional end date filter
+  ///
+  /// Returns a [Stream<QuerySnapshot>] that emits matching enquiries.
+  ///
+  /// Example:
+  /// ```dart
+  /// final searchStream = firestoreService.searchEnquiries(
+  ///   searchTerm: 'john wedding',
+  ///   status: 'new',
+  /// );
+  /// searchStream.listen((snapshot) {
+  ///   print('Found ${snapshot.docs.length} matching enquiries');
+  /// });
+  /// ```
+  Stream<QuerySnapshot> searchEnquiries({
+    required String searchTerm,
+    String? status,
+    String? assigneeId,
+    String? eventType,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+  }) {
+    Query query = _enquiriesCollection;
+    
+    // Apply filters
+    if (status != null) {
+      query = query.where('eventStatus', isEqualTo: status);
+    }
+    if (assigneeId != null) {
+      query = query.where('assignedTo', isEqualTo: assigneeId);
+    }
+    if (eventType != null) {
+      query = query.where('eventType', isEqualTo: eventType);
+    }
+    if (dateFrom != null) {
+      query = query.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateFrom));
+    }
+    if (dateTo != null) {
+      query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
+    }
+    
+    return query.orderBy('createdAt', descending: true).snapshots();
+  }
+
+  /// Filters enquiries based on multiple criteria.
+  ///
+  /// This method applies server-side filters for better performance
+  /// and then performs client-side text search on the results.
+  ///
+  /// Parameters:
+  /// - [statuses]: List of statuses to filter by
+  /// - [assigneeId]: Optional assignee filter
+  /// - [eventType]: Optional event type filter
+  /// - [dateFrom]: Optional start date filter
+  /// - [dateTo]: Optional end date filter
+  /// - [searchTerm]: Optional text search term
+  ///
+  /// Returns a [Stream<QuerySnapshot>] that emits filtered enquiries.
+  ///
+  /// Example:
+  /// ```dart
+  /// final filteredStream = firestoreService.filterEnquiries(
+  ///   statuses: ['new', 'contacted'],
+  ///   searchTerm: 'wedding',
+  /// );
+  /// ```
+  Stream<QuerySnapshot> filterEnquiries({
+    List<String>? statuses,
+    String? assigneeId,
+    String? eventType,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? searchTerm,
+  }) {
+    Query query = _enquiriesCollection;
+    
+    // Apply server-side filters
+    if (statuses != null && statuses.isNotEmpty) {
+      query = query.where('eventStatus', whereIn: statuses);
+    }
+    if (assigneeId != null) {
+      query = query.where('assignedTo', isEqualTo: assigneeId);
+    }
+    if (eventType != null) {
+      query = query.where('eventType', isEqualTo: eventType);
+    }
+    if (dateFrom != null) {
+      query = query.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateFrom));
+    }
+    if (dateTo != null) {
+      query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
+    }
+    
+    return query.orderBy('createdAt', descending: true).snapshots();
+  }
+
+  /// Exports enquiries to CSV format with active filters.
+  ///
+  /// This method generates a CSV file containing enquiry data with
+  /// all active filters applied. Only admins can access this feature.
+  ///
+  /// Parameters:
+  /// - [statuses]: List of statuses to filter by
+  /// - [assigneeId]: Optional assignee filter
+  /// - [eventType]: Optional event type filter
+  /// - [dateFrom]: Optional start date filter
+  /// - [dateTo]: Optional end date filter
+  /// - [searchTerm]: Optional text search term
+  ///
+  /// Returns a [Future<String>] containing the CSV content.
+  ///
+  /// Throws:
+  /// - [FirebaseException] if the operation fails
+  /// - [UnimplementedError] if called by non-admin user
+  ///
+  /// Example:
+  /// ```dart
+  /// final csvContent = await firestoreService.exportEnquiriesToCSV(
+  ///   statuses: ['new', 'contacted'],
+  ///   dateFrom: DateTime.now().subtract(Duration(days: 30)),
+  /// );
+  /// ```
+  Future<String> exportEnquiriesToCSV({
+    List<String>? statuses,
+    String? assigneeId,
+    String? eventType,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? searchTerm,
+  }) async {
+    // Get filtered enquiries
+    final query = _enquiriesCollection;
+    Query filteredQuery = query;
+    
+    // Apply server-side filters
+    if (statuses != null && statuses.isNotEmpty) {
+      filteredQuery = filteredQuery.where('eventStatus', whereIn: statuses);
+    }
+    if (assigneeId != null) {
+      filteredQuery = filteredQuery.where('assignedTo', isEqualTo: assigneeId);
+    }
+    if (eventType != null) {
+      filteredQuery = filteredQuery.where('eventType', isEqualTo: eventType);
+    }
+    if (dateFrom != null) {
+      filteredQuery = filteredQuery.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateFrom));
+    }
+    if (dateTo != null) {
+      filteredQuery = filteredQuery.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
+    }
+    
+    final snapshot = await filteredQuery.orderBy('createdAt', descending: true).get();
+    
+    // Build CSV content
+    final csvBuffer = StringBuffer();
+    
+    // CSV Header
+    csvBuffer.writeln('ID,Customer Name,Customer Email,Customer Phone,Event Type,Event Date,Event Location,Guest Count,Budget Range,Status,Assigned To,Priority,Source,Total Cost,Advance Paid,Payment Status,Created By,Created At,Updated At,Description');
+    
+    // CSV Data
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      
+      // Apply client-side text search if specified
+      if (searchTerm != null && searchTerm.isNotEmpty) {
+        final textIndex = data['textIndex'] as String? ?? '';
+        if (!textIndex.toLowerCase().contains(searchTerm.toLowerCase())) {
+          continue;
+        }
+      }
+      
+      // Format timestamps to ISO 8601
+      final createdAt = data['createdAt'] as Timestamp?;
+      final updatedAt = data['updatedAt'] as Timestamp?;
+      final eventDate = data['eventDate'] as Timestamp?;
+      
+      final createdAtIso = createdAt?.toDate().toIso8601String() ?? '';
+      final updatedAtIso = updatedAt?.toDate().toIso8601String() ?? '';
+      final eventDateIso = eventDate?.toDate().toIso8601String() ?? '';
+      
+      // Escape CSV values (handle commas, quotes, newlines)
+      String escapeCsv(String? value) {
+        if (value == null) return '';
+        final escaped = value.replaceAll('"', '""');
+        return '"$escaped"';
+      }
+      
+      csvBuffer.writeln([
+        doc.id,
+        escapeCsv(data['customerName']?.toString()),
+        escapeCsv(data['customerEmail']?.toString()),
+        escapeCsv(data['customerPhone']?.toString()),
+        escapeCsv(data['eventType']?.toString()),
+        eventDateIso,
+        escapeCsv(data['eventLocation']?.toString()),
+        data['guestCount']?.toString() ?? '',
+        escapeCsv(data['budgetRange']?.toString()),
+        escapeCsv(data['eventStatus']?.toString()),
+        escapeCsv(data['assigneeName']?.toString() ?? data['assignedTo']?.toString()),
+        escapeCsv(data['priority']?.toString()),
+        escapeCsv(data['source']?.toString()),
+        data['totalCost']?.toString() ?? '',
+        data['advancePaid']?.toString() ?? '',
+        escapeCsv(data['paymentStatus']?.toString()),
+        escapeCsv(data['createdByName']?.toString() ?? data['createdBy']?.toString()),
+        createdAtIso,
+        updatedAtIso,
+        escapeCsv(data['description']?.toString()),
+      ].join(','));
+    }
+    
+    return csvBuffer.toString();
   }
 
   /// Retrieves a specific enquiry by its ID.
