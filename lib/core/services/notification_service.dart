@@ -5,6 +5,14 @@ import '../../shared/models/user_model.dart';
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Rate limiting configuration
+  static const int _maxNotificationsPerMinute = 5;
+  static const int _maxNotificationsPerHour = 20;
+  static const int _maxNotificationsPerDay = 100;
+  
+  // Cache for rate limiting (in-memory, will reset on app restart)
+  final Map<String, List<DateTime>> _notificationHistory = {};
+
   /// Send notification when a new enquiry is created
   Future<void> notifyEnquiryCreated({
     required String enquiryId,
@@ -29,6 +37,8 @@ class NotificationService {
             'eventType': eventType,
             'createdBy': createdBy,
           },
+          notificationType: 'new_enquiry',
+          isImportant: true, // New enquiries are important
         );
       }
 
@@ -80,6 +90,8 @@ class NotificationService {
           'eventType': eventType,
           'assignedBy': assignedBy,
         },
+        notificationType: 'enquiry_assigned',
+        isImportant: true, // Assignments are important
       );
 
       // Send notification to user's personal topic
@@ -112,6 +124,8 @@ class NotificationService {
             'assignedTo': assignedTo,
             'assignedBy': assignedBy,
           },
+          notificationType: 'enquiry_assigned',
+          isImportant: false, // Admin notifications about assignments are less critical
         );
       }
 
@@ -147,6 +161,8 @@ class NotificationService {
             'newStatus': newStatus,
             'updatedBy': updatedBy,
           },
+          notificationType: 'status_update',
+          isImportant: _isImportantStatusChange(oldStatus, newStatus),
         );
       }
 
@@ -228,8 +244,17 @@ class NotificationService {
     required String title,
     required String body,
     required Map<String, dynamic> data,
+    String? notificationType,
+    bool isImportant = false,
   }) async {
     try {
+      // Check rate limiting
+      final type = notificationType ?? data['type'] as String? ?? 'general';
+      if (!_shouldSendNotification(userId, type, isImportant: isImportant)) {
+        print('NotificationService: Rate limit exceeded for user $userId, notification type: $type');
+        return;
+      }
+
       // Get user's FCM token
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
@@ -268,14 +293,14 @@ class NotificationService {
         'data': data,
         'read': false,
         'createdAt': FieldValue.serverTimestamp(),
+        'notificationType': type,
+        'isImportant': isImportant,
       });
 
-      // TODO: Send actual FCM notification
-      // This would typically be done via a Cloud Function or server
-      print('NotificationService: Would send FCM notification to user $userId');
-      print('Title: $title');
-      print('Body: $body');
-      print('Data: $data');
+      // Record notification sent for rate limiting
+      _recordNotificationSent(userId, type);
+
+      // FCM notification is now sent by Cloud Function when this document is created
     } catch (e) {
       print('NotificationService: Error sending notification to user $userId: $e');
     }
@@ -298,12 +323,7 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TODO: Send actual FCM notification to topic
-      // This would typically be done via a Cloud Function or server
-      print('NotificationService: Would send FCM notification to topic $topic');
-      print('Title: $title');
-      print('Body: $body');
-      print('Data: $data');
+      // FCM notification is now sent by Cloud Function when this document is created
     } catch (e) {
       print('NotificationService: Error sending notification to topic $topic: $e');
     }
@@ -363,5 +383,110 @@ class NotificationService {
     } catch (e) {
       print('NotificationService: Error marking all notifications as read: $e');
     }
+  }
+
+  /// Check if notification rate limit is exceeded for a user
+  bool _isRateLimitExceeded(String userId, String notificationType) {
+    final now = DateTime.now();
+    final key = '${userId}_$notificationType';
+    
+    // Get or create notification history for this user/type
+    final history = _notificationHistory[key] ?? [];
+    
+    // Clean up old entries (older than 24 hours)
+    history.removeWhere((timestamp) => now.difference(timestamp).inDays > 0);
+    _notificationHistory[key] = history;
+    
+    // Check rate limits
+    final lastMinute = history.where((timestamp) => now.difference(timestamp).inMinutes < 1).length;
+    final lastHour = history.where((timestamp) => now.difference(timestamp).inHours < 1).length;
+    final lastDay = history.length;
+    
+    if (lastMinute >= _maxNotificationsPerMinute) {
+      print('NotificationService: Rate limit exceeded - too many notifications per minute for $userId');
+      return true;
+    }
+    
+    if (lastHour >= _maxNotificationsPerHour) {
+      print('NotificationService: Rate limit exceeded - too many notifications per hour for $userId');
+      return true;
+    }
+    
+    if (lastDay >= _maxNotificationsPerDay) {
+      print('NotificationService: Rate limit exceeded - too many notifications per day for $userId');
+      return true;
+    }
+    
+    return false;
+  }
+
+  /// Record notification sent for rate limiting
+  void _recordNotificationSent(String userId, String notificationType) {
+    final now = DateTime.now();
+    final key = '${userId}_$notificationType';
+    
+    final history = _notificationHistory[key] ?? [];
+    history.add(now);
+    _notificationHistory[key] = history;
+  }
+
+  /// Check if notification should be sent based on rate limiting and importance
+  bool _shouldSendNotification(String userId, String notificationType, {bool isImportant = false}) {
+    // Important notifications bypass rate limiting
+    if (isImportant) {
+      return true;
+    }
+    
+    // Check rate limiting for regular notifications
+    return !_isRateLimitExceeded(userId, notificationType);
+  }
+
+  /// Get rate limit status for a user
+  Map<String, int> getRateLimitStatus(String userId, String notificationType) {
+    final now = DateTime.now();
+    final key = '${userId}_$notificationType';
+    final history = _notificationHistory[key] ?? [];
+    
+    final lastMinute = history.where((timestamp) => now.difference(timestamp).inMinutes < 1).length;
+    final lastHour = history.where((timestamp) => now.difference(timestamp).inHours < 1).length;
+    final lastDay = history.length;
+    
+    return {
+      'perMinute': lastMinute,
+      'perHour': lastHour,
+      'perDay': lastDay,
+      'maxPerMinute': _maxNotificationsPerMinute,
+      'maxPerHour': _maxNotificationsPerHour,
+      'maxPerDay': _maxNotificationsPerDay,
+    };
+  }
+
+  /// Clear rate limit history for a user (admin function)
+  void clearRateLimitHistory(String userId, {String? notificationType}) {
+    if (notificationType != null) {
+      _notificationHistory.remove('${userId}_$notificationType');
+    } else {
+      // Clear all notification types for this user
+      _notificationHistory.removeWhere((key, value) => key.startsWith('${userId}_'));
+    }
+  }
+
+  /// Check if a status change is important enough to bypass rate limiting
+  bool _isImportantStatusChange(String oldStatus, String newStatus) {
+    // Important status changes that should bypass rate limiting
+    final importantTransitions = [
+      ['new', 'contacted'],
+      ['contacted', 'quoted'],
+      ['quoted', 'confirmed'],
+      ['confirmed', 'in_progress'],
+      ['in_progress', 'completed'],
+      ['new', 'cancelled'],
+      ['contacted', 'cancelled'],
+      ['quoted', 'cancelled'],
+      ['confirmed', 'cancelled'],
+    ];
+
+    return importantTransitions.any((transition) => 
+        transition[0] == oldStatus && transition[1] == newStatus);
   }
 }
