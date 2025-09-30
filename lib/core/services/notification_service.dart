@@ -34,7 +34,7 @@ class NotificationService {
 
       // Also send to general admin topic
       await _sendNotificationToTopic(
-        topic: 'admin',
+        topic: 'admins',
         title: 'New Enquiry Created',
         body: 'New enquiry from $customerName for $eventType',
         data: {
@@ -152,7 +152,7 @@ class NotificationService {
 
       // Also send to general admin topic
       await _sendNotificationToTopic(
-        topic: 'admin',
+        topic: 'admins',
         title: 'Enquiry Status Updated',
         body: 'Status changed from $oldStatus to $newStatus for $customerName',
         data: {

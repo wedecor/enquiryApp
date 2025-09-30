@@ -1,5 +1,5 @@
 import { setGlobalOptions, logger } from "firebase-functions/v2";
-import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { onDocumentWritten, onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -427,5 +427,58 @@ export const notifyOnEnquiryChange = onDocumentWritten(
       read: false,
       archived: false
     });
+  }
+);
+
+// Send FCM when a user notification doc is created: users/{uid}/notifications/{nid}
+export const sendUserNotification = onDocumentCreated(
+  "users/{uid}/notifications/{nid}",
+  async (event) => {
+    const db = getFirestore();
+    const messaging = getMessaging();
+    const data = event.data?.data() as any;
+    const uid = event.params.uid as string;
+
+    // Load up to 500 device tokens from private subcollection
+    const tokensSnap = await db
+      .collection("users").doc(uid)
+      .collection("private").doc("notifications")
+      .collection("tokens").limit(500).get();
+
+    const tokens = Array.from(new Set(
+      tokensSnap.docs.map(d => (d.get("token") as string | undefined) || d.id).filter(Boolean) as string[]
+    ));
+
+    if (tokens.length === 0) {
+      logger.info("sendUserNotification: no tokens", { uid });
+      return;
+    }
+
+    const payload = {
+      tokens,
+      notification: { title: data?.title || "Notification", body: data?.body || "" },
+      data: (data?.data as Record<string, string>) || {},
+    } as const;
+
+    const res = await messaging.sendEachForMulticast(payload);
+    logger.info("sendUserNotification: sent", { uid, successCount: res.successCount, failureCount: res.failureCount });
+  }
+);
+
+// Send FCM when a topic message is created: notifications/{topic}/messages/{id}
+export const sendTopicNotification = onDocumentCreated(
+  "notifications/{topic}/messages/{id}",
+  async (event) => {
+    const messaging = getMessaging();
+    const topic = event.params.topic as string;
+    const doc = event.data?.data() as any;
+
+    await messaging.send({
+      topic,
+      notification: { title: doc?.title || "Update", body: doc?.body || "" },
+      data: (doc?.data as Record<string, string>) || {},
+    });
+
+    logger.info("sendTopicNotification: sent", { topic });
   }
 );

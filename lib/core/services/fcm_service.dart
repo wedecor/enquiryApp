@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/user_model.dart';
+import 'local_notifications_service.dart';
 
 /// Service for handling Firebase Cloud Messaging (FCM)
 class FCMService {
@@ -64,6 +65,9 @@ class FCMService {
       if (initialMessage != null) {
         _handleMessageOpenedApp(initialMessage);
       }
+
+      // Initialize local notifications
+      await LocalNotificationsService.instance.initialize();
     } catch (e) {
       print('FCM initialization error: $e');
     }
@@ -110,7 +114,7 @@ class FCMService {
           final role = userData['role'] as String?;
 
           if (role == 'admin') {
-            await _messaging.subscribeToTopic('admin');
+            await _messaging.subscribeToTopic('admins');
             await _messaging.subscribeToTopic('enquiries');
           } else {
             await _messaging.subscribeToTopic('staff');
@@ -130,13 +134,13 @@ class FCMService {
   Future<void> subscribeToUserTopics(UserModel user) async {
     try {
       // Unsubscribe from all topics first
-      await _messaging.unsubscribeFromTopic('admin');
+      await _messaging.unsubscribeFromTopic('admins');
       await _messaging.unsubscribeFromTopic('staff');
       await _messaging.unsubscribeFromTopic('user_${user.uid}');
 
       // Subscribe to role-based topics
       if (user.role == UserRole.admin) {
-        await _messaging.subscribeToTopic('admin');
+        await _messaging.subscribeToTopic('admins');
         await _messaging.subscribeToTopic('enquiries');
       } else {
         await _messaging.subscribeToTopic('staff');
@@ -168,9 +172,9 @@ class FCMService {
 
   /// Show local notification for foreground messages
   void _showLocalNotification(RemoteMessage message) {
-    // TODO: Implement local notification display
-    // This would typically use flutter_local_notifications package
-    print('FCM: Would show local notification: ${message.notification?.title}');
+    final title = message.notification?.title ?? 'Update';
+    final body = message.notification?.body ?? '';
+    LocalNotificationsService.instance.show(title: title, body: body, payload: message.data);
   }
 
   /// Handle navigation based on notification data
@@ -207,7 +211,7 @@ class FCMService {
   Future<void> unsubscribeFromAllTopics() async {
     try {
       await _messaging.unsubscribeFromTopic('general');
-      await _messaging.unsubscribeFromTopic('admin');
+      await _messaging.unsubscribeFromTopic('admins');
       await _messaging.unsubscribeFromTopic('staff');
       await _messaging.unsubscribeFromTopic('enquiries');
 

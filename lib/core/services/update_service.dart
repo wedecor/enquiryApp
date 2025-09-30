@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -19,6 +21,12 @@ class UpdateService {
   /// Check for available updates
   static Future<UpdateInfo?> checkForUpdate({bool forceCheck = false}) async {
     try {
+      // Only check updates on Android; skip on Web/iOS/macOS/Windows/Linux
+      if (kIsWeb || !Platform.isAndroid) {
+        Logger.debug('Update check skipped - non-Android platform', tag: 'UpdateService');
+        return null;
+      }
+
       // Rate limit: only check once per hour
       final prefs = await SharedPreferences.getInstance();
       final lastChecked = prefs.getInt(_lastCheckedKey) ?? 0;
@@ -108,8 +116,8 @@ class UpdateService {
       builder: (context) => UpdateDialog(updateInfo: updateInfo),
     );
 
-    // Record dismissal if user chose not to update
-    if (result == false) {
+    // Record dismissal if user didn't proceed with download (false or dismissed)
+    if (result != true) {
       await prefs.setInt(_lastDismissedKey, now);
     }
   }
