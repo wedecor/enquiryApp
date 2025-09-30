@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/theme/tokens.dart';
 import '../filters_controller.dart';
 import '../filters_state.dart';
@@ -327,8 +328,11 @@ class QuickFilters extends ConsumerWidget {
     if (currentFilters.assigneeId != null) {
       ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter(null);
     } else {
-      // TODO: Get current user ID
-      ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter('current_user_id');
+      final currentUserAsync = ref.read(currentUserAsyncProvider);
+      final currentUser = currentUserAsync.valueOrNull;
+      if (currentUser != null) {
+        ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter(currentUser.uid);
+      }
     }
   }
 }

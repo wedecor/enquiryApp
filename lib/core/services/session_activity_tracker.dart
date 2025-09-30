@@ -22,7 +22,7 @@ class SessionActivityTracker extends WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // Update activity when app becomes active
     if (state == AppLifecycleState.resumed) {
       _sessionService.updateActivity();
@@ -42,7 +42,7 @@ final sessionActivityTrackerProvider = Provider<SessionActivityTracker>((ref) {
 });
 
 /// Mixin for widgets to easily track user activity
-mixin SessionActivityMixin<T extends StatefulWidget> on State<T> {
+mixin SessionActivityMixin<T extends ConsumerStatefulWidget> on ConsumerState<T> {
   SessionActivityTracker? _activityTracker;
 
   @override

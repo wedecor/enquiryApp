@@ -132,13 +132,18 @@ class EnquiriesListScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
-                            Text(
-                              'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Text(
+                                  'Assigned: ',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _getAssignedUserName(enquiryData['assignedTo'] as String, ref),
+                                ),
+                              ],
                             ),
                           ],
                         ],
@@ -272,10 +277,25 @@ class EnquiriesListScreen extends ConsumerWidget {
     }
   }
 
-  String _getAssignedUserName(String? assignedTo) {
-    if (assignedTo == null) return 'Unassigned';
-    // TODO: Fetch user name from Firestore
-    return 'User ID: $assignedTo';
+  Widget _getAssignedUserName(String? assignedTo, WidgetRef ref) {
+    if (assignedTo == null) return const Text('Unassigned');
+
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: ref.read(firestoreServiceProvider).getUser(assignedTo),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Text('Loading...', style: TextStyle(fontStyle: FontStyle.italic));
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return Text('User ID: $assignedTo', style: TextStyle(color: Colors.grey[600]));
+        }
+
+        final userData = snapshot.data!;
+        final userName = userData['name'] as String? ?? 'Unknown User';
+        return Text(userName);
+      },
+    );
   }
 
   void _handleAction(
