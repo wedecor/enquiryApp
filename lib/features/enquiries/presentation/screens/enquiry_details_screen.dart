@@ -8,19 +8,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../widgets/contact_buttons.dart';
 import 'enquiry_form_screen.dart';
-
-class NotificationService {
-  Future<void> notifyStatusUpdated({
-    required String enquiryId,
-    required String customerName,
-    required String oldStatus,
-    required String newStatus,
-    required String updatedBy,
-  }) async {
-    // TODO: Implement notification
-    print('Notification: Status updated for $customerName from $oldStatus to $newStatus');
-  }
-}
+import '../../../../core/services/notification_service.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
   final String enquiryId;
@@ -36,16 +24,84 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   // Cache user display strings (name · phone) by uid to reduce lookups
   final Map<String, String> _userDisplayCache = <String, String>{};
   bool _isUpdatingStatus = false;
+  
+  // Undo functionality state
+  String? _previousStatus;
+  bool _showUndo = false;
 
-  // Allowed status transitions for staff users
+  /// Undoes the last status change (AC-Details-2)
+  Future<void> _undoStatusChange() async {
+    if (_previousStatus == null) return;
+    
+    setState(() {
+      _isUpdatingStatus = true;
+      _showUndo = false;
+    });
+
+    try {
+      final currentStatus = _selectedStatus;
+      
+      await FirebaseFirestore.instance
+          .collection('enquiries')
+          .doc(widget.enquiryId)
+          .update({
+        'eventStatus': _previousStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+      });
+
+      // Record audit trail for undo
+      final auditService = AuditService();
+      await auditService.recordChange(
+        enquiryId: widget.enquiryId,
+        fieldChanged: 'eventStatus',
+        oldValue: currentStatus,
+        newValue: _previousStatus,
+        notes: 'Undo operation',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Status change undone'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to undo status change: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingStatus = false;
+          _previousStatus = null;
+        });
+      }
+    }
+  }
+
+  // Allowed status transitions for staff users (AC-Lifecycle-1)
+  // Based on specification: new → contacted, cancelled
+  // contacted → quoted, cancelled
+  // quoted → confirmed, cancelled
+  // confirmed → in_progress, cancelled
+  // in_progress → completed, cancelled
+  // completed, cancelled → terminal
   static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_talks', 'cancelled', 'not_interested'],
-    'in_talks': ['quotation_sent', 'confirmed', 'cancelled', 'not_interested'],
-    'quotation_sent': ['confirmed', 'in_talks', 'cancelled', 'not_interested'],
-    'confirmed': ['completed', 'cancelled'],
-    'completed': [],
-    'cancelled': [],
-    'not_interested': [],
+    'new': ['contacted', 'cancelled'],
+    'contacted': ['quoted', 'cancelled'],
+    'quoted': ['confirmed', 'cancelled'],
+    'confirmed': ['in_progress', 'cancelled'],
+    'in_progress': ['completed', 'cancelled'],
+    'completed': [], // Terminal state
+    'cancelled': [], // Terminal state
   };
 
   @override
@@ -423,6 +479,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
                       setState(() {
                         _isUpdatingStatus = true;
+                        _previousStatus = enquiryData['eventStatus'] as String?; // Store for undo
                         _selectedStatus = value; // optimistic
                       });
 
@@ -461,18 +518,62 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                         );
 
+                        // Suggest follow-up date for contacted/quoted status (AC-Lifecycle-4)
+                        if ((value == 'contacted' || value == 'quoted') && 
+                            (enquiryData['followUpDate'] == null)) {
+                          final followUpDate = DateTime.now().add(const Duration(days: 3));
+                          await FirebaseFirestore.instance
+                              .collection('enquiries')
+                              .doc(widget.enquiryId)
+                              .update({
+                            'followUpDate': Timestamp.fromDate(followUpDate),
+                          });
+                          
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Follow-up date set to ${followUpDate.day}/${followUpDate.month}/${followUpDate.year}'),
+                                backgroundColor: Theme.of(context).colorScheme.secondary,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                        }
+
                         if (mounted) {
+                          setState(() {
+                            _showUndo = true;
+                          });
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: const Text('Status updated'),
                               backgroundColor: Theme.of(context).colorScheme.primary,
+                              action: SnackBarAction(
+                                label: 'Undo',
+                                textColor: Theme.of(context).colorScheme.onPrimary,
+                                onPressed: _undoStatusChange,
+                              ),
+                              duration: const Duration(seconds: 5),
                             ),
                           );
+                          
+                          // Auto-hide undo after 5 seconds
+                          Future.delayed(const Duration(seconds: 5), () {
+                            if (mounted) {
+                              setState(() {
+                                _showUndo = false;
+                                _previousStatus = null;
+                              });
+                            }
+                          });
                         }
                       } catch (e) {
                         // Rollback optimistic selection on error
                         setState(() {
                           _selectedStatus = enquiryData['eventStatus'] as String?;
+                          _showUndo = false;
+                          _previousStatus = null;
                         });
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
