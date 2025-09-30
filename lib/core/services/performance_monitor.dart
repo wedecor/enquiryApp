@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import 'performance_service.dart';
 
@@ -14,7 +15,7 @@ mixin PerformanceMonitor {
     bool trackErrors = true,
   }) async {
     _performanceService.startOperation(operationName);
-    
+
     try {
       final result = await operation();
       _performanceService.endOperation(operationName, isError: false);
@@ -34,7 +35,7 @@ mixin PerformanceMonitor {
     bool trackErrors = true,
   }) {
     _performanceService.startOperation(operationName);
-    
+
     try {
       final result = operation();
       _performanceService.endOperation(operationName, isError: false);
@@ -53,7 +54,12 @@ mixin PerformanceMonitor {
   }
 
   /// Monitor Firestore operations
-  void monitorFirestoreOperation(String operation, String collection, Duration duration, {bool isError = false}) {
+  void monitorFirestoreOperation(
+    String operation,
+    String collection,
+    Duration duration, {
+    bool isError = false,
+  }) {
     _performanceService.trackFirestoreOperation(operation, collection, duration, isError: isError);
   }
 
@@ -94,7 +100,7 @@ class PerformanceTracker {
     bool trackErrors = true,
   }) async {
     _service.startOperation(operationName);
-    
+
     try {
       final result = await operation();
       _service.endOperation(operationName, isError: false);
@@ -108,13 +114,9 @@ class PerformanceTracker {
   }
 
   /// Track a synchronous function execution
-  static T trackSync<T>(
-    String operationName,
-    T Function() operation, {
-    bool trackErrors = true,
-  }) {
+  static T trackSync<T>(String operationName, T Function() operation, {bool trackErrors = true}) {
     _service.startOperation(operationName);
-    
+
     try {
       final result = operation();
       _service.endOperation(operationName, isError: false);
@@ -133,7 +135,12 @@ class PerformanceTracker {
   }
 
   /// Track Firestore operation performance
-  static void trackFirestore(String operation, String collection, Duration duration, {bool isError = false}) {
+  static void trackFirestore(
+    String operation,
+    String collection,
+    Duration duration, {
+    bool isError = false,
+  }) {
     _service.trackFirestoreOperation(operation, collection, duration, isError: isError);
   }
 
@@ -174,10 +181,7 @@ mixin BuildPerformanceMonitor {
 
   /// Monitor widget build performance
   Widget monitorBuild(String widgetName, Widget Function() buildWidget) {
-    return _performanceService.monitorSyncOperation(
-      'build_$widgetName',
-      () => buildWidget(),
-    );
+    return PerformanceTracker.trackSync('build_$widgetName', () => buildWidget());
   }
 }
 
@@ -188,7 +192,7 @@ class PerformanceConfig {
   static bool trackFirestore = true;
   static bool trackBuilds = false; // Disable by default as it can be noisy
   static bool trackUI = false; // Disable by default as it can be noisy
-  
+
   static void configure({
     bool? enabled,
     bool? trackNetwork,
