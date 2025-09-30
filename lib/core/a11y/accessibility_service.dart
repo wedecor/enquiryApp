@@ -81,7 +81,7 @@ class AccessibilityService {
     if (isReduceMotionEnabled) {
       return Duration.zero;
     }
-    return Theme.of(context).animationTheme.animationDuration ?? const Duration(milliseconds: 300);
+    return const Duration(milliseconds: 300);
   }
 
   /// Get appropriate animation curve based on accessibility settings
@@ -200,11 +200,7 @@ class _AccessibilityFocusManagerState extends State<AccessibilityFocusManager> {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(
-      focusNode: _focusNode,
-      autofocus: widget.autoFocus,
-      child: widget.child,
-    );
+    return Focus(focusNode: _focusNode, autofocus: widget.autoFocus, child: widget.child);
   }
 }
 
@@ -312,26 +308,19 @@ class AccessibleErrorWidget extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(
-                icon,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
+              Icon(icon, size: 64, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 16),
             ],
             Text(
               error,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: onRetry,
-                child: Text(retryLabel),
-              ),
+              ElevatedButton(onPressed: onRetry, child: Text(retryLabel)),
             ],
           ],
         ),
@@ -367,10 +356,7 @@ class AccessibleLoadingWidget extends StatelessWidget {
             else
               const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            Text(message, style: Theme.of(context).textTheme.bodyLarge),
             if (showProgress && progress != null) ...[
               const SizedBox(height: 8),
               Text(

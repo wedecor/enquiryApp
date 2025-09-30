@@ -34,11 +34,7 @@ class AccessibilityTesting {
 
 /// Widget for testing accessibility features in development
 class AccessibilityTestOverlay extends StatefulWidget {
-  const AccessibilityTestOverlay({
-    super.key,
-    required this.child,
-    this.enabled = false,
-  });
+  const AccessibilityTestOverlay({super.key, required this.child, this.enabled = false});
 
   final Widget child;
   final bool enabled;

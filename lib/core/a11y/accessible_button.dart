@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tokens.dart';
 import 'accessibility_service.dart';
 import 'tap_target.dart';
 
@@ -46,13 +47,13 @@ class AccessibleButton extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (hint != null) hints.add(hint!);
     if (!enabled) hints.add('Disabled');
     if (isLoading) hints.add('Please wait');
     if (isDestructive) hints.add('This action cannot be undone');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -60,10 +61,10 @@ class AccessibleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     // Determine button style based on context
     ButtonStyle effectiveStyle = style ?? _getDefaultStyle(context);
-    
+
     Widget button = ElevatedButton(
       onPressed: enabled && !isLoading ? onPressed : null,
       style: effectiveStyle,
@@ -78,9 +79,7 @@ class AccessibleButton extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      colorScheme.onPrimary,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -90,10 +89,7 @@ class AccessibleButton extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[
-                  Icon(icon),
-                  const SizedBox(width: 8),
-                ],
+                if (icon != null) ...[Icon(icon), const SizedBox(width: 8)],
                 Text(label),
               ],
             ),
@@ -111,7 +107,7 @@ class AccessibleButton extends StatelessWidget {
 
   ButtonStyle _getDefaultStyle(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     if (isDestructive) {
       return ElevatedButton.styleFrom(
         backgroundColor: colorScheme.error,
@@ -120,7 +116,7 @@ class AccessibleButton extends StatelessWidget {
         disabledForegroundColor: colorScheme.onError.withOpacity(0.5),
       );
     }
-    
+
     return ElevatedButton.styleFrom(
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
@@ -166,11 +162,11 @@ class AccessibleIconButton extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (!enabled) hints.add('Disabled');
     if (isDestructive) hints.add('This action cannot be undone');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -178,7 +174,7 @@ class AccessibleIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return IconTapTarget(
       icon: icon,
       onPressed: enabled ? onPressed : null,
@@ -228,12 +224,12 @@ class AccessibleTextButton extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (hint != null) hints.add(hint!);
     if (!enabled) hints.add('Disabled');
     if (isDestructive) hints.add('This action cannot be undone');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -241,9 +237,9 @@ class AccessibleTextButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     ButtonStyle effectiveStyle = style ?? _getDefaultStyle(context);
-    
+
     Widget button = TextButton(
       onPressed: enabled ? onPressed : null,
       style: effectiveStyle,
@@ -251,10 +247,7 @@ class AccessibleTextButton extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            Icon(icon),
-            const SizedBox(width: 8),
-          ],
+          if (icon != null) ...[Icon(icon), const SizedBox(width: 8)],
           Text(label),
         ],
       ),
@@ -272,14 +265,14 @@ class AccessibleTextButton extends StatelessWidget {
 
   ButtonStyle _getDefaultStyle(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     if (isDestructive) {
       return TextButton.styleFrom(
         foregroundColor: colorScheme.error,
         disabledForegroundColor: colorScheme.error.withOpacity(0.5),
       );
     }
-    
+
     return TextButton.styleFrom(
       foregroundColor: colorScheme.primary,
       disabledForegroundColor: colorScheme.onSurfaceVariant,
@@ -321,10 +314,10 @@ class AccessibleFloatingActionButton extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (!enabled) hints.add('Disabled');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -380,12 +373,12 @@ class AccessibleToggleButton extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (hint != null) hints.add(hint!);
     if (!enabled) hints.add('Disabled');
     hints.add(value ? 'Currently selected' : 'Currently unselected');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -437,12 +430,12 @@ class AccessibleSwitch extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (hint != null) hints.add(hint!);
     if (!enabled) hints.add('Disabled');
     hints.add(value ? 'Currently on' : 'Currently off');
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
@@ -501,11 +494,11 @@ class AccessibleCheckbox extends StatelessWidget {
 
   String? _getSemanticHint() {
     if (semanticHint != null) return semanticHint;
-    
+
     final hints = <String>[];
     if (hint != null) hints.add(hint!);
     if (!enabled) hints.add('Disabled');
-    
+
     if (value == true) {
       hints.add('Currently checked');
     } else if (value == false) {
@@ -513,7 +506,7 @@ class AccessibleCheckbox extends StatelessWidget {
     } else {
       hints.add('Currently indeterminate');
     }
-    
+
     return hints.isNotEmpty ? hints.join('. ') : null;
   }
 
