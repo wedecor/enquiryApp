@@ -24,6 +24,7 @@ final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynam
 });
 
 /// Current user role: "admin" | "staff" | null (unknown/not found)
+/// Returns null if user is deactivated (AC-User-2)
 final currentUserRoleProvider = Provider<String?>((ref) {
   final docAsync = ref.watch(currentUserDocProvider);
   return docAsync.when(
@@ -31,6 +32,13 @@ final currentUserRoleProvider = Provider<String?>((ref) {
       if (snap == null || !snap.exists) return null;
       final data = snap.data();
       if (data == null) return null;
+      
+      // Check if user is active (AC-User-2)
+      final isActive = data['active'] as bool? ?? true;
+      if (!isActive) {
+        return null; // Deactivated users have no role
+      }
+      
       final role = data['role'];
       if (role is String && (role == 'admin' || role == 'staff')) return role;
       return null;
@@ -83,6 +91,7 @@ final currentUserAsyncProvider = StreamProvider<UserModel?>((ref) {
           email: data['email'] as String? ?? '',
           phone: data['phone'] as String? ?? '',
           role: data['role'] == 'admin' ? UserRole.admin : UserRole.staff,
+          active: data['active'] as bool? ?? true,
         );
       });
     },
@@ -104,7 +113,20 @@ final currentUserEmailProvider = Provider<String?>((ref) {
 });
 
 /// Current user active status
-final currentUserActiveProvider = Provider<bool?>((ref) {
+final currentUserActiveProvider = Provider<bool>((ref) {
   final data = ref.watch(currentUserDataProvider);
-  return data?['active'] as bool?;
+  return data?['active'] as bool? ?? true;
+});
+
+/// Provider that automatically logs out deactivated users (AC-User-2)
+final userDeactivationGuardProvider = Provider<void>((ref) {
+  final auth = ref.watch(firebaseAuthUserProvider);
+  final isActive = ref.watch(currentUserActiveProvider);
+  
+  auth.whenData((user) {
+    if (user != null && !isActive) {
+      // User is signed in but deactivated - log them out
+      fb.FirebaseAuth.instance.signOut();
+    }
+  });
 });

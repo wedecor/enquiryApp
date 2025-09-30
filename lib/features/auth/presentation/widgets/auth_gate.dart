@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/auth/session_state.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/services/session_service.dart';
@@ -17,6 +18,9 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the deactivation guard to automatically log out deactivated users
+    ref.watch(userDeactivationGuardProvider);
+    
     final sessionAsync = ref.watch(sessionStateProvider);
 
     return sessionAsync.when(
