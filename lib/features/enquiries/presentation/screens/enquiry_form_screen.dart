@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/a11y/accessible_form_field.dart';
+import '../../../../core/a11y/accessible_button.dart';
+import '../../../../core/a11y/accessibility_service.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
@@ -28,7 +31,7 @@ class EnquiryFormScreen extends ConsumerStatefulWidget {
   ConsumerState<EnquiryFormScreen> createState() => _EnquiryFormScreenState();
 }
 
-class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
+class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> with AccessibilityMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -343,7 +346,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   /// Get list of updated fields for audit logging
   List<String> _getUpdatedFields() {
     final updatedFields = <String>[];
-    
+
     if (_nameController.text.isNotEmpty) updatedFields.add('customerName');
     if (_phoneController.text.isNotEmpty) updatedFields.add('customerPhone');
     if (_locationController.text.isNotEmpty) updatedFields.add('eventLocation');
@@ -352,7 +355,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     if (_advancePaidController.text.isNotEmpty) updatedFields.add('advancePaid');
     if (_budgetController.text.isNotEmpty) updatedFields.add('budgetRange');
     if (_selectedImages.isNotEmpty) updatedFields.add('imageUrls');
-    
+
     return updatedFields;
   }
 

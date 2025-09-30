@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/a11y/accessible_form_field.dart';
+import '../../../../core/a11y/accessible_button.dart';
+import '../../../../core/a11y/accessibility_service.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../shared/widgets/auto_size_headline.dart';
 import '../../../../shared/widgets/clamped_text.dart';
@@ -14,7 +17,7 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> with AccessibilityMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -35,6 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _isLoading = true;
       _errorMessage = null;
     });
+    announceLoading(true);
 
     try {
       final authService = ref.read(firebaseAuthServiceProvider);
@@ -46,14 +50,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() {
         _errorMessage = e.message;
       });
+      announceError(e.message);
     } catch (e) {
       setState(() {
         _errorMessage = 'An unexpected error occurred.';
       });
+      announceError('An unexpected error occurred.');
     } finally {
       setState(() {
         _isLoading = false;
       });
+      announceLoading(false);
     }
   }
 
@@ -132,14 +139,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 32),
 
                 // Email Field
-                TextFormField(
+                AccessibleFormField(
+                  label: 'Email',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(),
-                  ),
+                  prefixIcon: const Icon(Icons.email),
+                  isRequired: true,
+                  autofillHints: const [AutofillHints.email],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
@@ -153,14 +159,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
 
                 // Password Field
-                TextFormField(
+                AccessibleFormField(
+                  label: 'Password',
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: Icon(Icons.lock),
-                    border: OutlineInputBorder(),
-                  ),
+                  prefixIcon: const Icon(Icons.lock),
+                  isRequired: true,
+                  autofillHints: const [AutofillHints.password],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your password';
@@ -204,27 +209,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 if (_errorMessage != null) const SizedBox(height: 16),
 
                 // Sign In Button
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _signIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Sign In',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                AccessibleButton(
+                  label: 'Sign In',
+                  onPressed: _signIn,
+                  enabled: !_isLoading,
+                  isLoading: _isLoading,
+                  loadingText: 'Signing in...',
+                  semanticLabel: 'Sign in to your account',
+                  semanticHint: 'Double tap to sign in with your email and password',
                 ),
               ],
             ),
