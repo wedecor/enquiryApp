@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/firestore_schema.dart';
+import 'performance_monitor.dart';
 
 /// Service class for handling all Firestore database operations.
 ///
@@ -28,7 +29,7 @@ import '../constants/firestore_schema.dart';
 /// // Get real-time stream of enquiries
 /// final enquiriesStream = firestoreService.getEnquiries();
 /// ```
-class FirestoreService {
+class FirestoreService with PerformanceMonitor {
   /// The underlying Firebase Firestore instance.
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -207,48 +208,50 @@ class FirestoreService {
   }) async {
     final now = DateTime.now();
     final ninetyDaysAgo = now.subtract(const Duration(days: 90));
-    
+
     final duplicates = <Map<String, dynamic>>[];
-    
+
     try {
       // Check for duplicates by phone number
       final phoneQuery = await _enquiriesCollection
           .where('phoneNormalized', isEqualTo: phoneNormalized)
           .where('createdAt', isGreaterThan: Timestamp.fromDate(ninetyDaysAgo))
           .get();
-      
+
       for (final doc in phoneQuery.docs) {
+        final data = doc.data() as Map<String, dynamic>;
         duplicates.add({
           'id': doc.id,
-          'customerName': doc.data()['customerName'],
-          'customerPhone': doc.data()['customerPhone'],
-          'customerEmail': doc.data()['customerEmail'],
-          'createdAt': doc.data()['createdAt'],
+          'customerName': data['customerName'],
+          'customerPhone': data['customerPhone'],
+          'customerEmail': data['customerEmail'],
+          'createdAt': data['createdAt'],
           'matchType': 'phone',
         });
       }
-      
+
       // Check for duplicates by email (if different from phone matches)
       final emailQuery = await _enquiriesCollection
           .where('customerEmail', isEqualTo: customerEmail.toLowerCase())
           .where('createdAt', isGreaterThan: Timestamp.fromDate(ninetyDaysAgo))
           .get();
-      
+
       for (final doc in emailQuery.docs) {
         // Avoid adding the same enquiry twice if it matches both phone and email
         final existingId = doc.id;
         if (!duplicates.any((dup) => dup['id'] == existingId)) {
+          final data = doc.data() as Map<String, dynamic>;
           duplicates.add({
             'id': doc.id,
-            'customerName': doc.data()['customerName'],
-            'customerPhone': doc.data()['customerPhone'],
-            'customerEmail': doc.data()['customerEmail'],
-            'createdAt': doc.data()['createdAt'],
+            'customerName': data['customerName'],
+            'customerPhone': data['customerPhone'],
+            'customerEmail': data['customerEmail'],
+            'createdAt': data['createdAt'],
             'matchType': 'email',
           });
         }
       }
-      
+
       return duplicates;
     } catch (e) {
       // Log error but don't throw - duplicate check should not block enquiry creation
@@ -316,24 +319,27 @@ class FirestoreService {
     String? assignedTo,
     List<String>? imageUrls,
   }) async {
+    return await monitorOperation('createEnquiry', () async {
     // Normalize phone number for duplicate detection
     final phoneNormalized = normalizePhoneNumber(customerPhone);
     final emailLower = customerEmail.toLowerCase();
-    
+
     // Check for duplicates (non-blocking)
     final duplicates = await checkForDuplicates(
       phoneNormalized: phoneNormalized,
       customerEmail: emailLower,
     );
-    
+
     // Log duplicates if found (for admin awareness)
     if (duplicates.isNotEmpty) {
-      print('⚠️ Duplicate enquiry detected: ${duplicates.length} similar enquiries found in last 90 days');
+      print(
+        '⚠️ Duplicate enquiry detected: ${duplicates.length} similar enquiries found in last 90 days',
+      );
       for (final dup in duplicates) {
         print('  - ${dup['customerName']} (${dup['matchType']}) - ${dup['createdAt']}');
       }
     }
-    
+
     final enquiryData = {
       'customerName': customerName,
       'customerNameLower': customerName.toLowerCase(), // For case-insensitive search
@@ -346,7 +352,8 @@ class FirestoreService {
       'guestCount': guestCount,
       'budgetRange': budgetRange,
       'description': description,
-      'textIndex': '${customerName.toLowerCase()} ${phoneNormalized} ${emailLower} ${description.toLowerCase()}', // For text search
+      'textIndex':
+          '${customerName.toLowerCase()} $phoneNormalized $emailLower ${description.toLowerCase()}', // For text search
       // Defaults follow dropdown values (snake_case)
       'eventStatus': 'new',
       'paymentStatus': paymentStatus ?? 'unpaid',
@@ -363,6 +370,7 @@ class FirestoreService {
 
     final docRef = await _enquiriesCollection.add(enquiryData);
     return docRef.id;
+    });
   }
 
   /// Retrieves a real-time stream of all enquiries.
@@ -449,7 +457,7 @@ class FirestoreService {
     DateTime? dateTo,
   }) {
     Query query = _enquiriesCollection;
-    
+
     // Apply filters
     if (status != null) {
       query = query.where('eventStatus', isEqualTo: status);
@@ -466,7 +474,7 @@ class FirestoreService {
     if (dateTo != null) {
       query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
     }
-    
+
     return query.orderBy('createdAt', descending: true).snapshots();
   }
 
@@ -501,7 +509,7 @@ class FirestoreService {
     String? searchTerm,
   }) {
     Query query = _enquiriesCollection;
-    
+
     // Apply server-side filters
     if (statuses != null && statuses.isNotEmpty) {
       query = query.where('eventStatus', whereIn: statuses);
@@ -518,7 +526,7 @@ class FirestoreService {
     if (dateTo != null) {
       query = query.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
     }
-    
+
     return query.orderBy('createdAt', descending: true).snapshots();
   }
 
@@ -559,7 +567,7 @@ class FirestoreService {
     // Get filtered enquiries
     final query = _enquiriesCollection;
     Query filteredQuery = query;
-    
+
     // Apply server-side filters
     if (statuses != null && statuses.isNotEmpty) {
       filteredQuery = filteredQuery.where('eventStatus', whereIn: statuses);
@@ -571,24 +579,32 @@ class FirestoreService {
       filteredQuery = filteredQuery.where('eventType', isEqualTo: eventType);
     }
     if (dateFrom != null) {
-      filteredQuery = filteredQuery.where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateFrom));
+      filteredQuery = filteredQuery.where(
+        'createdAt',
+        isGreaterThanOrEqualTo: Timestamp.fromDate(dateFrom),
+      );
     }
     if (dateTo != null) {
-      filteredQuery = filteredQuery.where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(dateTo));
+      filteredQuery = filteredQuery.where(
+        'createdAt',
+        isLessThanOrEqualTo: Timestamp.fromDate(dateTo),
+      );
     }
-    
+
     final snapshot = await filteredQuery.orderBy('createdAt', descending: true).get();
-    
+
     // Build CSV content
     final csvBuffer = StringBuffer();
-    
+
     // CSV Header
-    csvBuffer.writeln('ID,Customer Name,Customer Email,Customer Phone,Event Type,Event Date,Event Location,Guest Count,Budget Range,Status,Assigned To,Priority,Source,Total Cost,Advance Paid,Payment Status,Created By,Created At,Updated At,Description');
-    
+    csvBuffer.writeln(
+      'ID,Customer Name,Customer Email,Customer Phone,Event Type,Event Date,Event Location,Guest Count,Budget Range,Status,Assigned To,Priority,Source,Total Cost,Advance Paid,Payment Status,Created By,Created At,Updated At,Description',
+    );
+
     // CSV Data
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      
+
       // Apply client-side text search if specified
       if (searchTerm != null && searchTerm.isNotEmpty) {
         final textIndex = data['textIndex'] as String? ?? '';
@@ -596,47 +612,49 @@ class FirestoreService {
           continue;
         }
       }
-      
+
       // Format timestamps to ISO 8601
       final createdAt = data['createdAt'] as Timestamp?;
       final updatedAt = data['updatedAt'] as Timestamp?;
       final eventDate = data['eventDate'] as Timestamp?;
-      
+
       final createdAtIso = createdAt?.toDate().toIso8601String() ?? '';
       final updatedAtIso = updatedAt?.toDate().toIso8601String() ?? '';
       final eventDateIso = eventDate?.toDate().toIso8601String() ?? '';
-      
+
       // Escape CSV values (handle commas, quotes, newlines)
       String escapeCsv(String? value) {
         if (value == null) return '';
         final escaped = value.replaceAll('"', '""');
         return '"$escaped"';
       }
-      
-      csvBuffer.writeln([
-        doc.id,
-        escapeCsv(data['customerName']?.toString()),
-        escapeCsv(data['customerEmail']?.toString()),
-        escapeCsv(data['customerPhone']?.toString()),
-        escapeCsv(data['eventType']?.toString()),
-        eventDateIso,
-        escapeCsv(data['eventLocation']?.toString()),
-        data['guestCount']?.toString() ?? '',
-        escapeCsv(data['budgetRange']?.toString()),
-        escapeCsv(data['eventStatus']?.toString()),
-        escapeCsv(data['assigneeName']?.toString() ?? data['assignedTo']?.toString()),
-        escapeCsv(data['priority']?.toString()),
-        escapeCsv(data['source']?.toString()),
-        data['totalCost']?.toString() ?? '',
-        data['advancePaid']?.toString() ?? '',
-        escapeCsv(data['paymentStatus']?.toString()),
-        escapeCsv(data['createdByName']?.toString() ?? data['createdBy']?.toString()),
-        createdAtIso,
-        updatedAtIso,
-        escapeCsv(data['description']?.toString()),
-      ].join(','));
+
+      csvBuffer.writeln(
+        [
+          doc.id,
+          escapeCsv(data['customerName']?.toString()),
+          escapeCsv(data['customerEmail']?.toString()),
+          escapeCsv(data['customerPhone']?.toString()),
+          escapeCsv(data['eventType']?.toString()),
+          eventDateIso,
+          escapeCsv(data['eventLocation']?.toString()),
+          data['guestCount']?.toString() ?? '',
+          escapeCsv(data['budgetRange']?.toString()),
+          escapeCsv(data['eventStatus']?.toString()),
+          escapeCsv(data['assigneeName']?.toString() ?? data['assignedTo']?.toString()),
+          escapeCsv(data['priority']?.toString()),
+          escapeCsv(data['source']?.toString()),
+          data['totalCost']?.toString() ?? '',
+          data['advancePaid']?.toString() ?? '',
+          escapeCsv(data['paymentStatus']?.toString()),
+          escapeCsv(data['createdByName']?.toString() ?? data['createdBy']?.toString()),
+          createdAtIso,
+          updatedAtIso,
+          escapeCsv(data['description']?.toString()),
+        ].join(','),
+      );
     }
-    
+
     return csvBuffer.toString();
   }
 
@@ -689,8 +707,10 @@ class FirestoreService {
   /// });
   /// ```
   Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
-    data['updatedAt'] = FieldValue.serverTimestamp();
-    await _enquiriesCollection.doc(enquiryId).update(data);
+    return await monitorOperation('updateEnquiry', () async {
+      data['updatedAt'] = FieldValue.serverTimestamp();
+      await _enquiriesCollection.doc(enquiryId).update(data);
+    });
   }
 
   /// Deletes an enquiry document from Firestore.
@@ -891,35 +911,6 @@ class FirestoreService {
     }
 
     return stats;
-  }
-
-  /// Searches enquiries by customer name.
-  ///
-  /// This method performs a prefix search on customer names to find
-  /// enquiries that match the provided search term. The search is
-  /// case-sensitive and uses Firestore's string comparison operators.
-  ///
-  /// Parameters:
-  /// - [searchTerm]: The search term to match against customer names
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits matching enquiries.
-  ///
-  /// Example:
-  /// ```dart
-  /// final searchResults = firestoreService.searchEnquiries('John');
-  /// searchResults.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Found: ${data['customerName']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> searchEnquiries(String searchTerm) {
-    return _enquiriesCollection
-        .where('customerName', isGreaterThanOrEqualTo: searchTerm)
-        .where('customerName', isLessThan: '$searchTerm\uf8ff')
-        .orderBy('customerName')
-        .snapshots();
   }
 
   /// Retrieves a real-time stream of all active users.
