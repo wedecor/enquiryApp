@@ -344,13 +344,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   List<String> _getUpdatedFields() {
     final updatedFields = <String>[];
     
-    if (_customerNameController.text.isNotEmpty) updatedFields.add('customerName');
-    if (_customerPhoneController.text.isNotEmpty) updatedFields.add('customerPhone');
-    if (_customerEmailController.text.isNotEmpty) updatedFields.add('customerEmail');
-    if (_eventTypeController.text.isNotEmpty) updatedFields.add('eventType');
-    if (_eventDateController.text.isNotEmpty) updatedFields.add('eventDate');
-    if (_eventLocationController.text.isNotEmpty) updatedFields.add('eventLocation');
-    if (_descriptionController.text.isNotEmpty) updatedFields.add('description');
+    if (_nameController.text.isNotEmpty) updatedFields.add('customerName');
+    if (_phoneController.text.isNotEmpty) updatedFields.add('customerPhone');
+    if (_locationController.text.isNotEmpty) updatedFields.add('eventLocation');
+    if (_notesController.text.isNotEmpty) updatedFields.add('description');
+    if (_totalCostController.text.isNotEmpty) updatedFields.add('totalCost');
+    if (_advancePaidController.text.isNotEmpty) updatedFields.add('advancePaid');
     if (_budgetController.text.isNotEmpty) updatedFields.add('budgetRange');
     if (_selectedImages.isNotEmpty) updatedFields.add('imageUrls');
     
