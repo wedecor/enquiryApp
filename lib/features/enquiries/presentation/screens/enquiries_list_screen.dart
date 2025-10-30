@@ -98,7 +98,10 @@ class EnquiriesListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(context, enquiryData['eventStatus'] as String?),
+                        backgroundColor: _getStatusColor(
+                          context,
+                          enquiryData['eventStatus'] as String?,
+                        ),
                         child: Text(
                           _getStatusInitial(enquiryData['eventStatus'] as String?),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -119,7 +122,10 @@ class EnquiriesListScreen extends ConsumerWidget {
                           if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                           ],
                         ],

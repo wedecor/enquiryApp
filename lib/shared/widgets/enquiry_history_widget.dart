@@ -123,7 +123,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(_getFieldIcon(fieldChanged), color: _getFieldColor(context, fieldChanged), size: 20),
+                Icon(
+                  _getFieldIcon(fieldChanged),
+                  color: _getFieldColor(context, fieldChanged),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

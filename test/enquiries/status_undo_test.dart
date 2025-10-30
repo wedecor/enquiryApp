@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:we_decor_enquiries/lib/features/enquiries/presentation/widgets/status_inline_control.dart' as wid;
+import 'package:we_decor_enquiries/lib/features/enquiries/presentation/widgets/status_inline_control.dart'
+    as wid;
 import 'package:we_decor_enquiries/lib/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/lib/features/enquiries/domain/enquiry.dart';
 import 'package:we_decor_enquiries/lib/core/auth/current_user_role_provider.dart';
@@ -26,14 +27,18 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          enquiryRepositoryProvider.overrideWithValue(repo),
-          currentUserRoleProvider.overrideWithValue('staff'),
-          currentUserUidProvider.overrideWithValue('staff2'),
-        ],
-        child: MaterialApp(home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry))),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            enquiryRepositoryProvider.overrideWithValue(repo),
+            currentUserRoleProvider.overrideWithValue('staff'),
+            currentUserUidProvider.overrideWithValue('staff2'),
+          ],
+          child: MaterialApp(
+            home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry)),
+          ),
+        ),
+      );
 
       final dd = find.byKey(const Key('statusDropdown'));
       expect(dd, findsOneWidget);
@@ -43,8 +48,14 @@ void main() {
 
     testWidgets('assigned staff: change + Undo => two writes', (tester) async {
       final repo = MockEnquiryRepository();
-      when(() => repo.updateStatus(id: any(named: 'id'), nextStatus: any(named: 'nextStatus'), userId: any(named: 'userId'), prevStatus: any(named: 'prevStatus')))
-          .thenAnswer((_) async {});
+      when(
+        () => repo.updateStatus(
+          id: any(named: 'id'),
+          nextStatus: any(named: 'nextStatus'),
+          userId: any(named: 'userId'),
+          prevStatus: any(named: 'prevStatus'),
+        ),
+      ).thenAnswer((_) async {});
 
       final enquiry = Enquiry(
         id: 'E2',
@@ -56,14 +67,18 @@ void main() {
         createdAt: DateTime.now(),
       );
 
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          enquiryRepositoryProvider.overrideWithValue(repo),
-          currentUserRoleProvider.overrideWithValue('staff'),
-          currentUserUidProvider.overrideWithValue('staff1'),
-        ],
-        child: MaterialApp(home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry))),
-      ));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            enquiryRepositoryProvider.overrideWithValue(repo),
+            currentUserRoleProvider.overrideWithValue('staff'),
+            currentUserUidProvider.overrideWithValue('staff1'),
+          ],
+          child: MaterialApp(
+            home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry)),
+          ),
+        ),
+      );
 
       await tester.tap(find.byKey(const Key('statusDropdown')));
       await tester.pumpAndSettle();
@@ -71,15 +86,27 @@ void main() {
       await tester.tap(find.text('quoted').last);
       await tester.pump();
 
-      verify(() => repo.updateStatus(id: 'E2', nextStatus: 'quoted', userId: 'staff1', prevStatus: 'contacted')).called(1);
+      verify(
+        () => repo.updateStatus(
+          id: 'E2',
+          nextStatus: 'quoted',
+          userId: 'staff1',
+          prevStatus: 'contacted',
+        ),
+      ).called(1);
 
       if (find.text('Undo').evaluate().isNotEmpty) {
         await tester.tap(find.text('Undo'));
         await tester.pump();
-        verify(() => repo.updateStatus(id: 'E2', nextStatus: 'contacted', userId: 'staff1', prevStatus: 'quoted')).called(1);
+        verify(
+          () => repo.updateStatus(
+            id: 'E2',
+            nextStatus: 'contacted',
+            userId: 'staff1',
+            prevStatus: 'quoted',
+          ),
+        ).called(1);
       }
     });
   });
 }
-
-
