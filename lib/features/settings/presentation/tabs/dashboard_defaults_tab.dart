@@ -108,7 +108,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
   Widget _buildStatusTabsSection(BuildContext context) {
     final availableStatuses = [
       ('new', 'New', 'Newly created enquiries'),
-      ('in_progress', 'In Progress', 'Currently being worked on'),
+      ('in_talks', 'In Talks', 'Currently being discussed with customer'),
       ('quote_sent', 'Quote Sent', 'Quotes sent to customers'),
       ('approved', 'Approved', 'Approved by customers'),
       ('completed', 'Completed', 'Successfully completed'),
@@ -117,7 +117,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
     ];
 
     final currentTabs =
-        _currentSettings?.dashboard.statusTabs ?? ['new', 'in_progress', 'quote_sent'];
+        _currentSettings?.dashboard.statusTabs ?? ['new', 'in_talks', 'quote_sent'];
 
     return Card(
       child: Padding(

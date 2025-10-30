@@ -14,8 +14,8 @@ class StatusInlineControl extends ConsumerWidget {
     'new': ['contacted', 'cancelled'],
     'contacted': ['quoted', 'cancelled'],
     'quoted': ['confirmed', 'cancelled'],
-    'confirmed': ['in_progress', 'cancelled'],
-    'in_progress': ['completed', 'cancelled'],
+    'confirmed': ['in_talks', 'cancelled'],
+    'in_talks': ['completed', 'cancelled'],
     'completed': [],
     'cancelled': [],
   };

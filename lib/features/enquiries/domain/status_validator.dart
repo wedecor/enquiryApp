@@ -8,8 +8,8 @@ bool canStaffTransition(String from, String to) {
     case 'quoted':
       return to == 'confirmed' || to == 'cancelled';
     case 'confirmed':
-      return to == 'in_progress' || to == 'cancelled';
-    case 'in_progress':
+      return to == 'in_talks' || to == 'cancelled';
+    case 'in_talks':
       return to == 'completed' || to == 'cancelled';
     default:
       return false; // completed/cancelled are terminal

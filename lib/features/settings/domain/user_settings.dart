@@ -40,7 +40,7 @@ extension UserSettingsFirestore on UserSettings {
 class DashboardSettings with _$DashboardSettings {
   const factory DashboardSettings({
     @Default('30d') String dateRange,
-    @Default(['new', 'in_progress', 'quote_sent']) List<String> statusTabs,
+    @Default(['new', 'in_talks', 'quote_sent']) List<String> statusTabs,
     @Default([
       ColumnSettings(id: 'customer', visible: true, order: 0),
       ColumnSettings(id: 'eventType', visible: true, order: 1),

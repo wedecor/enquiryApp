@@ -100,7 +100,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         return [
           {'label': 'New', 'value': 'new'},
           {'label': 'Contacted', 'value': 'contacted'},
-          {'label': 'In Progress', 'value': 'in_progress'},
+          {'label': 'In Talks', 'value': 'in_talks'},
           {'label': 'Quote Sent', 'value': 'quote_sent'},
           {'label': 'Approved', 'value': 'approved'},
           {'label': 'Scheduled', 'value': 'scheduled'},

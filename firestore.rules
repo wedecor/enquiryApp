@@ -1,31 +1,5 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{db}/documents {
-    function isAdmin() { return request.auth.token.role == 'admin'; }
-    function isStaff() { return request.auth.token.role == 'staff'; }
-    function isAssignee(resource) { return resource.data.assignedTo == request.auth.uid || resource.data.assignee == request.auth.uid; }
-
-    match /enquiries/{id} {
-      // global read for signed-in users
-      allow read: if request.auth != null;
-
-      // staff can ONLY update status fields — and ONLY if assigned
-      allow update: if isStaff()
-        && isAssignee(resource)
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status','eventStatus','statusUpdatedAt','statusUpdatedBy','updatedAt']);
-
-      // admins full control
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /users/{uid} {
-      allow read: if request.auth != null && (isAdmin() || request.auth.uid == uid);
-      allow update: if isAdmin();
-    }
-  }
-}
-rules_version = '2';
-service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() { return request.auth != null; }

@@ -30,7 +30,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   final List<Map<String, String>> _statusTabs = [
     {'label': 'All', 'value': 'All'},
     {'label': 'New', 'value': 'new'},
-    {'label': 'In Progress', 'value': 'in_progress'},
+    {'label': 'In Talks', 'value': 'in_talks'},
     {'label': 'Quote Sent', 'value': 'quote_sent'},
     {'label': 'Confirmed', 'value': 'confirmed'},
     {'label': 'Completed', 'value': 'completed'},
@@ -204,7 +204,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_progress';
+          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_talks';
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -228,7 +228,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'In Progress',
+                'In Talks',
                 inProgressEnquiries.toString(),
                 Icons.pending,
                 Theme.of(context).colorScheme.primary,
@@ -368,6 +368,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       ),
                     ),
                     const SizedBox(width: 8),
+                    if ((enquiryData['eventStatus'] as String?)?.toLowerCase() != 'confirmed') ...[
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                        tooltip: 'Delete Enquiry',
+                        onPressed: () {
+                          _confirmAndDeleteEnquiry(
+                            enquiryId,
+                            (enquiryData['customerName'] as String?) ?? 'this enquiry',
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                     const Icon(Icons.chevron_right),
                   ],
                 ),
@@ -386,6 +399,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  Future<void> _confirmAndDeleteEnquiry(String enquiryId, String customerName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Enquiry'),
+        content: Text('Are you sure you want to delete "$customerName"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Enquiry deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+      }
+    }
+  }
+
   Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
     Query query = FirebaseFirestore.instance.collection('enquiries');
 
@@ -399,7 +445,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       query = query.where('eventStatus', isEqualTo: status);
     }
 
-    return query.orderBy('createdAt', descending: true).snapshots();
+    // Sort: show oldest first for 'new' tab; otherwise newest first
+    final bool descending = (status?.toLowerCase() == 'new') ? false : true;
+    return query.orderBy('createdAt', descending: descending).snapshots();
   }
 
   String _formatDate(dynamic date) {
@@ -424,7 +472,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     switch (status?.toLowerCase()) {
       case 'new':
         return Colors.orange;
-      case 'in_progress':
+      case 'in_talks':
         return Theme.of(context).colorScheme.primary;
       case 'quote_sent':
         return Theme.of(context).colorScheme.primary;
