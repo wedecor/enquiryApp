@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/services/audit_service.dart';
@@ -219,9 +220,6 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _createEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
 
-    // TODO: Upload images to Firebase Storage and get URLs
-    // For now, we'll skip image upload
-
     final enquiryId = await firestoreService.createEnquiry(
       customerName: _nameController.text.trim(),
       customerEmail: '', // TODO: Add email field if needed
@@ -240,6 +238,20 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       paymentStatus: _selectedPaymentStatus,
       assignedTo: _selectedAssignedTo,
     );
+
+    // Upload reference images if any and save URLs
+    if (_selectedImages.isNotEmpty) {
+      try {
+        final urls = await _uploadImages(enquiryId);
+        if (urls.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).update({
+            'images': FieldValue.arrayUnion(urls),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': currentUser.uid,
+          });
+        }
+      } catch (_) {}
+    }
 
     // Send notification for new enquiry creation
     final notificationService = NotificationService();
@@ -312,6 +324,22 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       ).showSnackBar(const SnackBar(content: Text('Enquiry updated successfully!')));
       Navigator.of(context).pop();
     }
+  }
+
+  Future<List<String>> _uploadImages(String enquiryId) async {
+    final storage = FirebaseStorage.instance;
+    final List<String> downloadUrls = [];
+
+    for (final xfile in _selectedImages) {
+      final file = File(xfile.path);
+      final fileName = xfile.name;
+      final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+      downloadUrls.add(url);
+    }
+
+    return downloadUrls;
   }
 
   @override
@@ -416,38 +444,24 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Event Type Field - SIMPLIFIED FOR TESTING
-              Builder(
-                builder: (context) {
-                  print('🔍 EnquiryFormScreen: Event type value: "$_selectedEventType"');
-                  return DropdownButtonFormField<String>(
-                    initialValue: _selectedEventType,
-                    decoration: const InputDecoration(
-                      labelText: 'Event Type *',
-                      prefixIcon: Icon(Icons.event),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'wedding', child: Text('Wedding')),
-                      DropdownMenuItem(value: 'birthday', child: Text('Birthday')),
-                      DropdownMenuItem(value: 'corporate_event', child: Text('Corporate Event')),
-                      DropdownMenuItem(value: 'haldi', child: Text('Haldi')),
-                      DropdownMenuItem(value: 'anniversary', child: Text('Anniversary')),
-                      DropdownMenuItem(value: 'others', child: Text('Others')),
-                    ],
-                    onChanged: (value) {
-                      print('🔍 EnquiryFormScreen: Event type changed to: "$value"');
-                      setState(() {
-                        _selectedEventType = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please select an event type';
-                      }
-                      return null;
-                    },
-                  );
+              // Event Type Field - Firestore-backed via StatusDropdown
+              StatusDropdown(
+                collectionName: 'event_types',
+                value: _selectedEventType,
+                label: 'Event Type',
+                required: true,
+                onChanged: (value) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      _selectedEventType = value;
+                    });
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please select an event type';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),

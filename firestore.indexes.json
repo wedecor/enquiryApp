@@ -1,118 +1,69 @@
 {
   "indexes": [
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"status","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"assignedTo","order":"ASCENDING"}, {"fieldPath":"status","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"eventType","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"eventDate","order":"DESCENDING"} ] },
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"phoneNormalized","order":"ASCENDING"}, {"fieldPath":"createdAt","order":"DESCENDING"} ] },
-    { "collectionGroup": "enquiries", "queryScope": "COLLECTION",
-      "fields": [ {"fieldPath":"customerNameLower","order":"ASCENDING"} ] }
-  ],
-  "fieldOverrides": []
-}
-{
-  "indexes": [
     {
       "collectionGroup": "items",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "active",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "order",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "active", "order": "ASCENDING" },
+        { "fieldPath": "order", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "eventStatus",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "assignedTo",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "createdBy",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "history",
+      "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "enquiry_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "history",
+      "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "user_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "history",
+      "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "field_changed",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ],

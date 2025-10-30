@@ -39,8 +39,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   // Allowed status transitions for staff users
   static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_progress', 'cancelled'],
-    'in_progress': ['quote_sent', 'cancelled'],
+    'new': ['in_talks', 'cancelled'],
+    'in_talks': ['quote_sent', 'cancelled'],
     'quote_sent': ['confirmed', 'closed_lost'],
     'confirmed': ['scheduled', 'cancelled'],
     'scheduled': ['completed', 'cancelled'],
@@ -70,6 +70,15 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 );
               },
               tooltip: 'Edit Enquiry',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _isUpdatingStatus
+                  ? null
+                  : () async {
+                      await _confirmAndDelete(context);
+                    },
+              tooltip: 'Delete Enquiry',
             ),
           ],
         ],
@@ -185,6 +194,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         _buildInfoRow('Source', (enquiryData['source'] as String?) ?? 'N/A'),
                       ],
                     ),
+
+                    // Reference Images (Admins and Assignee)
+                    if (_canViewImages(userRole, enquiryData, user.uid))
+                      _buildImagesSection(enquiryData),
 
                     // Assignment Information (Admin Only)
                     if (userRole == UserRole.admin) ...[
@@ -355,7 +368,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           // Fallback to default statuses
           statuses = [
             {'value': 'new', 'label': 'New', 'order': 1},
-            {'value': 'in_progress', 'label': 'In Progress', 'order': 2},
+            {'value': 'in_talks', 'label': 'In Talks', 'order': 2},
             {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3},
             {'value': 'approved', 'label': 'Approved', 'order': 4},
             {'value': 'scheduled', 'label': 'Scheduled', 'order': 5},
@@ -589,13 +602,132 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     return text[0].toUpperCase() + text.substring(1).toLowerCase();
   }
 
+  bool _canViewImages(UserRole? role, Map<String, dynamic> data, String meUid) {
+    if (role == UserRole.admin) return true;
+    final assignedTo = data['assignedTo'] as String?;
+    return assignedTo != null && assignedTo == meUid;
+  }
+
+  Widget _buildImagesSection(Map<String, dynamic> enquiryData) {
+    final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
+    if (images.isEmpty) {
+      return _buildSection(title: 'Reference Images', children: const [Text('No images attached')]);
+    }
+
+    return _buildSection(
+      title: 'Reference Images',
+      children: [
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: images.length,
+          itemBuilder: (context, index) {
+            final url = images[index] as String?;
+            if (url == null || url.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return GestureDetector(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    child: InteractiveViewer(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.network(url, fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(url, fit: BoxFit.cover),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Enquiry'),
+        content: const Text(
+          'Are you sure you want to delete this enquiry? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() {
+        _isUpdatingStatus = true;
+      });
+
+      // Record audit trail before deletion
+      final auditService = AuditService();
+      await auditService.recordChange(
+        enquiryId: widget.enquiryId,
+        fieldChanged: 'deleted',
+        oldValue: 'exists',
+        newValue: 'deleted',
+      );
+
+      // Delete the enquiry document
+      await FirebaseFirestore.instance
+          .collection('enquiries')
+          .doc(widget.enquiryId)
+          .delete();
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enquiry deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete enquiry: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingStatus = false;
+        });
+      }
+    }
+  }
+
   Color _getStatusColor(String? status) {
     final colorScheme = Theme.of(context).colorScheme;
 
     switch (status) {
       case 'new':
         return const Color(0xFFFF9800); // Orange
-      case 'in_progress':
+      case 'in_talks':
         return colorScheme.primary;
       case 'quote_sent':
         return const Color(0xFF009688); // Teal
