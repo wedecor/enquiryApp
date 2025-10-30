@@ -66,7 +66,9 @@ class Enquiry with _$Enquiry {
       priority: data['priority'] as String?,
       source: data['source'] as String?,
       notes: data['notes'] as String?,
-      customerNameLower: (data['customerNameLower'] as String?) ?? (data['customerName'] as String? ?? '').toLowerCase(),
+      customerNameLower:
+          (data['customerNameLower'] as String?) ??
+          (data['customerName'] as String? ?? '').toLowerCase(),
       phoneNormalized: data['phoneNormalized'] as String?,
       assigneeName: data['assigneeName'] as String?,
       createdByName: data['createdByName'] as String?,

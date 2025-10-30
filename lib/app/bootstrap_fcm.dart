@@ -12,5 +12,3 @@ Future<void> onLogoutUnsubscribe(String uid, {bool isAdmin = false}) async {
   await fcm.unsubscribeFromTopic('user_$uid');
   if (isAdmin) await fcm.unsubscribeFromTopic('admins');
 }
-
-

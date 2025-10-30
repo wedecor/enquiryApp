@@ -116,8 +116,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
       ('closed_lost', 'Closed Lost', 'Lost opportunities'),
     ];
 
-    final currentTabs =
-        _currentSettings?.dashboard.statusTabs ?? ['new', 'in_talks', 'quote_sent'];
+    final currentTabs = _currentSettings?.dashboard.statusTabs ?? ['new', 'in_talks', 'quote_sent'];
 
     return Card(
       child: Padding(

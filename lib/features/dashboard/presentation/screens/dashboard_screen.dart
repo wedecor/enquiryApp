@@ -406,7 +406,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         title: const Text('Delete Enquiry'),
         content: Text('Are you sure you want to delete "$customerName"? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.of(context).pop(true),
@@ -421,13 +424,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     try {
       await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).delete();
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Enquiry deleted')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Enquiry deleted')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
       }
     }
   }
@@ -504,10 +507,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return FutureBuilder<String>(
       future: _getUserDisplayName(assignedUserId),
       builder: (context, snapshot) {
-        final textStyle = TextStyle(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.primary,
-        );
+        final textStyle = TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary);
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(

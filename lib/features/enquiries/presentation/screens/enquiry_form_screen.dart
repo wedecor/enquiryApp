@@ -770,16 +770,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
-      child: Builder(builder: (context) {
-        return Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }),
+      child: Builder(
+        builder: (context) {
+          return Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        },
+      ),
     );
   }
 }

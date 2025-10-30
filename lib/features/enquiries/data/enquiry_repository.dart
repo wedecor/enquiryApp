@@ -88,7 +88,12 @@ class EnquiryRepository {
       'customerNameLower': name.toLowerCase(),
       'phoneNormalized': normalizePhone(phone),
       'customerEmail': email,
-      'textIndex': makeTextIndex(name: name, phone: phone, email: email, notes: data['notes'] as String?),
+      'textIndex': makeTextIndex(
+        name: name,
+        phone: phone,
+        email: email,
+        notes: data['notes'] as String?,
+      ),
       'createdBy': createdBy,
       'createdByName': createdByName,
       'createdAt': FieldValue.serverTimestamp(),

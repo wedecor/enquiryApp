@@ -32,7 +32,10 @@ class StatusInlineControl extends ConsumerWidget {
     final canChange = isAdmin || (isStaff && isAssignee);
 
     final current = enquiry.status;
-    final options = <String>{current, ...(_allowedTransitions[current] ?? const <String>[])}.toList();
+    final options = <String>{
+      current,
+      ...(_allowedTransitions[current] ?? const <String>[]),
+    }.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,15 +43,18 @@ class StatusInlineControl extends ConsumerWidget {
         DropdownButton<String>(
           key: const Key('statusDropdown'),
           value: current,
-          items: options
-              .map((s) => DropdownMenuItem<String>(value: s, child: Text(s)))
-              .toList(),
+          items: options.map((s) => DropdownMenuItem<String>(value: s, child: Text(s))).toList(),
           onChanged: canChange
               ? (next) async {
                   if (next == null || next == current) return;
                   final prev = current;
                   final uid = meUid ?? '';
-                  await repo.updateStatus(id: enquiry.id, nextStatus: next, userId: uid, prevStatus: prev);
+                  await repo.updateStatus(
+                    id: enquiry.id,
+                    nextStatus: next,
+                    userId: uid,
+                    prevStatus: prev,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -56,7 +62,12 @@ class StatusInlineControl extends ConsumerWidget {
                         action: SnackBarAction(
                           label: 'Undo',
                           onPressed: () async {
-                            await repo.updateStatus(id: enquiry.id, nextStatus: prev, userId: uid, prevStatus: next);
+                            await repo.updateStatus(
+                              id: enquiry.id,
+                              nextStatus: prev,
+                              userId: uid,
+                              prevStatus: next,
+                            );
                           },
                         ),
                       ),
@@ -74,5 +85,3 @@ class StatusInlineControl extends ConsumerWidget {
     );
   }
 }
-
-

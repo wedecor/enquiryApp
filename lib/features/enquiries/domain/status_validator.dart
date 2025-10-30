@@ -15,5 +15,3 @@ bool canStaffTransition(String from, String to) {
       return false; // completed/cancelled are terminal
   }
 }
-
-
