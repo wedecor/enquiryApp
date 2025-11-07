@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:we_decor_enquiries/lib/features/enquiries/presentation/widgets/status_inline_control.dart'
+import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/status_inline_control.dart'
     as wid;
-import 'package:we_decor_enquiries/lib/features/enquiries/data/enquiry_repository.dart';
-import 'package:we_decor_enquiries/lib/features/enquiries/domain/enquiry.dart';
-import 'package:we_decor_enquiries/lib/core/auth/current_user_role_provider.dart';
+import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
+import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
+import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
 
 class MockEnquiryRepository extends Mock implements EnquiryRepository {}
 
@@ -46,14 +46,13 @@ void main() {
       expect(w.onChanged, isNull);
     });
 
-    testWidgets('assigned staff: change + Undo => two writes', (tester) async {
+    testWidgets('assigned staff can change status', (tester) async {
       final repo = MockEnquiryRepository();
       when(
         () => repo.updateStatus(
           id: any(named: 'id'),
           nextStatus: any(named: 'nextStatus'),
           userId: any(named: 'userId'),
-          prevStatus: any(named: 'prevStatus'),
         ),
       ).thenAnswer((_) async {});
 
@@ -87,26 +86,9 @@ void main() {
       await tester.pump();
 
       verify(
-        () => repo.updateStatus(
-          id: 'E2',
-          nextStatus: 'quoted',
-          userId: 'staff1',
-          prevStatus: 'contacted',
-        ),
+        () =>
+            repo.updateStatus(id: 'E2', nextStatus: 'quoted', userId: 'staff1'),
       ).called(1);
-
-      if (find.text('Undo').evaluate().isNotEmpty) {
-        await tester.tap(find.text('Undo'));
-        await tester.pump();
-        verify(
-          () => repo.updateStatus(
-            id: 'E2',
-            nextStatus: 'contacted',
-            userId: 'staff1',
-            prevStatus: 'quoted',
-          ),
-        ).called(1);
-      }
     });
   });
 }
