@@ -1,84 +1,139 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/features/admin/analytics/domain/analytics_models.dart';
+
+import '../../features/admin/analytics/domain/analytics_models.dart';
+import '../auth/role_guards.dart';
 
 /// Utility class for exporting data to CSV format
 class CsvExport {
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
-  /// Export enquiries to CSV
-  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries) async {
+  /// Export enquiries to CSV with role-based filtering and column restrictions
+  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries, WidgetRef ref) async {
     if (enquiries.isEmpty) {
       throw Exception('No data to export');
     }
 
-    // Define CSV headers
-    final headers = [
-      'ID',
-      'Customer Name',
-      'Customer Email',
-      'Customer Phone',
-      'Event Type',
-      'Event Date',
-      'Event Location',
-      'Guest Count',
-      'Budget Range',
-      'Description',
-      'Status',
-      'Payment Status',
-      'Total Cost',
-      'Advance Paid',
-      'Assigned To',
-      'Priority',
-      'Source',
-      'Staff Notes',
-      'Created At',
-      'Created By',
-      'Updated At',
-    ];
+    final isAdminUser = isAdmin(ref);
+
+    // Log the export action
+    await logAdminAction(ref, 'csv_export_enquiries', {
+      'recordCount': enquiries.length,
+      'isAdmin': isAdminUser,
+      'exportType': isAdminUser ? 'full_access' : 'staff_restricted',
+    });
+
+    // Define CSV headers based on role
+    final List<String> headers;
+    if (isAdminUser) {
+      // Admin gets all fields including financial data
+      headers = [
+        'ID',
+        'Customer Name',
+        'Customer Email',
+        'Customer Phone',
+        'Event Type',
+        'Event Date',
+        'Event Location',
+        'Guest Count',
+        'Budget Range',
+        'Description',
+        'Status',
+        'Payment Status',
+        'Total Cost',
+        'Advance Paid',
+        'Assigned To',
+        'Priority',
+        'Source',
+        'Staff Notes',
+        'Created At',
+        'Created By',
+        'Updated At',
+      ];
+    } else {
+      // Staff gets limited fields (no financial data)
+      headers = [
+        'ID',
+        'Customer Name',
+        'Customer Phone',
+        'Event Type',
+        'Event Date',
+        'Event Location',
+        'Guest Count',
+        'Description',
+        'Status',
+        'Priority',
+        'Source',
+        'Staff Notes',
+        'Created At',
+      ];
+    }
 
     // Convert enquiries to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final enquiry in enquiries) {
-      rows.add([
-        enquiry['id']?.toString() ?? '',
-        enquiry['customerName']?.toString() ?? '',
-        enquiry['customerEmail']?.toString() ?? '',
-        enquiry['customerPhone']?.toString() ?? '',
-        enquiry['eventType']?.toString() ?? '',
-        _formatTimestamp(enquiry['eventDate']),
-        enquiry['eventLocation']?.toString() ?? '',
-        enquiry['guestCount']?.toString() ?? '',
-        enquiry['budgetRange']?.toString() ?? '',
-        enquiry['description']?.toString() ?? '',
-        enquiry['eventStatus']?.toString() ?? '',
-        enquiry['paymentStatus']?.toString() ?? '',
-        enquiry['totalCost']?.toString() ?? '',
-        enquiry['advancePaid']?.toString() ?? '',
-        enquiry['assignedTo']?.toString() ?? '',
-        enquiry['priority']?.toString() ?? '',
-        enquiry['source']?.toString() ?? '',
-        enquiry['staffNotes']?.toString() ?? '',
-        _formatTimestamp(enquiry['createdAt']),
-        enquiry['createdBy']?.toString() ?? '',
-        _formatTimestamp(enquiry['updatedAt']),
-      ]);
+      if (isAdminUser) {
+        // Admin export: all fields including financial data
+        rows.add([
+          enquiry['id']?.toString() ?? '',
+          enquiry['customerName']?.toString() ?? '',
+          enquiry['customerEmail']?.toString() ?? '',
+          enquiry['customerPhone']?.toString() ?? '',
+          enquiry['eventType']?.toString() ?? '',
+          _formatTimestamp(enquiry['eventDate']),
+          enquiry['eventLocation']?.toString() ?? '',
+          enquiry['guestCount']?.toString() ?? '',
+          enquiry['budgetRange']?.toString() ?? '',
+          enquiry['description']?.toString() ?? '',
+          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['paymentStatus']?.toString() ?? '',
+          enquiry['totalCost']?.toString() ?? '',
+          enquiry['advancePaid']?.toString() ?? '',
+          enquiry['assignedTo']?.toString() ?? '',
+          enquiry['priority']?.toString() ?? '',
+          enquiry['source']?.toString() ?? '',
+          enquiry['staffNotes']?.toString() ?? '',
+          _formatTimestamp(enquiry['createdAt']),
+          enquiry['createdBy']?.toString() ?? '',
+          _formatTimestamp(enquiry['updatedAt']),
+        ]);
+      } else {
+        // Staff export: limited fields (no financial data, customer email, budget)
+        rows.add([
+          enquiry['id']?.toString() ?? '',
+          enquiry['customerName']?.toString() ?? '',
+          enquiry['customerPhone']?.toString() ?? '',
+          enquiry['eventType']?.toString() ?? '',
+          _formatTimestamp(enquiry['eventDate']),
+          enquiry['eventLocation']?.toString() ?? '',
+          enquiry['guestCount']?.toString() ?? '',
+          enquiry['description']?.toString() ?? '',
+          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['priority']?.toString() ?? '',
+          enquiry['source']?.toString() ?? '',
+          enquiry['staffNotes']?.toString() ?? '',
+          _formatTimestamp(enquiry['createdAt']),
+        ]);
+      }
     }
 
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
-    // Generate filename with timestamp
+
+    // Generate filename with timestamp and role indicator
     final timestamp = _fileNameDateFormat.format(DateTime.now());
-    final filename = 'enquiries_$timestamp.csv';
+    final rolePrefix = isAdminUser ? 'all' : 'assigned';
+    final filename = 'enquiries_${rolePrefix}_$timestamp.csv';
 
     // Save file
     await FileSaver.instance.saveFile(
@@ -109,7 +164,7 @@ class CsvExport {
 
     // Convert enquiries to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final enquiry in enquiries) {
       rows.add([
         enquiry.id,
@@ -126,7 +181,7 @@ class CsvExport {
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'recent_enquiries_$timestamp.csv';
@@ -153,17 +208,44 @@ class CsvExport {
     // KPI Summary section
     rows.addAll([
       ['WeDecor Analytics Summary'],
-      ['Date Range', '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(dateRange.end)}'],
+      [
+        'Date Range',
+        '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(dateRange.end)}',
+      ],
       ['Generated At', _dateFormat.format(DateTime.now())],
       [''],
       ['KPI Summary'],
       ['Metric', 'Value', 'Change %'],
-      ['Total Enquiries', kpiSummary.totalEnquiries.toString(), '${kpiSummary.deltas.totalEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Active Enquiries', kpiSummary.activeEnquiries.toString(), '${kpiSummary.deltas.activeEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Won Enquiries', kpiSummary.wonEnquiries.toString(), '${kpiSummary.deltas.wonEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Lost Enquiries', kpiSummary.lostEnquiries.toString(), '${kpiSummary.deltas.lostEnquiriesChange.toStringAsFixed(1)}%'],
-      ['Conversion Rate', '${kpiSummary.conversionRate.toStringAsFixed(1)}%', '${kpiSummary.deltas.conversionRateChange.toStringAsFixed(1)}%'],
-      ['Estimated Revenue', '₹${kpiSummary.estimatedRevenue.toStringAsFixed(2)}', '${kpiSummary.deltas.estimatedRevenueChange.toStringAsFixed(1)}%'],
+      [
+        'Total Enquiries',
+        kpiSummary.totalEnquiries.toString(),
+        '${kpiSummary.deltas.totalEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Active Enquiries',
+        kpiSummary.activeEnquiries.toString(),
+        '${kpiSummary.deltas.activeEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Won Enquiries',
+        kpiSummary.wonEnquiries.toString(),
+        '${kpiSummary.deltas.wonEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Lost Enquiries',
+        kpiSummary.lostEnquiries.toString(),
+        '${kpiSummary.deltas.lostEnquiriesChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Conversion Rate',
+        '${kpiSummary.conversionRate.toStringAsFixed(1)}%',
+        '${kpiSummary.deltas.conversionRateChange.toStringAsFixed(1)}%',
+      ],
+      [
+        'Estimated Revenue',
+        '₹${kpiSummary.estimatedRevenue.toStringAsFixed(2)}',
+        '${kpiSummary.deltas.estimatedRevenueChange.toStringAsFixed(1)}%',
+      ],
       [''],
     ]);
 
@@ -172,11 +254,9 @@ class CsvExport {
       rows.addAll([
         ['Status Breakdown'],
         ['Status', 'Count', 'Percentage'],
-        ...statusBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...statusBreakdown.map(
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
+        ),
         [''],
       ]);
     }
@@ -186,11 +266,9 @@ class CsvExport {
       rows.addAll([
         ['Event Type Breakdown'],
         ['Event Type', 'Count', 'Percentage'],
-        ...eventTypeBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...eventTypeBreakdown.map(
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
+        ),
         [''],
       ]);
     }
@@ -200,18 +278,16 @@ class CsvExport {
       rows.addAll([
         ['Source Breakdown'],
         ['Source', 'Count', 'Percentage'],
-        ...sourceBreakdown.map((item) => [
-          item.key,
-          item.count.toString(),
-          '${item.percentage.toStringAsFixed(1)}%',
-        ]),
+        ...sourceBreakdown.map(
+          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
+        ),
       ]);
     }
 
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'analytics_summary_$timestamp.csv';
@@ -246,7 +322,7 @@ class CsvExport {
 
     // Convert users to CSV rows
     final rows = <List<String>>[headers];
-    
+
     for (final user in users) {
       rows.add([
         user['uid']?.toString() ?? '',
@@ -264,7 +340,7 @@ class CsvExport {
     // Generate CSV content
     final csvContent = const ListToCsvConverter().convert(rows);
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
-    
+
     // Generate filename with timestamp
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final filename = 'users_$timestamp.csv';
@@ -281,9 +357,9 @@ class CsvExport {
   /// Format timestamp for CSV export
   static String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return '';
-    
+
     DateTime? dateTime;
-    
+
     if (timestamp is Timestamp) {
       dateTime = timestamp.toDate();
     } else if (timestamp is DateTime) {
@@ -295,7 +371,7 @@ class CsvExport {
         return timestamp;
       }
     }
-    
+
     return dateTime != null ? _dateFormat.format(dateTime) : '';
   }
 
@@ -305,11 +381,7 @@ class CsvExport {
       SnackBar(
         content: Text('Exported successfully: $filename'),
         backgroundColor: Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
@@ -320,11 +392,7 @@ class CsvExport {
       SnackBar(
         content: Text('Export failed: $error'),
         backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }

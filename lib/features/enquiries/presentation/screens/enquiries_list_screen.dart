@@ -1,11 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_details_screen.dart';
-import 'package:we_decor_enquiries/features/enquiries/presentation/screens/enquiry_form_screen.dart';
-import 'package:we_decor_enquiries/core/export/csv_export.dart';
+
+import '../../../../core/export/csv_export.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../shared/models/user_model.dart';
+import 'enquiry_details_screen.dart';
+import 'enquiry_form_screen.dart';
 
 class EnquiriesListScreen extends ConsumerWidget {
   const EnquiriesListScreen({super.key});
@@ -21,7 +22,8 @@ class EnquiriesListScreen extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           PopupMenuButton<String>(
-            onSelected: (action) => _handleAction(context, ref, action, userRole, currentUser.value?.uid),
+            onSelected: (action) =>
+                _handleAction(context, ref, action, userRole, currentUser.value?.uid),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'export',
@@ -46,18 +48,14 @@ class EnquiriesListScreen extends ConsumerWidget {
       body: currentUser.when(
         data: (user) {
           if (user == null) {
-            return const Center(
-              child: Text('Please log in to view enquiries'),
-            );
+            return const Center(child: Text('Please log in to view enquiries'));
           }
 
           return StreamBuilder<QuerySnapshot>(
             stream: _getEnquiriesStream(userRole, user.uid),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Center(
-                  child: Text('Error: ${snapshot.error}'),
-                );
+                return Center(child: Text('Error: ${snapshot.error}'));
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -76,13 +74,10 @@ class EnquiriesListScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        userRole == UserRole.admin 
-                            ? 'No enquiries found' 
+                        userRole == UserRole.admin
+                            ? 'No enquiries found'
                             : 'No enquiries assigned to you',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey,
-                        ),
+                        style: const TextStyle(fontSize: 18, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -103,13 +98,13 @@ class EnquiriesListScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
+                        backgroundColor: _getStatusColor(
+                          context,
+                          enquiryData['eventStatus'] as String?,
+                        ),
                         child: Text(
                           _getStatusInitial(enquiryData['eventStatus'] as String?),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                       title: Text(
@@ -127,9 +122,9 @@ class EnquiriesListScreen extends ConsumerWidget {
                           if (userRole == UserRole.admin && enquiryData['assignedTo'] != null) ...[
                             Text(
                               'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.blue,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                           ],
@@ -139,10 +134,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getPriorityColor(enquiryData['priority'] as String?),
                               borderRadius: BorderRadius.circular(12),
@@ -164,10 +156,8 @@ class EnquiriesListScreen extends ConsumerWidget {
                               onPressed: () {
                                 Navigator.of(context).push<void>(
                                   MaterialPageRoute<void>(
-                                    builder: (context) => EnquiryFormScreen(
-                                      enquiryId: enquiryId,
-                                      mode: 'edit',
-                                    ),
+                                    builder: (context) =>
+                                        EnquiryFormScreen(enquiryId: enquiryId, mode: 'edit'),
                                   ),
                                 );
                               },
@@ -183,9 +173,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push<void>(
                           MaterialPageRoute<void>(
-                            builder: (context) => EnquiryDetailsScreen(
-                              enquiryId: enquiryId,
-                            ),
+                            builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
                           ),
                         );
                       },
@@ -197,9 +185,7 @@ class EnquiriesListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text('Error loading user data: $error'),
-        ),
+        error: (error, stack) => Center(child: Text('Error loading user data: $error')),
       ),
     );
   }
@@ -239,12 +225,12 @@ class EnquiriesListScreen extends ConsumerWidget {
     return status[0].toUpperCase();
   }
 
-  Color _getStatusColor(String? status) {
+  Color _getStatusColor(BuildContext context, String? status) {
     switch (status?.toLowerCase()) {
       case 'pending':
         return Colors.orange;
       case 'in progress':
-        return Colors.blue;
+        return Theme.of(context).colorScheme.primary;
       case 'completed':
         return Colors.green;
       case 'cancelled':
@@ -273,23 +259,30 @@ class EnquiriesListScreen extends ConsumerWidget {
     return 'User ID: $assignedTo';
   }
 
-  void _handleAction(BuildContext context, WidgetRef ref, String action, UserRole? userRole, String? userId) {
+  void _handleAction(
+    BuildContext context,
+    WidgetRef ref,
+    String action,
+    UserRole? userRole,
+    String? userId,
+  ) {
     switch (action) {
       case 'export':
-        _exportEnquiries(context, userRole, userId);
+        _exportEnquiries(context, ref);
         break;
       case 'add':
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => const EnquiryFormScreen(),
-          ),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const EnquiryFormScreen()));
         break;
     }
   }
 
-  Future<void> _exportEnquiries(BuildContext context, UserRole? userRole, String? userId) async {
+  Future<void> _exportEnquiries(BuildContext context, WidgetRef ref) async {
     try {
+      final userRole = ref.read(currentUserWithFirestoreProvider).value?.role;
+      final userId = ref.read(currentUserWithFirestoreProvider).value?.uid;
+
       // Show loading indicator
       showDialog(
         context: context,
@@ -305,22 +298,20 @@ class EnquiriesListScreen extends ConsumerWidget {
         ),
       );
 
-      // Fetch all enquiries for export
+      // Fetch enquiries based on role - Staff only gets assigned enquiries
       Query query = FirebaseFirestore.instance.collection('enquiries');
-      
+
       if (userRole != UserRole.admin && userId != null) {
+        // Staff: only assigned enquiries
         query = query.where('assignedTo', isEqualTo: userId);
       }
-      
+
       query = query.orderBy('createdAt', descending: true);
-      
+
       final snapshot = await query.get();
       final enquiries = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
 
       // Close loading dialog
@@ -331,22 +322,21 @@ class EnquiriesListScreen extends ConsumerWidget {
       if (enquiries.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No enquiries to export'),
-              backgroundColor: Colors.orange,
-            ),
+            const SnackBar(content: Text('No enquiries to export'), backgroundColor: Colors.orange),
           );
         }
         return;
       }
 
-      // Export to CSV
-      await CsvExport.exportEnquiries(enquiries);
-      
-      if (context.mounted) {
-        CsvExport.showExportSuccess(context, 'enquiries_${DateTime.now().millisecondsSinceEpoch}.csv');
-      }
+      // Export to CSV with role-based filtering
+      await CsvExport.exportEnquiries(enquiries, ref);
 
+      if (context.mounted) {
+        CsvExport.showExportSuccess(
+          context,
+          'enquiries_${DateTime.now().millisecondsSinceEpoch}.csv',
+        );
+      }
     } catch (e) {
       // Close loading dialog if still open
       if (context.mounted) {
@@ -355,4 +345,4 @@ class EnquiriesListScreen extends ConsumerWidget {
       }
     }
   }
-} 
+}

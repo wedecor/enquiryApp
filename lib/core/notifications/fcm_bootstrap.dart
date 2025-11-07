@@ -1,5 +1,6 @@
-import 'package:flutter/widgets.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/widgets.dart';
+
 import 'fcm_token_manager.dart';
 
 /// Keeps FCM token in sync whenever auth state becomes non-null.

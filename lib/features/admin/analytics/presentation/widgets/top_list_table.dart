@@ -27,9 +27,7 @@ class TopListTable extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
@@ -41,27 +39,17 @@ class TopListTable extends StatelessWidget {
 
   Widget _buildTable(BuildContext context) {
     final displayData = data.take(maxItems).toList();
-    
+
     return Table(
-      columnWidths: showPercentage ? const {
-        0: FlexColumnWidth(1),
-        1: FixedColumnWidth(60),
-        2: FixedColumnWidth(80),
-      } : const {
-        0: FlexColumnWidth(1),
-        1: FixedColumnWidth(60),
-      },
+      columnWidths: showPercentage
+          ? const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60), 2: FixedColumnWidth(80)}
+          : const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60)},
       children: [
         // Header row
         TableRow(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
           ),
           children: [
             _buildHeaderCell(context, 'Name'),
@@ -69,16 +57,17 @@ class TopListTable extends StatelessWidget {
             if (showPercentage) _buildHeaderCell(context, 'Share'),
           ],
         ),
-        
+
         // Data rows
-        ...displayData.map((item) => TableRow(
-          children: [
-            _buildDataCell(context, item.key),
-            _buildDataCell(context, item.count.toString()),
-            if (showPercentage)
-              _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
-          ],
-        )),
+        ...displayData.map(
+          (item) => TableRow(
+            children: [
+              _buildDataCell(context, item.key),
+              _buildDataCell(context, item.count.toString()),
+              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -113,17 +102,11 @@ class TopListTable extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(
-              Icons.table_chart,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.table_chart, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'No data available',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey.shade600,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
             ),
           ],
         ),
@@ -156,9 +139,7 @@ class RecentEnquiriesTable extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
@@ -170,7 +151,7 @@ class RecentEnquiriesTable extends StatelessWidget {
 
   Widget _buildTable(BuildContext context) {
     final displayData = data.take(maxItems).toList();
-    
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
@@ -178,134 +159,109 @@ class RecentEnquiriesTable extends StatelessWidget {
           DataColumn(
             label: Text(
               'Date',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Customer',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Event Type',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Status',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Source',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Priority',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Total Cost',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
-        rows: displayData.map((enquiry) => DataRow(
-          cells: [
-            DataCell(
-              Text(
-                _formatDate(enquiry.date),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            DataCell(
-              Text(
-                enquiry.customerName,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            DataCell(
-              Text(
-                enquiry.eventType,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            DataCell(
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getStatusColor(enquiry.status),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _formatStatusName(enquiry.status),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+        rows: displayData
+            .map(
+              (enquiry) => DataRow(
+                cells: [
+                  DataCell(
+                    Text(_formatDate(enquiry.date), style: Theme.of(context).textTheme.bodySmall),
                   ),
-                ),
-              ),
-            ),
-            DataCell(
-              Text(
-                enquiry.source,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            DataCell(
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getPriorityColor(enquiry.priority),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _formatPriorityName(enquiry.priority),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                  DataCell(
+                    Text(
+                      enquiry.customerName,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    ),
                   ),
-                ),
+                  DataCell(Text(enquiry.eventType, style: Theme.of(context).textTheme.bodyMedium)),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(enquiry.status),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _formatStatusName(enquiry.status),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(Text(enquiry.source, style: Theme.of(context).textTheme.bodyMedium)),
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getPriorityColor(enquiry.priority),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _formatPriorityName(enquiry.priority),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(
+                      enquiry.totalCost != null ? _formatCurrency(enquiry.totalCost!) : '—',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            DataCell(
-              Text(
-                enquiry.totalCost != null 
-                    ? _formatCurrency(enquiry.totalCost!)
-                    : '—',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        )).toList(),
+            )
+            .toList(),
       ),
     );
   }
@@ -316,24 +272,16 @@ class RecentEnquiriesTable extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(
-              Icons.table_rows,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.table_rows, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'No recent enquiries',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey.shade600,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
             Text(
               'Select a different date range or filters',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -344,7 +292,7 @@ class RecentEnquiriesTable extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date).inDays;
-    
+
     if (difference == 0) {
       return 'Today';
     } else if (difference == 1) {
@@ -398,14 +346,14 @@ class RecentEnquiriesTable extends StatelessWidget {
   }
 
   String _formatPriorityName(String priority) {
-    return priority.isNotEmpty 
+    return priority.isNotEmpty
         ? priority[0].toUpperCase() + priority.substring(1).toLowerCase()
         : priority;
   }
 
   String _formatCurrency(double amount) {
     if (amount == 0) return '—';
-    
+
     if (amount >= 1000000) {
       return '₹${(amount / 1000000).toStringAsFixed(1)}M';
     } else if (amount >= 100000) {

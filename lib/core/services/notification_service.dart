@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+import '../../shared/models/user_model.dart';
 
 /// Service for managing notification triggers and sending notifications
 class NotificationService {
@@ -16,7 +15,7 @@ class NotificationService {
     try {
       // Get all admin users except the creator
       final adminUsers = await _getAdminUsers(excludeUserId: createdBy);
-      
+
       // Send notification to all admins
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
@@ -99,7 +98,7 @@ class NotificationService {
 
       // Get all admin users except the assigner
       final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
-      
+
       // Send notification to all admins
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
@@ -133,7 +132,7 @@ class NotificationService {
     try {
       // Get all admin users except the updater
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
-      
+
       // Send notification to all admins
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
@@ -166,9 +165,9 @@ class NotificationService {
         },
       );
 
-      print('NotificationService: Sent status update notifications to ${adminUsers.length} admins');
+      print('NotificationService: Sent status change notifications to ${adminUsers.length} admins');
     } catch (e) {
-      print('NotificationService: Error sending status update notifications: $e');
+      print('NotificationService: Error sending status change notifications: $e');
     }
   }
 
@@ -181,19 +180,20 @@ class NotificationService {
           .where('isActive', isEqualTo: true);
 
       final snapshot = await query.get();
-      
+
       final adminUsers = snapshot.docs
           .where((doc) => excludeUserId == null || doc.id != excludeUserId)
           .map((doc) {
-        final data = doc.data();
-        return UserModel(
-          uid: doc.id,
-          name: data['name'] as String? ?? '',
-          email: data['email'] as String? ?? '',
-          phone: data['phone'] as String? ?? '',
-          role: UserRole.admin,
-        );
-      }).toList();
+            final data = doc.data();
+            return UserModel(
+              uid: doc.id,
+              name: data['name'] as String? ?? '',
+              email: data['email'] as String? ?? '',
+              phone: data['phone'] as String? ?? '',
+              role: UserRole.admin,
+            );
+          })
+          .toList();
 
       return adminUsers;
     } catch (e) {
@@ -234,20 +234,35 @@ class NotificationService {
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
 
-      final userData = userDoc.data() as Map<String, dynamic>;
-      final fcmToken = userData['fcmToken'] as String?;
-      
-      if (fcmToken == null || fcmToken.isEmpty) {
-        print('NotificationService: No FCM token for user $userId');
+      // Read tokens from private subcollection
+      final tokensSnapshot = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('private')
+          .doc('notifications')
+          .collection('tokens')
+          .limit(10)
+          .get();
+
+      if (tokensSnapshot.docs.isEmpty) {
+        // TODO: Replace with safeLog - print('NotificationService: No FCM tokens for user $userId');
+        return;
+      }
+
+      // Get all valid tokens
+      final tokens = tokensSnapshot.docs
+          .map((doc) => doc.get('token') as String?)
+          .where((token) => token != null && token.isNotEmpty)
+          .cast<String>()
+          .toList();
+
+      if (tokens.isEmpty) {
+        // TODO: Replace with safeLog - print('NotificationService: No valid FCM tokens for user $userId');
         return;
       }
 
       // Store notification in Firestore for the user
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
+      await _firestore.collection('users').doc(userId).collection('notifications').add({
         'title': title,
         'body': body,
         'data': data,
@@ -261,7 +276,6 @@ class NotificationService {
       print('Title: $title');
       print('Body: $body');
       print('Data: $data');
-      
     } catch (e) {
       print('NotificationService: Error sending notification to user $userId: $e');
     }
@@ -276,11 +290,7 @@ class NotificationService {
   }) async {
     try {
       // Store notification in Firestore for the topic
-      await _firestore
-          .collection('notifications')
-          .doc(topic)
-          .collection('messages')
-          .add({
+      await _firestore.collection('notifications').doc(topic).collection('messages').add({
         'title': title,
         'body': body,
         'data': data,
@@ -294,7 +304,6 @@ class NotificationService {
       print('Title: $title');
       print('Body: $body');
       print('Data: $data');
-      
     } catch (e) {
       print('NotificationService: Error sending notification to topic $topic: $e');
     }
@@ -313,10 +322,7 @@ class NotificationService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
     } catch (e) {
       print('NotificationService: Error getting user notifications: $e');
@@ -332,10 +338,7 @@ class NotificationService {
           .doc(userId)
           .collection('notifications')
           .doc(notificationId)
-          .update({
-        'read': true,
-        'readAt': FieldValue.serverTimestamp(),
-      });
+          .update({'read': true, 'readAt': FieldValue.serverTimestamp()});
     } catch (e) {
       print('NotificationService: Error marking notification as read: $e');
     }
@@ -353,10 +356,7 @@ class NotificationService {
           .get();
 
       for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {
-          'read': true,
-          'readAt': FieldValue.serverTimestamp(),
-        });
+        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
       }
 
       await batch.commit();
@@ -364,4 +364,4 @@ class NotificationService {
       print('NotificationService: Error marking all notifications as read: $e');
     }
   }
-} 
+}

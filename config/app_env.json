@@ -1,0 +1,9 @@
+{
+  "APP_ENV": "development",
+  "VAPID_PUBLIC_KEY": "BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E",
+  "API_BASE_URL": "https://wedecorenquries.firebaseapp.com",
+  "FIREBASE_REGION": "asia-south1",
+  "APP_VERSION": "1.0.0",
+  "ENABLE_ANALYTICS": "true",
+  "ENABLE_NOTIFICATIONS": "true"
+}

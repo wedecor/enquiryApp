@@ -13,21 +13,30 @@ class FcmTokenManager {
     if (user == null) return;
 
     // Web permission prompt
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true, badge: true, sound: true,
-    );
+    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
 
-    // VAPID public key from Firebase Console
-    const vapidKey = 'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E';
+    // VAPID public key from environment configuration
+    const vapidKey = String.fromEnvironment(
+      'VAPID_PUBLIC_KEY',
+      defaultValue:
+          'BKmvRVlG_poi0It85Ooupfs2e8ylBJ4me4TLUhqiIVC7OSnxXK1ctR1gGP1emUgaJJ8z7MzHgZFCe5MsMWnIY7E',
+    );
 
     final token = await FirebaseMessaging.instance.getToken(vapidKey: vapidKey);
     if (token == null) return;
 
-    final doc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    await doc.set({
-      'fcmToken': token,
-      'webTokens': FieldValue.arrayUnion([token]),
-      'updatedAt': FieldValue.serverTimestamp(),
+    // NEW: Store tokens in private subcollection (owner-only access)
+    final tokensCollection = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('private')
+        .doc('notifications')
+        .collection('tokens');
+
+    // Use the token as the doc ID for idempotency
+    await tokensCollection.doc(token).set({
+      'token': token,
+      'createdAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     // Foreground handler (optional)
@@ -36,15 +45,37 @@ class FcmTokenManager {
       // debugPrint('🔔 ${m.notification?.title ?? "Update"}: ${m.notification?.body ?? ""}');
     });
 
-    // Token refresh
+    // Token refresh - update private collection
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      await doc.set({
-        'fcmToken': newToken,
-        'webTokens': FieldValue.arrayUnion([newToken]),
+      await tokensCollection.doc(newToken).set({
+        'token': newToken,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     });
 
     _registered = true;
+  }
+
+  /// Optional: Clean up token on sign-out
+  static Future<void> removeCurrentToken() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+
+      // Remove from private collection
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('private')
+          .doc('notifications')
+          .collection('tokens')
+          .doc(token)
+          .delete();
+    } catch (e) {
+      // Ignore cleanup errors
+    }
   }
 }

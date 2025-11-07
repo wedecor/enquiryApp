@@ -1,14 +1,17 @@
 import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
+
 import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/auth/role_guards.dart';
 import '../domain/user_model.dart';
-import 'users_providers.dart';
-import 'widgets/user_form_dialog.dart';
-import 'widgets/confirm_dialog.dart';
 import 'invite_user_dialog.dart';
 import 'role_checker_panel.dart';
+import 'users_providers.dart';
+import 'widgets/confirm_dialog.dart';
+import 'widgets/user_form_dialog.dart';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -103,7 +106,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -135,7 +138,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     // Role filter
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: filter['role'] as String,
+                        initialValue: filter['role'] as String,
                         decoration: const InputDecoration(
                           labelText: 'Role',
                           border: OutlineInputBorder(),
@@ -157,7 +160,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     // Status filter
                     Expanded(
                       child: DropdownButtonFormField<bool?>(
-                        value: filter['active'] as bool?,
+                        initialValue: filter['active'] as bool?,
                         decoration: const InputDecoration(
                           labelText: 'Status',
                           border: OutlineInputBorder(),
@@ -179,14 +182,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             ),
           ),
           // Users list
-          Expanded(
-            child: _buildUsersListArea(
-              usersAsync,
-              isAdmin,
-              role != null,
-              paginationState,
-            ),
-          ),
+          Expanded(child: _buildUsersListArea(usersAsync, isAdmin, role != null, paginationState)),
         ],
       ),
     );
@@ -205,7 +201,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildUsersList(List<UserModel> users, bool isAdmin, bool roleKnown, PaginationState paginationState) {
+  Widget _buildUsersList(
+    List<UserModel> users,
+    bool isAdmin,
+    bool roleKnown,
+    PaginationState paginationState,
+  ) {
     if (!roleKnown) {
       return const Center(
         child: Column(
@@ -224,28 +225,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.people_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               isAdmin
                   ? 'No users found. Use "Add User" to create one.'
                   : 'No users to show or you lack permissions to modify.',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               isAdmin
                   ? 'Start by adding your first user to the system.'
                   : 'Contact an admin to get access or check your role in Firestore.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -281,21 +274,22 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 DataColumn(label: Text('Updated')),
                 DataColumn(label: Text('Actions')),
               ],
-              rows: users.map((user) => DataRow(
-                cells: [
-                  DataCell(Text(user.name)),
-                  DataCell(Text(
-                    user.email,
-                    style: const TextStyle(fontFamily: 'monospace'),
-                  )),
-                  DataCell(Text(user.phone ?? '')),
-                  DataCell(_buildRoleChip(user.role)),
-                  DataCell(_buildStatusChip(user.active)),
-                  DataCell(Text(_formatDate(user.createdAt))),
-                  DataCell(Text(_formatDate(user.updatedAt))),
-                  DataCell(_buildActionButtons(user, isAdmin)),
-                ],
-              )).toList(),
+              rows: users
+                  .map(
+                    (user) => DataRow(
+                      cells: [
+                        DataCell(Text(user.name)),
+                        DataCell(Text(user.email, style: const TextStyle(fontFamily: 'monospace'))),
+                        DataCell(Text(user.phone ?? '')),
+                        DataCell(_buildRoleChip(user.role)),
+                        DataCell(_buildStatusChip(user.active)),
+                        DataCell(Text(_formatDate(user.createdAt))),
+                        DataCell(Text(_formatDate(user.updatedAt))),
+                        DataCell(_buildActionButtons(user, isAdmin)),
+                      ],
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ),
@@ -333,10 +327,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        user.email,
-                        style: const TextStyle(fontFamily: 'monospace'),
-                      ),
+                      Text(user.email, style: const TextStyle(fontFamily: 'monospace')),
                       if (user.phone != null) Text(user.phone!),
                       const SizedBox(height: 4),
                       Row(
@@ -369,9 +360,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           children: [
                             Icon(user.active ? Icons.block : Icons.check_circle),
                             const SizedBox(width: 8),
-                            Text(isAdmin 
-                                ? (user.active ? 'Deactivate' : 'Activate')
-                                : 'Admin only'),
+                            Text(
+                              isAdmin ? (user.active ? 'Deactivate' : 'Activate') : 'Admin only',
+                            ),
                           ],
                         ),
                       ),
@@ -405,11 +396,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return Chip(
       label: Text(
         role.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
       ),
       backgroundColor: color,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -420,11 +407,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return Chip(
       label: Text(
         active ? 'ACTIVE' : 'INACTIVE',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
       ),
       backgroundColor: active ? Colors.green : Colors.red,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -443,36 +426,24 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         IconButton(
           icon: Icon(user.active ? Icons.block : Icons.check_circle),
           onPressed: isAdmin ? () => _toggleUserStatus(user) : null,
-          tooltip: isAdmin 
-              ? (user.active ? 'Deactivate' : 'Activate')
-              : 'Admin only',
+          tooltip: isAdmin ? (user.active ? 'Deactivate' : 'Activate') : 'Admin only',
         ),
       ],
     );
   }
-
 
   Widget _buildErrorState(Object error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
-          Text(
-            'Error loading users',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Error loading users', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -492,8 +463,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return months[month - 1];
   }
 
@@ -505,21 +488,26 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   void _showAddUserDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const UserFormDialog(),
-    );
+    showDialog<void>(context: context, builder: (context) => const UserFormDialog());
   }
 
   void _showInviteUserDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const InviteUserDialog(),
-    );
+    try {
+      requireAdmin(ref);
+      logAdminAction(ref, 'invite_user_dialog_opened', {
+        'screen': 'user_management',
+        'action_type': 'ui_access',
+      });
+      showDialog<void>(context: context, builder: (context) => const InviteUserDialog());
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Access denied: ${e.toString()}')));
+    }
   }
 
   void _showEditUserDialog(BuildContext context, UserModel user) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => UserFormDialog(user: user),
     );
@@ -538,31 +526,45 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   void _toggleUserStatus(UserModel user) {
-    final action = user.active ? 'deactivate' : 'activate';
-    showDialog(
-      context: context,
-      builder: (context) => ConfirmDialog(
-        title: '${action.capitalize()} User',
-        content: 'Are you sure you want to $action ${user.name}?',
-        onConfirm: () {
-          Navigator.of(context).pop();
-          ref.read(userFormControllerProvider.notifier).toggleActive(
-            user.uid,
-            !user.active,
-          ).then((_) {
-            _showSnackBar(
-              'User ${action}d successfully',
-              isError: false,
-            );
-          }).catchError((error) {
-            _showSnackBar(
-              'Failed to $action user: $error',
-              isError: true,
-            );
-          });
-        },
-      ),
-    );
+    try {
+      requireAdmin(ref);
+      final action = user.active ? 'deactivate' : 'activate';
+
+      logAdminAction(ref, 'user_status_toggle_initiated', {
+        'targetUserId': user.uid,
+        'targetUserEmail': user.email,
+        'action': action,
+        'currentActive': user.active,
+      });
+
+      showDialog<void>(
+        context: context,
+        builder: (context) => ConfirmDialog(
+          title: '${action.capitalize()} User',
+          content: 'Are you sure you want to $action ${user.name}?',
+          onConfirm: () {
+            Navigator.of(context).pop();
+            logAdminAction(ref, 'user_status_toggle_confirmed', {
+              'targetUserId': user.uid,
+              'action': action,
+            });
+            ref
+                .read(userFormControllerProvider.notifier)
+                .toggleActive(user.uid, !user.active)
+                .then((_) {
+                  _showSnackBar('User ${action}d successfully', isError: false);
+                })
+                .catchError((Object error) {
+                  _showSnackBar('Failed to $action user: $error', isError: true);
+                });
+          },
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Access denied: ${e.toString()}')));
+    }
   }
 
   void _showSnackBar(String message, {required bool isError}) {
@@ -570,11 +572,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }

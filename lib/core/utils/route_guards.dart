@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+
+import '../../shared/models/user_model.dart';
+import '../providers/role_provider.dart';
 
 /// Route guard utilities for protecting admin-only screens
 class RouteGuards {
   /// Prevents access to admin-only screens for non-admin users
-  /// 
+  ///
   /// This function checks if the current user has admin privileges.
   /// If not, it shows an access denied dialog and returns false.
   /// If the user is an admin, it returns true to allow access.
-  /// 
+  ///
   /// Example usage:
   /// ```dart
   /// if (await RouteGuards.requireAdmin(context, ref)) {
@@ -20,7 +21,7 @@ class RouteGuards {
   /// ```
   static Future<bool> requireAdmin(BuildContext context, WidgetRef ref) async {
     final currentUser = ref.read(currentUserWithFirestoreProvider);
-    
+
     return currentUser.when(
       data: (user) {
         if (user?.role == UserRole.admin) {
@@ -42,11 +43,11 @@ class RouteGuards {
   }
 
   /// Prevents access to screens for unauthenticated users
-  /// 
+  ///
   /// This function checks if the current user is authenticated.
   /// If not, it shows an authentication required dialog and returns false.
   /// If the user is authenticated, it returns true to allow access.
-  /// 
+  ///
   /// Example usage:
   /// ```dart
   /// if (await RouteGuards.requireAuth(context, ref)) {
@@ -56,7 +57,7 @@ class RouteGuards {
   /// ```
   static Future<bool> requireAuth(BuildContext context, WidgetRef ref) async {
     final currentUser = ref.read(currentUserWithFirestoreProvider);
-    
+
     return currentUser.when(
       data: (user) {
         if (user != null) {
@@ -94,10 +95,7 @@ class RouteGuards {
           'This feature is only available to administrators.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -120,10 +118,7 @@ class RouteGuards {
           'Please sign in to continue.',
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -136,11 +131,7 @@ class RouteGuards {
       barrierDismissible: false,
       builder: (context) => const AlertDialog(
         content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text('Loading...'),
-          ],
+          children: [CircularProgressIndicator(), SizedBox(width: 16), Text('Loading...')],
         ),
       ),
     );
@@ -160,10 +151,7 @@ class RouteGuards {
         ),
         content: Text('An error occurred: $error'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
         ],
       ),
     );
@@ -171,10 +159,10 @@ class RouteGuards {
 }
 
 /// Widget wrapper for admin-only screens
-/// 
+///
 /// This widget automatically checks admin permissions and shows
 /// an access denied screen if the user is not an admin.
-/// 
+///
 /// Example usage:
 /// ```dart
 /// AdminOnlyScreen(
@@ -184,10 +172,7 @@ class RouteGuards {
 class AdminOnlyScreen extends ConsumerWidget {
   final Widget child;
 
-  const AdminOnlyScreen({
-    super.key,
-    required this.child,
-  });
+  const AdminOnlyScreen({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -201,16 +186,8 @@ class AdminOnlyScreen extends ConsumerWidget {
           return _buildAccessDeniedScreen();
         }
       },
-      loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      ),
-      error: (error, stack) => Scaffold(
-        body: Center(
-          child: Text('Error: $error'),
-        ),
-      ),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stack) => Scaffold(body: Center(child: Text('Error: $error'))),
     );
   }
 
@@ -225,33 +202,22 @@ class AdminOnlyScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.lock,
-              size: 64,
-              color: Colors.red,
-            ),
+            Icon(Icons.lock, size: 64, color: Colors.red),
             SizedBox(height: 16),
             Text(
               'Access Denied',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.red),
             ),
             SizedBox(height: 8),
             Text(
               'You do not have permission to access this screen.\n'
               'This feature is only available to administrators.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
       ),
     );
   }
-} 
+}

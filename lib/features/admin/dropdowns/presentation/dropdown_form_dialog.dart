@@ -8,11 +8,7 @@ class DropdownFormDialog extends ConsumerStatefulWidget {
   final DropdownGroup group;
   final DropdownItem? item; // null for create, non-null for edit
 
-  const DropdownFormDialog({
-    super.key,
-    required this.group,
-    this.item,
-  });
+  const DropdownFormDialog({super.key, required this.group, this.item});
 
   @override
   ConsumerState<DropdownFormDialog> createState() => _DropdownFormDialogState();
@@ -48,7 +44,9 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
     final formState = ref.watch(dropdownFormControllerProvider);
 
     return AlertDialog(
-      title: Text(isEdit ? 'Edit ${widget.group.displayName} Item' : 'Add ${widget.group.displayName} Item'),
+      title: Text(
+        isEdit ? 'Edit ${widget.group.displayName} Item' : 'Add ${widget.group.displayName} Item',
+      ),
       content: SizedBox(
         width: 400,
         child: Form(
@@ -118,7 +116,7 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
               const SizedBox(height: 16),
 
               // Color preview
-              if (_colorController.text.isNotEmpty && 
+              if (_colorController.text.isNotEmpty &&
                   DropdownItemValidation.isValidHexColor(_colorController.text))
                 _buildColorPreview(),
 
@@ -182,17 +180,11 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.palette,
-            color: _getContrastColor(color),
-          ),
+          Icon(Icons.palette, color: _getContrastColor(color)),
           const SizedBox(width: 8),
           Text(
             'Color Preview',
-            style: TextStyle(
-              color: _getContrastColor(color),
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: _getContrastColor(color), fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -218,19 +210,16 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
     try {
       if (widget.item == null) {
         // Create new item
-        await ref.read(dropdownFormControllerProvider.notifier)
-            .createItem(widget.group, input);
+        await ref.read(dropdownFormControllerProvider.notifier).createItem(widget.group, input);
       } else {
         // Update existing item
-        final patch = <String, dynamic>{
-          'label': input.label,
-          'active': input.active,
-        };
+        final patch = <String, dynamic>{'label': input.label, 'active': input.active};
         if (input.color != null) {
           patch['color'] = input.color;
         }
 
-        await ref.read(dropdownFormControllerProvider.notifier)
+        await ref
+            .read(dropdownFormControllerProvider.notifier)
             .updateItem(widget.group, widget.item!.value, patch);
       }
 
@@ -250,10 +239,7 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -282,11 +268,7 @@ class DropdownDeleteDialog extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasReferences) ...[
-            const Icon(
-              Icons.warning,
-              color: Colors.orange,
-              size: 48,
-            ),
+            const Icon(Icons.warning, color: Colors.orange, size: 48),
             const SizedBox(height: 16),
             Text(
               'Cannot delete "${item.label}" because it is referenced by existing enquiries.',
@@ -299,18 +281,12 @@ class DropdownDeleteDialog extends ConsumerWidget {
           ] else ...[
             Text('Are you sure you want to delete "${item.label}"?'),
             const SizedBox(height: 8),
-            const Text(
-              'This action cannot be undone.',
-              style: TextStyle(color: Colors.red),
-            ),
+            const Text('This action cannot be undone.', style: TextStyle(color: Colors.red)),
           ],
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
         if (!hasReferences)
           FilledButton(
             onPressed: () => _confirmDelete(context, ref),
@@ -326,9 +302,8 @@ class DropdownDeleteDialog extends ConsumerWidget {
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
-          .deleteItem(group, item.value);
-      
+      await ref.read(dropdownFormControllerProvider.notifier).deleteItem(group, item.value);
+
       if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -341,10 +316,7 @@ class DropdownDeleteDialog extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -373,7 +345,9 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final replacementsAsync = ref.watch(availableReplacementsProvider((widget.group, widget.oldValue)));
+    final replacementsAsync = ref.watch(
+      availableReplacementsProvider((widget.group, widget.oldValue)),
+    );
     final formState = ref.watch(dropdownFormControllerProvider);
 
     return AlertDialog(
@@ -389,7 +363,7 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 16),
-            
+
             replacementsAsync.when(
               data: (replacements) {
                 if (replacements.isEmpty) {
@@ -400,7 +374,7 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
                 }
 
                 return DropdownButtonFormField<DropdownItem>(
-                  value: _selectedReplacement != null
+                  initialValue: _selectedReplacement != null
                       ? replacements.firstWhere((item) => item.value == _selectedReplacement)
                       : null,
                   decoration: const InputDecoration(
@@ -472,9 +446,10 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
     if (_selectedReplacement == null) return;
 
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
           .replaceInEnquiries(widget.group, widget.oldValue, _selectedReplacement!);
-      
+
       if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -487,10 +462,7 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }

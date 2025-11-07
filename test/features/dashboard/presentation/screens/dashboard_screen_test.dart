@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   group('DashboardScreen Widget Tests', () {
@@ -8,7 +6,7 @@ void main() {
       testWidgets('should display dashboard with proper structure', (WidgetTester tester) async {
         // Note: This test will fail due to the complex widgets, but it demonstrates the intent
         // In a real scenario, you would mock the problematic widgets or test them separately
-        
+
         expect(true, isTrue); // Placeholder test
       });
 
@@ -36,7 +34,9 @@ void main() {
         expect(true, isTrue); // Placeholder test
       });
 
-      testWidgets('should show correct statistics for different users', (WidgetTester tester) async {
+      testWidgets('should show correct statistics for different users', (
+        WidgetTester tester,
+      ) async {
         // Test role-based statistics
         expect(true, isTrue); // Placeholder test
       });
@@ -48,14 +48,18 @@ void main() {
         expect(true, isTrue); // Placeholder test
       });
 
-      testWidgets('should show only assigned enquiries for staff users', (WidgetTester tester) async {
+      testWidgets('should show only assigned enquiries for staff users', (
+        WidgetTester tester,
+      ) async {
         // Test staff filtering
         expect(true, isTrue); // Placeholder test
       });
     });
 
     group('Navigation and Actions', () {
-      testWidgets('should have floating action button for adding enquiries', (WidgetTester tester) async {
+      testWidgets('should have floating action button for adding enquiries', (
+        WidgetTester tester,
+      ) async {
         // Test FAB presence
         expect(true, isTrue); // Placeholder test
       });
@@ -66,4 +70,4 @@ void main() {
       });
     });
   });
-} 
+}

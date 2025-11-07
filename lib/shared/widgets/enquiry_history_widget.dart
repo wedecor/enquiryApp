@@ -1,16 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/audit_provider.dart';
+
+import '../../core/providers/audit_provider.dart';
 
 /// Widget to display enquiry change history
 class EnquiryHistoryWidget extends ConsumerWidget {
   final String enquiryId;
 
-  const EnquiryHistoryWidget({
-    super.key,
-    required this.enquiryId,
-  });
+  const EnquiryHistoryWidget({super.key, required this.enquiryId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,32 +17,31 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     return historyAsync.when(
       data: (history) {
         if (history.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.history,
-                  size: 64,
-                  color: Colors.grey,
-                ),
-                SizedBox(height: 16),
-                Text(
-                  'No changes recorded',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey,
+          final theme = Theme.of(context);
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No changes recorded',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Changes to this enquiry will appear here',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
+                  const SizedBox(height: 8),
+                  Text(
+                    'Changes to this enquiry will appear here',
+                    style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
@@ -59,17 +56,54 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           },
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error loading history: $error'),
-          ],
-        ),
-      ),
+      loading: () {
+        final theme = Theme.of(context);
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading change history...',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      error: (error, stack) {
+        final theme = Theme.of(context);
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 48, color: theme.colorScheme.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Change history not available',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This feature requires additional setup',
+                  style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -91,26 +125,20 @@ class EnquiryHistoryWidget extends ConsumerWidget {
               children: [
                 Icon(
                   _getFieldIcon(fieldChanged),
-                  color: _getFieldColor(fieldChanged),
+                  color: _getFieldColor(context, fieldChanged),
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _getFieldDisplayName(fieldChanged),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 if (timestamp != null) ...[
                   Text(
                     _formatTimestamp(timestamp),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
               ],
@@ -140,10 +168,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                         ),
                         child: Text(
                           _formatValue(oldValue),
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.red[700], fontSize: 14),
                         ),
                       ),
                     ],
@@ -174,10 +199,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                         ),
                         child: Text(
                           _formatValue(newValue),
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.green[700], fontSize: 14),
                         ),
                       ),
                     ],
@@ -192,10 +214,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 const SizedBox(width: 4),
                 Text(
                   'Changed by: $userEmail',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -236,12 +255,12 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     }
   }
 
-  Color _getFieldColor(String fieldName) {
+  Color _getFieldColor(BuildContext context, String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
-        return const Color(0xFF2563EB); // Our new blue color
+        return Theme.of(context).colorScheme.primary;
       case 'assignedto':
-        return const Color(0xFF2563EB); // Blue
+        return Theme.of(context).colorScheme.primary;
       case 'priority':
         return Colors.orange;
       case 'totalcost':
@@ -254,7 +273,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
       case 'eventtype':
       case 'eventdate':
       case 'eventlocation':
-        return const Color(0xFF059669); // Our new green color
+        return Theme.of(context).colorScheme.secondary;
       case 'description':
         return Colors.brown;
       default:
@@ -328,9 +347,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
 extension StringExtension on String {
   String toTitleCase() {
     if (isEmpty) return this;
-    return split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
-} 
+}

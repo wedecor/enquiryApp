@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/providers/role_provider.dart';
+
+import '../../core/providers/role_provider.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
@@ -66,15 +67,18 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .orderBy('order')
           .get();
 
-      final statuses = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final label = (data['label'] as String?)?.trim();
-        final value = (data['value'] as String?)?.trim();
-        return {
-          'label': label?.isNotEmpty == true ? label! : (value ?? ''),
-          'value': value ?? '',
-        };
-      }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
+      final statuses = snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            final label = (data['label'] as String?)?.trim();
+            final value = (data['value'] as String?)?.trim();
+            return {
+              'label': label?.isNotEmpty == true ? label! : (value ?? ''),
+              'value': value ?? '',
+            };
+          })
+          .where((e) => (e['value'] ?? '').isNotEmpty)
+          .toList();
 
       setState(() {
         _statuses = statuses;
@@ -96,7 +100,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         return [
           {'label': 'New', 'value': 'new'},
           {'label': 'Contacted', 'value': 'contacted'},
-          {'label': 'In Progress', 'value': 'in_progress'},
+          {'label': 'In Talks', 'value': 'in_talks'},
           {'label': 'Quote Sent', 'value': 'quote_sent'},
           {'label': 'Approved', 'value': 'approved'},
           {'label': 'Scheduled', 'value': 'scheduled'},
@@ -123,26 +127,20 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     }
   }
 
-  // Get the first valid value from the list as default
-  String? _getDefaultValue() {
-    if (_statuses.isEmpty) return null;
-    return _statuses.first['value'];
-  }
-
   // Validate if the current value exists in the statuses list
   String? _getValidValue(String? value) {
     if (value == null) return null;
-    
+
     // If still loading, return null to show hint text
     if (_isLoading) return null;
-    
+
     // CRITICAL FIX: Return null if _statuses is empty (still loading)
     if (_statuses.isEmpty) return null;
-    
+
     // Check if the value exists in the current statuses list
     final exists = _statuses.any((status) => status['value'] == value);
     if (exists) return value;
-    
+
     // If value doesn't exist in the list, return null to show hint text
     // This prevents assertion errors while still showing the field
     return null;
@@ -165,16 +163,14 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
     // Check for case-insensitive uniqueness
     final exists = _statuses.any(
-      (status) => (status['label'] ?? '').toLowerCase() == newStatus.toLowerCase() ||
-                   (status['value'] ?? '').toLowerCase() == newStatus.toLowerCase(),
+      (status) =>
+          (status['label'] ?? '').toLowerCase() == newStatus.toLowerCase() ||
+          (status['value'] ?? '').toLowerCase() == newStatus.toLowerCase(),
     );
 
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${widget.label} already exists'),
-          backgroundColor: Colors.orange,
-        ),
+        SnackBar(content: Text('${widget.label} already exists'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -189,13 +185,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .doc(widget.collectionName)
           .collection('items')
           .add({
-        'label': newStatus,
-        'value': newStatus.toLowerCase().replaceAll(' ', '_'),
-        'active': true,
-        'order': (_statuses.length + 1),
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-      });
+            'label': newStatus,
+            'value': newStatus.toLowerCase().replaceAll(' ', '_'),
+            'active': true,
+            'order': (_statuses.length + 1),
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+          });
 
       // Refresh the list
       await _loadStatuses();
@@ -268,10 +264,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             },
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: _addNewStatus,
-            child: const Text('Add'),
-          ),
+          ElevatedButton(onPressed: _addNewStatus, child: const Text('Add')),
         ],
       ),
     );
@@ -289,14 +282,17 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             Expanded(
               child: DropdownButtonFormField<String>(
                 // CRITICAL: Always ensure value is valid or null
-                value: _getValidValue(widget.value),
+                initialValue: _getValidValue(widget.value),
                 decoration: InputDecoration(
                   labelText: widget.required ? '${widget.label} *' : widget.label,
                   prefixIcon: Icon(_getIconForStatus()),
                   border: const OutlineInputBorder(),
-                  hintText: widget.value != null && !_isLoading && _statuses.isNotEmpty && 
-                           !_statuses.any((status) => status['value'] == widget.value)
-                      ? 'Current: ${widget.value}' 
+                  hintText:
+                      widget.value != null &&
+                          !_isLoading &&
+                          _statuses.isNotEmpty &&
+                          !_statuses.any((status) => status['value'] == widget.value)
+                      ? 'Current: ${widget.value}'
                       : null,
                   suffixIcon: _isLoading
                       ? const Padding(

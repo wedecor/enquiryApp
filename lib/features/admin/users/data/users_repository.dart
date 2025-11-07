@@ -36,28 +36,44 @@ class UsersRepository {
     // Apply limit
     query = query.limit(limit);
 
-    return query.snapshots().map((snapshot) {
-      List<UserModel> users = snapshot.docs
-          .map((doc) => UserModel.fromFirestore(doc))
-          .toList();
+    return query
+        .snapshots()
+        .map((snapshot) {
+          List<UserModel> users = [];
 
-      // Apply search filter on client side (for name and email)
-      if (search != null && search.isNotEmpty) {
-        final searchLower = search.toLowerCase();
-        users = users.where((user) {
-          return user.name.toLowerCase().contains(searchLower) ||
-              user.email.toLowerCase().contains(searchLower);
-        }).toList();
-      }
+          // Process each document with error handling
+          for (final doc in snapshot.docs) {
+            try {
+              final user = UserModel.fromFirestore(doc);
+              users.add(user);
+            } catch (e) {
+              print('Error parsing user document ${doc.id}: $e');
+              // Skip invalid documents instead of crashing
+              continue;
+            }
+          }
 
-      return users;
-    });
+          // Apply search filter on client side (for name and email)
+          if (search != null && search.isNotEmpty) {
+            final searchLower = search.toLowerCase();
+            users = users.where((user) {
+              return user.name.toLowerCase().contains(searchLower) ||
+                  user.email.toLowerCase().contains(searchLower);
+            }).toList();
+          }
+
+          return users;
+        })
+        .handleError((error) {
+          print('Error in users stream: $error');
+          return <UserModel>[]; // Return empty list on stream error
+        });
   }
 
   /// Create a new user document
   Future<void> createUserDoc(UserModel input) async {
     final userData = input.toFirestore();
-    
+
     // Set timestamps
     userData['createdAt'] = FieldValue.serverTimestamp();
     userData['updatedAt'] = FieldValue.serverTimestamp();
@@ -68,7 +84,7 @@ class UsersRepository {
   /// Update user document with patch
   Future<void> updateUserDoc(String uid, Map<String, dynamic> patch) async {
     patch['updatedAt'] = FieldValue.serverTimestamp();
-    
+
     await _firestore.collection(_collection).doc(uid).update(patch);
   }
 
@@ -105,10 +121,7 @@ class UsersRepository {
   }
 
   /// Get total count of users (for pagination info)
-  Future<int> getTotalUsersCount({
-    String? role,
-    bool? active,
-  }) async {
+  Future<int> getTotalUsersCount({String? role, bool? active}) async {
     Query query = _firestore.collection(_collection);
 
     if (role != null && role.isNotEmpty && role != 'All') {
@@ -123,4 +136,3 @@ class UsersRepository {
     return snapshot.docs.length;
   }
 }
-

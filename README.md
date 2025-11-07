@@ -2,6 +2,10 @@
 
 A comprehensive Flutter application for managing customer enquiries in the event decoration business. Built with clean architecture principles, Firebase backend, and role-based access control.
 
+## 📱 PWA Notes
+
+Asset caching is handled by Flutter's generated service worker (`flutter_service_worker.js`). The `firebase-messaging-sw.js` handles only FCM background messages and does not include caching logic to avoid conflicts.
+
 ## 📋 Overview
 
 We Decor Enquiries is a modern, scalable Flutter application designed to streamline the enquiry management process for event decoration businesses. The application provides a complete solution for tracking customer enquiries from initial contact to completion, with role-based access for administrators and staff members.
@@ -462,6 +466,31 @@ flutter clean && flutter pub get
 flutter build apk --release
 ```
 
+## 🔐 RBAC & Permissions
+
+- **[Feature Matrix](docs/FEATURE_MATRIX.md)**: Complete Staff vs Admin capabilities comparison
+- **[RBAC Quick Reference](docs/RBAC_QUICKREF.md)**: Role matrix and 3-layer gating checklist  
+- **[Planned Features](docs/PLANNED_FEATURES.md)**: Future role enhancements and roadmap
+
+## 📞 Contact Shortcuts
+
+The app includes integrated contact functionality for better customer communication:
+
+- **Call Integration**: Direct phone dialer access from enquiry details
+- **WhatsApp Integration**: Native app or web fallback with prefilled messages
+- **Cross-platform Support**: Works on Android, iOS, and Web with appropriate fallbacks
+- **Accessibility**: Full screen reader support and minimum 48dp tap targets
+
+### **Platform Requirements**
+- **iOS**: Requires `LSApplicationQueriesSchemes` for WhatsApp (already configured)
+- **Web/Desktop**: Falls back to WhatsApp Web and may not support calling (copy number fallback provided)
+- **Android**: Full native support for both calling and WhatsApp
+
+### **Privacy & Security**
+- **No PII Logging**: Phone numbers are not logged in audit trails
+- **Audit Trail**: Contact attempts are logged for admin users
+- **Error Handling**: Graceful fallbacks with copy-to-clipboard options
+
 ## 📚 Documentation
 
 - **API Documentation**: Run `dart doc` to generate documentation
@@ -494,6 +523,13 @@ For support and questions:
 - Create an issue in the GitHub repository
 - Check the documentation
 - Review the Firebase Console for backend issues
+
+## 🔒 Security
+
+### Security strict mode
+- Locally: `npm run sec:all` (non-strict), or `SECURITY_STRICT=1 npm run sec:all` (strict).
+- Pre-push: strict mode enforced.
+- CI on `main`: strict mode enforced + guard tests must pass.
 
 ---
 

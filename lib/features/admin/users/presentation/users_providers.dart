@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../data/users_repository.dart';
 import '../domain/user_model.dart';
-import '../../../../core/auth/current_user_role_provider.dart';
 
 // Repository provider
 final usersRepositoryProvider = Provider<UsersRepository>((ref) {
@@ -10,13 +11,14 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
 
 // Filter state for users list
 class UsersFilter extends StateNotifier<Map<String, dynamic>> {
-  UsersFilter() : super({
-    'search': '',
-    'role': 'All',
-    'active': null, // null means "All"
-    'limit': 20,
-    'startAfterEmail': null,
-  });
+  UsersFilter()
+    : super({
+        'search': '',
+        'role': 'All',
+        'active': null, // null means "All"
+        'limit': 20,
+        'startAfterEmail': null,
+      });
 
   void updateSearch(String search) {
     state = {...state, 'search': search, 'startAfterEmail': null};
@@ -35,13 +37,7 @@ class UsersFilter extends StateNotifier<Map<String, dynamic>> {
   }
 
   void reset() {
-    state = {
-      'search': '',
-      'role': 'All',
-      'active': null,
-      'limit': 20,
-      'startAfterEmail': null,
-    };
+    state = {'search': '', 'role': 'All', 'active': null, 'limit': 20, 'startAfterEmail': null};
   }
 }
 
@@ -50,9 +46,12 @@ final usersFilterProvider = StateNotifierProvider<UsersFilter, Map<String, dynam
 });
 
 // Users stream provider
-final usersStreamProvider = StreamProvider.family<List<UserModel>, Map<String, dynamic>>((ref, filter) {
+final usersStreamProvider = StreamProvider.family<List<UserModel>, Map<String, dynamic>>((
+  ref,
+  filter,
+) {
   final repository = ref.read(usersRepositoryProvider);
-  
+
   return repository.watchUsers(
     search: filter['search'] as String?,
     role: filter['role'] as String?,
@@ -103,19 +102,20 @@ class UserFormController extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final userFormControllerProvider = StateNotifierProvider<UserFormController, AsyncValue<void>>((ref) {
+final userFormControllerProvider = StateNotifierProvider<UserFormController, AsyncValue<void>>((
+  ref,
+) {
   final repository = ref.read(usersRepositoryProvider);
   return UserFormController(repository);
 });
-
 
 // Current user provider (for role checking) - now using the new auth system
 final currentUserProvider = Provider<UserModel?>((ref) {
   final authUser = ref.watch(firebaseAuthUserProvider).value;
   final userData = ref.watch(currentUserDataProvider);
-  
+
   if (authUser == null || userData == null) return null;
-  
+
   return UserModel(
     uid: authUser.uid,
     name: userData['name'] as String? ?? '',
@@ -123,7 +123,7 @@ final currentUserProvider = Provider<UserModel?>((ref) {
     phone: userData['phone'] as String?,
     role: userData['role'] as String? ?? 'staff',
     active: userData['active'] as bool? ?? true,
-    fcmToken: userData['fcmToken'] as String?,
+    // fcmToken removed for security - stored in private subcollection
     createdAt: DateTime.now(), // These will be properly set when loaded from Firestore
     updatedAt: DateTime.now(),
   );
@@ -139,17 +139,9 @@ class PaginationState {
   final bool isLoading;
   final String? lastEmail;
 
-  const PaginationState({
-    this.hasMore = false,
-    this.isLoading = false,
-    this.lastEmail,
-  });
+  const PaginationState({this.hasMore = false, this.isLoading = false, this.lastEmail});
 
-  PaginationState copyWith({
-    bool? hasMore,
-    bool? isLoading,
-    String? lastEmail,
-  }) {
+  PaginationState copyWith({bool? hasMore, bool? isLoading, String? lastEmail}) {
     return PaginationState(
       hasMore: hasMore ?? this.hasMore,
       isLoading: isLoading ?? this.isLoading,
@@ -158,7 +150,9 @@ class PaginationState {
   }
 }
 
-final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, PaginationState>((ref) {
+final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, PaginationState>((
+  ref,
+) {
   return PaginationStateNotifier();
 });
 

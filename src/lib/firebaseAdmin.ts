@@ -17,7 +17,7 @@ function init() {
     const credential = {
       projectId: projectId,
       clientEmail: "firebase-adminsdk@wedecorenquries.iam.gserviceaccount.com",
-      privateKey: "-----BEGIN PRIVATE KEY-----\ntemp\n-----END PRIVATE KEY-----\n",
+      privateKey: "process.env.PRIVATE_KEY_1\n",
     };
     
     // Use application default credentials with project ID
@@ -26,7 +26,7 @@ function init() {
       projectId: projectId
     });
   } catch (tokenError) {
-    console.log("Firebase CLI token not available, trying other methods...");
+    console.log("Firebase CLI [REDACTED] not available, trying other methods...");
     
     // Fallback to service account file if available
     const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;

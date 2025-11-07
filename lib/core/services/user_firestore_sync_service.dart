@@ -1,10 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
-import 'package:we_decor_enquiries/core/services/fcm_service.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+
+import '../../shared/models/user_model.dart';
+import 'fcm_service.dart';
+import 'firestore_service.dart';
 
 /// Service for syncing user data between Firebase Auth and Firestore
 class UserFirestoreSyncService {
@@ -91,20 +90,12 @@ class UserFirestoreSyncService {
     required String name,
     required String phone,
   }) async {
-    await _firestoreService.updateUser(uid, {
-      'name': name,
-      'phone': phone,
-    });
+    await _firestoreService.updateUser(uid, {'name': name, 'phone': phone});
   }
 
   /// Update user role (admin only)
-  Future<void> updateUserRole({
-    required String uid,
-    required UserRole role,
-  }) async {
-    await _firestoreService.updateUser(uid, {
-      'role': role.name,
-    });
+  Future<void> updateUserRole({required String uid, required UserRole role}) async {
+    await _firestoreService.updateUser(uid, {'role': role.name});
   }
 }
 
@@ -146,4 +137,4 @@ final currentUserIsAdminProvider = Provider<bool>((ref) {
 final currentUserIsStaffProvider = Provider<bool>((ref) {
   final role = ref.watch(currentUserRoleProvider);
   return role == UserRole.staff;
-}); 
+});

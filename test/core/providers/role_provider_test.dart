@@ -1,7 +1,6 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:we_decor_enquiries/core/providers/role_provider.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 void main() {
   group('Role Provider Tests', () {
@@ -75,10 +74,10 @@ void main() {
       test('should provide correct permissions for admin role', () {
         // This test verifies the role-based access control logic
         // by testing the userPermissionsProvider behavior
-        
+
         // Since the actual provider depends on Firebase Auth,
         // we test the logic that determines permissions based on roles
-        
+
         // Admin should have all permissions
         final adminPermissions = UserPermissions(
           canViewEnquiries: true,
@@ -129,20 +128,20 @@ void main() {
 
         // Staff should not be able to edit enquiries
         expect(staffPermissions.canEditEnquiries, isFalse);
-        
+
         // Staff should not be able to delete enquiries
         expect(staffPermissions.canDeleteEnquiries, isFalse);
-        
+
         // Staff should not be able to view analytics
         expect(staffPermissions.canViewAnalytics, isFalse);
-        
+
         // Staff should not be able to manage users
         expect(staffPermissions.canManageUsers, isFalse);
       });
 
       test('should allow appropriate access for each role', () {
         // Test that each role has appropriate access levels
-        
+
         // Admin role - full access
         final adminPermissions = UserPermissions(
           canViewEnquiries: true,
@@ -166,16 +165,16 @@ void main() {
         // Verify admin has more permissions than staff
         expect(adminPermissions.canEditEnquiries, isTrue);
         expect(staffPermissions.canEditEnquiries, isFalse);
-        
+
         expect(adminPermissions.canDeleteEnquiries, isTrue);
         expect(staffPermissions.canDeleteEnquiries, isFalse);
-        
+
         expect(adminPermissions.canViewAnalytics, isTrue);
         expect(staffPermissions.canViewAnalytics, isFalse);
-        
+
         expect(adminPermissions.canManageUsers, isTrue);
         expect(staffPermissions.canManageUsers, isFalse);
       });
     });
   });
-} 
+}

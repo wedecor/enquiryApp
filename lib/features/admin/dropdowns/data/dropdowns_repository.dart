@@ -10,18 +10,12 @@ class DropdownsRepository {
 
   /// Get the collection reference for a dropdown group
   CollectionReference<Map<String, dynamic>> _getCollection(DropdownGroup group) {
-    return _firestore
-        .collection('dropdowns')
-        .doc(group.collectionPath)
-        .collection('items');
+    return _firestore.collection('dropdowns').doc(group.collectionPath).collection('items');
   }
 
   /// Watch dropdown items for a specific group
   Stream<List<DropdownItem>> watchGroup(DropdownGroup group) {
-    return _getCollection(group)
-        .orderBy('order')
-        .snapshots()
-        .map((snapshot) {
+    return _getCollection(group).orderBy('order').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => DropdownItem.fromFirestore(doc)).toList();
     });
   }
@@ -29,7 +23,7 @@ class DropdownsRepository {
   /// Create a new dropdown item
   Future<void> create(DropdownGroup group, DropdownItemInput input) async {
     final collection = _getCollection(group);
-    
+
     // Check if value already exists
     final existingDoc = await collection.doc(input.value).get();
     if (existingDoc.exists) {
@@ -49,17 +43,10 @@ class DropdownsRepository {
   }
 
   /// Update an existing dropdown item
-  Future<void> update(
-    DropdownGroup group,
-    String value,
-    Map<String, dynamic> patch,
-  ) async {
+  Future<void> update(DropdownGroup group, String value, Map<String, dynamic> patch) async {
     final docRef = _getCollection(group).doc(value);
-    
-    await docRef.update({
-      ...patch,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+
+    await docRef.update({...patch, 'updatedAt': FieldValue.serverTimestamp()});
   }
 
   /// Toggle active status of a dropdown item
@@ -88,41 +75,32 @@ class DropdownsRepository {
 
     for (int i = 0; i < orderedValues.length; i++) {
       final docRef = collection.doc(orderedValues[i]);
-      batch.update(docRef, {
-        'order': i + 1,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      batch.update(docRef, {'order': i + 1, 'updatedAt': FieldValue.serverTimestamp()});
     }
 
     await batch.commit();
   }
 
   /// Replace a dropdown value in all enquiries
-  Future<void> replaceInEnquiries(
-    DropdownGroup group,
-    String oldValue,
-    String newValue,
-  ) async {
+  Future<void> replaceInEnquiries(DropdownGroup group, String oldValue, String newValue) async {
     final enquiryField = group.enquiryFieldName;
     final enquiriesRef = _firestore.collection('enquiries');
-    
+
     // Process in batches of 400
     const batchSize = 400;
     QueryDocumentSnapshot? lastDoc;
-    
+
     while (true) {
-      Query query = enquiriesRef
-          .where(enquiryField, isEqualTo: oldValue)
-          .limit(batchSize);
-      
+      Query query = enquiriesRef.where(enquiryField, isEqualTo: oldValue).limit(batchSize);
+
       if (lastDoc != null) {
         query = query.startAfterDocument(lastDoc);
       }
-      
+
       final snapshot = await query.get();
-      
+
       if (snapshot.docs.isEmpty) break;
-      
+
       // Batch update
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
@@ -131,9 +109,9 @@ class DropdownsRepository {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
-      
+
       await batch.commit();
-      
+
       if (snapshot.docs.length < batchSize) break;
       lastDoc = snapshot.docs.last;
     }
@@ -141,13 +119,10 @@ class DropdownsRepository {
 
   /// Get the next order value for a group
   Future<int> _getNextOrder(DropdownGroup group) async {
-    final snapshot = await _getCollection(group)
-        .orderBy('order', descending: true)
-        .limit(1)
-        .get();
-    
+    final snapshot = await _getCollection(group).orderBy('order', descending: true).limit(1).get();
+
     if (snapshot.docs.isEmpty) return 1;
-    
+
     final lastItem = DropdownItem.fromFirestore(snapshot.docs.first);
     return lastItem.order + 1;
   }
@@ -160,7 +135,7 @@ class DropdownsRepository {
         .where(enquiryField, isEqualTo: value)
         .limit(1)
         .get();
-    
+
     return snapshot.docs.isNotEmpty;
   }
 
@@ -171,16 +146,12 @@ class DropdownsRepository {
   }
 
   /// Search dropdown items within a group
-  Future<List<DropdownItem>> searchGroup(
-    DropdownGroup group,
-    String searchQuery,
-  ) async {
+  Future<List<DropdownItem>> searchGroup(DropdownGroup group, String searchQuery) async {
     final items = await getGroup(group);
     final query = searchQuery.toLowerCase();
-    
+
     return items.where((item) {
-      return item.value.toLowerCase().contains(query) ||
-             item.label.toLowerCase().contains(query);
+      return item.value.toLowerCase().contains(query) || item.label.toLowerCase().contains(query);
     }).toList();
   }
 }
@@ -191,7 +162,10 @@ final dropdownsRepositoryProvider = Provider<DropdownsRepository>((ref) {
 });
 
 /// Provider for dropdown items stream
-final dropdownsStreamProvider = StreamProvider.family<List<DropdownItem>, DropdownGroup>((ref, group) {
+final dropdownsStreamProvider = StreamProvider.family<List<DropdownItem>, DropdownGroup>((
+  ref,
+  group,
+) {
   final repository = ref.watch(dropdownsRepositoryProvider);
   return repository.watchGroup(group);
 });
@@ -203,17 +177,18 @@ final dropdownsProvider = FutureProvider.family<List<DropdownItem>, DropdownGrou
 });
 
 /// Provider for checking if a dropdown value has references
-final dropdownHasReferencesProvider = FutureProvider.family<bool, (DropdownGroup, String)>((ref, params) async {
-  final repository = ref.watch(dropdownsRepositoryProvider);
+final dropdownHasReferencesProvider = FutureProvider.family<bool, (DropdownGroup, String)>((
+  ref,
+  params,
+) async {
   final (group, value) = params;
-  
+
   final enquiryField = group.enquiryFieldName;
   final snapshot = await FirebaseFirestore.instance
       .collection('enquiries')
       .where(enquiryField, isEqualTo: value)
       .limit(1)
       .get();
-  
+
   return snapshot.docs.isNotEmpty;
 });
-

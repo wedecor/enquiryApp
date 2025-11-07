@@ -47,7 +47,10 @@ final dropdownQueryProvider = StateNotifierProvider<DropdownQueryState, String>(
 });
 
 /// Provider for filtered dropdown items
-final filteredDropdownsProvider = StreamProvider.family<List<DropdownItem>, DropdownGroup>((ref, group) {
+final filteredDropdownsProvider = StreamProvider.family<List<DropdownItem>, DropdownGroup>((
+  ref,
+  group,
+) {
   final dropdownsAsync = ref.watch(dropdownsStreamProvider(group));
   final query = ref.watch(dropdownQueryProvider);
 
@@ -60,7 +63,7 @@ final filteredDropdownsProvider = StreamProvider.family<List<DropdownItem>, Drop
 
       final filtered = items.where((item) {
         return item.value.toLowerCase().contains(searchQuery) ||
-               item.label.toLowerCase().contains(searchQuery);
+            item.label.toLowerCase().contains(searchQuery);
       }).toList();
 
       return Stream.value(filtered);
@@ -86,11 +89,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
   }
 
   /// Update an existing dropdown item
-  Future<void> updateItem(
-    DropdownGroup group,
-    String value,
-    Map<String, dynamic> patch,
-  ) async {
+  Future<void> updateItem(DropdownGroup group, String value, Map<String, dynamic> patch) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
@@ -99,11 +98,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
   }
 
   /// Toggle active status of a dropdown item
-  Future<void> toggleActive(
-    DropdownGroup group,
-    String value,
-    bool active,
-  ) async {
+  Future<void> toggleActive(DropdownGroup group, String value, bool active) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
@@ -121,10 +116,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
   }
 
   /// Reorder dropdown items
-  Future<void> reorderItems(
-    DropdownGroup group,
-    List<String> orderedValues,
-  ) async {
+  Future<void> reorderItems(DropdownGroup group, List<String> orderedValues) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
@@ -133,11 +125,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
   }
 
   /// Replace a dropdown value in all enquiries
-  Future<void> replaceInEnquiries(
-    DropdownGroup group,
-    String oldValue,
-    String newValue,
-  ) async {
+  Future<void> replaceInEnquiries(DropdownGroup group, String oldValue, String newValue) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
@@ -146,9 +134,10 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final dropdownFormControllerProvider = StateNotifierProvider<DropdownFormController, AsyncValue<void>>((ref) {
-  return DropdownFormController(ref);
-});
+final dropdownFormControllerProvider =
+    StateNotifierProvider<DropdownFormController, AsyncValue<void>>((ref) {
+      return DropdownFormController(ref);
+    });
 
 /// Provider for checking if current user is admin
 final isDropdownAdminProvider = Provider<bool>((ref) {
@@ -156,9 +145,12 @@ final isDropdownAdminProvider = Provider<bool>((ref) {
 });
 
 /// Provider for dropdown group statistics
-final dropdownGroupStatsProvider = FutureProvider.family<Map<String, int>, DropdownGroup>((ref, group) async {
+final dropdownGroupStatsProvider = FutureProvider.family<Map<String, int>, DropdownGroup>((
+  ref,
+  group,
+) async {
   final items = await ref.watch(dropdownsProvider(group).future);
-  
+
   return {
     'total': items.length,
     'active': items.where((item) => item.active).length,
@@ -167,69 +159,64 @@ final dropdownGroupStatsProvider = FutureProvider.family<Map<String, int>, Dropd
 });
 
 /// Provider for checking if a dropdown value is referenced in enquiries
-final isDropdownReferencedProvider = FutureProvider.family<bool, (DropdownGroup, String)>((ref, params) async {
+final isDropdownReferencedProvider = FutureProvider.family<bool, (DropdownGroup, String)>((
+  ref,
+  params,
+) async {
   return ref.watch(dropdownHasReferencesProvider(params).future);
 });
 
 /// Provider for getting available replacement values for a dropdown group
-final availableReplacementsProvider = FutureProvider.family<List<DropdownItem>, (DropdownGroup, String)>((ref, params) async {
-  final (group, excludeValue) = params;
-  final items = await ref.watch(dropdownsProvider(group).future);
-  
-  return items
-      .where((item) => item.value != excludeValue && item.active)
-      .toList();
-});
+final availableReplacementsProvider =
+    FutureProvider.family<List<DropdownItem>, (DropdownGroup, String)>((ref, params) async {
+      final (group, excludeValue) = params;
+      final items = await ref.watch(dropdownsProvider(group).future);
+
+      return items.where((item) => item.value != excludeValue && item.active).toList();
+    });
 
 /// State for dropdown reordering
 class DropdownReorderState extends StateNotifier<Map<String, dynamic>> {
-  DropdownReorderState() : super({
-    'isReordering': false,
-    'reorderedValues': <String>[],
-  });
+  DropdownReorderState() : super({'isReordering': false, 'reorderedValues': <String>[]});
 
   void startReordering(List<String> initialValues) {
-    state = {
-      'isReordering': true,
-      'reorderedValues': List.from(initialValues),
-    };
+    state = {'isReordering': true, 'reorderedValues': List.from(initialValues)};
   }
 
   void updateReorderedValues(List<String> newOrder) {
-    state = {
-      ...state,
-      'reorderedValues': List.from(newOrder),
-    };
+    state = {...state, 'reorderedValues': List.from(newOrder)};
   }
 
   void cancelReordering() {
-    state = {
-      'isReordering': false,
-      'reorderedValues': <String>[],
-    };
+    state = {'isReordering': false, 'reorderedValues': <String>[]};
   }
 
   void confirmReordering() {
-    state = {
-      ...state,
-      'isReordering': false,
-    };
+    state = {...state, 'isReordering': false};
   }
 }
 
-final dropdownReorderProvider = StateNotifierProvider<DropdownReorderState, Map<String, dynamic>>((ref) {
+final dropdownReorderProvider = StateNotifierProvider<DropdownReorderState, Map<String, dynamic>>((
+  ref,
+) {
   return DropdownReorderState();
 });
 
 /// Provider for dropdown item validation
-final validateDropdownItemProvider = Provider.family<DropdownItemValidation, DropdownItemInput>((ref, input) {
+final validateDropdownItemProvider = Provider.family<DropdownItemValidation, DropdownItemInput>((
+  ref,
+  input,
+) {
   return DropdownItemValidation.validate(input);
 });
 
 /// Provider for checking if a dropdown value is unique within a group
-final isDropdownValueUniqueProvider = FutureProvider.family<bool, (DropdownGroup, String)>((ref, params) async {
+final isDropdownValueUniqueProvider = FutureProvider.family<bool, (DropdownGroup, String)>((
+  ref,
+  params,
+) async {
   final (group, value) = params;
   final items = await ref.watch(dropdownsProvider(group).future);
-  
+
   return !items.any((item) => item.value == value);
 });
