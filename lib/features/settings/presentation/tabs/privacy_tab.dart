@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../legal/privacy_policy_screen.dart';
-import '../../../legal/terms_of_service_screen.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/feedback/feedback_sheet.dart';
 import '../../../../core/services/consent_service.dart';
+import '../../../legal/privacy_policy_screen.dart';
+import '../../../legal/terms_of_service_screen.dart';
 
 class PrivacyTab extends ConsumerStatefulWidget {
   const PrivacyTab({super.key});
@@ -172,9 +172,9 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                Text('Version: 1.0.0+1'),
-                Text('Environment: ${AppConfig.env}'),
-                Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
+                const Text('Version: 1.0.0+1'),
+                const Text('Environment: ${AppConfig.env}'),
+                const Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
                 const SizedBox(height: 8),
                 Text('© ${DateTime.now().year} We Decor Enquiries. All rights reserved.'),
               ],

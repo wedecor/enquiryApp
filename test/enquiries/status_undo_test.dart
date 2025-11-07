@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-
-import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/status_inline_control.dart'
-    as wid;
+import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
-import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
+import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/status_inline_control.dart'
+    as wid;
 
 class MockEnquiryRepository extends Mock implements EnquiryRepository {}
 

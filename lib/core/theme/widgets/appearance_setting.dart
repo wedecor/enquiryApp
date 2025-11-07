@@ -24,7 +24,7 @@ class AppearanceSetting extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(AppTokens.space4),
+        padding: const EdgeInsets.all(AppTokens.space4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,36 +32,36 @@ class AppearanceSetting extends ConsumerWidget {
               'Appearance',
               style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: AppTokens.space2),
+            const SizedBox(height: AppTokens.space2),
             Text(
               'Choose how the app looks on your device',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            SizedBox(height: AppTokens.space4),
+            const SizedBox(height: AppTokens.space4),
 
             // Segmented Button for theme selection
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<AppearanceMode>(
                 segments: [
-                  ButtonSegment(
+                  const ButtonSegment(
                     value: AppearanceMode.system,
-                    label: const Text('System'),
-                    icon: const Icon(Icons.brightness_auto),
+                    label: Text('System'),
+                    icon: Icon(Icons.brightness_auto),
                     tooltip: 'Follow system setting',
                   ),
-                  ButtonSegment(
+                  const ButtonSegment(
                     value: AppearanceMode.light,
-                    label: const Text('Light'),
-                    icon: const Icon(Icons.light_mode),
+                    label: Text('Light'),
+                    icon: Icon(Icons.light_mode),
                     tooltip: 'Always use light theme',
                   ),
-                  ButtonSegment(
+                  const ButtonSegment(
                     value: AppearanceMode.dark,
-                    label: const Text('Dark'),
-                    icon: const Icon(Icons.dark_mode),
+                    label: Text('Dark'),
+                    icon: Icon(Icons.dark_mode),
                     tooltip: 'Always use dark theme',
                   ),
                 ],
@@ -75,14 +75,14 @@ class AppearanceSetting extends ConsumerWidget {
               ),
             ),
 
-            SizedBox(height: AppTokens.space3),
+            const SizedBox(height: AppTokens.space3),
 
             // Current mode description
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(AppTokens.space3),
+              padding: const EdgeInsets.all(AppTokens.space3),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: AppRadius.medium,
               ),
               child: Row(
@@ -92,7 +92,7 @@ class AppearanceSetting extends ConsumerWidget {
                     size: AppTokens.iconSmall,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                  SizedBox(width: AppTokens.space2),
+                  const SizedBox(width: AppTokens.space2),
                   Expanded(
                     child: Text(
                       _getModeDescription(mode),

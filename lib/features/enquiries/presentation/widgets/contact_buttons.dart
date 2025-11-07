@@ -32,8 +32,8 @@ class ContactButtons extends ConsumerWidget {
     // Don't show buttons if no phone number — show a subtle hint instead
     if (customerPhone == null || customerPhone!.trim().isEmpty) {
       return Container(
-        margin: EdgeInsets.only(top: AppTokens.space2),
-        padding: EdgeInsets.all(AppTokens.space2),
+        margin: const EdgeInsets.only(top: AppTokens.space2),
+        padding: const EdgeInsets.all(AppTokens.space2),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: AppRadius.medium,
@@ -46,7 +46,7 @@ class ContactButtons extends ConsumerWidget {
               size: AppTokens.iconSmall,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            SizedBox(width: AppTokens.space2),
+            const SizedBox(width: AppTokens.space2),
             Expanded(
               child: Text(
                 'Add a phone number to enable Call and WhatsApp actions',
@@ -61,7 +61,7 @@ class ContactButtons extends ConsumerWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(top: AppTokens.space2),
+      margin: const EdgeInsets.only(top: AppTokens.space2),
       child: Row(
         children: [
           // Call Button
@@ -95,7 +95,7 @@ class ContactButtons extends ConsumerWidget {
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
-                    SizedBox(width: AppTokens.space1),
+                    const SizedBox(width: AppTokens.space1),
                     Text(
                       'Call',
                       style: theme.textTheme.labelMedium?.copyWith(
@@ -111,7 +111,7 @@ class ContactButtons extends ConsumerWidget {
             ),
           ),
 
-          SizedBox(width: AppTokens.space3),
+          const SizedBox(width: AppTokens.space3),
 
           // WhatsApp Button
           Expanded(
@@ -144,7 +144,7 @@ class ContactButtons extends ConsumerWidget {
                           ? const Color(0xFF25D366)
                           : theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
-                    SizedBox(width: AppTokens.space1),
+                    const SizedBox(width: AppTokens.space1),
                     Text(
                       'WhatsApp',
                       style: theme.textTheme.labelMedium?.copyWith(

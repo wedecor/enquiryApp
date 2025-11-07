@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/services/audit_service.dart';
@@ -542,7 +542,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                     );
                   },
                   loading: () => TextFormField(
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Assign To',
                       prefixIcon: Icon(Icons.person_add),
                       border: OutlineInputBorder(),
