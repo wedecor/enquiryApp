@@ -1,16 +1,16 @@
 {
-  "version": "1.0.1",
-  "buildNumber": 13,
+  "version": "2.0.0",
+  "buildNumber": 22,
   "releaseDate": "2025-11-07",
-  "releaseNotes": "🎨 BRAND REFRESH + KPI FIXES\n\n✨ We Decor branding and color palette applied across dashboards\n📊 KPI strip now shows four tiles without overflow on phones\n🛠️ General polish and stability improvements",
-  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-20251107-221426.apk",
-  "sha256": "bb4bfac37b3717f03f01761da795fa4936aef9b51484af7d47dada58fb7dbc30",
+  "releaseNotes": "🚀 VERSION 2.0 LAUNCH\n\n🌈 Updated We Decor branding applied across Android & Web\n📊 Responsive KPI cards with full metrics grid on phones\n🧭 Nested dashboard tabs for smoother scrolling\n🪲 Bug fixes and performance polish",
+  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-2.0.0-22-20251107-222110.apk",
+  "sha256": "0d7b25da5892d4b09eea6ad9f8f9e1ff5168d7bc78386ea6b1e0137ebc318a1a",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
     "We Decor teal/blue branding",
-    "Responsive KPI cards on dashboard",
-    "Tab bar layout fixes"
+    "Responsive dashboard KPI cards",
+    "Pinned tab layout improvements"
   ],
   "bugFixes": [
     "Resolved dashboard KPI overflow on phones",
