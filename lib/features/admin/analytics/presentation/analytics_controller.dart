@@ -1,8 +1,9 @@
 import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../domain/analytics_models.dart';
+
 import '../data/analytics_repository.dart';
+import '../domain/analytics_models.dart';
 
 part 'analytics_controller.g.dart';
 
@@ -25,10 +26,7 @@ class AnalyticsController extends _$AnalyticsController {
   /// Update date range preset and reload data
   Future<void> updateDateRangePreset(DateRangePreset preset) async {
     final currentState = await future;
-    final newFilters = currentState.filters.copyWith(
-      preset: preset,
-      dateRange: preset.dateRange,
-    );
+    final newFilters = currentState.filters.copyWith(preset: preset, dateRange: preset.dateRange);
     await updateFilters(newFilters);
   }
 
@@ -80,7 +78,7 @@ class AnalyticsController extends _$AnalyticsController {
   /// Load all analytics data in parallel
   Future<AnalyticsState> _loadAnalyticsData(AnalyticsFilters filters) async {
     final repository = ref.read(analyticsRepositoryProvider);
-    
+
     try {
       // Calculate previous period for deltas
       final currentRange = filters.dateRange;
@@ -102,10 +100,7 @@ class AnalyticsController extends _$AnalyticsController {
       final previousData = results[1] as _PreviousPeriodData;
 
       // Calculate KPI summary with deltas
-      final kpiSummary = _calculateKpiSummary(
-        currentData,
-        previousData,
-      );
+      final kpiSummary = _calculateKpiSummary(currentData, previousData);
 
       // Convert breakdowns to CategoryCount lists
       final statusBreakdown = _convertToCategories(currentData.statusCounts);
@@ -145,23 +140,15 @@ class AnalyticsController extends _$AnalyticsController {
     AnalyticsFilters filters,
   ) async {
     final bucket = TimeBucket.fromDateRange(filters.dateRange);
-    
+
     final results = await Future.wait([
       repository.countEnquiries(dateRange: filters.dateRange, filters: filters),
       repository.countByStatus(dateRange: filters.dateRange, filters: filters),
       repository.countByEventType(dateRange: filters.dateRange, filters: filters),
       repository.countBySource(dateRange: filters.dateRange, filters: filters),
       repository.sumRevenue(dateRange: filters.dateRange, filters: filters),
-      repository.getTimeSeries(
-        dateRange: filters.dateRange,
-        bucket: bucket,
-        filters: filters,
-      ),
-      repository.getRecentEnquiries(
-        dateRange: filters.dateRange,
-        filters: filters,
-        limit: 20,
-      ),
+      repository.getTimeSeries(dateRange: filters.dateRange, bucket: bucket, filters: filters),
+      repository.getRecentEnquiries(dateRange: filters.dateRange, filters: filters, limit: 20),
     ]);
 
     return _CurrentPeriodData(
@@ -182,7 +169,7 @@ class AnalyticsController extends _$AnalyticsController {
     DateRange previousRange,
   ) async {
     final previousFilters = filters.copyWith(dateRange: previousRange);
-    
+
     final results = await Future.wait([
       repository.countEnquiries(dateRange: previousRange, filters: previousFilters),
       repository.countByStatus(dateRange: previousRange, filters: previousFilters),
@@ -197,26 +184,26 @@ class AnalyticsController extends _$AnalyticsController {
   }
 
   /// Calculate KPI summary with deltas
-  KpiSummary _calculateKpiSummary(
-    _CurrentPeriodData current,
-    _PreviousPeriodData previous,
-  ) {
+  KpiSummary _calculateKpiSummary(_CurrentPeriodData current, _PreviousPeriodData previous) {
     // Calculate current period KPIs
     final activeCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.active);
     final wonCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.won);
     final lostCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.lost);
-    
-    final conversionRate = (wonCount + lostCount) > 0 
-        ? (wonCount / (wonCount + lostCount)) * 100 
+
+    final conversionRate = (wonCount + lostCount) > 0
+        ? (wonCount / (wonCount + lostCount)) * 100
         : 0.0;
 
     // Calculate previous period KPIs for deltas
-    final prevActiveCount = _countByStatusCategory(previous.statusCounts, EnquiryStatusCategory.active);
+    final prevActiveCount = _countByStatusCategory(
+      previous.statusCounts,
+      EnquiryStatusCategory.active,
+    );
     final prevWonCount = _countByStatusCategory(previous.statusCounts, EnquiryStatusCategory.won);
     final prevLostCount = _countByStatusCategory(previous.statusCounts, EnquiryStatusCategory.lost);
-    
-    final prevConversionRate = (prevWonCount + prevLostCount) > 0 
-        ? (prevWonCount / (prevWonCount + prevLostCount)) * 100 
+
+    final prevConversionRate = (prevWonCount + prevLostCount) > 0
+        ? (prevWonCount / (prevWonCount + prevLostCount)) * 100
         : 0.0;
 
     // Calculate percentage changes
@@ -226,7 +213,10 @@ class AnalyticsController extends _$AnalyticsController {
       wonEnquiriesChange: _calculatePercentageChange(prevWonCount, wonCount),
       lostEnquiriesChange: _calculatePercentageChange(prevLostCount, lostCount),
       conversionRateChange: _calculatePercentageChange(prevConversionRate, conversionRate),
-      estimatedRevenueChange: _calculatePercentageChange(previous.totalRevenue, current.totalRevenue),
+      estimatedRevenueChange: _calculatePercentageChange(
+        previous.totalRevenue,
+        current.totalRevenue,
+      ),
     );
 
     return KpiSummary(
@@ -262,15 +252,17 @@ class AnalyticsController extends _$AnalyticsController {
   /// Convert count map to CategoryCount list with percentages
   List<CategoryCount> _convertToCategories(Map<String, int> counts) {
     final total = counts.values.fold<int>(0, (sum, count) => sum + count);
-    
+
     if (total == 0) return [];
-    
+
     return counts.entries
-        .map((entry) => CategoryCount(
-              key: entry.key,
-              count: entry.value,
-              percentage: (entry.value / total) * 100,
-            ))
+        .map(
+          (entry) => CategoryCount(
+            key: entry.key,
+            count: entry.value,
+            percentage: (entry.value / total) * 100,
+          ),
+        )
         .toList()
       ..sort((a, b) => b.count.compareTo(a.count)); // Sort by count descending
   }

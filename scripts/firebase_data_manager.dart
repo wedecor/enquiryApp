@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
+import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Firebase Data Manager for export/import operations
 class FirebaseDataManager {
@@ -33,7 +34,6 @@ class FirebaseDataManager {
 
       print('✅ Export completed successfully!');
       print('📁 Data exported to: $dir');
-
     } catch (e) {
       print('❌ Export failed: $e');
       rethrow;
@@ -60,7 +60,6 @@ class FirebaseDataManager {
       await _importDropdowns(inputDir);
 
       print('✅ Import completed successfully!');
-
     } catch (e) {
       print('❌ Import failed: $e');
       rethrow;
@@ -78,7 +77,7 @@ class FirebaseDataManager {
       documents[doc.id] = doc.data();
     }
 
-    final file = File('$outputDir/${collectionName}.json');
+    final file = File('$outputDir/$collectionName.json');
     await file.writeAsString(jsonEncode(documents, toEncodable: _jsonEncoder));
 
     print('   ✅ Exported ${documents.length} documents');
@@ -175,7 +174,7 @@ class FirebaseDataManager {
   Future<void> _importCollection(String collectionName, String inputDir) async {
     print('📥 Importing collection: $collectionName');
 
-    final file = File('$inputDir/${collectionName}.json');
+    final file = File('$inputDir/$collectionName.json');
     if (!await file.exists()) {
       print('   ⚠️  File not found: ${file.path}');
       return;
@@ -187,10 +186,13 @@ class FirebaseDataManager {
     int importedCount = 0;
     for (final entry in documents.entries) {
       try {
-        await _firestore.collection(collectionName).doc(entry.key).set(entry.value);
+        await _firestore
+            .collection(collectionName)
+            .doc(entry.key)
+            .set(Map<String, dynamic>.from(entry.value as Map));
         importedCount++;
       } catch (e) {
-        print('   ❌ Failed to import document ${entry.key}: $e');
+        // TODO: Replace with safeLog - print('   ❌ Failed to import document ${entry.key}: $e');
       }
     }
 
@@ -213,8 +215,8 @@ class FirebaseDataManager {
     int importedCount = 0;
     for (final entry in documents.entries) {
       try {
-        final docData = Map<String, dynamic>.from(entry.value);
-        final subcollections = docData.remove('_subcollections') as Map<String, dynamic>?;
+        final docData = Map<String, dynamic>.from(entry.value as Map);
+        final subcollections = docData.remove('_subcollections') as Map<dynamic, dynamic>?;
 
         // Import main document
         await _firestore.collection(collectionName).doc(entry.key).set(docData);
@@ -230,27 +232,27 @@ class FirebaseDataManager {
                   .doc(entry.key)
                   .collection('financial')
                   .doc(financialEntry.key)
-                  .set(financialEntry.value);
+                  .set(Map<String, dynamic>.from(financialEntry.value as Map));
             }
           }
 
           // Import history subcollection
           if (subcollections.containsKey('history')) {
-            final historyDocs = subcollections['history'] as Map<String, dynamic>;
+            final historyDocs = subcollections['history'] as Map<dynamic, dynamic>;
             for (final historyEntry in historyDocs.entries) {
               await _firestore
                   .collection(collectionName)
                   .doc(entry.key)
                   .collection('history')
-                  .doc(historyEntry.key)
-                  .set(historyEntry.value);
+                  .doc(historyEntry.key as String)
+                  .set(Map<String, dynamic>.from(historyEntry.value as Map<String, dynamic>));
             }
           }
         }
 
         importedCount++;
       } catch (e) {
-        print('   ❌ Failed to import document ${entry.key}: $e');
+        // TODO: Replace with safeLog - print('   ❌ Failed to import document ${entry.key}: $e');
       }
     }
 
@@ -280,10 +282,10 @@ class FirebaseDataManager {
               .doc(dropdownType)
               .collection('items')
               .doc(itemEntry.key)
-              .set(itemEntry.value);
+              .set(Map<String, dynamic>.from(itemEntry.value as Map));
           importedCount++;
         } catch (e) {
-          print('   ❌ Failed to import dropdown item ${itemEntry.key}: $e');
+          // TODO: Replace with safeLog - print('   ❌ Failed to import dropdown item ${itemEntry.key}: $e');
         }
       }
     }
@@ -294,17 +296,10 @@ class FirebaseDataManager {
   /// Custom JSON encoder for Firestore data
   dynamic _jsonEncoder(dynamic obj) {
     if (obj is Timestamp) {
-      return {
-        '_type': 'timestamp',
-        'seconds': obj.seconds,
-        'nanoseconds': obj.nanoseconds,
-      };
+      return {'_type': 'timestamp', 'seconds': obj.seconds, 'nanoseconds': obj.nanoseconds};
     }
     if (obj is DateTime) {
-      return {
-        '_type': 'datetime',
-        'iso8601': obj.toIso8601String(),
-      };
+      return {'_type': 'datetime', 'iso8601': obj.toIso8601String()};
     }
     return obj;
   }
@@ -350,9 +345,7 @@ class FirebaseDataManager {
 void main(List<String> args) async {
   try {
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -392,7 +385,6 @@ void main(List<String> args) async {
         print('❌ Unknown command: $command');
         printUsage();
     }
-
   } catch (e) {
     print('❌ Error: $e');
     exit(1);
@@ -412,4 +404,4 @@ void printUsage() {
   print('  dart run scripts/firebase_data_manager.dart export');
   print('  dart run scripts/firebase_data_manager.dart export ./my_backup');
   print('  dart run scripts/firebase_data_manager.dart import ./my_backup');
-} 
+}

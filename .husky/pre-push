@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔒 Running security audit (strict on push)..."
+SECURITY_STRICT=1 npm run sec:all || exit 1
+
+echo "🧪 Running guard tests..."
+flutter test --machine >/dev/null 2>&1 || flutter test || exit 1
+
+echo "✅ Pre-push checks passed."
+

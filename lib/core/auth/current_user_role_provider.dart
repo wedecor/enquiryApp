@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../shared/models/user_model.dart';
 
 /// Auth state (FirebaseAuth user)
 final firebaseAuthUserProvider = StreamProvider<fb.User?>((ref) {
@@ -11,27 +11,39 @@ final firebaseAuthUserProvider = StreamProvider<fb.User?>((ref) {
 
 /// Firestore user doc stream for the signed-in user
 final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
-  final auth = ref.watch(firebaseAuthUserProvider).value;
-  if (auth == null) return const Stream.empty();
-  final doc = FirebaseFirestore.instance.collection('users').doc(auth.uid);
-  return doc.snapshots();
+  final authAsync = ref.watch(firebaseAuthUserProvider);
+  return authAsync.when(
+    data: (auth) {
+      if (auth == null) return const Stream.empty();
+      final doc = FirebaseFirestore.instance.collection('users').doc(auth.uid);
+      return doc.snapshots();
+    },
+    loading: () => const Stream.empty(),
+    error: (_, __) => const Stream.empty(),
+  );
 });
 
 /// Current user role: "admin" | "staff" | null (unknown/not found)
 final currentUserRoleProvider = Provider<String?>((ref) {
-  final snap = ref.watch(currentUserDocProvider).value;
-  if (snap == null || !snap.exists) return null;
-  final data = snap.data();
-  if (data == null) return null;
-  final role = data['role'];
-  if (role is String && (role == 'admin' || role == 'staff')) return role;
-  return null;
+  final docAsync = ref.watch(currentUserDocProvider);
+  return docAsync.when(
+    data: (snap) {
+      if (snap == null || !snap.exists) return null;
+      final data = snap.data();
+      if (data == null) return null;
+      final role = data['role'];
+      if (role is String && (role == 'admin' || role == 'staff')) return role;
+      return null;
+    },
+    loading: () => null,
+    error: (_, __) => null,
+  );
 });
 
 /// Current user uid (or null)
 final currentUserUidProvider = Provider<String?>((ref) {
-  final u = ref.watch(firebaseAuthUserProvider).value;
-  return u?.uid;
+  final authAsync = ref.watch(firebaseAuthUserProvider);
+  return authAsync.when(data: (user) => user?.uid, loading: () => null, error: (_, __) => null);
 });
 
 /// Convenience: is admin?
@@ -41,9 +53,15 @@ final isAdminProvider = Provider<bool>((ref) {
 
 /// Current user document data
 final currentUserDataProvider = Provider<Map<String, dynamic>?>((ref) {
-  final snap = ref.watch(currentUserDocProvider).value;
-  if (snap == null || !snap.exists) return null;
-  return snap.data();
+  final docAsync = ref.watch(currentUserDocProvider);
+  return docAsync.when(
+    data: (snap) {
+      if (snap == null || !snap.exists) return null;
+      return snap.data();
+    },
+    loading: () => null,
+    error: (_, __) => null,
+  );
 });
 
 /// Current user as AsyncValue<UserModel?> for compatibility
@@ -57,7 +75,7 @@ final currentUserAsyncProvider = StreamProvider<UserModel?>((ref) {
         if (!snap.exists) return null;
         final data = snap.data();
         if (data == null) return null;
-        
+
         // Convert to UserModel
         return UserModel(
           uid: snap.id,

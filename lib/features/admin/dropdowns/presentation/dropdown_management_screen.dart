@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../domain/dropdown_item.dart';
-import 'dropdown_providers.dart';
 import 'dropdown_form_dialog.dart';
+import 'dropdown_providers.dart';
 
 /// Main screen for managing dropdown items
 class DropdownManagementScreen extends ConsumerStatefulWidget {
@@ -48,7 +49,6 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(dropdownGroupProvider);
     final isAdmin = ref.watch(isDropdownAdminProvider);
-    final searchQuery = ref.watch(dropdownQueryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +74,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             ),
           ),
           const SizedBox(width: 8),
-          
+
           // Add button (admin only)
           if (isAdmin)
             ElevatedButton.icon(
@@ -82,9 +82,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               icon: const Icon(Icons.add),
               label: const Text('Add Item'),
             ),
-          
+
           const SizedBox(width: 8),
-          
+
           // Refresh button
           IconButton(
             onPressed: () {
@@ -97,10 +97,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          tabs: DropdownGroup.values.map((group) => Tab(
-            text: group.displayName,
-            icon: Icon(_getGroupIcon(group)),
-          )).toList(),
+          tabs: DropdownGroup.values
+              .map((group) => Tab(text: group.displayName, icon: Icon(_getGroupIcon(group))))
+              .toList(),
         ),
       ),
       body: TabBarView(
@@ -118,7 +117,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       children: [
         // Group statistics
         _buildGroupStats(group),
-        
+
         // Dropdowns list
         Expanded(
           child: dropdownsAsync.when(
@@ -170,18 +169,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           children: [
             Text(
               value.toString(),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
             ),
             Text(
               label,
-              style: TextStyle(
-                color: color.withOpacity(0.8),
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(color: color.withOpacity(0.8), fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -194,17 +186,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            _getGroupIcon(group),
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(_getGroupIcon(group), size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No ${group.displayName.toLowerCase()} found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
@@ -223,17 +209,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red,
-          ),
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
           Text(
             'Error loading dropdowns',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.red,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.red),
           ),
           const SizedBox(height: 8),
           Text(
@@ -258,7 +238,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     return ReorderableListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
-      onReorder: isAdmin ? (oldIndex, newIndex) => _onReorder(group, items, oldIndex, newIndex) : (_, __) {},
+      onReorder: isAdmin
+          ? (oldIndex, newIndex) => _onReorder(group, items, oldIndex, newIndex)
+          : (_, __) {},
       itemBuilder: (context, index) {
         final item = items[index];
         return _buildDropdownItem(group, item, index, isAdmin);
@@ -295,16 +277,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             ],
           ],
         ),
-        title: Text(
-          item.label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        title: Text(item.label, style: const TextStyle(fontWeight: FontWeight.w500)),
         subtitle: Text(
           item.value,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontFamily: 'monospace', color: Colors.grey.shade600),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -319,7 +295,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               ),
             ),
             const SizedBox(width: 8),
-            
+
             // Actions menu
             PopupMenuButton<String>(
               enabled: isAdmin,
@@ -327,13 +303,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit),
-                      SizedBox(width: 8),
-                      Text('Edit'),
-                    ],
-                  ),
+                  child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')]),
                 ),
                 PopupMenuItem(
                   value: item.active ? 'deactivate' : 'activate',
@@ -373,7 +343,12 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Future<void> _onReorder(DropdownGroup group, List<DropdownItem> items, int oldIndex, int newIndex) async {
+  Future<void> _onReorder(
+    DropdownGroup group,
+    List<DropdownItem> items,
+    int oldIndex,
+    int newIndex,
+  ) async {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -385,9 +360,8 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     final orderedValues = reorderedItems.map((item) => item.value).toList();
 
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
-          .reorderItems(group, orderedValues);
-      
+      await ref.read(dropdownFormControllerProvider.notifier).reorderItems(group, orderedValues);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -442,16 +416,15 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
 
   Future<void> _toggleActive(DropdownGroup group, DropdownItem item) async {
     try {
-      await ref.read(dropdownFormControllerProvider.notifier)
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
           .toggleActive(group, item.value, !item.active);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              item.active
-                  ? 'Item deactivated successfully'
-                  : 'Item activated successfully',
+              item.active ? 'Item deactivated successfully' : 'Item activated successfully',
             ),
             backgroundColor: Colors.green,
           ),
@@ -460,10 +433,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -472,25 +442,23 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   void _showReplaceDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
     showDialog(
       context: context,
-      builder: (context) => DropdownReplaceDialog(
-        group: group,
-        oldValue: item.value,
-        oldLabel: item.label,
-      ),
+      builder: (context) =>
+          DropdownReplaceDialog(group: group, oldValue: item.value, oldLabel: item.label),
     );
   }
 
-  Future<void> _showDeleteDialog(BuildContext context, DropdownGroup group, DropdownItem item) async {
+  Future<void> _showDeleteDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) async {
     final hasReferences = await ref.read(isDropdownReferencedProvider((group, item.value)).future);
-    
+
     if (mounted) {
       showDialog(
         context: context,
-        builder: (context) => DropdownDeleteDialog(
-          group: group,
-          item: item,
-          hasReferences: hasReferences,
-        ),
+        builder: (context) =>
+            DropdownDeleteDialog(group: group, item: item, hasReferences: hasReferences),
       );
     }
   }

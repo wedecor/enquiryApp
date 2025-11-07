@@ -1,0 +1,52 @@
+# Gitleaks configuration tuned for We Decor Enquiries
+
+[allowlist]
+  description = "Allow non-sensitive Firebase WEB configs"
+  regexes = [
+    "(?s)apiKey\\"?\\s*:\\s*\\"[A-Za-z0-9_\\-]{20,}\\"\\s*,\\s*authDomain\\"?\\s*:\\s*\\"[\\w\\.-]+\\"\\s*,\\s*projectId\\"?\\s*:\\s*\\"[\\w\\-]+\\""
+  ]
+  files = [
+    "web/.*",
+    "public/.*",
+    "lib/firebase_options.dart"
+  ]
+
+[[rules]]
+  id = "google-service-account-json"
+  severity = "high"
+  regex = '"type"\s*:\s*"service_account"'
+
+[[rules]]
+  id = "fcm-server-key"
+  severity = "high"
+  regex = 'AAAA[a-zA-Z0-9_-]{7,}:[a-zA-Z0-9_-]{140,}'
+
+[[rules]]
+  id = "github-pat"
+  severity = "high"
+  regex = 'ghp_[A-Za-z0-9]{36,}'
+
+[[rules]]
+  id = "stripe-secret-key"
+  severity = "high"
+  regex = '(sk_live|rk_live)_[A-Za-z0-9]{24,}'
+
+[[rules]]
+  id = "slack-token"
+  severity = "high"
+  regex = 'xox[baprs]-[A-Za-z0-9-]{10,}'
+
+[[rules]]
+  id = "twilio-creds"
+  severity = "high"
+  regex = '(AC[a-f0-9]{32})|([a-f0-9]{32})'
+
+[[rules]]
+  id = "ssh-private-key"
+  severity = "high"
+  regex = '-----BEGIN (RSA|OPENSSH|EC|ED25519) PRIVATE KEY-----'
+
+[[rules]]
+  id = "jwt-secret-heuristic"
+  severity = "medium"
+  regex = '(JWT|SECRET|SIGNING_KEY).{0,5}[:=].{0,3}["']?[A-Za-z0-9+/]{24,}[=]{0,2}["']?'

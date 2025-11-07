@@ -6,25 +6,21 @@ import '../domain/analytics_models.dart';
 class AnalyticsRepository {
   final FirebaseFirestore _firestore;
 
-  AnalyticsRepository({
-    FirebaseFirestore? firestore,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance;
+  AnalyticsRepository({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Count total enquiries in date range with optional filters
-  Future<int> countEnquiries({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
+  Future<int> countEnquiries({required DateRange dateRange, AnalyticsFilters? filters}) async {
     try {
       // Try using aggregate query first (more efficient)
-      Query query = _buildBaseQuery(dateRange, filters);
-      
+      final Query query = _buildBaseQuery(dateRange, filters);
+
       final aggregateQuery = query.count();
       final snapshot = await aggregateQuery.get();
       return snapshot.count ?? 0;
     } catch (e) {
       // Fallback to regular query if aggregate fails
-      Query query = _buildBaseQuery(dateRange, filters);
+      final Query query = _buildBaseQuery(dateRange, filters);
       final snapshot = await query.get();
       return snapshot.docs.length;
     }
@@ -35,17 +31,17 @@ class AnalyticsRepository {
     required DateRange dateRange,
     AnalyticsFilters? filters,
   }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     final statusCounts = <String, int>{};
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final status = (data['eventStatus'] as String?) ?? 'unknown';
       statusCounts[status] = (statusCounts[status] ?? 0) + 1;
     }
-    
+
     return statusCounts;
   }
 
@@ -54,17 +50,17 @@ class AnalyticsRepository {
     required DateRange dateRange,
     AnalyticsFilters? filters,
   }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     final eventTypeCounts = <String, int>{};
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final eventType = (data['eventType'] as String?) ?? 'unknown';
       eventTypeCounts[eventType] = (eventTypeCounts[eventType] ?? 0) + 1;
     }
-    
+
     return eventTypeCounts;
   }
 
@@ -73,17 +69,17 @@ class AnalyticsRepository {
     required DateRange dateRange,
     AnalyticsFilters? filters,
   }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     final sourceCounts = <String, int>{};
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final source = (data['source'] as String?) ?? 'unknown';
       sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
     }
-    
+
     return sourceCounts;
   }
 
@@ -92,17 +88,17 @@ class AnalyticsRepository {
     required DateRange dateRange,
     AnalyticsFilters? filters,
   }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     final priorityCounts = <String, int>{};
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final priority = (data['priority'] as String?) ?? 'unknown';
       priorityCounts[priority] = (priorityCounts[priority] ?? 0) + 1;
     }
-    
+
     return priorityCounts;
   }
 
@@ -112,25 +108,25 @@ class AnalyticsRepository {
     required TimeBucket bucket,
     AnalyticsFilters? filters,
   }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     final Map<DateTime, int> dateCounts = {};
-    
+
     // Initialize all buckets to 0
     DateTime current = _truncateToTimeBucket(dateRange.start, bucket);
     final end = _truncateToTimeBucket(dateRange.end, bucket);
-    
+
     while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
       dateCounts[current] = 0;
       current = _incrementTimeBucket(current, bucket);
     }
-    
+
     // Count actual data points
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-      
+
       if (createdAt != null) {
         final bucketDate = _truncateToTimeBucket(createdAt, bucket);
         if (dateCounts.containsKey(bucketDate)) {
@@ -138,32 +134,27 @@ class AnalyticsRepository {
         }
       }
     }
-    
-    return dateCounts.entries
-        .map((entry) => SeriesPoint(x: entry.key, count: entry.value))
-        .toList()
+
+    return dateCounts.entries.map((entry) => SeriesPoint(x: entry.key, count: entry.value)).toList()
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
   /// Sum total revenue from totalCost field
-  Future<double> sumRevenue({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
+  Future<double> sumRevenue({required DateRange dateRange, AnalyticsFilters? filters}) async {
+    final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
-    
+
     double totalRevenue = 0.0;
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
       final totalCost = data['totalCost'];
-      
+
       if (totalCost is num) {
         totalRevenue += totalCost.toDouble();
       }
     }
-    
+
     return totalRevenue;
   }
 
@@ -175,13 +166,13 @@ class AnalyticsRepository {
   }) async {
     Query query = _buildBaseQuery(dateRange, filters);
     query = query.orderBy('createdAt', descending: true).limit(limit);
-    
+
     final snapshot = await query.get();
-    
+
     return snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-      
+
       return RecentEnquiry(
         id: doc.id,
         date: createdAt,
@@ -203,10 +194,8 @@ class AnalyticsRepository {
           .doc('event_types')
           .collection('items')
           .get();
-      
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
+
+      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -222,10 +211,8 @@ class AnalyticsRepository {
           .doc('statuses')
           .collection('items')
           .get();
-      
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
+
+      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -246,12 +233,12 @@ class AnalyticsRepository {
   /// Build base query with date range and filters
   Query _buildBaseQuery(DateRange dateRange, AnalyticsFilters? filters) {
     Query query = _firestore.collection('enquiries');
-    
+
     // Apply date range filter
     query = query
         .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start))
         .where('createdAt', isLessThan: Timestamp.fromDate(dateRange.end));
-    
+
     // Apply additional filters
     if (filters != null) {
       if (filters.eventType != null && filters.eventType!.isNotEmpty) {
@@ -267,7 +254,7 @@ class AnalyticsRepository {
         query = query.where('source', isEqualTo: filters.source);
       }
     }
-    
+
     return query;
   }
 
@@ -275,7 +262,7 @@ class AnalyticsRepository {
   Future<List<String>> _getUniqueFieldValues(String fieldName) async {
     final snapshot = await _firestore.collection('enquiries').get();
     final values = <String>{};
-    
+
     for (final doc in snapshot.docs) {
       final data = doc.data();
       final value = data[fieldName] as String?;
@@ -283,7 +270,7 @@ class AnalyticsRepository {
         values.add(value);
       }
     }
-    
+
     return values.toList()..sort();
   }
 

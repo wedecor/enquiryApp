@@ -65,3 +65,9 @@ async function makeCurrentUserAdmin() {
 
 makeCurrentUserAdmin();
 
+
+
+
+
+
+

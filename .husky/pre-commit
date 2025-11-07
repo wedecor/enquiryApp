@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧹 formatting dart..."
+dart format -l 100 . || exit 1
+
+echo "🔍 quick analyze (non-blocking)..."
+flutter analyze || true

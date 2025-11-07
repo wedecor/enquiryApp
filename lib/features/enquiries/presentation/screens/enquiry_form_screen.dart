@@ -1,15 +1,17 @@
 import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
-import 'package:we_decor_enquiries/core/services/user_firestore_sync_service.dart';
-import 'package:we_decor_enquiries/shared/widgets/event_type_autocomplete.dart';
-import 'package:we_decor_enquiries/shared/widgets/status_dropdown.dart';
-import 'package:we_decor_enquiries/core/services/notification_service.dart';
-import 'package:we_decor_enquiries/core/services/audit_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+
+import '../../../../core/services/audit_service.dart';
+import '../../../../core/services/firestore_service.dart';
+import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/user_firestore_sync_service.dart';
+import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/status_dropdown.dart';
 
 /// Screen for creating and editing enquiries
 class EnquiryFormScreen extends ConsumerStatefulWidget {
@@ -33,14 +35,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   final _notesController = TextEditingController();
   final _totalCostController = TextEditingController();
   final _advancePaidController = TextEditingController();
-  
+
   DateTime? _selectedDate;
   String? _selectedEventType;
   String? _selectedStatus;
   String? _selectedPriority;
   String? _selectedPaymentStatus;
   String? _selectedAssignedTo;
-  List<XFile> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
   bool _isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -48,13 +50,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   @override
   void initState() {
     super.initState();
-    print('🔍 EnquiryFormScreen: initState called - mode: ${widget.mode}, enquiryId: ${widget.enquiryId}');
+    print(
+      '🔍 EnquiryFormScreen: initState called - mode: ${widget.mode}, enquiryId: ${widget.enquiryId}',
+    );
     // Set default values for dropdowns
     // Use dropdown value keys (snake_case)
     _selectedStatus = 'new';
     _selectedPriority = 'medium';
     _selectedPaymentStatus = 'pending';
-    
+
     // Load existing data if in edit mode
     if (widget.mode == 'edit' && widget.enquiryId != null) {
       print('🔍 EnquiryFormScreen: About to call _loadEnquiryData');
@@ -71,39 +75,39 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           .collection('enquiries')
           .doc(widget.enquiryId!)
           .get();
-      
+
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         setState(() {
           _nameController.text = (data['customerName'] as String?) ?? '';
           _phoneController.text = (data['customerPhone'] as String?) ?? '';
           _locationController.text = (data['eventLocation'] as String?) ?? '';
           _notesController.text = (data['description'] as String?) ?? '';
-          
+
           if (data['totalCost'] != null) {
             _totalCostController.text = data['totalCost'].toString();
           }
           if (data['advancePaid'] != null) {
             _advancePaidController.text = data['advancePaid'].toString();
           }
-          
+
           // Set dropdown values from database
           _selectedEventType = data['eventType'] as String?;
           print('🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"');
-          
+
           // Safely set dropdown values - ensure they exist in valid options
           final eventStatus = data['eventStatus'] as String?;
           _selectedStatus = eventStatus;
-          
+
           final priority = data['priority'] as String?;
           _selectedPriority = priority;
 
           final paymentStatus = data['paymentStatus'] as String?;
           _selectedPaymentStatus = paymentStatus;
-          
+
           _selectedAssignedTo = data['assignedTo'] as String?;
-          
+
           if (data['eventDate'] != null) {
             final timestamp = data['eventDate'] as Timestamp;
             _selectedDate = timestamp.toDate();
@@ -112,13 +116,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading enquiry data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading enquiry data: $e')));
       }
     }
   }
-
 
   @override
   void dispose() {
@@ -168,15 +171,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event date')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event date')));
       return;
     }
     if (_selectedEventType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event type')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
       return;
     }
 
@@ -200,7 +203,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e')),
+          SnackBar(
+            content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e'),
+          ),
         );
       }
     } finally {
@@ -214,10 +219,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
   Future<void> _createEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
-    
-    // TODO: Upload images to Firebase Storage and get URLs
-    // For now, we'll skip image upload
-    
+
     final enquiryId = await firestoreService.createEnquiry(
       customerName: _nameController.text.trim(),
       customerEmail: '', // TODO: Add email field if needed
@@ -236,6 +238,20 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       paymentStatus: _selectedPaymentStatus,
       assignedTo: _selectedAssignedTo,
     );
+
+    // Upload reference images if any and save URLs
+    if (_selectedImages.isNotEmpty) {
+      try {
+        final urls = await _uploadImages(enquiryId);
+        if (urls.isNotEmpty) {
+          await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).update({
+            'images': FieldValue.arrayUnion(urls),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': currentUser.uid,
+          });
+        }
+      } catch (_) {}
+    }
 
     // Send notification for new enquiry creation
     final notificationService = NotificationService();
@@ -267,19 +283,16 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry created successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry created successfully!')));
       Navigator.of(context).pop();
     }
   }
 
   Future<void> _updateEnquiry(UserModel currentUser) async {
     // Update the enquiry document directly
-    await FirebaseFirestore.instance
-        .collection('enquiries')
-        .doc(widget.enquiryId!)
-        .update({
+    await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
       'customerName': _nameController.text.trim(),
       'customerPhone': _phoneController.text.trim(),
       'eventLocation': _locationController.text.trim(),
@@ -306,11 +319,27 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry updated successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry updated successfully!')));
       Navigator.of(context).pop();
     }
+  }
+
+  Future<List<String>> _uploadImages(String enquiryId) async {
+    final storage = FirebaseStorage.instance;
+    final List<String> downloadUrls = [];
+
+    for (final xfile in _selectedImages) {
+      final file = File(xfile.path);
+      final fileName = xfile.name;
+      final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+      downloadUrls.add(url);
+    }
+
+    return downloadUrls;
   }
 
   @override
@@ -407,9 +436,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         _selectedDate == null
                             ? 'Select Event Date *'
                             : 'Event Date: ${_selectedDate!.toString().split(' ')[0]}',
-                        style: TextStyle(
-                          color: _selectedDate == null ? Colors.grey : null,
-                        ),
+                        style: TextStyle(color: _selectedDate == null ? Colors.grey : null),
                       ),
                     ],
                   ),
@@ -417,38 +444,24 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Event Type Field - SIMPLIFIED FOR TESTING
-              Builder(
-                builder: (context) {
-                  print('🔍 EnquiryFormScreen: Event type value: "$_selectedEventType"');
-                  return DropdownButtonFormField<String>(
-                    value: _selectedEventType,
-                    decoration: const InputDecoration(
-                      labelText: 'Event Type *',
-                      prefixIcon: Icon(Icons.event),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'wedding', child: Text('Wedding')),
-                      DropdownMenuItem(value: 'birthday', child: Text('Birthday')),
-                      DropdownMenuItem(value: 'corporate_event', child: Text('Corporate Event')),
-                      DropdownMenuItem(value: 'haldi', child: Text('Haldi')),
-                      DropdownMenuItem(value: 'anniversary', child: Text('Anniversary')),
-                      DropdownMenuItem(value: 'others', child: Text('Others')),
-                    ],
-                    onChanged: (value) {
-                      print('🔍 EnquiryFormScreen: Event type changed to: "$value"');
-                      setState(() {
-                        _selectedEventType = value;
-                      });
-                    },
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please select an event type';
-                      }
-                      return null;
-                    },
-                  );
+              // Event Type Field - Firestore-backed via StatusDropdown
+              StatusDropdown(
+                collectionName: 'event_types',
+                value: _selectedEventType,
+                label: 'Event Type',
+                required: true,
+                onChanged: (value) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    setState(() {
+                      _selectedEventType = value;
+                    });
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please select an event type';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -500,7 +513,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 activeUsers.when(
                   data: (users) {
                     return DropdownButtonFormField<String>(
-                      value: _selectedAssignedTo,
+                      initialValue: _selectedAssignedTo,
                       decoration: const InputDecoration(
                         labelText: 'Assign To',
                         prefixIcon: Icon(Icons.person_add),
@@ -508,15 +521,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       ),
                       hint: const Text('Select user to assign'),
                       items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Unassigned'),
-                        ),
+                        const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
                         ...users.docs.map((doc) {
                           final user = doc.data() as Map<String, dynamic>;
                           return DropdownMenuItem<String>(
                             value: doc.id,
-                            child: Text((user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown'),
+                            child: Text(
+                              (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
+                            ),
                           );
                         }),
                       ],
@@ -602,7 +614,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       if (advance == null || advance < 0) {
                         return 'Please enter a valid amount';
                       }
-                      
+
                       // Check if advance is more than total cost
                       final totalCost = _parseDouble(_totalCostController.text);
                       if (totalCost != null && advance > totalCost) {
@@ -662,9 +674,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 onPressed: _pickImages,
                 icon: const Icon(Icons.upload),
                 label: const Text('Upload Images'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               ),
               const SizedBox(height: 16),
 
@@ -711,11 +721,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                                 ),
                               ),
                             ),
@@ -733,8 +739,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB), // Blue
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isLoading
@@ -762,18 +768,20 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF2563EB), // Blue
-        ),
+      child: Builder(
+        builder: (context) {
+          return Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        },
       ),
     );
   }
-} 
+}

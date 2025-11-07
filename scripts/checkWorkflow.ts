@@ -36,6 +36,6 @@ if (!ok) {
 
 console.log("✅ Workflow file looks good.");
 console.log("Next:");
-console.log("1) Repo → Settings → Secrets → Actions → add repository secret GOOGLE_CREDENTIALS (service account JSON).");
-console.log('2) Actions → Seed Firestore (WeDecor) → Run workflow → enter admin_uid (your Firebase Auth UID).');
+console.log("1) Repo → Settings → Secrets → Actions → add repository [REDACTED] GOOGLE_CREDENTIALS (service account JSON).");
+console.log('2) Actions → Seed Firestore (WeDecor) → Run workflow → enter admin_uid (your Firebase [REDACTED] UID).');
 

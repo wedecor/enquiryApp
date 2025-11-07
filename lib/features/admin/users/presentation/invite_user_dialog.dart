@@ -1,8 +1,9 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import '../../../../shared/models/user_model.dart';
+
+// Removed shared user model import - using string-based roles instead
 
 /// Dialog for inviting new users via Cloud Function
 class InviteUserDialog extends ConsumerStatefulWidget {
@@ -16,9 +17,10 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  UserRole _selectedRole = UserRole.staff;
+  String _selectedRole = 'staff';
   bool _isLoading = false;
   String? _resetLink;
+  bool _emailSent = false;
 
   @override
   void dispose() {
@@ -54,9 +56,9 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 TextFormField(
                   controller: _emailController,
                   decoration: const InputDecoration(
@@ -75,22 +77,20 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
-                DropdownButtonFormField<UserRole>(
-                  value: _selectedRole,
+
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.security),
                   ),
-                  items: UserRole.values.map((role) {
-                    return DropdownMenuItem(
-                      value: role,
-                      child: Text(_getRoleDisplayName(role)),
-                    );
-                  }).toList(),
+                  items: const [
+                    DropdownMenuItem(value: 'staff', child: Text('Staff Member')),
+                    DropdownMenuItem(value: 'admin', child: Text('Administrator')),
+                  ],
                   onChanged: (role) {
                     if (role != null) {
                       setState(() {
@@ -101,14 +101,10 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 ),
               ] else ...[
                 // Success state with reset link
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 64,
-                ),
-                
+                const Icon(Icons.check_circle, color: Colors.green, size: 64),
+
                 const SizedBox(height: 16),
-                
+
                 Text(
                   'User invited successfully!',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -117,17 +113,46 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
+                if (_emailSent) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.email, color: Colors.green.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Invitation email sent to ${_emailController.text.trim()}',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 Text(
-                  'Share this password reset link with the user:',
+                  _emailSent
+                      ? 'Backup reset link (if needed):'
+                      : 'Share this password reset link with the user:',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -137,14 +162,12 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                   ),
                   child: SelectableText(
                     _resetLink!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 ElevatedButton.icon(
                   onPressed: _copyResetLink,
                   icon: const Icon(Icons.copy),
@@ -180,23 +203,13 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 : const Text('Send Invite'),
           ),
         ] else ...[
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
-          ),
+          ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
         ],
       ],
     );
   }
 
-  String _getRoleDisplayName(UserRole role) {
-    switch (role) {
-      case UserRole.admin:
-        return 'Administrator';
-      case UserRole.staff:
-        return 'Staff Member';
-    }
-  }
+  // Removed _getRoleDisplayName method - using inline role names in dropdown
 
   Future<void> _inviteUser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -206,33 +219,64 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
     });
 
     try {
-      final functions = FirebaseFunctions.instance;
+      // Use production functions in asia-south1 region
+      final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
       final callable = functions.httpsCallable('inviteUser');
-      
-      final result = await callable.call({
+
+      // Debug: Print the function configuration
+      print('🔧 DEBUG: Using Production Functions in region: asia-south1');
+      print('🔧 DEBUG: Function name: inviteUser');
+
+      final result = await callable.call<Map<String, dynamic>>({
         'email': _emailController.text.trim(),
         'name': _nameController.text.trim(),
-        'role': _selectedRole.name,
+        'role': _selectedRole,
       });
 
-      final data = result.data as Map<String, dynamic>;
+      final data = result.data;
       final resetLink = data['resetLink'] as String;
+      final emailSent = data['emailSent'] as bool? ?? false;
 
       setState(() {
         _resetLink = resetLink;
+        _emailSent = emailSent;
         _isLoading = false;
       });
-
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
 
+      // Parse specific error messages for better user feedback
+      String errorMessage = 'Failed to invite user';
+
+      if (e.toString().contains('memory limit')) {
+        errorMessage = 'Server is busy. Please try again in a moment.';
+      } else if (e.toString().contains('timeout')) {
+        errorMessage = 'Request timed out. Please check your connection and try again.';
+      } else if (e.toString().contains('permission-denied')) {
+        errorMessage = 'You don\'t have permission to invite users.';
+      } else if (e.toString().contains('invalid-argument')) {
+        errorMessage = 'Please check the email and role are valid.';
+      } else if (e.toString().contains('already-exists')) {
+        errorMessage = 'A user with this email already exists.';
+      } else if (e.toString().contains('unauthenticated')) {
+        errorMessage = 'Please sign in again and try.';
+      } else {
+        errorMessage = 'Failed to invite user: ${e.toString()}';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to invite user: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _inviteUser(),
+            ),
           ),
         );
       }

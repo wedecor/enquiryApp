@@ -1,0 +1,43 @@
+{
+  "model_fields": {
+    "customerNameLower": true,
+    "phoneNormalized": true,
+    "textIndex": true,
+    "createdBy": true,
+    "createdByName": true,
+    "assigneeName": true
+  },
+  "repo_writes": {
+    "statusUpdatedAt_by": true,
+    "create_normalization": true
+  },
+  "ui_gating": {
+    "assignee_check": true,
+    "undo_second_write": true,
+    "disabled_tooltip": true
+  },
+  "fcm_ops": {
+    "subscribe": true,
+    "unsubscribe": true
+  },
+  "digest": {
+    "cron": "0 9 * * *",
+    "tz": "Asia/Kolkata"
+  },
+  "rules": {
+    "assignment_gating": true,
+    "status_key_whitelist": true
+  },
+  "storage": {
+    "size_limit_5mb": true,
+    "type_filter": true
+  },
+  "indexes": {
+    "status_createdAt": true,
+    "assignee_status_createdAt": true,
+    "eventType_createdAt": true,
+    "eventDate": true,
+    "phoneNormalized_createdAt": true,
+    "customerNameLower": true
+  }
+}

@@ -1,3 +1,34 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+
+      - name: Install Node deps for rules tests
+        run: npm i -D @firebase/rules-unit-testing firebase-admin firebase@10 jest
+
+      - name: Start Firestore emulator
+        run: npx firebase emulators:start --only firestore --project demo-we-decor &
+      
+      - name: Flutter analyze & tests with coverage
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test --coverage
+
+      - name: Coverage threshold (60%)
+        run: node qa/scripts/coverage_check.js coverage/lcov.info 60
+
+      - name: Run rules tests
+        run: npx jest qa/rules/rules_enquiries.spec.js -i
+
 name: CI/CD Pipeline
 
 on:

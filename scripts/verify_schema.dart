@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
+import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Standalone script for schema verification
 void main(List<String> args) async {
@@ -11,9 +12,7 @@ void main(List<String> args) async {
     print('================================================');
 
     // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
     // Connect to Firestore emulator if running locally
     if (const bool.fromEnvironment('USE_FIRESTORE_EMULATOR')) {
@@ -45,7 +44,6 @@ void main(List<String> args) async {
           _printUsage();
       }
     }
-
   } catch (e) {
     print('❌ Error during schema verification: $e');
     exit(1);
@@ -85,7 +83,9 @@ Future<void> _runFullVerification(SchemaVerificationService schemaService) async
     if (result.details.isNotEmpty) {
       final details = result.details;
       if (details.containsKey('totalDocuments')) {
-        print('   📄 Documents: ${details['totalDocuments']} total, ${details['validDocuments']} valid, ${details['invalidDocuments']} invalid');
+        print(
+          '   📄 Documents: ${details['totalDocuments']} total, ${details['validDocuments']} valid, ${details['invalidDocuments']} invalid',
+        );
       }
     }
 
@@ -137,7 +137,7 @@ Future<void> _runQuickVerification(SchemaVerificationService schemaService) asyn
   print('⏳ Checking collection structure only...\n');
 
   final startTime = DateTime.now();
-  
+
   try {
     final firestore = FirebaseFirestore.instance;
     final collections = ['users', 'enquiries', 'dropdowns'];
@@ -166,7 +166,6 @@ Future<void> _runQuickVerification(SchemaVerificationService schemaService) asyn
     } else {
       print('\n🔧 Some collections may have issues.');
     }
-
   } catch (e) {
     print('❌ Quick verification failed: $e');
   }
@@ -212,4 +211,4 @@ void _printUsage() {
   print('  • Dropdowns collection schema compliance');
   print('  • Field types and required fields');
   print('  • Data validation rules');
-} 
+}

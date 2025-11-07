@@ -67,8 +67,7 @@ class DropdownItem with _$DropdownItem {
     required DateTime updatedAt,
   }) = _DropdownItem;
 
-  factory DropdownItem.fromJson(Map<String, dynamic> json) =>
-      _$DropdownItemFromJson(json);
+  factory DropdownItem.fromJson(Map<String, dynamic> json) => _$DropdownItemFromJson(json);
 
   /// Create a DropdownItem from Firestore document
   factory DropdownItem.fromFirestore(DocumentSnapshot doc) {
@@ -83,7 +82,6 @@ class DropdownItem with _$DropdownItem {
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
     );
   }
-
 }
 
 /// Input model for creating/updating dropdown items
@@ -144,8 +142,7 @@ class DropdownItemValidation {
 
   static const DropdownItemValidation valid = DropdownItemValidation._(true, null);
 
-  static DropdownItemValidation error(String message) =>
-      DropdownItemValidation._(false, message);
+  static DropdownItemValidation error(String message) => DropdownItemValidation._(false, message);
 
   /// Validate HEX color format
   static bool isValidHexColor(String? color) {

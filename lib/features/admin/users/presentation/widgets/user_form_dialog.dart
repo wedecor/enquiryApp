@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../../core/auth/current_user_role_provider.dart';
 import '../../domain/user_model.dart';
 import '../users_providers.dart';
-import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
 
 class UserFormDialog extends ConsumerStatefulWidget {
   final UserModel? user; // null for create, non-null for edit
@@ -55,10 +56,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter a name';
@@ -94,11 +92,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedRole,
-              decoration: const InputDecoration(
-                labelText: 'Role',
-                border: OutlineInputBorder(),
-              ),
+              initialValue: _selectedRole,
+              decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'staff', child: Text('Staff')),
                 DropdownMenuItem(value: 'admin', child: Text('Admin')),
@@ -127,15 +122,8 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        if (isAdmin)
-          FilledButton(
-            onPressed: _submit,
-            child: Text(isEdit ? 'Update' : 'Create'),
-          ),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        if (isAdmin) FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create')),
       ],
     );
   }
@@ -150,13 +138,13 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       role: _selectedRole,
       active: _isActive,
-      fcmToken: widget.user?.fcmToken,
+      // fcmToken removed for security - stored in private subcollection
       createdAt: widget.user?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
     final formController = ref.read(userFormControllerProvider.notifier);
-    
+
     if (widget.user != null) {
       await formController.updateUser(user.uid, user.toJson());
     } else {
@@ -165,11 +153,13 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
     if (mounted) {
       Navigator.of(context).pop();
-      
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(widget.user != null ? 'User updated successfully' : 'User created successfully'),
+          content: Text(
+            widget.user != null ? 'User updated successfully' : 'User created successfully',
+          ),
           backgroundColor: Colors.green,
         ),
       );

@@ -1,0 +1,63 @@
+# Pre-commit hooks for We Decor Enquiries
+# Ensures code quality and security standards before commits
+
+repos:
+  - repo: local
+    hooks:
+      - id: flutter-analyze
+        name: Flutter Analyze
+        entry: flutter analyze --no-fatal-infos
+        language: system
+        files: \.dart$
+        pass_filenames: false
+        description: Run Flutter analyzer to catch errors and warnings
+
+      - id: dart-format
+        name: Dart Format
+        entry: dart format --set-exit-if-changed .
+        language: system
+        files: \.dart$
+        pass_filenames: false
+        description: Ensure consistent Dart code formatting
+
+      - id: flutter-test
+        name: Flutter Test
+        entry: flutter test
+        language: system
+        files: \.dart$
+        pass_filenames: false
+        stages: [pre-push]
+        description: Run unit tests before pushing
+
+      - id: security-check
+        name: RBAC Security Check
+        entry: bash -c 'grep -r "requireAdmin\|logAdminAction" lib/features/admin/ || echo "Warning: Admin features may be missing security guards"'
+        language: system
+        files: lib/features/admin/.*\.dart$
+        pass_filenames: false
+        description: Verify admin features have proper security guards
+
+      - id: semgrep-security
+        name: Semgrep Security Scan
+        entry: semgrep --config=p/ci --error --exclude=build --exclude=.dart_tool
+        language: system
+        files: \.dart$
+        pass_filenames: false
+        stages: [pre-push]
+        description: Run security static analysis with Semgrep
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        files: \.(dart|yaml|yml|json|md)$
+      - id: end-of-file-fixer
+        files: \.(dart|yaml|yml|json|md)$
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+
+# Configuration
+default_stages: [commit]
+fail_fast: false
+minimum_pre_commit_version: 3.0.0

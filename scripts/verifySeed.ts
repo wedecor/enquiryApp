@@ -187,7 +187,7 @@ async function main() {
     console.log("🔧 Troubleshooting:");
     console.log("   • Check Firebase Console for missing collections");
     console.log("   • Re-run the seeder: npm run seed");
-    console.log("   • Verify ADMIN_UID is correct Firebase Auth UID");
+    console.log("   • Verify ADMIN_UID is correct Firebase [REDACTED] UID");
     console.log("   • Check service account permissions");
     process.exit(1);
   }

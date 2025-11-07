@@ -18,11 +18,7 @@ class AuditService {
       final currentUser = _auth.currentUser;
       final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
 
-      await _firestore
-          .collection('enquiries')
-          .doc(enquiryId)
-          .collection('history')
-          .add({
+      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add({
         'field_changed': fieldChanged,
         'old_value': oldValue,
         'new_value': newValue,
@@ -51,7 +47,7 @@ class AuditService {
       for (final entry in changes.entries) {
         final fieldChanged = entry.key;
         final changeData = entry.value;
-        
+
         final historyRef = _firestore
             .collection('enquiries')
             .doc(enquiryId)
@@ -77,24 +73,61 @@ class AuditService {
 
   /// Get change history for an enquiry (real-time stream)
   Stream<List<Map<String, dynamic>>> getEnquiryHistoryStream(String enquiryId) {
-    return _firestore
-        .collection('enquiries')
-        .doc(enquiryId)
-        .collection('history')
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
-      }).toList();
-    }).handleError((error) {
-      print('AuditService: Error getting enquiry history stream: $error');
-      return <Map<String, dynamic>>[];
-    });
+    try {
+      print('AuditService: Starting history stream for enquiry $enquiryId');
+
+      // Try subcollection approach first (simpler, doesn't require index)
+      return _firestore
+          .collection('enquiries')
+          .doc(enquiryId)
+          .collection('history')
+          .snapshots()
+          .timeout(const Duration(seconds: 10))
+          .map((snapshot) {
+            print(
+              'AuditService: Received ${snapshot.docs.length} history documents for $enquiryId',
+            );
+
+            if (snapshot.docs.isEmpty) {
+              print('AuditService: No history found for enquiry $enquiryId');
+              return <Map<String, dynamic>>[];
+            }
+
+            // Manual sorting since orderBy might require index
+            final docs = snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {'id': doc.id, ...data};
+            }).toList();
+
+            // Sort by timestamp if available
+            docs.sort((a, b) {
+              final aTime = a['timestamp'];
+              final bTime = b['timestamp'];
+
+              if (aTime == null && bTime == null) return 0;
+              if (aTime == null) return 1;
+              if (bTime == null) return -1;
+
+              if (aTime is Timestamp && bTime is Timestamp) {
+                return bTime.compareTo(aTime); // Descending order
+              }
+
+              return 0;
+            });
+
+            print('AuditService: Returning ${docs.length} sorted history items');
+            return docs;
+          })
+          .handleError((error) {
+            print('AuditService: History stream error for $enquiryId: $error');
+            // Return empty list on error instead of propagating
+            return <Map<String, dynamic>>[];
+          });
+    } catch (e) {
+      print('AuditService: Failed to create history stream for $enquiryId: $e');
+      // Return a stream with empty list if setup fails
+      return Stream.value(<Map<String, dynamic>>[]);
+    }
   }
 
   /// Get change history for an enquiry (one-time fetch)
@@ -109,10 +142,7 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting enquiry history: $e');
@@ -133,10 +163,7 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
+        return {'id': doc.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting field history: $e');
@@ -156,11 +183,7 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          'enquiry_id': doc.reference.parent.parent?.id,
-          ...data,
-        };
+        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting user changes: $e');
@@ -179,15 +202,31 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {
-          'id': doc.id,
-          'enquiry_id': doc.reference.parent.parent?.id,
-          ...data,
-        };
+        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
     } catch (e) {
       print('AuditService: Error getting recent changes: $e');
       return [];
+    }
+  }
+
+  /// Log admin-specific actions for compliance and audit trail
+  Future<void> logAdminAction(String action, Map<String, Object?> data) async {
+    try {
+      final currentUser = _auth.currentUser;
+
+      await _firestore.collection('admin_audit').add({
+        'action': action,
+        'user_id': currentUser?.uid ?? 'unknown',
+        'user_email': currentUser?.email ?? 'unknown',
+        'timestamp': FieldValue.serverTimestamp(),
+        'data': data,
+        'app_version': '1.0.1+10', // TODO: Get from package_info
+      });
+
+      print('AuditService: Admin action logged - $action');
+    } catch (e) {
+      print('AuditService: Error logging admin action: $e');
     }
   }
 
@@ -256,7 +295,7 @@ class AuditService {
   Future<Map<String, dynamic>> getEnquiryChangeSummary(String enquiryId) async {
     try {
       final history = await getEnquiryHistory(enquiryId);
-      
+
       final summary = <String, dynamic>{
         'total_changes': history.length,
         'last_modified': history.isNotEmpty ? history.first['timestamp'] : null,
@@ -269,7 +308,8 @@ class AuditService {
         final fieldChanged = change['field_changed'] as String?;
         final userEmail = change['user_email'] as String?;
 
-        if (fieldChanged != null && !(summary['fields_changed'] as List<String>).contains(fieldChanged)) {
+        if (fieldChanged != null &&
+            !(summary['fields_changed'] as List<String>).contains(fieldChanged)) {
           (summary['fields_changed'] as List<String>).add(fieldChanged);
         }
 
@@ -296,9 +336,11 @@ class AuditService {
 extension StringExtension on String {
   String toTitleCase() {
     if (isEmpty) return this;
-    return split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
-} 
+}

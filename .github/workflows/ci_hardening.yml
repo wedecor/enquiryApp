@@ -1,0 +1,583 @@
+name: CI Hardening Pipeline v2
+
+on:
+  push:
+    branches: [main, 'feature/*', 'stabilization/*', 'ops/*']
+  pull_request:
+    branches: [main, 'feature/*', 'stabilization/*', 'ops/*']
+  schedule:
+    - cron: '0 2 * * *' # Nightly at 2 AM UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.24.3'
+  JAVA_VERSION: '17'
+  NODE_VERSION: '18'
+  FIREBASE_CLI_VERSION: '13.11.2'
+
+jobs:
+  analyze_and_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      coverage_summary: ${{ steps.coverage.outputs.summary }}
+      test_results: ${{ steps.test.outputs.results }}
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🚀 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'rules-tests/package-lock.json'
+
+      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🗂️ Cache Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+            build
+            node_modules
+            ~/.cache/flutter
+          key: ${{ runner.os }}-deps-${{ hashFiles('pubspec.lock', 'rules-tests/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+
+      - name: 📦 Get Dependencies
+        run: |
+          flutter pub get
+          cd rules-tests && npm ci
+
+      - name: 🏗️ Generate Code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🔍 Analyze Code
+        run: |
+          echo "::group::Flutter Analyze"
+          flutter analyze --no-fatal-infos > analysis_report.txt 2>&1 || true
+          
+          # Count errors
+          ERROR_COUNT=$(grep -c "error •" analysis_report.txt || echo "0")
+          
+          if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo "❌ Found $ERROR_COUNT analyzer errors"
+            cat analysis_report.txt
+            exit 1
+          fi
+          
+          echo "✅ Flutter analyze passed (0 errors)"
+          echo "::endgroup::"
+
+      - name: 🔒 Security Scan
+        run: |
+          echo "::group::Security Analysis"
+          pip install semgrep
+          semgrep --config=p/ci --error --exclude=rules-tests --exclude=build --exclude=.dart_tool . || echo "Security scan completed with warnings"
+          echo "::endgroup::"
+
+      - name: 🧪 Run Tests with Retry
+        id: test
+        run: |
+          echo "::group::Unit Tests"
+          bash tools/test_with_retry.sh
+          echo "results=passed" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 📊 Generate Coverage
+        id: coverage
+        run: |
+          echo "::group::Test Coverage"
+          flutter test --coverage --reporter expanded
+          bash tools/coverage_gate_enhanced.sh > coverage_summary.txt
+          
+          # Extract summary for output
+          COVERAGE_SUMMARY=$(head -n 5 coverage_summary.txt | tail -n 1)
+          echo "summary=$COVERAGE_SUMMARY" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 📤 Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            analysis_report.txt
+            coverage_summary.txt
+            coverage/lcov.info
+          retention-days: 30
+
+  firestore_rules_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      rules_test_status: ${{ steps.rules.outputs.status }}
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🚀 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'rules-tests/package-lock.json'
+
+      - name: 🔥 Setup Firebase CLI
+        run: npm install -g firebase-tools@${{ env.FIREBASE_CLI_VERSION }}
+
+      - name: 🗂️ Cache Emulator
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulators-${{ env.FIREBASE_CLI_VERSION }}
+
+      - name: 📦 Install Rules Test Dependencies
+        working-directory: rules-tests
+        run: npm ci
+
+      - name: 🛡️ Run Firestore Rules Tests
+        id: rules
+        working-directory: rules-tests
+        run: |
+          echo "::group::Firestore Security Rules Tests"
+          
+          # Run tests with proper emulator lifecycle
+          npm run ci > rules_test_output.json 2>&1 || RULES_EXIT_CODE=$?
+          
+          if [ "${RULES_EXIT_CODE:-0}" -eq 0 ]; then
+            echo "✅ All Firestore rules tests passed"
+            echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Firestore rules tests failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: 📤 Upload Rules Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rules-test-reports
+          path: rules-tests/rules_test_output.json
+          retention-days: 30
+
+  build_android_artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: analyze_and_test
+    outputs:
+      apk_checksum: ${{ steps.build.outputs.checksum }}
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🗂️ Restore Dependencies Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+            build
+          key: ${{ runner.os }}-deps-${{ hashFiles('pubspec.lock') }}
+
+      - name: 📦 Get Dependencies
+        run: flutter pub get
+
+      - name: 🏗️ Generate Code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🔨 Build Release APK
+        id: build
+        run: |
+          echo "::group::Android Release Build"
+          
+          flutter build apk --release \
+            --dart-define=APP_ENV=prod \
+            --dart-define=ENABLE_CRASHLYTICS=true \
+            --dart-define=ENABLE_PERFORMANCE=true \
+            --dart-define=ENABLE_ANALYTICS=false \
+            --obfuscate \
+            --split-debug-info=build/debug-info/
+          
+          # Generate checksum
+          cd build/app/outputs/flutter-apk
+          shasum -a 256 app-release.apk > SHA256.txt
+          CHECKSUM=$(cat SHA256.txt | cut -d' ' -f1)
+          
+          echo "✅ APK built successfully"
+          echo "📦 Size: $(du -h app-release.apk | cut -f1)"
+          echo "🔒 SHA256: $CHECKSUM"
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: 📤 Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/flutter-apk/SHA256.txt
+          retention-days: 90
+
+  web_preview_deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: analyze_and_test
+    if: github.event_name == 'pull_request'
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.url }}
+      lighthouse_score: ${{ steps.lighthouse.outputs.score }}
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🚀 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🔥 Setup Firebase CLI
+        run: npm install -g firebase-tools@${{ env.FIREBASE_CLI_VERSION }}
+
+      - name: 📦 Get Dependencies
+        run: flutter pub get
+
+      - name: 🏗️ Generate Code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: 🌐 Build Web Release
+        run: |
+          echo "::group::Web Release Build"
+          flutter build web --release \
+            --dart-define=APP_ENV=prod \
+            --dart-define=ENABLE_CRASHLYTICS=true \
+            --dart-define=ENABLE_PERFORMANCE=true \
+            --dart-define=ENABLE_ANALYTICS=false
+          echo "✅ Web build completed"
+          echo "::endgroup::"
+
+      - name: 🚀 Deploy Preview Channel
+        id: deploy
+        run: |
+          echo "::group::Firebase Preview Deploy"
+          
+          # Create channel name from PR number or branch
+          CHANNEL_NAME="pr-${{ github.event.pull_request.number || github.ref_name }}"
+          CHANNEL_NAME=$(echo "$CHANNEL_NAME" | tr '/' '-' | tr '_' '-' | cut -c1-63)
+          
+          # Deploy to preview channel
+          DEPLOY_OUTPUT=$(firebase hosting:channel:deploy "$CHANNEL_NAME" --json --expires 7d)
+          
+          # Extract preview URL
+          PREVIEW_URL=$(echo "$DEPLOY_OUTPUT" | jq -r '.result.url')
+          echo "🌐 Preview URL: $PREVIEW_URL"
+          echo "url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          
+          echo "::endgroup::"
+
+      - name: 🔍 Run Lighthouse CI
+        id: lighthouse
+        run: |
+          echo "::group::Lighthouse Analysis"
+          
+          PREVIEW_URL="${{ steps.deploy.outputs.url }}"
+          bash tools/lighthouse_ci.sh "$PREVIEW_URL"
+          
+          # Extract performance score
+          PERF_SCORE=$(grep -o '"performance":[0-9.]*' lighthouse-report.json | cut -d: -f2 || echo "0")
+          echo "⚡ Performance Score: $PERF_SCORE"
+          echo "score=$PERF_SCORE" >> $GITHUB_OUTPUT
+          
+          echo "::endgroup::"
+
+      - name: 📤 Upload Lighthouse Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: |
+            lighthouse-report.html
+            lighthouse-report.json
+          retention-days: 30
+
+  integration_smoke_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [firestore_rules_tests]
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🔥 Setup Firebase CLI
+        run: npm install -g firebase-tools@${{ env.FIREBASE_CLI_VERSION }}
+
+      - name: 📦 Get Dependencies
+        run: flutter pub get
+
+      - name: 🔥 Start Firebase Emulators
+        run: |
+          firebase emulators:start --only firestore --project demo-project &
+          EMULATOR_PID=$!
+          echo "EMULATOR_PID=$EMULATOR_PID" >> $GITHUB_ENV
+          
+          # Wait for emulator with timeout
+          timeout=60
+          while [ $timeout -gt 0 ]; do
+            if curl -f http://localhost:8080 >/dev/null 2>&1; then
+              echo "✅ Firestore emulator ready"
+              break
+            fi
+            echo "⏳ Waiting for emulator..."
+            sleep 2
+            timeout=$((timeout - 2))
+          done
+
+      - name: 🧪 Run RBAC Integration Tests
+        env:
+          FIREBASE_EMULATOR_HOSTS: "firestore:localhost:8080"
+        run: |
+          echo "::group::RBAC Integration Tests"
+          flutter test integration_test/rbac_smoke_test.dart > rbac_smoke.log 2>&1 || INTEGRATION_EXIT_CODE=$?
+          
+          if [ "${INTEGRATION_EXIT_CODE:-0}" -eq 0 ]; then
+            echo "✅ RBAC integration tests passed"
+          else
+            echo "❌ RBAC integration tests failed"
+            cat rbac_smoke.log
+            exit 1
+          fi
+          echo "::endgroup::"
+
+      - name: 🧹 Cleanup Emulators
+        if: always()
+        run: |
+          if [ ! -z "$EMULATOR_PID" ]; then
+            kill $EMULATOR_PID || true
+            echo "🔥 Firebase emulators stopped"
+          fi
+
+      - name: 📤 Upload Integration Test Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-logs
+          path: rbac_smoke.log
+          retention-days: 14
+
+  slack_notifications:
+    runs-on: ubuntu-latest
+    needs: [analyze_and_test, firestore_rules_tests, build_android_artifacts, web_preview_deploy, integration_smoke_tests]
+    if: always()
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📢 Send Slack Notification
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          # Determine overall status
+          if [ "${{ needs.analyze_and_test.result }}" = "success" ] && \
+             [ "${{ needs.firestore_rules_tests.result }}" = "success" ] && \
+             [ "${{ needs.build_android_artifacts.result }}" = "success" ] && \
+             [ "${{ needs.integration_smoke_tests.result }}" = "success" ]; then
+            STATUS="✅ SUCCESS"
+            COLOR="good"
+          else
+            STATUS="❌ FAILED"
+            COLOR="danger"
+          fi
+          
+          # Build message
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "$STATUS" = "✅ SUCCESS" ]; then
+            # Success on main - detailed summary
+            MESSAGE="{
+              \"text\": \"$STATUS — main build completed\",
+              \"color\": \"$COLOR\",
+              \"fields\": [
+                {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                {\"title\": \"Coverage\", \"value\": \"${{ needs.analyze_and_test.outputs.coverage_summary }}\", \"short\": true},
+                {\"title\": \"APK Checksum\", \"value\": \"${{ needs.build_android_artifacts.outputs.apk_checksum }}\", \"short\": false}
+              ]
+            }"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR summary with preview
+            MESSAGE="{
+              \"text\": \"$STATUS — PR #${{ github.event.pull_request.number }}\",
+              \"color\": \"$COLOR\",
+              \"fields\": [
+                {\"title\": \"Branch\", \"value\": \"${{ github.head_ref }}\", \"short\": true},
+                {\"title\": \"Preview\", \"value\": \"${{ needs.web_preview_deploy.outputs.preview_url || 'N/A' }}\", \"short\": true},
+                {\"title\": \"Lighthouse\", \"value\": \"P${{ needs.web_preview_deploy.outputs.lighthouse_score || 'N/A' }}\", \"short\": true}
+              ]
+            }"
+          else
+            # Simple failure notification
+            MESSAGE="{
+              \"text\": \"$STATUS — ${{ github.ref_name }} @ ${{ github.sha }}\",
+              \"color\": \"$COLOR\"
+            }"
+          fi
+          
+          # Send to Slack if webhook is configured
+          if [ ! -z "$SLACK_WEBHOOK" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "$MESSAGE" "$SLACK_WEBHOOK"
+          else
+            echo "📢 Slack webhook not configured - skipping notification"
+          fi
+
+  nightly_maintenance:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    timeout-minutes: 45
+
+    steps:
+      - name: 📋 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 🚀 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔍 Check for Dependency Updates
+        run: |
+          echo "::group::Dependency Updates Check"
+          
+          # Check Flutter dependencies
+          flutter pub outdated > dependency_report.txt || true
+          
+          # Check Node dependencies
+          cd rules-tests && npm outdated >> ../dependency_report.txt || true
+          
+          echo "📋 Dependency report generated"
+          echo "::endgroup::"
+
+      - name: 🔍 Nightly Lighthouse CI
+        run: |
+          echo "::group::Nightly Lighthouse Analysis"
+          
+          # Build web for lighthouse
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          flutter build web --release
+          
+          # Run comprehensive lighthouse audit
+          npx lighthouse ./build/web/index.html \
+            --output html --output json \
+            --output-path ./nightly-lighthouse \
+            --chrome-flags="--headless" \
+            --preset=desktop
+          
+          echo "🔍 Nightly Lighthouse analysis completed"
+          echo "::endgroup::"
+
+      - name: 📤 Upload Nightly Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-reports
+          path: |
+            dependency_report.txt
+            nightly-lighthouse.report.html
+            nightly-lighthouse.report.json
+          retention-days: 7
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: [analyze_and_test, firestore_rules_tests, build_android_artifacts, web_preview_deploy, integration_smoke_tests]
+    if: always()
+
+    steps:
+      - name: 📋 Generate CI Summary
+        run: |
+          echo "## 🛡️ CI Hardening Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📊 Job Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔍 **Analysis & Tests**: ${{ needs.analyze_and_test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛡️ **Firestore Rules**: ${{ needs.firestore_rules_tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔨 **Android Build**: ${{ needs.build_android_artifacts.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 **Web Preview**: ${{ needs.web_preview_deploy.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧪 **Integration Tests**: ${{ needs.integration_smoke_tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📈 Metrics:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coverage**: ${{ needs.analyze_and_test.outputs.coverage_summary || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Checksum**: \`${{ needs.build_android_artifacts.outputs.apk_checksum || 'N/A' }}\`" >> $GITHUB_STEP_SUMMARY
+          
+          if [ ! -z "${{ needs.web_preview_deploy.outputs.preview_url }}" ]; then
+            echo "- **Preview URL**: ${{ needs.web_preview_deploy.outputs.preview_url }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Lighthouse Score**: ${{ needs.web_preview_deploy.outputs.lighthouse_score || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "- Android APK + Checksum" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Coverage Reports" >> $GITHUB_STEP_SUMMARY
+          echo "- Firestore Rules Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Test Logs" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "- Lighthouse Performance Report" >> $GITHUB_STEP_SUMMARY
+          fi

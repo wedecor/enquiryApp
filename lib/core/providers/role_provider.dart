@@ -1,23 +1,24 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
-import 'package:we_decor_enquiries/core/services/firestore_service.dart';
-import 'package:we_decor_enquiries/shared/models/user_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../shared/models/user_model.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 
 /// Riverpod provider that streams the current user's role information.
-/// 
+///
 /// This provider determines the user's role based on their authentication
 /// state and user data. It provides a [Stream<UserRole>] that emits the
 /// user's role whenever it changes.
-/// 
+///
 /// Currently, this provider returns a default role of [UserRole.staff] for
 /// all users. In a complete implementation, this would fetch the user's
 /// actual role from Firestore based on their UID.
-/// 
+///
 /// Returns a [StreamProvider<UserRole>] that emits:
 /// - [UserRole.admin] for administrators
 /// - [UserRole.staff] for staff members or unauthenticated users
-/// 
+///
 /// Usage:
 /// ```dart
 /// final roleAsync = ref.watch(roleProvider);
@@ -55,15 +56,15 @@ final roleProvider = StreamProvider<UserRole>((ref) {
 });
 
 /// Riverpod provider that checks if the current user has admin privileges.
-/// 
+///
 /// This provider returns a boolean indicating whether the current user
 /// has administrator role. It watches the [roleProvider] and returns
 /// `true` if the user's role is [UserRole.admin], `false` otherwise.
-/// 
+///
 /// Returns a [Provider<bool>] that provides:
 /// - `true` if the user is an administrator
 /// - `false` if the user is staff or unauthenticated
-/// 
+///
 /// Usage:
 /// ```dart
 /// final isAdmin = ref.watch(isAdminProvider);
@@ -85,15 +86,15 @@ final isAdminProvider = Provider<bool>((ref) {
 });
 
 /// Riverpod provider that checks if the current user has staff privileges.
-/// 
+///
 /// This provider returns a boolean indicating whether the current user
 /// has staff role. It watches the [roleProvider] and returns `true`
 /// if the user's role is [UserRole.staff], `false` otherwise.
-/// 
+///
 /// Returns a [Provider<bool>] that provides:
 /// - `true` if the user is staff
 /// - `false` if the user is admin or unauthenticated
-/// 
+///
 /// Usage:
 /// ```dart
 /// final isStaff = ref.watch(isStaffProvider);
@@ -112,21 +113,21 @@ final isStaffProvider = Provider<bool>((ref) {
 });
 
 /// Alias for isAdminProvider to maintain compatibility with existing code.
-/// 
+///
 /// This provider is equivalent to [isAdminProvider] and is used in
 /// components that expect this specific name.
 final currentUserIsAdminProvider = isAdminProvider;
 
 /// Provider that provides the current user with Firestore data.
-/// 
+///
 /// This provider combines authentication state with Firestore user data
 /// to provide a complete user profile. It watches the authentication
 /// state and fetches corresponding user data from Firestore.
-/// 
+///
 /// Returns a [StreamProvider<UserModel?>] that provides:
 /// - [UserModel] with complete user data if authenticated
 /// - `null` if not authenticated
-/// 
+///
 /// Usage:
 /// ```dart
 /// final userAsync = ref.watch(currentUserWithFirestoreProvider);
@@ -180,13 +181,13 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
 });
 
 /// Provider for Firestore service.
-/// 
+///
 /// This provider provides access to the Firestore service for database
 /// operations. It creates a singleton instance of the service that can
 /// be used throughout the application.
-/// 
+///
 /// Returns a [Provider<FirestoreService>] that provides the Firestore service.
-/// 
+///
 /// Usage:
 /// ```dart
 /// final firestoreService = ref.read(firestoreServiceProvider);
@@ -197,15 +198,15 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 });
 
 /// Riverpod provider that provides comprehensive user permissions.
-/// 
+///
 /// This provider aggregates all user permissions into a single [UserPermissions]
 /// object, making it easy to check multiple permissions at once. It combines
 /// the user's role information to determine what actions they can perform
 /// in the application.
-/// 
+///
 /// Returns a [Provider<UserPermissions>] containing all permission flags
 /// for the current user.
-/// 
+///
 /// Usage:
 /// ```dart
 /// final permissions = ref.watch(userPermissionsProvider);
@@ -215,7 +216,7 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 ///     child: Icon(Icons.add),
 ///   );
 /// }
-/// 
+///
 /// if (permissions.canViewAnalytics) {
 ///   return AnalyticsWidget();
 /// }
@@ -223,7 +224,7 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 final userPermissionsProvider = Provider<UserPermissions>((ref) {
   final isAdmin = ref.watch(isAdminProvider);
   final isStaff = ref.watch(isStaffProvider);
-  
+
   return UserPermissions(
     canViewEnquiries: isAdmin || isStaff,
     canCreateEnquiries: isAdmin || isStaff,
@@ -235,17 +236,17 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
 });
 
 /// Immutable class representing user permissions in the application.
-/// 
+///
 /// This class encapsulates all the permissions a user has within the
 /// system. It provides a clean way to check what actions a user can
 /// perform without having to check multiple role-based conditions
 /// throughout the codebase.
-/// 
+///
 /// Permissions are determined based on the user's role:
 /// - **Admin users** have all permissions enabled
 /// - **Staff users** have limited permissions (view/create enquiries only)
 /// - **Unauthenticated users** have no permissions
-/// 
+///
 /// Example usage:
 /// ```dart
 /// final permissions = UserPermissions(
@@ -256,21 +257,21 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
 ///   canViewAnalytics: false,
 ///   canManageUsers: false,
 /// );
-/// 
+///
 /// if (permissions.canCreateEnquiries) {
 ///   // Show create enquiry button
 /// }
-/// 
+///
 /// if (permissions.canViewAnalytics) {
 ///   // Show analytics dashboard
 /// }
 /// ```
 class UserPermissions {
   /// Creates a [UserPermissions] instance with the specified permission flags.
-  /// 
+  ///
   /// All parameters are required and should be set based on the user's
   /// role and specific permissions granted to them.
-  /// 
+  ///
   /// Parameters:
   /// - [canViewEnquiries]: Whether the user can view enquiry lists and details
   /// - [canCreateEnquiries]: Whether the user can create new enquiries
@@ -288,65 +289,65 @@ class UserPermissions {
   });
 
   /// Whether the user can view enquiry lists and details.
-  /// 
+  ///
   /// This permission allows users to:
   /// - View the main enquiry dashboard
   /// - See enquiry details and information
   /// - Access enquiry history and status
-  /// 
+  ///
   /// Typically granted to both admin and staff users.
   final bool canViewEnquiries;
 
   /// Whether the user can create new enquiries.
-  /// 
+  ///
   /// This permission allows users to:
   /// - Add new customer enquiries
   /// - Fill out enquiry forms
   /// - Submit enquiry data to the system
-  /// 
+  ///
   /// Typically granted to both admin and staff users.
   final bool canCreateEnquiries;
 
   /// Whether the user can modify existing enquiries.
-  /// 
+  ///
   /// This permission allows users to:
   /// - Update enquiry information
   /// - Change enquiry status
   /// - Modify customer details
   /// - Update assignment information
-  /// 
+  ///
   /// Typically restricted to admin users only.
   final bool canEditEnquiries;
 
   /// Whether the user can delete enquiries.
-  /// 
+  ///
   /// This permission allows users to:
   /// - Remove enquiries from the system
   /// - Permanently delete enquiry records
   /// - Clean up duplicate or invalid entries
-  /// 
+  ///
   /// Typically restricted to admin users only.
   final bool canDeleteEnquiries;
 
   /// Whether the user can access analytics and reports.
-  /// 
+  ///
   /// This permission allows users to:
   /// - View performance metrics
   /// - Access business intelligence dashboards
   /// - Generate reports and insights
   /// - Monitor system usage statistics
-  /// 
+  ///
   /// Typically restricted to admin users only.
   final bool canViewAnalytics;
 
   /// Whether the user can manage other users.
-  /// 
+  ///
   /// This permission allows users to:
   /// - Create new user accounts
   /// - Modify user roles and permissions
   /// - Deactivate user accounts
   /// - Manage user access levels
-  /// 
+  ///
   /// Typically restricted to admin users only.
   final bool canManageUsers;
-} 
+}

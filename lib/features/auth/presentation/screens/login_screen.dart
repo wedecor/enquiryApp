@@ -1,6 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/services/firebase_auth_service.dart';
+import '../../../../core/services/firebase_auth_service.dart';
 
 /// Screen for user authentication
 class LoginScreen extends ConsumerStatefulWidget {
@@ -54,6 +55,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password reset link sent! Check your email.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reset link sent if the email exists.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -67,30 +104,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo/Icon
-                const Icon(
-                  Icons.home,
-                  size: 80,
-                  color: Color(0xFF2563EB), // Blue
-                ),
+                Icon(Icons.home, size: 80, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 32),
-                
+
                 // Title
-                const Text(
+                Text(
                   'Welcome to We Decor',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF2563EB), // Blue
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                
-                const Text(
+
+                Text(
                   'Sign in to your account',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -136,7 +169,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // Forgot Password Link
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _forgotPassword,
+                    child: Text(
+                      'Forgot Password?',
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
 
                 // Error Message
                 if (_errorMessage != null)
@@ -159,12 +205,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF2563EB), // Blue
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -177,10 +221,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text(
                           'Sign In',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ],
@@ -190,4 +231,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
-} 
+}

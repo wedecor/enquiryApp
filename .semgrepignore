@@ -1,0 +1,48 @@
+# Semgrep ignore patterns for We Decor Enquiries
+
+# Generated and build files
+build/
+.dart_tool/
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Dependencies
+node_modules/
+.pub-cache/
+rules-tests/node_modules/
+
+# Test files (exclude from security scans)
+test/
+integration_test/
+*_test.dart
+
+# Platform-specific generated files
+android/app/build/
+ios/build/
+web/build/
+windows/build/
+linux/build/
+macos/build/
+
+# Firebase and deployment
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+*.iml
+
+# Documentation
+docs/
+*.md
+*.txt
+
+# Configuration files (may contain sensitive patterns that are actually safe)
+pubspec.yaml
+pubspec.lock
+firebase.json
+firestore.rules

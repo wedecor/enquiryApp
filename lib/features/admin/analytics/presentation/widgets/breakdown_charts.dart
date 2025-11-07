@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
 import '../../domain/analytics_models.dart';
 
 /// Pie chart for event type breakdown
@@ -7,11 +8,7 @@ class EventTypePieChart extends StatelessWidget {
   final List<CategoryCount> data;
   final String title;
 
-  const EventTypePieChart({
-    super.key,
-    required this.data,
-    required this.title,
-  });
+  const EventTypePieChart({super.key, required this.data, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -24,9 +21,7 @@ class EventTypePieChart extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -54,9 +49,7 @@ class EventTypePieChart extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Expanded(
-          child: _buildLegend(context),
-        ),
+        Expanded(child: _buildLegend(context)),
       ],
     );
   }
@@ -74,10 +67,7 @@ class EventTypePieChart extends StatelessWidget {
               Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -99,7 +89,7 @@ class EventTypePieChart extends StatelessWidget {
       final index = data.indexOf(item);
       final color = _getColor(index);
       final isLargest = index == 0;
-      
+
       return PieChartSectionData(
         color: color,
         value: item.count.toDouble(),
@@ -133,17 +123,11 @@ class EventTypePieChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.pie_chart,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.pie_chart, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -156,11 +140,7 @@ class SourceBarChart extends StatelessWidget {
   final List<CategoryCount> data;
   final String title;
 
-  const SourceBarChart({
-    super.key,
-    required this.data,
-    required this.title,
-  });
+  const SourceBarChart({super.key, required this.data, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -173,9 +153,7 @@ class SourceBarChart extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -210,12 +188,8 @@ class SourceBarChart extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -226,10 +200,7 @@ class SourceBarChart extends StatelessWidget {
                     axisSide: meta.axisSide,
                     child: Text(
                       _truncateLabel(data[index].key),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   );
                 }
@@ -247,30 +218,21 @@ class SourceBarChart extends StatelessWidget {
                   axisSide: meta.axisSide,
                   child: Text(
                     value.toInt().toString(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                 );
               },
             ),
           ),
         ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: Colors.grey.shade300),
-        ),
+        borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300)),
         barGroups: _getBarGroups(context),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: Colors.grey.shade300,
-              strokeWidth: 1,
-            );
+            return FlLine(color: Colors.grey.shade300, strokeWidth: 1);
           },
         ),
       ),
@@ -316,17 +278,11 @@ class SourceBarChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.bar_chart,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.bar_chart, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -339,11 +295,7 @@ class StatusStackedBarChart extends StatelessWidget {
   final List<CategoryCount> data;
   final String title;
 
-  const StatusStackedBarChart({
-    super.key,
-    required this.data,
-    required this.title,
-  });
+  const StatusStackedBarChart({super.key, required this.data, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -356,9 +308,7 @@ class StatusStackedBarChart extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -382,18 +332,18 @@ class StatusStackedBarChart extends StatelessWidget {
               maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
               barTouchData: BarTouchData(
                 enabled: true,
-              touchTooltipData: BarTouchTooltipData(
-                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                  if (rodIndex < data.length) {
-                    final item = data[rodIndex];
-                    return BarTooltipItem(
-                      '${item.key}: ${item.count}',
-                      const TextStyle(color: Colors.white),
-                    );
-                  }
-                  return null;
-                },
-              ),
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    if (rodIndex < data.length) {
+                      final item = data[rodIndex];
+                      return BarTooltipItem(
+                        '${item.key}: ${item.count}',
+                        const TextStyle(color: Colors.white),
+                      );
+                    }
+                    return null;
+                  },
+                ),
               ),
               titlesData: const FlTitlesData(show: false),
               borderData: FlBorderData(show: false),
@@ -415,10 +365,7 @@ class StatusStackedBarChart extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        Expanded(
-          flex: 2,
-          child: _buildLegend(context),
-        ),
+        Expanded(flex: 2, child: _buildLegend(context)),
       ],
     );
   }
@@ -426,20 +373,14 @@ class StatusStackedBarChart extends StatelessWidget {
   List<BarChartRodStackItem> _getStackItems() {
     final stackItems = <BarChartRodStackItem>[];
     double currentY = 0;
-    
+
     for (int i = 0; i < data.length; i++) {
       final item = data[i];
       final color = _getStatusColor(item.key);
-      stackItems.add(
-        BarChartRodStackItem(
-          currentY,
-          currentY + item.count.toDouble(),
-          color,
-        ),
-      );
+      stackItems.add(BarChartRodStackItem(currentY, currentY + item.count.toDouble(), color));
       currentY += item.count.toDouble();
     }
-    
+
     return stackItems;
   }
 
@@ -456,10 +397,7 @@ class StatusStackedBarChart extends StatelessWidget {
               Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -509,17 +447,11 @@ class StatusStackedBarChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.stacked_bar_chart,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.stacked_bar_chart, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
           ),
         ],
       ),

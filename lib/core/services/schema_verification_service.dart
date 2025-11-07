@@ -1,6 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:we_decor_enquiries/core/constants/firestore_schema.dart';
 
 /// Schema validation result
 class SchemaValidationResult {
@@ -20,7 +18,6 @@ class SchemaValidationResult {
 /// Service for automated schema verification and validation
 class SchemaVerificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Verify all collections and documents against schema
   Future<Map<String, SchemaValidationResult>> verifyAllSchemas() async {
@@ -41,7 +38,6 @@ class SchemaVerificationService {
 
       // Verify history subcollections
       results['history'] = await _verifyHistorySchema();
-
     } catch (e) {
       print('SchemaVerificationService: Error during schema verification: $e');
     }
@@ -63,7 +59,7 @@ class SchemaVerificationService {
       for (final doc in usersSnapshot.docs) {
         final data = doc.data();
         final validation = _validateUserDocument(data);
-        
+
         if (validation.isValid) {
           validCount++;
         } else {
@@ -79,7 +75,6 @@ class SchemaVerificationService {
       if (usersSnapshot.docs.isEmpty) {
         warnings.add('No users found in collection');
       }
-
     } catch (e) {
       errors.add('Error accessing users collection: $e');
     }
@@ -106,7 +101,7 @@ class SchemaVerificationService {
       for (final doc in enquiriesSnapshot.docs) {
         final data = doc.data();
         final validation = _validateEnquiryDocument(data);
-        
+
         if (validation.isValid) {
           validCount++;
         } else {
@@ -122,7 +117,6 @@ class SchemaVerificationService {
       if (enquiriesSnapshot.docs.isEmpty) {
         warnings.add('No enquiries found in collection');
       }
-
     } catch (e) {
       errors.add('Error accessing enquiries collection: $e');
     }
@@ -157,7 +151,7 @@ class SchemaVerificationService {
         for (final doc in itemsSnapshot.docs) {
           final data = doc.data();
           final validation = _validateDropdownDocument(data);
-          
+
           if (validation.isValid) {
             totalValid++;
           } else {
@@ -174,7 +168,6 @@ class SchemaVerificationService {
       if (totalValid + totalInvalid == 0) {
         warnings.add('No dropdown items found');
       }
-
     } catch (e) {
       errors.add('Error accessing dropdowns collection: $e');
     }
@@ -207,7 +200,7 @@ class SchemaVerificationService {
         for (final doc in financialSnapshot.docs) {
           final data = doc.data();
           final validation = _validateFinancialDocument(data);
-          
+
           if (validation.isValid) {
             totalValid++;
           } else {
@@ -224,7 +217,6 @@ class SchemaVerificationService {
       if (totalValid + totalInvalid == 0) {
         warnings.add('No financial documents found');
       }
-
     } catch (e) {
       errors.add('Error accessing financial subcollections: $e');
     }
@@ -249,15 +241,12 @@ class SchemaVerificationService {
       int totalInvalid = 0;
 
       for (final enquiryDoc in enquiriesSnapshot.docs) {
-        final historySnapshot = await enquiryDoc.reference
-            .collection('history')
-            .limit(10)
-            .get();
+        final historySnapshot = await enquiryDoc.reference.collection('history').limit(10).get();
 
         for (final doc in historySnapshot.docs) {
           final data = doc.data();
           final validation = _validateHistoryDocument(data);
-          
+
           if (validation.isValid) {
             totalValid++;
           } else {
@@ -274,7 +263,6 @@ class SchemaVerificationService {
       if (totalValid + totalInvalid == 0) {
         warnings.add('No history documents found');
       }
-
     } catch (e) {
       errors.add('Error accessing history subcollections: $e');
     }
@@ -318,20 +306,25 @@ class SchemaVerificationService {
     if (data.containsKey('name') && data['name'] is String && (data['name'] as String).isEmpty) {
       errors.add('name cannot be empty');
     }
-    if (data.containsKey('email') && data['email'] is String && !(data['email'] as String).contains('@')) {
+    if (data.containsKey('email') &&
+        data['email'] is String &&
+        !(data['email'] as String).contains('@')) {
       errors.add('email must be a valid email address');
     }
     if (data.containsKey('phone') && data['phone'] is String && (data['phone'] as String).isEmpty) {
       errors.add('phone cannot be empty');
     }
-    if (data.containsKey('role') && data['role'] is String && !['admin', 'staff'].contains(data['role'] as String)) {
+    if (data.containsKey('role') &&
+        data['role'] is String &&
+        !['admin', 'staff'].contains(data['role'] as String)) {
       errors.add('role must be either "admin" or "staff"');
     }
 
     // Optional field validation
-    if (data.containsKey('fcmToken') && data['fcmToken'] != null && data['fcmToken'] is! String) {
-      errors.add('fcmToken must be a string or null');
-    }
+    // fcmToken field removed for security - tokens now stored in private subcollection
+    // if (data.containsKey('fcmToken') && data['fcmToken'] != null && data['fcmToken'] is! String) {
+    //   errors.add('fcmToken must be a string or null');
+    // }
 
     return SchemaValidationResult(
       isValid: errors.isEmpty,
@@ -347,7 +340,18 @@ class SchemaVerificationService {
     final warnings = <String>[];
 
     // Required fields
-    final requiredFields = ['customerName', 'customerPhone', 'location', 'eventDate', 'eventType', 'eventStatus', 'notes', 'referenceImages', 'createdBy', 'createdAt'];
+    final requiredFields = [
+      'customerName',
+      'customerPhone',
+      'location',
+      'eventDate',
+      'eventType',
+      'eventStatus',
+      'notes',
+      'referenceImages',
+      'createdBy',
+      'createdAt',
+    ];
     for (final field in requiredFields) {
       if (!data.containsKey(field)) {
         errors.add('Missing required field: $field');
@@ -387,27 +391,41 @@ class SchemaVerificationService {
     }
 
     // Field value validation
-    if (data.containsKey('customerName') && data['customerName'] is String && (data['customerName'] as String).isEmpty) {
+    if (data.containsKey('customerName') &&
+        data['customerName'] is String &&
+        (data['customerName'] as String).isEmpty) {
       errors.add('customerName cannot be empty');
     }
-    if (data.containsKey('customerPhone') && data['customerPhone'] is String && (data['customerPhone'] as String).isEmpty) {
+    if (data.containsKey('customerPhone') &&
+        data['customerPhone'] is String &&
+        (data['customerPhone'] as String).isEmpty) {
       errors.add('customerPhone cannot be empty');
     }
-    if (data.containsKey('location') && data['location'] is String && (data['location'] as String).isEmpty) {
+    if (data.containsKey('location') &&
+        data['location'] is String &&
+        (data['location'] as String).isEmpty) {
       errors.add('location cannot be empty');
     }
-    if (data.containsKey('eventType') && data['eventType'] is String && (data['eventType'] as String).isEmpty) {
+    if (data.containsKey('eventType') &&
+        data['eventType'] is String &&
+        (data['eventType'] as String).isEmpty) {
       errors.add('eventType cannot be empty');
     }
-    if (data.containsKey('eventStatus') && data['eventStatus'] is String && (data['eventStatus'] as String).isEmpty) {
+    if (data.containsKey('eventStatus') &&
+        data['eventStatus'] is String &&
+        (data['eventStatus'] as String).isEmpty) {
       errors.add('eventStatus cannot be empty');
     }
-    if (data.containsKey('createdBy') && data['createdBy'] is String && (data['createdBy'] as String).isEmpty) {
+    if (data.containsKey('createdBy') &&
+        data['createdBy'] is String &&
+        (data['createdBy'] as String).isEmpty) {
       errors.add('createdBy cannot be empty');
     }
 
     // Optional field validation
-    if (data.containsKey('assignedTo') && data['assignedTo'] != null && data['assignedTo'] is! String) {
+    if (data.containsKey('assignedTo') &&
+        data['assignedTo'] != null &&
+        data['assignedTo'] is! String) {
       errors.add('assignedTo must be a string or null');
     }
 
@@ -472,13 +490,19 @@ class SchemaVerificationService {
     }
 
     // Field value validation
-    if (data.containsKey('totalCost') && data['totalCost'] is num && (data['totalCost'] as num) < 0) {
+    if (data.containsKey('totalCost') &&
+        data['totalCost'] is num &&
+        (data['totalCost'] as num) < 0) {
       errors.add('totalCost cannot be negative');
     }
-    if (data.containsKey('advancePaid') && data['advancePaid'] is num && (data['advancePaid'] as num) < 0) {
+    if (data.containsKey('advancePaid') &&
+        data['advancePaid'] is num &&
+        (data['advancePaid'] as num) < 0) {
       errors.add('advancePaid cannot be negative');
     }
-    if (data.containsKey('paymentStatus') && data['paymentStatus'] is String && (data['paymentStatus'] as String).isEmpty) {
+    if (data.containsKey('paymentStatus') &&
+        data['paymentStatus'] is String &&
+        (data['paymentStatus'] as String).isEmpty) {
       errors.add('paymentStatus cannot be empty');
     }
 
@@ -521,10 +545,14 @@ class SchemaVerificationService {
     }
 
     // Field value validation
-    if (data.containsKey('fieldChanged') && data['fieldChanged'] is String && (data['fieldChanged'] as String).isEmpty) {
+    if (data.containsKey('fieldChanged') &&
+        data['fieldChanged'] is String &&
+        (data['fieldChanged'] as String).isEmpty) {
       errors.add('fieldChanged cannot be empty');
     }
-    if (data.containsKey('changedBy') && data['changedBy'] is String && (data['changedBy'] as String).isEmpty) {
+    if (data.containsKey('changedBy') &&
+        data['changedBy'] is String &&
+        (data['changedBy'] as String).isEmpty) {
       errors.add('changedBy cannot be empty');
     }
 
@@ -575,4 +603,4 @@ class SchemaVerificationService {
 
     return report.toString();
   }
-} 
+}

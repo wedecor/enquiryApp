@@ -3,29 +3,48 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ],
+  "functions": {
+    "source": "functions",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "src",
+      "*.ts"
+    ],
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run build"
+    ]
+  },
   "hosting": {
-    "public": "build/web",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+    "headers": [
+      {
+        "source": "**/*.apk",
+        "headers": [
+          { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+          { "key": "Cache-Control", "value": "no-store, max-age=0" }
+        ]
+      }
+    ],
     "rewrites": [
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/pwa/rc1/**",
+        "destination": "/pwa/rc1/index.html"
+      },
+      {
+        "source": "/pwa/rc2/**",
+        "destination": "/pwa/rc2/index.html"
+      },
+      {
+        "source": "/pwa/rc3/**",
+        "destination": "/pwa/rc3/index.html"
       }
     ]
   },
