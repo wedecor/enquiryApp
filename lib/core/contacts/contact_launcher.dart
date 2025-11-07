@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../logging/logger.dart';
-import '../providers/role_provider.dart';
 
 /// Status of contact launch operations
 enum ContactLaunchStatus { opened, notInstalled, invalidNumber, failed }
@@ -35,7 +34,7 @@ class ContactLauncher {
     if (raw.trim().isEmpty) return '';
 
     // Remove all formatting characters except '+'
-    String cleaned = raw.replaceAll(RegExp(r'[^\d+]'), '');
+    final String cleaned = raw.replaceAll(RegExp(r'[^\d+]'), '');
 
     // If already has country code, return as-is
     if (cleaned.startsWith('+')) {

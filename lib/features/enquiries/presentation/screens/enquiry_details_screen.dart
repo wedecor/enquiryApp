@@ -806,10 +806,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         _userDisplayCache[userId] = 'Unknown';
         return 'Unknown';
       }
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       final name = (data?['name'] as String?)?.trim();
       final phone = (data?['phone'] as String?)?.trim();
-      final display = [name, phone].where((e) => e != null && e!.isNotEmpty).join(' · ');
+      final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
       final result = display.isNotEmpty ? display : 'Unknown';
       _userDisplayCache[userId] = result;
       return result;

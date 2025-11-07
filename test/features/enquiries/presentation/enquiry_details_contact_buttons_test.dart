@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:we_decor_enquiries/core/a11y/tap_target.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:we_decor_enquiries/core/contacts/contact_launcher.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/contact_buttons.dart';
 
@@ -148,7 +147,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [contactLauncherProvider.overrideWith((ref) => mockLauncher)],
-            child: MaterialApp(
+            child: const MaterialApp(
               home: Scaffold(
                 body: ContactButtons(
                   customerPhone: '9876543210',
@@ -187,7 +186,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [contactLauncherProvider.overrideWith((ref) => mockLauncher)],
-            child: MaterialApp(
+            child: const MaterialApp(
               home: Scaffold(
                 body: ContactButtons(
                   customerPhone: '+919876543210',
@@ -227,7 +226,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [contactLauncherProvider.overrideWith((ref) => mockLauncher)],
-            child: MaterialApp(
+            child: const MaterialApp(
               home: Scaffold(
                 body: ContactButtons(
                   customerPhone: '+919876543210',
@@ -312,7 +311,7 @@ void main() {
 
 /// Mock ContactLauncher for testing
 class _MockContactLauncher extends ContactLauncher {
-  _MockContactLauncher({this.onCall, this.onWhatsApp, super.defaultCountryCode = '+91'});
+  _MockContactLauncher({this.onCall, this.onWhatsApp});
 
   final Future<ContactLaunchStatus> Function(String)? onCall;
   final Future<ContactLaunchStatus> Function(String, String?)? onWhatsApp;

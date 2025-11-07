@@ -208,8 +208,8 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     final isAdmin = ref.read(currentUserIsAdminProvider);
     if (!isAdmin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Only admins can add new event types'),
+        const SnackBar(
+          content: Text('Only admins can add new event types'),
           backgroundColor: Colors.red,
         ),
       );
