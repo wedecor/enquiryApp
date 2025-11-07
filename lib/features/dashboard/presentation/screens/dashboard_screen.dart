@@ -1,10 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
+import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/components/stats_card.dart';
+import '../../../../widgets/enquiry_tile_status_strip.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
@@ -24,9 +28,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // Simple in-memory cache to avoid refetching user names repeatedly
   final Map<String, String> _userNameCache = <String, String>{};
-  // Use value keys that match Firestore (snake_case), plus display labels
+  final Map<String, Color> _statusColorCache = <String, Color>{};
+  final Map<String, Color> _eventColorCache = <String, Color>{};
   final List<Map<String, String>> _statusTabs = [
     {'label': 'All', 'value': 'All'},
     {'label': 'New', 'value': 'new'},
@@ -41,8 +45,113 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
+    _primeDropdownColors();
+  }
 
-    // FCM registration is now handled automatically by FcmBootstrap
+  Future<void> _primeDropdownColors() async {
+    final firestore = FirebaseFirestore.instance;
+    try {
+      final statusSnapshot = await firestore
+          .collection('dropdowns')
+          .doc('statuses')
+          .collection('items')
+          .where('active', isEqualTo: true)
+          .get();
+      for (final doc in statusSnapshot.docs) {
+        final data = doc.data();
+        final value = (data['value'] as String?)?.trim();
+        final colorHex = data['color'] as String?;
+        if (value == null || value.isEmpty || colorHex == null) continue;
+        final color = _parseColor(colorHex);
+        if (color != null) {
+          _statusColorCache[value.toLowerCase()] = color;
+        }
+      }
+
+      final eventSnapshot = await firestore
+          .collection('dropdowns')
+          .doc('event_types')
+          .collection('items')
+          .where('active', isEqualTo: true)
+          .get();
+      for (final doc in eventSnapshot.docs) {
+        final data = doc.data();
+        final value = (data['value'] as String?)?.trim();
+        final colorHex = data['color'] as String?;
+        if (value == null || value.isEmpty || colorHex == null) continue;
+        final color = _parseColor(colorHex);
+        if (color != null) {
+          _eventColorCache[value.toLowerCase()] = color;
+        }
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('Failed to load dropdown colors: $e');
+        debugPrint('$st');
+      }
+    }
+
+    if (mounted) setState(() {});
+
+    if (kDebugMode) {
+      debugPrint(
+        '[DropdownCaches] statuses=${_statusColorCache.map((k, v) => MapEntry(k, v.value.toRadixString(16)))} '
+        'events=${_eventColorCache.map((k, v) => MapEntry(k, v.value.toRadixString(16)))}',
+      );
+    }
+  }
+
+  Color? _parseColor(String? input) {
+    if (input == null) return null;
+    var s = input.trim();
+    if (s.isEmpty) return null;
+
+    final rgbRe = RegExp(
+      r'^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*([0-1]?\.?\d+))?\s*\)$',
+      caseSensitive: false,
+    );
+    final match = rgbRe.firstMatch(s);
+    if (match != null) {
+      int clampChannel(String v) => int.parse(v).clamp(0, 255);
+      final r = clampChannel(match.group(1)!);
+      final g = clampChannel(match.group(2)!);
+      final b = clampChannel(match.group(3)!);
+      final rawAlpha = match.group(4);
+      final alpha = rawAlpha != null
+          ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0)
+          : 1.0;
+      return Color.fromRGBO(r, g, b, alpha);
+    }
+
+    s = s.replaceAll('#', '').trim();
+    if (s.startsWith('0x')) {
+      try {
+        var value = int.parse(s);
+        if (value <= 0xFFFFFF) value = 0xFF000000 | value;
+        return Color(value);
+      } catch (_) {}
+    }
+
+    final hexRe = RegExp(r'^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$');
+    if (hexRe.hasMatch(s)) {
+      if (s.length == 6) {
+        return Color(int.parse('0xFF${s.toUpperCase()}'));
+      }
+      if (s.length == 8) {
+        final rr = s.substring(0, 2).toUpperCase();
+        final gg = s.substring(2, 4).toUpperCase();
+        final bb = s.substring(4, 6).toUpperCase();
+        final aa = s.substring(6, 8).toUpperCase();
+        return Color(int.parse('0x$aa$rr$gg$bb'));
+      }
+    }
+
+    try {
+      final value = int.parse(s);
+      return Color(value <= 0xFFFFFF ? (0xFF000000 | value) : value);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -61,9 +170,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       appBar: AppBar(
         title: const Text('We Decor Dashboard'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        automaticallyImplyLeading: true, // This will show the hamburger menu
+        automaticallyImplyLeading: true,
         actions: [
-          // Notifications will be added later
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _signOut(ref),
@@ -94,9 +202,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(
-            context,
-          ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) => const EnquiryFormScreen(),
+            ),
+          );
         },
         tooltip: 'Add New Enquiry',
         child: const Icon(Icons.add),
@@ -104,13 +214,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
+  Widget _buildDashboardContent(
+    BuildContext context,
+    UserModel? user,
+    bool isAdmin,
+  ) {
     return Column(
       children: [
-        // Welcome and Statistics Section
         _buildWelcomeAndStats(user, isAdmin),
-
-        // Enquiries Tab View
         Expanded(
           child: TabBarView(
             controller: _tabController,
@@ -140,14 +251,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Welcome Section
           Row(
             children: [
               CircleAvatar(
                 radius: 25,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
-                  user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
+                  user?.name.isNotEmpty == true
+                      ? user!.name[0].toUpperCase()
+                      : 'U',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -162,7 +274,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   children: [
                     Text(
                       'Welcome back, ${user?.name ?? 'User'}!',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       isAdmin ? 'Administrator' : 'Staff Member',
@@ -174,8 +289,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ],
           ),
           const SizedBox(height: 24),
-
-          // Statistics Cards
           _buildStatisticsCards(isAdmin, user?.uid),
         ],
       ),
@@ -196,7 +309,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
         final enquiries = snapshot.data?.docs ?? [];
 
-        // Calculate statistics
         final totalEnquiries = enquiries.length;
         final newEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
@@ -211,97 +323,90 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           return (data['eventStatus'] as String?)?.toLowerCase() == 'completed';
         }).length;
 
-        return Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total',
-                totalEnquiries.toString(),
-                Icons.inbox,
-                Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard('New', newEnquiries.toString(), Icons.fiber_new, Colors.orange),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'In Talks',
-                inProgressEnquiries.toString(),
-                Icons.pending,
-                Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Completed',
-                completedEnquiries.toString(),
-                Icons.check_circle,
-                Colors.green,
-              ),
-            ),
-          ],
+        final cards = [
+          StatsCard(
+            icon: Icons.inbox_outlined,
+            value: totalEnquiries.toString(),
+            label: 'Total enquiries',
+          ),
+          StatsCard(
+            icon: Icons.fiber_new,
+            value: newEnquiries.toString(),
+            label: 'New',
+          ),
+          StatsCard(
+            icon: Icons.handshake_outlined,
+            value: inProgressEnquiries.toString(),
+            label: 'In talks',
+          ),
+          StatsCard(
+            icon: Icons.verified_outlined,
+            value: completedEnquiries.toString(),
+            label: 'Completed',
+          ),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < 720;
+            return isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final card in cards) ...[
+                        card,
+                        const SizedBox(height: 12),
+                      ],
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (int i = 0; i < cards.length; i++) ...[
+                        Expanded(child: cards[i]),
+                        if (i != cards.length - 1) const SizedBox(width: 16),
+                      ],
+                    ],
+                  );
+          },
         );
       },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEnquiriesTab(String status, bool isAdmin, String? userId) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(isAdmin, userId, status),
+      stream: _getEnquiriesStream(
+        isAdmin,
+        userId,
+        status == 'All' ? null : status,
+      ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text('Error: ${snapshot.error}'),
-              ],
-            ),
-          );
+          return _buildErrorWidget(context, snapshot.error!);
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final enquiries = snapshot.data?.docs ?? [];
+        final rawEnquiries = snapshot.data!.docs.toList();
 
-        if (enquiries.isEmpty) {
+        if (rawEnquiries.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  status == 'All' ? Icons.inbox : Icons.filter_list,
+                const Icon(
+                  Icons.sentiment_dissatisfied,
                   size: 64,
                   color: Colors.grey,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  status == 'All' ? 'No enquiries found' : 'No $status enquiries',
+                  status == 'All'
+                      ? 'No enquiries found'
+                      : 'No $status enquiries',
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -314,84 +419,131 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           );
         }
 
+        rawEnquiries.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aDate =
+              _parseDateTime(aData['eventDate']) ??
+              _parseDateTime(aData['createdAt']) ??
+              DateTime(9999);
+          final bDate =
+              _parseDateTime(bData['eventDate']) ??
+              _parseDateTime(bData['createdAt']) ??
+              DateTime(9999);
+          return aDate.compareTo(bDate);
+        });
+
         return ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: enquiries.length,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          itemCount: rawEnquiries.length,
           itemBuilder: (context, index) {
-            final enquiry = enquiries[index];
+            final enquiry = rawEnquiries[index];
             final enquiryData = enquiry.data() as Map<String, dynamic>;
             final enquiryId = enquiry.id;
+            final customerName =
+                (enquiryData['customerName'] as String?) ?? 'Customer';
+            final phone = enquiryData['customerPhone'] as String?;
+            final assignedUserId = enquiryData['assignedTo'] as String?;
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getStatusColor(enquiryData['eventStatus'] as String?),
-                  child: Text(
-                    _getStatusInitial(enquiryData['eventStatus'] as String?),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                title: Text(
-                  (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
-                    Text(
-                      'Date: ${_formatDate(enquiryData['eventDate'])}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    if (isAdmin && enquiryData['assignedTo'] != null) ...[
-                      _buildAssignedToLabel(enquiryData['assignedTo'] as String),
-                    ],
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getPriorityColor(enquiryData['priority'] as String?),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if ((enquiryData['eventStatus'] as String?)?.toLowerCase() != 'confirmed') ...[
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                        tooltip: 'Delete Enquiry',
-                        onPressed: () {
-                          _confirmAndDeleteEnquiry(
-                            enquiryId,
-                            (enquiryData['customerName'] as String?) ?? 'this enquiry',
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                    ],
-                    const Icon(Icons.chevron_right),
-                  ],
-                ),
-                onTap: () {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(
-                      builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
-                    ),
+            return FutureBuilder<String>(
+              future: assignedUserId != null
+                  ? _getUserDisplayName(assignedUserId)
+                  : Future.value('Unassigned'),
+              builder: (context, snapshot) {
+                final assignedDisplay = assignedUserId == null
+                    ? 'Unassigned'
+                    : snapshot.connectionState == ConnectionState.waiting
+                    ? 'Fetching assignee…'
+                    : snapshot.hasError
+                    ? 'Unknown'
+                    : snapshot.data ?? 'Unassigned';
+
+                final createdAt =
+                    _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
+                final eventDate = _parseDateTime(enquiryData['eventDate']);
+                final location =
+                    (enquiryData['eventLocation'] as String?) ??
+                    (enquiryData['location'] as String?);
+                final notes =
+                    (enquiryData['description'] as String?) ??
+                    (enquiryData['notes'] as String?);
+
+                final status =
+                    (enquiryData['eventStatus'] as String?)
+                            ?.trim()
+                            .isNotEmpty ==
+                        true
+                    ? enquiryData['eventStatus'] as String
+                    : 'New';
+                final eventType =
+                    (enquiryData['eventType'] as String?)?.trim().isNotEmpty ==
+                        true
+                    ? enquiryData['eventType'] as String
+                    : 'Event';
+                final whatsappContact =
+                    enquiryData['whatsappNumber'] as String? ?? phone;
+                final statusColorHex =
+                    (enquiryData['statusColorHex'] as String?) ??
+                    (enquiryData['statusColor'] as String?);
+                final eventColorHex =
+                    (enquiryData['eventColorHex'] as String?) ??
+                    (enquiryData['eventColor'] as String?);
+                final statusColorOverride =
+                    _colorFromDynamic(enquiryData['statusColorValue']) ??
+                    _colorFromDynamic(enquiryData['statusColorInt']) ??
+                    _colorFromDynamic(statusColorHex) ??
+                    _colorFromDynamic(enquiryData['statusColor']) ??
+                    _statusColorCache[status.toLowerCase()];
+                final eventColorOverride =
+                    _colorFromDynamic(enquiryData['eventColorValue']) ??
+                    _colorFromDynamic(enquiryData['eventColorInt']) ??
+                    _colorFromDynamic(eventColorHex) ??
+                    _colorFromDynamic(enquiryData['eventColor']) ??
+                    _eventColorCache[eventType.toLowerCase()];
+                if (kDebugMode) {
+                  debugPrint(
+                    '[EnquiryData] id=$enquiryId '
+                    "eventType=${enquiryData['eventType']} "
+                    "status=${enquiryData['eventStatus']} "
+                    'keys=${enquiryData.keys} '
+                    'colors: statusHex=$statusColorHex eventHex=$eventColorHex '
+                    'statusOverride=${statusColorOverride?.value.toRadixString(16)} '
+                    'eventOverride=${eventColorOverride?.value.toRadixString(16)} '
+                    "rawStatusColor=${enquiryData['statusColor']} "
+                    "rawEventColor=${enquiryData['eventColor']}",
                   );
-                },
-              ),
+                }
+
+                return EnquiryTileStatusStrip(
+                  name: customerName,
+                  status: status,
+                  eventType: eventType,
+                  ageLabel: _formatAgeLabel(createdAt),
+                  assignee: assignedDisplay,
+                  dateLabel: _formatDateLabel(eventDate),
+                  location: location,
+                  notes: notes,
+                  phoneNumber: phone,
+                  whatsappNumber: whatsappContact,
+                  statusColorHex: statusColorHex,
+                  eventColorHex: eventColorHex,
+                  statusColorOverride: statusColorOverride,
+                  eventColorOverride: eventColorOverride,
+                  whatsappPrefill: 'Hi $customerName, this is from We Decor.',
+                  onView: () => _openEnquiryDetails(enquiryId),
+                  enquiryId: enquiryId,
+                  onCall: phone == null
+                      ? null
+                      : () => _handleCall(phone, customerName, enquiryId),
+                  onWhatsApp: whatsappContact == null
+                      ? null
+                      : () => _handleWhatsApp(
+                          whatsappContact,
+                          customerName,
+                          enquiryId,
+                        ),
+                );
+              },
             );
           },
         );
@@ -399,149 +551,168 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Future<void> _confirmAndDeleteEnquiry(String enquiryId, String customerName) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Enquiry'),
-        content: Text('Are you sure you want to delete "$customerName"? This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  String _formatAgeLabel(DateTime createdAt) {
+    final age = DateTime.now().difference(createdAt);
+    if (age.inMinutes < 1) return 'Just now';
+    if (age.inMinutes < 60) return '${age.inMinutes}m old';
+    if (age.inHours < 24) return '${age.inHours}h old';
+    if (age.inDays < 7) return '${age.inDays}d old';
+    final weeks = age.inDays ~/ 7;
+    if (weeks < 5) return '${weeks}w old';
+    final months = age.inDays ~/ 30;
+    if (months < 12) return '${months}mo old';
+    final years = age.inDays ~/ 365;
+    return '${years}y old';
+  }
+
+  String _formatDateLabel(DateTime? date) {
+    if (date == null) return 'Date TBC';
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$day/$month/$year';
+  }
+
+  Color? _colorFromDynamic(dynamic value) {
+    if (value == null) return null;
+    if (value is Color) return value;
+    if (value is int) {
+      final normalized = value <= 0xFFFFFF ? 0xFF000000 | value : value;
+      return Color(normalized);
+    }
+    if (value is String) {
+      return _parseColor(value);
+    }
+    return null;
+  }
+
+  Future<void> _handleCall(
+    String? phone,
+    String customerName,
+    String enquiryId,
+  ) async {
+    if (phone == null || phone.trim().isEmpty) {
+      _showSnack('No phone number available for $customerName');
+      return;
+    }
+
+    final launcher = ref.read(contactLauncherProvider);
+    final status = await launcher.callNumberWithAudit(
+      phone,
+      enquiryId: enquiryId,
     );
 
-    if (confirmed != true) return;
-
-    try {
-      await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).delete();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Enquiry deleted')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
-      }
+    switch (status) {
+      case ContactLaunchStatus.opened:
+        _showSnack('Dialer opened for $customerName');
+        break;
+      case ContactLaunchStatus.invalidNumber:
+        _showSnack('Invalid phone number for $customerName');
+        break;
+      case ContactLaunchStatus.notInstalled:
+        _showSnack('Phone dialer not available on this device');
+        break;
+      case ContactLaunchStatus.failed:
+        _showSnack('Unable to start call to $customerName');
+        break;
     }
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
+  Future<void> _handleWhatsApp(
+    String? phone,
+    String customerName,
+    String enquiryId,
+  ) async {
+    if (phone == null || phone.trim().isEmpty) {
+      _showSnack('No phone number available for WhatsApp');
+      return;
+    }
+
+    final launcher = ref.read(contactLauncherProvider);
+    final prefill = 'Hi $customerName, this is from We Decor.';
+    final status = await launcher.openWhatsAppWithAudit(
+      phone,
+      prefillText: prefill,
+      enquiryId: enquiryId,
+    );
+
+    switch (status) {
+      case ContactLaunchStatus.opened:
+        _showSnack('WhatsApp opened for $customerName');
+        break;
+      case ContactLaunchStatus.invalidNumber:
+        _showSnack('Invalid WhatsApp number');
+        break;
+      case ContactLaunchStatus.notInstalled:
+        _showSnack('WhatsApp is not installed on this device');
+        break;
+      case ContactLaunchStatus.failed:
+        _showSnack('Unable to launch WhatsApp');
+        break;
+    }
+  }
+
+  void _openEnquiryDetails(String enquiryId) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
+      ),
+    );
+  }
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Stream<QuerySnapshot> _getEnquiriesStream(
+    bool isAdmin,
+    String? userId, [
+    String? status,
+  ]) {
     Query query = FirebaseFirestore.instance.collection('enquiries');
 
-    // Apply role-based filtering
     if (!isAdmin && userId != null) {
       query = query.where('assignedTo', isEqualTo: userId);
     }
 
-    // Apply status filtering
     if (status != null && status != 'All') {
       query = query.where('eventStatus', isEqualTo: status);
     }
 
-    // Sort: show oldest first for 'new' tab; otherwise newest first
     final bool descending = (status?.toLowerCase() == 'new') ? false : true;
     return query.orderBy('createdAt', descending: descending).snapshots();
   }
 
-  String _formatDate(dynamic date) {
-    if (date == null) return 'N/A';
-    if (date is Timestamp) {
-      return '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}';
-    }
-    return date.toString();
-  }
-
-  String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
-  }
-
-  String _getStatusInitial(String? status) {
-    if (status == null) return '?';
-    return status.isEmpty ? '?' : status[0].toUpperCase();
-  }
-
-  Color _getStatusColor(String? status) {
-    switch (status?.toLowerCase()) {
-      case 'new':
-        return Colors.orange;
-      case 'in_talks':
-        return Theme.of(context).colorScheme.primary;
-      case 'quote_sent':
-        return Theme.of(context).colorScheme.primary;
-      case 'confirmed':
-        return Colors.indigo;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Color _getPriorityColor(String? priority) {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget _buildAssignedToLabel(String assignedUserId) {
-    return FutureBuilder<String>(
-      future: _getUserDisplayName(assignedUserId),
-      builder: (context, snapshot) {
-        final textStyle = TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary);
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 14,
-            width: 100,
-            child: LinearProgressIndicator(minHeight: 2),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Text('Assigned: Unknown', style: textStyle);
-        }
-
-        final display = snapshot.data ?? 'Unassigned';
-        return Text('Assigned: $display', style: textStyle);
-      },
-    );
-  }
-
   Future<String> _getUserDisplayName(String userId) async {
-    // Return cached value if present
     final cached = _userNameCache[userId];
     if (cached != null) return cached;
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       if (!doc.exists) {
         _userNameCache[userId] = 'Unknown';
         return 'Unknown';
       }
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       final name = (data?['name'] as String?)?.trim();
       final phone = (data?['phone'] as String?)?.trim();
-      final display = [name, phone].where((e) => e != null && e!.isNotEmpty).join(' · ');
+      final display = [
+        name,
+        phone,
+      ].where((e) => e != null && e.isNotEmpty).join(' · ');
       final result = display.isNotEmpty ? display : 'Unknown';
       _userNameCache[userId] = result;
       return result;
@@ -574,159 +745,228 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Future<void> _signOut(WidgetRef ref) async {
     try {
-      // Remove FCM token before signing out
-      // FCM token cleanup is handled automatically by FcmBootstrap
-
       final authService = ref.read(firebaseAuthServiceProvider);
       await authService.signOut();
     } catch (e) {
-      // Error handling is done by the auth service
+      // handled by auth service
     }
   }
 
-  Widget _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
+  Drawer _buildNavigationDrawer(
+    AsyncValue<UserModel?> currentUser,
+    bool isAdmin,
+  ) {
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          // Ultra-simple user header - NO COLUMN, NO OVERFLOW
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
-            child: currentUser.when(
-              data: (user) => Row(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDrawerHeader(currentUser, isAdmin),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  const Icon(Icons.account_circle, size: 20, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${user?.name ?? 'User'} (${isAdmin ? 'Admin' : 'Staff'})',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                  _buildDrawerSectionLabel('Overview'),
+                  _buildDrawerTile(
+                    icon: Icons.dashboard_outlined,
+                    label: 'Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.list_alt_outlined,
+                    label: 'All Enquiries',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const EnquiriesListScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.add_circle_outline,
+                    label: 'Add Enquiry',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const EnquiryFormScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  if (isAdmin) ...[
+                    const SizedBox(height: 16),
+                    _buildDrawerSectionLabel('Admin Tools'),
+                    _buildDrawerTile(
+                      icon: Icons.people_outline,
+                      label: 'User Management',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const UserManagementScreen(),
+                          ),
+                        );
+                      },
                     ),
+                    _buildDrawerTile(
+                      icon: Icons.bar_chart_outlined,
+                      label: 'Analytics',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AnalyticsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildDrawerTile(
+                      icon: Icons.tune,
+                      label: 'Dropdowns',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const DropdownManagementScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  _buildDrawerSectionLabel('Preferences'),
+                  _buildDrawerTile(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
-              loading: () => const Center(child: CircularProgressIndicator(color: Colors.white)),
-              error: (error, stack) =>
-                  const Text('Error loading user', style: TextStyle(color: Colors.white)),
             ),
-          ),
-
-          // Navigation menu items
-          _buildMenuItem(
-            icon: Icons.dashboard,
-            title: 'Dashboard',
-            onTap: () {
-              Navigator.of(context).pop(); // Close drawer
-              // Already on dashboard, no navigation needed
-            },
-          ),
-
-          _buildMenuItem(
-            icon: Icons.list,
-            title: isAdmin ? 'All Enquiries' : 'My Enquiries',
-            onTap: () {
-              Navigator.of(context).pop(); // Close drawer
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (context) => const EnquiriesListScreen()),
-              );
-            },
-          ),
-
-          _buildMenuItem(
-            icon: Icons.add,
-            title: 'New Enquiry',
-            onTap: () {
-              Navigator.of(context).pop(); // Close drawer
-              Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
-              );
-            },
-          ),
-
-          // Admin-only menu items
-          if (isAdmin) ...[
-            const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                'Admin Tools',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-              ),
-            ),
-            _buildMenuItem(
-              icon: Icons.people,
-              title: 'User Management',
-              onTap: () {
-                Navigator.of(context).pop(); // Close drawer
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (context) => const UserManagementScreen()),
-                );
+            const Divider(height: 0),
+            _buildDrawerTile(
+              icon: Icons.logout,
+              label: 'Sign out',
+              danger: true,
+              onTap: () async {
+                Navigator.pop(context);
+                await _signOut(ref);
               },
             ),
-            _buildMenuItem(
-              icon: Icons.settings,
-              title: 'Dropdown Management',
-              onTap: () {
-                Navigator.of(context).pop(); // Close drawer
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (context) => const DropdownManagementScreen()),
-                );
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.analytics,
-              title: 'System Analytics',
-              onTap: () {
-                Navigator.of(context).pop(); // Close drawer
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (context) => const AnalyticsScreen()),
-                );
-              },
-            ),
+            const SizedBox(height: 12),
           ],
-
-          const Divider(),
-
-          // Settings and logout
-          _buildMenuItem(
-            icon: Icons.settings,
-            title: 'Settings',
-            onTap: () {
-              Navigator.of(context).pop(); // Close drawer
-              Navigator.of(
-                context,
-              ).push<void>(MaterialPageRoute<void>(builder: (context) => const SettingsScreen()));
-            },
-          ),
-
-          _buildMenuItem(
-            icon: Icons.logout,
-            title: 'Sign Out',
-            onTap: () {
-              Navigator.of(context).pop(); // Close drawer
-              _signOut(ref);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildMenuItem({
+  Widget _buildDrawerHeader(AsyncValue<UserModel?> currentUser, bool isAdmin) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.primary,
+            theme.colorScheme.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: currentUser.when(
+        data: (user) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: Text(
+                (user?.name.isNotEmpty == true ? user!.name[0] : 'U')
+                    .toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              user?.name ?? 'User',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isAdmin ? 'Administrator' : 'Team Member',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+        loading: () => const SizedBox(
+          height: 40,
+          child: Center(child: CircularProgressIndicator(color: Colors.white)),
+        ),
+        error: (error, stack) => const Text(
+          'Error loading user',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerSectionLabel(String label) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        label.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          letterSpacing: 1.1,
+          color: theme.colorScheme.onSurface.withOpacity(0.6),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerTile({
     required IconData icon,
-    required String title,
+    required String label,
     required VoidCallback onTap,
+    bool danger = false,
   }) {
+    final theme = Theme.of(context);
+    final color = danger
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurface.withOpacity(0.85);
     return ListTile(
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title),
+      leading: Icon(icon, color: color),
+      title: Text(
+        label,
+        style: theme.textTheme.bodyMedium?.copyWith(color: color),
+      ),
       onTap: onTap,
     );
   }

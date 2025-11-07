@@ -222,7 +222,7 @@ class DatabaseSetupService {
           .doc(docRef.id)
           .collection('financial')
           .add(
-            FinancialDocument(
+            const FinancialDocument(
               totalCost: 5000.0,
               advancePaid: 1000.0,
               paymentStatus: 'Partial',

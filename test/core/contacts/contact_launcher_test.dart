@@ -70,7 +70,7 @@ void main() {
       test('generates WhatsApp URLs with prefill text', () {
         final normalized = contactLauncher.normalize('9876543210');
         final whatsappPhone = normalized.substring(1);
-        final prefillText = 'Hello from We Decor!';
+        const prefillText = 'Hello from We Decor!';
         final encodedText = Uri.encodeComponent(prefillText);
         final expectedUrl = 'whatsapp://send?phone=$whatsappPhone&text=$encodedText';
         expect(expectedUrl, 'whatsapp://send?phone=919876543210&text=Hello%20from%20We%20Decor!');
@@ -86,7 +86,7 @@ void main() {
       test('generates WhatsApp Web URLs with text', () {
         final normalized = contactLauncher.normalize('+442071838750');
         final whatsappPhone = normalized.substring(1);
-        final prefillText = 'Hi! Following up on your enquiry.';
+        const prefillText = 'Hi! Following up on your enquiry.';
         final encodedText = Uri.encodeComponent(prefillText);
         final expectedWebUrl = 'https://wa.me/$whatsappPhone?text=$encodedText';
         expect(

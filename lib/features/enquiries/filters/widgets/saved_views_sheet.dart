@@ -490,7 +490,7 @@ class _SaveViewDialogState extends ConsumerState<_SaveViewDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.existingView != null ? 'Updated "${name}"' : 'Saved "${name}"'),
+            content: Text(widget.existingView != null ? 'Updated "$name"' : 'Saved "$name"'),
           ),
         );
       }
