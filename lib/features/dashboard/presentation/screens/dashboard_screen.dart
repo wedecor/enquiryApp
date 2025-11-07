@@ -41,11 +41,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     {'label': 'Cancelled', 'value': 'cancelled'},
   ];
 
+  late final List<Tab> _tabs;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
     _primeDropdownColors();
+    _tabs = _statusTabs
+        .map((tab) => Tab(text: tab['label']!))
+        .toList(growable: false);
   }
 
   Future<void> _primeDropdownColors() async {
@@ -167,6 +172,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final isAdmin = ref.watch(auth_provider.isAdminProvider);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('We Decor Dashboard'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -178,11 +184,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             tooltip: 'Sign Out',
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _statusTabs.map((s) => Tab(text: s['label']!)).toList(),
-        ),
       ),
       drawer: _buildNavigationDrawer(currentUser, isAdmin),
       body: authUser.when(
@@ -219,18 +220,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     UserModel? user,
     bool isAdmin,
   ) {
-    return Column(
-      children: [
-        _buildWelcomeAndStats(user, isAdmin),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: _statusTabs
-                .map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid))
-                .toList(),
+    final tabBar = TabBar(
+      controller: _tabController,
+      tabs: _tabs,
+      isScrollable: true,
+    );
+
+    return SafeArea(
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverToBoxAdapter(
+            child: _buildWelcomeAndStats(user, isAdmin),
           ),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabBarDelegate(tabBar),
+          ),
+        ],
+        body: TabBarView(
+          controller: _tabController,
+          children: _statusTabs
+              .map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid))
+              .toList(),
         ),
-      ],
+      ),
     );
   }
 
@@ -346,30 +359,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ];
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isCompact = constraints.maxWidth < 720;
-            return isCompact
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final card in cards) ...[
-                        card,
-                        const SizedBox(height: 12),
-                      ],
-                    ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (int i = 0; i < cards.length; i++) ...[
-                        Expanded(child: cards[i]),
-                        if (i != cards.length - 1) const SizedBox(width: 16),
-                      ],
-                    ],
-                  );
-          },
-        );
+        return DashboardKpiRow(items: cards);
       },
     );
   }
@@ -433,9 +423,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           return aDate.compareTo(bDate);
         });
 
-        return ListView.builder(
+        return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+          physics: const AlwaysScrollableScrollPhysics(),
           itemCount: rawEnquiries.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final enquiry = rawEnquiries[index];
             final enquiryData = enquiry.data() as Map<String, dynamic>;
@@ -968,6 +960,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         style: theme.textTheme.bodyMedium?.copyWith(color: color),
       ),
       onTap: onTap,
+    );
+  }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  _TabBarDelegate(this._tabBar);
+
+  final TabBar _tabBar;
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Material(
+      elevation: overlapsContent ? 2 : 0,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) {
+    return oldDelegate._tabBar != _tabBar;
+  }
+}
+
+class DashboardKpiRow extends StatelessWidget {
+  const DashboardKpiRow({super.key, required this.items});
+
+  final List<Widget> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    int crossAxisCount;
+    double childAspectRatio;
+
+    if (width >= 1024) {
+      crossAxisCount = 4;
+      childAspectRatio = 3.2;
+    } else if (width >= 720) {
+      crossAxisCount = 3;
+      childAspectRatio = 2.8;
+    } else {
+      crossAxisCount = 2;
+      childAspectRatio = 2.2;
+    }
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: childAspectRatio,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: items,
     );
   }
 }
