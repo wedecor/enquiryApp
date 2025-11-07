@@ -33,7 +33,7 @@ class EmptyState extends StatelessWidget {
             // Icon
             if (icon != null) ...[
               Icon(icon, size: AppTokens.iconXLarge * 2, color: colorScheme.onSurfaceVariant),
-              SizedBox(height: AppTokens.space6),
+              const SizedBox(height: AppTokens.space6),
             ],
 
             // Message
@@ -45,7 +45,7 @@ class EmptyState extends StatelessWidget {
 
             // Action button
             if (action != null && actionText != null) ...[
-              SizedBox(height: AppTokens.space6),
+              const SizedBox(height: AppTokens.space6),
               ElevatedButton(onPressed: action, child: Text(actionText!)),
             ],
           ],
@@ -129,7 +129,7 @@ class NotificationsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return EmptyState(
+    return const EmptyState(
       icon: Icons.notifications_none,
       message: 'No notifications.\nYou\'re all caught up!',
     );

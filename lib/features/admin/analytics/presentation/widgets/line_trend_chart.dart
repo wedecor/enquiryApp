@@ -119,7 +119,7 @@ class LineTrendChart extends StatelessWidget {
             ),
           ),
         ],
-        lineTouchData: LineTouchData(enabled: true),
+        lineTouchData: const LineTouchData(enabled: true),
       ),
     );
   }

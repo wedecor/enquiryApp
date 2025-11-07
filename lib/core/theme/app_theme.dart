@@ -136,7 +136,7 @@ class AppTheme {
         foregroundColor: AppColorScheme.light.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -146,7 +146,7 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.light.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -157,7 +157,7 @@ class AppTheme {
         foregroundColor: AppColorScheme.light.primary,
         side: BorderSide(color: AppColorScheme.light.outline),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -186,7 +186,7 @@ class AppTheme {
         borderRadius: AppRadius.medium,
         borderSide: BorderSide(color: AppColorScheme.light.error, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(
+      contentPadding: const EdgeInsets.symmetric(
         horizontal: AppTokens.space4,
         vertical: AppTokens.space3,
       ),
@@ -210,19 +210,19 @@ class AppTheme {
       selectedColor: AppColorScheme.light.primaryContainer,
       labelStyle: AppTypography.labelMedium.copyWith(color: AppColorScheme.light.onSurface),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
-      padding: EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
     ),
 
     // Switch theme
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return AppColorScheme.light.primary;
         }
         return AppColorScheme.light.onSurfaceVariant;
       }),
-      trackColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return AppColorScheme.light.primaryContainer;
         }
         return AppColorScheme.light.surfaceContainerHighest;
@@ -267,7 +267,7 @@ class AppTheme {
         foregroundColor: AppColorScheme.dark.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -277,7 +277,7 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.dark.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -288,7 +288,7 @@ class AppTheme {
         foregroundColor: AppColorScheme.dark.primary,
         side: BorderSide(color: AppColorScheme.dark.outline),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -317,7 +317,7 @@ class AppTheme {
         borderRadius: AppRadius.medium,
         borderSide: BorderSide(color: AppColorScheme.dark.error, width: 2),
       ),
-      contentPadding: EdgeInsets.symmetric(
+      contentPadding: const EdgeInsets.symmetric(
         horizontal: AppTokens.space4,
         vertical: AppTokens.space3,
       ),
@@ -341,19 +341,19 @@ class AppTheme {
       selectedColor: AppColorScheme.dark.primaryContainer,
       labelStyle: AppTypography.labelMedium.copyWith(color: AppColorScheme.dark.onSurface),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
-      padding: EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
     ),
 
     // Switch theme
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return AppColorScheme.dark.primary;
         }
         return AppColorScheme.dark.onSurfaceVariant;
       }),
-      trackColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) {
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
           return AppColorScheme.dark.primaryContainer;
         }
         return AppColorScheme.dark.surfaceContainerHighest;

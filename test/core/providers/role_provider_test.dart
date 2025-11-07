@@ -16,7 +16,7 @@ void main() {
 
     group('UserPermissions class', () {
       test('should create permissions with correct values', () {
-        final permissions = UserPermissions(
+        const permissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: true,
@@ -34,7 +34,7 @@ void main() {
       });
 
       test('should create permissions with false values', () {
-        final permissions = UserPermissions(
+        const permissions = UserPermissions(
           canViewEnquiries: false,
           canCreateEnquiries: false,
           canEditEnquiries: false,
@@ -52,7 +52,7 @@ void main() {
       });
 
       test('should create mixed permissions', () {
-        final permissions = UserPermissions(
+        const permissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: false,
@@ -79,7 +79,7 @@ void main() {
         // we test the logic that determines permissions based on roles
 
         // Admin should have all permissions
-        final adminPermissions = UserPermissions(
+        const adminPermissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: true,
@@ -98,7 +98,7 @@ void main() {
 
       test('should provide correct permissions for staff role', () {
         // Staff should have limited permissions
-        final staffPermissions = UserPermissions(
+        const staffPermissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: false,
@@ -117,7 +117,7 @@ void main() {
 
       test('should enforce role-based restrictions', () {
         // Test that staff cannot perform admin-only actions
-        final staffPermissions = UserPermissions(
+        const staffPermissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: false,
@@ -143,7 +143,7 @@ void main() {
         // Test that each role has appropriate access levels
 
         // Admin role - full access
-        final adminPermissions = UserPermissions(
+        const adminPermissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: true,
@@ -153,7 +153,7 @@ void main() {
         );
 
         // Staff role - limited access
-        final staffPermissions = UserPermissions(
+        const staffPermissions = UserPermissions(
           canViewEnquiries: true,
           canCreateEnquiries: true,
           canEditEnquiries: false,

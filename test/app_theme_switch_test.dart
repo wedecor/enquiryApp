@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:we_decor_enquiries/core/theme/appearance_controller.dart';
 import 'package:we_decor_enquiries/main.dart';
@@ -112,12 +112,12 @@ void main() {
       await tester.pumpWidget(const ProviderScope(child: MyApp()));
       await tester.pumpAndSettle();
 
-      var container = ProviderScope.containerOf(tester.element(find.byType(MyApp)));
+      final container = ProviderScope.containerOf(tester.element(find.byType(MyApp)));
       await container.read(appearanceControllerProvider.notifier).set(AppearanceMode.dark);
       await tester.pumpAndSettle();
 
       // Verify dark mode is set
-      var app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(app.themeMode, ThemeMode.dark);
 
       // For this test, we'll just verify the immediate state change works

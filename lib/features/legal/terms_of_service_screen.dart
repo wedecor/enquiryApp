@@ -20,7 +20,7 @@ class TermsOfServiceScreen extends StatelessWidget {
           children: [
             Text('Terms of Service', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
-            Text('Last updated: ${_lastUpdated}', style: TextStyle(color: Colors.grey)),
+            Text('Last updated: $_lastUpdated', style: TextStyle(color: Colors.grey)),
             SizedBox(height: 24),
 
             _SectionWidget(

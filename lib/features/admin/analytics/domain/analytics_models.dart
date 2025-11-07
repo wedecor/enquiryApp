@@ -154,7 +154,7 @@ class AnalyticsFilters with _$AnalyticsFilters {
   factory AnalyticsFilters.fromJson(Map<String, dynamic> json) => _$AnalyticsFiltersFromJson(json);
 
   factory AnalyticsFilters.initial() {
-    final preset = DateRangePreset.last30Days;
+    const preset = DateRangePreset.last30Days;
     return AnalyticsFilters(dateRange: preset.dateRange, preset: preset);
   }
 }

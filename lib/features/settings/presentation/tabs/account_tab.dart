@@ -266,7 +266,7 @@ class AccountTab extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('You\'re running the latest version!'),
+                  const Text('You\'re running the latest version!'),
                   const SizedBox(height: 8),
                   Text(
                     'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',

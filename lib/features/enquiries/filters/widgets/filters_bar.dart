@@ -28,7 +28,7 @@ class FiltersBar extends ConsumerWidget {
         children: [
           // Active filters count
           Container(
-            padding: EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
               borderRadius: AppRadius.medium,
@@ -165,7 +165,7 @@ class _FilterChip extends StatelessWidget {
       margin: const EdgeInsets.only(right: AppTokens.space2),
       child: Chip(
         label: Text(label, style: theme.textTheme.labelSmall),
-        deleteIcon: Icon(Icons.close, size: AppTokens.iconSmall),
+        deleteIcon: const Icon(Icons.close, size: AppTokens.iconSmall),
         onDeleted: onDeleted,
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
         deleteIconColor: theme.colorScheme.onSurfaceVariant,

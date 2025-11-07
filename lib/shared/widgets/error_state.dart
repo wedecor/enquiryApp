@@ -40,7 +40,7 @@ class ErrorState extends StatelessWidget {
               color: colorScheme.error,
             ),
 
-            SizedBox(height: AppTokens.space6),
+            const SizedBox(height: AppTokens.space6),
 
             // Error message
             Text(
@@ -51,7 +51,7 @@ class ErrorState extends StatelessWidget {
 
             // Error details (if provided and in debug mode)
             if (error != null && kDebugMode) ...[
-              SizedBox(height: AppTokens.space4),
+              const SizedBox(height: AppTokens.space4),
               Container(
                 padding: AppSpacing.space4,
                 decoration: BoxDecoration(
@@ -71,7 +71,7 @@ class ErrorState extends StatelessWidget {
 
             // Retry button
             if (onRetry != null) ...[
-              SizedBox(height: AppTokens.space6),
+              const SizedBox(height: AppTokens.space6),
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
