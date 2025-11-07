@@ -10,16 +10,6 @@ class StatusInlineControl extends ConsumerWidget {
 
   final Enquiry enquiry;
 
-  static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['contacted', 'cancelled'],
-    'contacted': ['quoted', 'cancelled'],
-    'quoted': ['confirmed', 'cancelled'],
-    'confirmed': ['in_talks', 'cancelled'],
-    'in_talks': ['completed', 'cancelled'],
-    'completed': [],
-    'cancelled': [],
-  };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(currentUserRoleProvider);
@@ -31,48 +21,34 @@ class StatusInlineControl extends ConsumerWidget {
     final isAssignee = enquiry.assignedTo == meUid;
     final canChange = isAdmin || (isStaff && isAssignee);
 
-    final current = enquiry.status;
-    final options = <String>{
-      current,
-      ...(_allowedTransitions[current] ?? const <String>[]),
-    }.toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DropdownButton<String>(
           key: const Key('statusDropdown'),
-          value: current,
-          items: options.map((s) => DropdownMenuItem<String>(value: s, child: Text(s))).toList(),
+          value: enquiry.status,
+          items:
+              const <String>[
+                    'new',
+                    'contacted',
+                    'quoted',
+                    'confirmed',
+                    'in_talks',
+                    'completed',
+                    'cancelled',
+                  ]
+                  .map(
+                    (s) => DropdownMenuItem<String>(value: s, child: Text(s)),
+                  )
+                  .toList(),
           onChanged: canChange
               ? (next) async {
-                  if (next == null || next == current) return;
-                  final prev = current;
-                  final uid = meUid ?? '';
+                  if (next == null || next == enquiry.status) return;
                   await repo.updateStatus(
                     id: enquiry.id,
                     nextStatus: next,
-                    userId: uid,
-                    prevStatus: prev,
+                    userId: meUid ?? '',
                   );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Status changed to $next'),
-                        action: SnackBarAction(
-                          label: 'Undo',
-                          onPressed: () async {
-                            await repo.updateStatus(
-                              id: enquiry.id,
-                              nextStatus: prev,
-                              userId: uid,
-                              prevStatus: next,
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  }
                 }
               : null,
         ),
