@@ -1,27 +1,20 @@
 {
   "version": "1.0.1",
   "buildNumber": 13,
-  "releaseDate": "2025-09-22",
-  "releaseNotes": "🎨 MAJOR UPDATE: Contact Shortcuts + Theme Fixes\n\n📞 NEW: CONTACT SHORTCUTS:\n• Call and WhatsApp buttons in enquiry details\n• One-tap calling with native phone dialer\n• WhatsApp messaging with prefilled context\n• Cross-platform support with smart fallbacks\n• Accessibility compliant with proper semantics\n\n🎨 THEME SYSTEM OVERHAUL:\n• Fixed theme switching - changes apply instantly\n• Improved Settings → Appearance with modern design\n• Fixed hardcoded colors for better dark mode\n• Theme selection persists across app restarts\n\n🛡️ CI/CD ENHANCEMENTS:\n• Enterprise-grade CI pipeline with security scanning\n• Automated builds with integrity verification\n• Preview deployments for testing\n\n✅ PREVIOUS FIXES MAINTAINED:\n• Staff can change enquiry status (assigned enquiries)\n• Change history loads properly\n• Color contrast improvements\n• User invitation and login fixes\n• Manual 'Check for Updates' button",
-  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-20250922-173633.apk",
-  "sha256": "859114219fb26bd39e2605949ca86a6e271f477d0c4e3bfbbf6590cc999c1348",
+  "releaseDate": "2025-11-07",
+  "releaseNotes": "🎨 BRAND REFRESH + KPI FIXES\n\n✨ We Decor branding and color palette applied across dashboards\n📊 KPI strip now shows four tiles without overflow on phones\n🛠️ General polish and stability improvements",
+  "downloadUrl": "https://wedecorenquries.web.app/internal/rc3/we-decor-enquiries-20251107-221426.apk",
+  "sha256": "bb4bfac37b3717f03f01761da795fa4936aef9b51484af7d47dada58fb7dbc30",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "Contact shortcuts (Call & WhatsApp)",
-    "Instant theme switching",
-    "Dark mode support",
-    "Advanced filters and saved views",
-    "In-app feedback system",
-    "Accessibility improvements",
-    "Performance monitoring"
+    "We Decor teal/blue branding",
+    "Responsive KPI cards on dashboard",
+    "Tab bar layout fixes"
   ],
   "bugFixes": [
-    "Theme switching now applies immediately",
-    "Hardcoded colors replaced with theme-aware colors",
-    "Change history infinite loading",
-    "User invitation memory errors",
-    "PWA manifest 404 errors",
-    "Firebase Functions timeout issues"
+    "Resolved dashboard KPI overflow on phones",
+    "Unified theme colors across dashboard and analytics",
+    "General stability and UI tweaks"
   ]
 }
