@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/contacts/contact_launcher.dart';
 import '../utils/logger.dart';
 
+enum _TileAction { viewDetails, updateStatus, share, notes }
+
 class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   const EnquiryTileStatusStrip({
     super.key,
@@ -30,6 +32,9 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
     this.enquiryId,
     this.onCall,
     this.onWhatsApp,
+    this.onUpdateStatus,
+    this.onShare,
+    this.onAddNote,
   });
 
   final String name;
@@ -52,6 +57,9 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final String? enquiryId;
   final Future<void> Function()? onCall;
   final Future<void> Function()? onWhatsApp;
+  final Future<void> Function()? onUpdateStatus;
+  final Future<void> Function()? onShare;
+  final Future<void> Function()? onAddNote;
 
   @override
   ConsumerState<EnquiryTileStatusStrip> createState() => _EnquiryTileStatusStripState();
@@ -60,6 +68,37 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
 class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip> {
   bool _isHovered = false;
   bool _isLaunching = false;
+
+  void _handleAction(_TileAction action) {
+    switch (action) {
+      case _TileAction.viewDetails:
+        widget.onView();
+        break;
+      case _TileAction.updateStatus:
+        widget.onUpdateStatus?.call();
+        break;
+      case _TileAction.share:
+        widget.onShare?.call();
+        break;
+      case _TileAction.notes:
+        widget.onAddNote?.call();
+        break;
+    }
+  }
+
+  List<_TileAction> _availableActions() {
+    final actions = <_TileAction>[_TileAction.viewDetails];
+    if (widget.onUpdateStatus != null) {
+      actions.add(_TileAction.updateStatus);
+    }
+    if (widget.onShare != null) {
+      actions.add(_TileAction.share);
+    }
+    if (widget.onAddNote != null) {
+      actions.add(_TileAction.notes);
+    }
+    return actions;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +170,8 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
                             _HeaderRow(
                               name: widget.name,
                               eventColor: eventColor,
-                              onMorePressed: () {},
+                              actions: _availableActions(),
+                              onActionSelected: _handleAction,
                             ),
                             const SizedBox(height: 12),
                             _ChipWrap(
@@ -384,11 +424,43 @@ class _StatusStrip extends StatelessWidget {
 }
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.name, required this.eventColor, required this.onMorePressed});
+  const _HeaderRow({
+    required this.name,
+    required this.eventColor,
+    required this.actions,
+    required this.onActionSelected,
+  });
 
   final String name;
   final Color eventColor;
-  final VoidCallback? onMorePressed;
+  final List<_TileAction> actions;
+  final ValueChanged<_TileAction>? onActionSelected;
+
+  String _labelForAction(_TileAction action) {
+    switch (action) {
+      case _TileAction.viewDetails:
+        return 'View details';
+      case _TileAction.updateStatus:
+        return 'Update status';
+      case _TileAction.share:
+        return 'Share / export';
+      case _TileAction.notes:
+        return 'Follow-up notes';
+    }
+  }
+
+  IconData _iconForAction(_TileAction action) {
+    switch (action) {
+      case _TileAction.viewDetails:
+        return Icons.visibility_outlined;
+      case _TileAction.updateStatus:
+        return Icons.swap_horiz_outlined;
+      case _TileAction.share:
+        return Icons.ios_share_outlined;
+      case _TileAction.notes:
+        return Icons.note_alt_outlined;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -419,7 +491,27 @@ class _HeaderRow extends StatelessWidget {
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
-        IconButton(icon: const Icon(Icons.more_vert), onPressed: onMorePressed ?? () {}),
+        if (actions.isNotEmpty)
+          PopupMenuButton<_TileAction>(
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'More actions',
+            onSelected: onActionSelected ?? (_) {},
+            itemBuilder: (context) => actions
+                .map(
+                  (action) => PopupMenuItem<_TileAction>(
+                    value: action,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_iconForAction(action), size: 20),
+                        const SizedBox(width: 12),
+                        Text(_labelForAction(action)),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
       ],
     );
   }
@@ -491,7 +583,7 @@ class _ChipWrap extends StatelessWidget {
         ),
       ),
       if (eventCountdownLabel != null && eventCountdownLabel!.trim().isNotEmpty)
-        Chip(
+      Chip(
           shape: StadiumBorder(side: BorderSide(color: eventColor.withOpacity(0.2))),
           backgroundColor: eventColor.withOpacity(0.12),
           avatar: Icon(Icons.calendar_today, size: 16, color: eventColor),

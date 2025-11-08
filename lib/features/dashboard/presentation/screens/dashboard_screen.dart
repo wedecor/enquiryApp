@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
@@ -14,9 +15,11 @@ import '../../../../widgets/enquiry_tile_status_strip.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
+import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
+import '../../../enquiries/presentation/widgets/status_inline_control.dart';
 import '../../../settings/presentation/settings_screen.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
@@ -375,15 +378,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           );
         }
 
-        rawEnquiries.sort((a, b) {
-          final aCreated =
-              _parseDateTime((a.data() as Map<String, dynamic>)['createdAt']) ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          final bCreated =
-              _parseDateTime((b.data() as Map<String, dynamic>)['createdAt']) ??
-              DateTime.fromMillisecondsSinceEpoch(0);
-          return bCreated.compareTo(aCreated);
-        });
+        final now = DateTime.now();
+
+        if (status == 'in_talks') {
+          rawEnquiries.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>;
+            final bData = b.data() as Map<String, dynamic>;
+            final aEvent = _parseDateTime(aData['eventDate']);
+            final bEvent = _parseDateTime(bData['eventDate']);
+
+            final aDiff = aEvent != null ? aEvent.difference(now).inSeconds.abs() : 1 << 62;
+            final bDiff = bEvent != null ? bEvent.difference(now).inSeconds.abs() : 1 << 62;
+
+            if (aDiff != bDiff) {
+              return aDiff.compareTo(bDiff);
+            }
+
+            if (aEvent != null && bEvent != null) {
+              final eventComparison = aEvent.compareTo(bEvent);
+              if (eventComparison != 0) return eventComparison;
+            } else if (aEvent == null && bEvent != null) {
+              return 1;
+            } else if (aEvent != null && bEvent == null) {
+              return -1;
+            }
+
+            final aCreated =
+                _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bCreated =
+                _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bCreated.compareTo(aCreated);
+          });
+        } else {
+          rawEnquiries.sort((a, b) {
+            final aCreated =
+                _parseDateTime((a.data() as Map<String, dynamic>)['createdAt']) ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            final bCreated =
+                _parseDateTime((b.data() as Map<String, dynamic>)['createdAt']) ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            return bCreated.compareTo(aCreated);
+          });
+        }
 
         final dropdownLookup = ref
             .watch(dropdownLookupProvider)
@@ -398,6 +434,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final enquiry = rawEnquiries[index];
             final enquiryData = enquiry.data() as Map<String, dynamic>;
             final enquiryId = enquiry.id;
+            final enquiryModel = Enquiry.fromFirestore(enquiry);
             final customerName = (enquiryData['customerName'] as String?) ?? 'Customer';
             final phone = enquiryData['customerPhone'] as String?;
             final assignedUserId = enquiryData['assignedTo'] as String?;
@@ -499,6 +536,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   onWhatsApp: whatsappContact == null
                       ? null
                       : () => _handleWhatsApp(whatsappContact, customerName, enquiryId),
+                  onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
+                  onShare: () => _shareEnquiry(enquiryModel),
+                  onAddNote: () => _showNotesSheet(enquiryModel),
                 );
               },
             );
@@ -609,6 +649,123 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case ContactLaunchStatus.failed:
         _showSnack('Unable to launch WhatsApp');
         break;
+    }
+  }
+
+  Future<void> _showUpdateStatusSheet(Enquiry enquiry) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Update status', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              StatusInlineControl(enquiry: enquiry),
+              const SizedBox(height: 12),
+              Text(
+                'Changes are saved automatically.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _shareEnquiry(Enquiry enquiry) async {
+    final buffer = StringBuffer()
+      ..writeln('Enquiry: ${enquiry.customerName}')
+      ..writeln('Event: ${enquiry.eventTypeDisplay}')
+      ..writeln('Status: ${enquiry.statusDisplay}')
+      ..writeln('Event date: ${_formatDateLabel(enquiry.eventDate)}')
+      ..writeln('Assigned to: ${enquiry.assigneeName ?? 'Unassigned'}')
+      ..writeln('Phone: ${enquiry.customerPhone ?? 'N/A'}')
+      ..writeln('Notes: ${enquiry.notes?.trim().isNotEmpty == true ? enquiry.notes!.trim() : 'N/A'}');
+
+    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+    if (mounted) {
+      _showSnack('Enquiry details copied to clipboard');
+    }
+  }
+
+  Future<void> _showNotesSheet(Enquiry enquiry) async {
+    if (!mounted) return;
+    final controller = TextEditingController(text: enquiry.notes ?? '');
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + viewInsets),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Follow-up notes', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                minLines: 3,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  hintText: 'Add any internal notes or follow-up reminders',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (context, value, _) {
+                  final hasText = value.text.trim().isNotEmpty;
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(null),
+                        child: const Text('Cancel'),
+                      ),
+                      if (hasText)
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(''),
+                          child: const Text('Clear'),
+                        ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(value.text.trim()),
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+
+    if (!mounted || result == null) return;
+
+    try {
+      final doc = FirebaseFirestore.instance.collection('enquiries').doc(enquiry.id);
+      if (result.isEmpty) {
+        await doc.update({'notes': FieldValue.delete()});
+        _showSnack('Notes cleared');
+      } else {
+        await doc.update({'notes': result});
+        _showSnack('Notes updated');
+      }
+    } catch (e) {
+      _showSnack('Failed to update notes');
     }
   }
 
