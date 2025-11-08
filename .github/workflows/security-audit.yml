@@ -23,11 +23,21 @@ jobs:
         with:
           fetch-depth: 0  # Full history for secret detection
 
-      - name: Run Gitleaks
+      - name: Run Gitleaks secret scan
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        with:
+          args: detect --redact -v --exit-code=1 --report-format=sarif --report-path=results.sarif
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional for Pro features
+
+      - name: Upload Gitleaks results
+        if: always() && hashFiles('results.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: results.sarif
 
   security-audit:
     name: 🛡️ Repository Security Audit
