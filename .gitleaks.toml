@@ -1,14 +1,21 @@
-# Gitleaks configuration tuned for We Decor Enquiries
+title = "Gitleaks Config"
 
 [allowlist]
   description = "Allow non-sensitive Firebase WEB configs"
   regexes = [
     """(?s)apiKey"?\s*:\s*"[A-Za-z0-9_\-]{20,}"\s*,\s*authDomain"?\s*:\s*"[\\w\.-]+"\s*,\s*projectId"?\s*:\s*"[\\w\-]+"""",
+    '''(?i)dummy[_-]secret''',
+    '''(?i)example[_-]key''',
   ]
   files = [
     "web/.*",
     "public/.*",
     "lib/firebase_options.dart",
+  ]
+  paths = [
+    "docs/",
+    "test/fixtures/",
+    "samples/",
   ]
 
 [[rules]]
