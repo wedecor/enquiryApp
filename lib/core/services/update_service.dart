@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../logging/logger.dart';
-import 'firebase_app_distribution_adapter.dart';
 
 /// Service for checking app updates and notifying users
 class UpdateService {
@@ -117,24 +116,16 @@ class UpdateService {
 
   /// Launch download URL
   static Future<void> downloadUpdate(String downloadUrl) async {
-    final handledByAppDistribution =
-        await firebaseAppDistributionAdapter.tryLaunchUpdate().catchError((e) {
-      Logger.warn('Firebase App Distribution update not available, falling back to direct download',
-          error: e, tag: 'UpdateService');
-      return false;
-    });
-    if (handledByAppDistribution) return;
-
     try {
       final uri = Uri.parse(downloadUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
-        Logger.info('Update download launched via direct URL', tag: 'UpdateService');
+        Logger.info('Update download launched', tag: 'UpdateService');
       } else {
         throw Exception('Cannot launch download URL');
       }
     } catch (e) {
-      Logger.error('Failed to launch download URL', error: e, tag: 'UpdateService');
+      Logger.error('Failed to launch download', error: e, tag: 'UpdateService');
     }
   }
 
