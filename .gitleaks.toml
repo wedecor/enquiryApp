@@ -3,12 +3,12 @@
 [allowlist]
   description = "Allow non-sensitive Firebase WEB configs"
   regexes = [
-    "(?s)apiKey\\"?\\s*:\\s*\\"[A-Za-z0-9_\\-]{20,}\\"\\s*,\\s*authDomain\\"?\\s*:\\s*\\"[\\w\\.-]+\\"\\s*,\\s*projectId\\"?\\s*:\\s*\\"[\\w\\-]+\\""
+    """(?s)apiKey"?\s*:\s*"[A-Za-z0-9_\-]{20,}"\s*,\s*authDomain"?\s*:\s*"[\\w\.-]+"\s*,\s*projectId"?\s*:\s*"[\\w\-]+"""",
   ]
   files = [
     "web/.*",
     "public/.*",
-    "lib/firebase_options.dart"
+    "lib/firebase_options.dart",
   ]
 
 [[rules]]
