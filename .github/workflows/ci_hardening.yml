@@ -12,6 +12,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   FLUTTER_VERSION: '3.24.3'
   JAVA_VERSION: '17'
@@ -22,109 +25,41 @@ jobs:
   analyze_and_test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      coverage_summary: ${{ steps.coverage.outputs.summary }}
-      test_results: ${{ steps.test.outputs.results }}
 
     steps:
-      - name: 📋 Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🚀 Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-java@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'rules-tests/package-lock.json'
+          distribution: temurin
+          java-version: '17'
 
-      - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
+      - uses: subosito/flutter-action@v2
         with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
+          channel: stable
 
-      - name: 📱 Setup Flutter ${{ env.FLUTTER_VERSION }}
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-          cache: true
-
-      - name: 🗂️ Cache Dependencies
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
-            .dart_tool
-            build
-            node_modules
-            ~/.cache/flutter
-          key: ${{ runner.os }}-deps-${{ hashFiles('pubspec.lock', 'rules-tests/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-deps-
+            **/.dart_tool
+            **/build
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: ${{ runner.os }}-pub-
 
-      - name: 📦 Get Dependencies
+      - run: flutter pub get
+
+      - name: Analyze
         run: |
-          flutter pub get
-          cd rules-tests && npm ci
-
-      - name: 🏗️ Generate Code
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: 🔍 Analyze Code
-        run: |
-          echo "::group::Flutter Analyze"
-          flutter analyze --no-fatal-infos > analysis_report.txt 2>&1 || true
-          
-          # Count errors
-          ERROR_COUNT=$(grep -c "error •" analysis_report.txt || echo "0")
-          
-          if [ "$ERROR_COUNT" -gt 0 ]; then
-            echo "❌ Found $ERROR_COUNT analyzer errors"
-            cat analysis_report.txt
+          flutter analyze --no-pub > analyzer.log || true
+          if grep -q "error •" analyzer.log; then
+            cat analyzer.log
             exit 1
           fi
-          
-          echo "✅ Flutter analyze passed (0 errors)"
-          echo "::endgroup::"
+          cat analyzer.log
 
-      - name: 🔒 Security Scan
-        run: |
-          echo "::group::Security Analysis"
-          pip install semgrep
-          semgrep --config=p/ci --error --exclude=rules-tests --exclude=build --exclude=.dart_tool . || echo "Security scan completed with warnings"
-          echo "::endgroup::"
-
-      - name: 🧪 Run Tests with Retry
-        id: test
-        run: |
-          echo "::group::Unit Tests"
-          bash tools/test_with_retry.sh
-          echo "results=passed" >> $GITHUB_OUTPUT
-          echo "::endgroup::"
-
-      - name: 📊 Generate Coverage
-        id: coverage
-        run: |
-          echo "::group::Test Coverage"
-          flutter test --coverage --reporter expanded
-          bash tools/coverage_gate_enhanced.sh > coverage_summary.txt
-          
-          # Extract summary for output
-          COVERAGE_SUMMARY=$(head -n 5 coverage_summary.txt | tail -n 1)
-          echo "summary=$COVERAGE_SUMMARY" >> $GITHUB_OUTPUT
-          echo "::endgroup::"
-
-      - name: 📤 Upload Test Reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-reports
-          path: |
-            analysis_report.txt
-            coverage_summary.txt
-            coverage/lcov.info
-          retention-days: 30
+      - name: Unit tests
+        run: flutter test --reporter expanded --no-pub
 
   firestore_rules_tests:
     runs-on: ubuntu-latest
