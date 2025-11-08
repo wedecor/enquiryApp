@@ -9,7 +9,7 @@
   "scripts": {
     "clean": "rimraf lib dist node_modules .turbo .parcel-cache .cache || true",
     "build": "tsc -p tsconfig.json",
-    "deploy": "firebase deploy --only functions:inviteUser,functions:notifyOnEnquiryChange",
+    "deploy": "firebase deploy --only functions:inviteUser,functions:notifyOnEnquiryChange,functions:autoExpireEnquiries,functions:notifyOverdueInTalks",
     "lint": "echo \"(optional) add eslint if needed\""
   },
   "dependencies": {

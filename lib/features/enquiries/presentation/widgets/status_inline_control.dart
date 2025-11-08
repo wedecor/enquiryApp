@@ -36,6 +36,7 @@ class StatusInlineControl extends ConsumerWidget {
                     'in_talks',
                     'completed',
                     'cancelled',
+                    'not_interested',
                   ]
                   .map(
                     (s) => DropdownMenuItem<String>(value: s, child: Text(s)),

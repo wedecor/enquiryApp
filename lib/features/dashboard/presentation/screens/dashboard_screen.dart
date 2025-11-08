@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/stats_card.dart';
 import '../../../../widgets/enquiry_tile_status_strip.dart';
@@ -37,6 +38,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     {'label': 'In Talks', 'value': 'in_talks'},
     {'label': 'Quote Sent', 'value': 'quote_sent'},
     {'label': 'Confirmed', 'value': 'confirmed'},
+    {'label': 'Not Interested', 'value': 'not_interested'},
     {'label': 'Completed', 'value': 'completed'},
     {'label': 'Cancelled', 'value': 'cancelled'},
   ];
@@ -410,18 +412,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
 
         rawEnquiries.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          final aDate =
-              _parseDateTime(aData['eventDate']) ??
-              _parseDateTime(aData['createdAt']) ??
-              DateTime(9999);
-          final bDate =
-              _parseDateTime(bData['eventDate']) ??
-              _parseDateTime(bData['createdAt']) ??
-              DateTime(9999);
-          return aDate.compareTo(bDate);
+          final aCreated =
+              _parseDateTime((a.data() as Map<String, dynamic>)['createdAt']) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final bCreated =
+              _parseDateTime((b.data() as Map<String, dynamic>)['createdAt']) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          return bCreated.compareTo(aCreated);
         });
+
+        final dropdownLookup =
+            ref.watch(dropdownLookupProvider).maybeWhen(data: (value) => value, orElse: () => null);
 
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -460,20 +461,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     (enquiryData['description'] as String?) ??
                     (enquiryData['notes'] as String?);
 
-                final status =
-                    (enquiryData['eventStatus'] as String?)
-                            ?.trim()
-                            .isNotEmpty ==
-                        true
-                    ? enquiryData['eventStatus'] as String
-                    : 'New';
-                final eventType =
-                    (enquiryData['eventType'] as String?)?.trim().isNotEmpty ==
-                        true
-                    ? enquiryData['eventType'] as String
-                    : 'Event';
+                final statusValueRaw =
+                    (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+                final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                    ? statusValueRaw!.trim()
+                    : 'new';
+                final statusLabel =
+                    (enquiryData['statusLabel'] as String?) ??
+                        (dropdownLookup != null
+                            ? dropdownLookup.labelForStatus(statusValue)
+                            : DropdownLookup.titleCase(statusValue));
+                final eventTypeValueRaw =
+                    (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
+                final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
+                    ? eventTypeValueRaw!.trim()
+                    : 'event';
+                final eventTypeLabel =
+                    (enquiryData['eventTypeLabel'] as String?) ??
+                        (dropdownLookup != null
+                            ? dropdownLookup.labelForEventType(eventTypeValue)
+                            : DropdownLookup.titleCase(eventTypeValue));
                 final whatsappContact =
                     enquiryData['whatsappNumber'] as String? ?? phone;
+                final eventCountdownLabel =
+                    _formatEventCountdownLabel(eventDate);
                 final statusColorHex =
                     (enquiryData['statusColorHex'] as String?) ??
                     (enquiryData['statusColor'] as String?);
@@ -485,13 +496,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     _colorFromDynamic(enquiryData['statusColorInt']) ??
                     _colorFromDynamic(statusColorHex) ??
                     _colorFromDynamic(enquiryData['statusColor']) ??
-                    _statusColorCache[status.toLowerCase()];
+                    _statusColorCache[statusValue.toLowerCase()];
                 final eventColorOverride =
                     _colorFromDynamic(enquiryData['eventColorValue']) ??
                     _colorFromDynamic(enquiryData['eventColorInt']) ??
                     _colorFromDynamic(eventColorHex) ??
                     _colorFromDynamic(enquiryData['eventColor']) ??
-                    _eventColorCache[eventType.toLowerCase()];
+                    _eventColorCache[eventTypeValue.toLowerCase()];
                 if (kDebugMode) {
                   debugPrint(
                     '[EnquiryData] id=$enquiryId '
@@ -508,8 +519,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
                 return EnquiryTileStatusStrip(
                   name: customerName,
-                  status: status,
-                  eventType: eventType,
+                  status: statusLabel,
+                  eventType: eventTypeLabel,
+                  eventCountdownLabel: eventCountdownLabel,
                   ageLabel: _formatAgeLabel(createdAt),
                   assignee: assignedDisplay,
                   dateLabel: _formatDateLabel(eventDate),
@@ -563,6 +575,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year.toString();
     return '$day/$month/$year';
+  }
+
+  String? _formatEventCountdownLabel(DateTime? date) {
+    if (date == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final eventDay = DateTime(date.year, date.month, date.day);
+    final days = eventDay.difference(today).inDays;
+
+    if (days > 1) return 'In $days days';
+    if (days == 1) return 'Tomorrow';
+    if (days == 0) return 'Today';
+    if (days == -1) return 'Yesterday';
+    return '${days.abs()} days ago';
   }
 
   Color? _colorFromDynamic(dynamic value) {
@@ -681,8 +707,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       query = query.where('eventStatus', isEqualTo: status);
     }
 
-    final bool descending = (status?.toLowerCase() == 'new') ? false : true;
-    return query.orderBy('createdAt', descending: descending).snapshots();
+    return query.orderBy('createdAt', descending: true).snapshots();
   }
 
   Future<String> _getUserDisplayName(String userId) async {
