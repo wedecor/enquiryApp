@@ -19,9 +19,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    await container
-        .read(appearanceControllerProvider.notifier)
-        .set(AppearanceMode.dark);
+    await container.read(appearanceControllerProvider.notifier).set(AppearanceMode.dark);
 
     expect(container.read(themeModeProvider), ThemeMode.dark);
 
@@ -30,9 +28,7 @@ void main() {
   });
 
   test('AppearanceController restores persisted mode on boot', () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      'appearance.mode.v2': 'light',
-    });
+    SharedPreferences.setMockInitialValues(<String, Object>{'appearance.mode.v2': 'light'});
 
     final container = ProviderContainer();
     addTearDown(container.dispose);

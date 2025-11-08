@@ -39,49 +39,94 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     final isAdmin = ref.watch(isAdminProvider);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('System Analytics'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        bottom: isAdmin
-            ? TabBar(
-                controller: _tabController,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                indicatorColor: Colors.white,
-                tabs: const [
-                  Tab(text: 'Overview', icon: Icon(Icons.dashboard, size: 20)),
-                  Tab(text: 'Trends', icon: Icon(Icons.trending_up, size: 20)),
-                  Tab(text: 'Breakdown', icon: Icon(Icons.pie_chart, size: 20)),
-                  Tab(text: 'Tables', icon: Icon(Icons.table_chart, size: 20)),
-                ],
-              )
-            : null,
       ),
-      body: isAdmin ? _buildAdminContent() : _buildNoAccessContent(),
+      body: isAdmin ? _buildAnalyticsContent(context) : _buildNoAccessContent(),
     );
   }
 
-  Widget _buildAdminContent() {
-    return Column(
-      children: [
-        // Filters bar
-        _buildFiltersBar(),
-
-        // Tab content
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildOverviewTab(),
-              _buildTrendsTab(),
-              _buildBreakdownTab(),
-              _buildTablesTab(),
-            ],
-          ),
-        ),
+  Widget _buildAnalyticsContent(BuildContext context) {
+    final filterBar = _buildFiltersBar();
+    final tabBar = TabBar(
+      controller: _tabController,
+      isScrollable: true,
+      labelColor: Theme.of(context).colorScheme.primary,
+      unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+      indicatorColor: Theme.of(context).colorScheme.primary,
+      tabs: const [
+        Tab(text: 'Overview', icon: Icon(Icons.dashboard, size: 20)),
+        Tab(text: 'Trends', icon: Icon(Icons.trending_up, size: 20)),
+        Tab(text: 'Breakdown', icon: Icon(Icons.pie_chart, size: 20)),
+        Tab(text: 'Tables', icon: Icon(Icons.table_chart, size: 20)),
       ],
+    );
+
+    return SafeArea(
+      child: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [_buildSummaryHeader(), const SizedBox(height: 12), filterBar],
+            ),
+          ),
+          SliverPersistentHeader(pinned: true, delegate: _PinnedBarDelegate(tabBar: tabBar)),
+        ],
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildOverviewTab(),
+            _buildTrendsTab(),
+            _buildBreakdownTab(),
+            _buildTablesTab(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryHeader() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final analyticsAsync = ref.watch(analyticsControllerProvider);
+
+        return analyticsAsync.when(
+          data: (state) {
+            if (state.kpiSummary == null) {
+              return const SizedBox.shrink();
+            }
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Summary', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 12),
+                  _buildKpiGrid(state),
+                ],
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, stack) => Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Unable to load analytics summary',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -494,23 +539,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         final analyticsAsync = ref.watch(analyticsControllerProvider);
 
         return analyticsAsync.when(
-          data: (state) => SingleChildScrollView(
+          data: (state) => ListView(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // KPI Cards
-                _buildKpiGrid(state),
-                const SizedBox(height: 24),
-
-                // Quick trend chart
-                LineTrendChart(
-                  data: state.timeSeries,
-                  title: 'Enquiries Trend',
-                  subtitle: _formatDateRange(state.filters.dateRange),
-                ),
-              ],
-            ),
+            children: [
+              LineTrendChart(
+                data: state.timeSeries,
+                title: 'Enquiries Trend',
+                subtitle: _formatDateRange(state.filters.dateRange),
+              ),
+            ],
           ),
           loading: () => _buildLoadingState(),
           error: (error, stack) => _buildErrorState(error.toString()),
@@ -525,14 +562,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         final analyticsAsync = ref.watch(analyticsControllerProvider);
 
         return analyticsAsync.when(
-          data: (state) => SingleChildScrollView(
+          data: (state) => ListView(
             padding: const EdgeInsets.all(16),
-            child: LineTrendChart(
-              data: state.timeSeries,
-              title: 'Enquiries Over Time',
-              subtitle:
-                  '${_formatDateRange(state.filters.dateRange)} • ${TimeBucket.fromDateRange(state.filters.dateRange).label} view',
-            ),
+            children: [
+              LineTrendChart(
+                data: state.timeSeries,
+                title: 'Enquiries Over Time',
+                subtitle:
+                    '${_formatDateRange(state.filters.dateRange)} • ${TimeBucket.fromDateRange(state.filters.dateRange).label} view',
+              ),
+            ],
           ),
           loading: () => _buildLoadingState(),
           error: (error, stack) => _buildErrorState(error.toString()),
@@ -547,50 +586,53 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         final analyticsAsync = ref.watch(analyticsControllerProvider);
 
         return analyticsAsync.when(
-          data: (state) => SingleChildScrollView(
+          data: (state) => ListView(
             padding: const EdgeInsets.all(16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 600) {
-                  // Mobile layout - stack charts vertically
-                  return Column(
-                    children: [
-                      StatusStackedBarChart(data: state.statusBreakdown, title: 'Status Breakdown'),
-                      const SizedBox(height: 16),
-                      EventTypePieChart(data: state.eventTypeBreakdown, title: 'Event Types'),
-                      const SizedBox(height: 16),
-                      SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
-                    ],
-                  );
-                } else {
-                  // Desktop layout - side by side
-                  return Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: StatusStackedBarChart(
-                              data: state.statusBreakdown,
-                              title: 'Status Breakdown',
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth < 600) {
+                    return Column(
+                      children: [
+                        StatusStackedBarChart(
+                          data: state.statusBreakdown,
+                          title: 'Status Breakdown',
+                        ),
+                        const SizedBox(height: 16),
+                        EventTypePieChart(data: state.eventTypeBreakdown, title: 'Event Types'),
+                        const SizedBox(height: 16),
+                        SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: StatusStackedBarChart(
+                                data: state.statusBreakdown,
+                                title: 'Status Breakdown',
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: EventTypePieChart(
-                              data: state.eventTypeBreakdown,
-                              title: 'Event Types',
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: EventTypePieChart(
+                                data: state.eventTypeBreakdown,
+                                title: 'Event Types',
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
-                    ],
-                  );
-                }
-              },
-            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
+                      ],
+                    );
+                  }
+                },
+              ),
+            ],
           ),
           loading: () => _buildLoadingState(),
           error: (error, stack) => _buildErrorState(error.toString()),
@@ -605,44 +647,44 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         final analyticsAsync = ref.watch(analyticsControllerProvider);
 
         return analyticsAsync.when(
-          data: (state) => SingleChildScrollView(
+          data: (state) => ListView(
             padding: const EdgeInsets.all(16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Column(
-                  children: [
-                    RecentEnquiriesTable(data: state.recentEnquiries, title: 'Recent Enquiries'),
-                    const SizedBox(height: 16),
-                    if (constraints.maxWidth < 600)
-                      // Mobile layout - stack tables vertically
-                      Column(
-                        children: [
-                          TopListTable(title: 'Top Event Types', data: state.topEventTypes),
-                          const SizedBox(height: 16),
-                          TopListTable(title: 'Top Sources', data: state.topSources),
-                        ],
-                      )
-                    else
-                      // Desktop layout - side by side
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: TopListTable(
-                              title: 'Top Event Types',
-                              data: state.topEventTypes,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return Column(
+                    children: [
+                      RecentEnquiriesTable(data: state.recentEnquiries, title: 'Recent Enquiries'),
+                      const SizedBox(height: 16),
+                      if (constraints.maxWidth < 600)
+                        Column(
+                          children: [
+                            TopListTable(title: 'Top Event Types', data: state.topEventTypes),
+                            const SizedBox(height: 16),
+                            TopListTable(title: 'Top Sources', data: state.topSources),
+                          ],
+                        )
+                      else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: TopListTable(
+                                title: 'Top Event Types',
+                                data: state.topEventTypes,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TopListTable(title: 'Top Sources', data: state.topSources),
-                          ),
-                        ],
-                      ),
-                  ],
-                );
-              },
-            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TopListTable(title: 'Top Sources', data: state.topSources),
+                            ),
+                          ],
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
           loading: () => _buildLoadingState(),
           error: (error, stack) => _buildErrorState(error.toString()),
@@ -905,5 +947,31 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         );
       },
     );
+  }
+}
+
+class _PinnedBarDelegate extends SliverPersistentHeaderDelegate {
+  _PinnedBarDelegate({required this.tabBar});
+
+  final TabBar tabBar;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: overlapsContent ? 2 : 0,
+      child: tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedBarDelegate oldDelegate) {
+    return oldDelegate.tabBar != tabBar;
   }
 }

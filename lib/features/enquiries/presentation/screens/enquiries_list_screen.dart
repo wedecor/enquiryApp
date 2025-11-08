@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import 'enquiry_details_screen.dart';
 import 'enquiry_form_screen.dart';
@@ -51,6 +52,10 @@ class EnquiriesListScreen extends ConsumerWidget {
             return const Center(child: Text('Please log in to view enquiries'));
           }
 
+          final dropdownLookup = ref
+              .watch(dropdownLookupProvider)
+              .maybeWhen(data: (value) => value, orElse: () => null);
+
           return StreamBuilder<QuerySnapshot>(
             stream: _getEnquiriesStream(userRole, user.uid),
             builder: (context, snapshot) {
@@ -94,16 +99,46 @@ class EnquiriesListScreen extends ConsumerWidget {
                   final enquiryData = enquiry.data() as Map<String, dynamic>;
                   final enquiryId = enquiry.id;
 
+                  final statusValueRaw =
+                      (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+                  final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                      ? statusValueRaw!.trim()
+                      : 'new';
+                  final statusLabel =
+                      (enquiryData['statusLabel'] as String?) ??
+                      (dropdownLookup != null
+                          ? dropdownLookup.labelForStatus(statusValue)
+                          : DropdownLookup.titleCase(statusValue));
+                  final eventTypeValueRaw =
+                      (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
+                  final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
+                      ? eventTypeValueRaw!.trim()
+                      : 'event';
+                  final eventTypeLabel =
+                      (enquiryData['eventTypeLabel'] as String?) ??
+                      (dropdownLookup != null
+                          ? dropdownLookup.labelForEventType(eventTypeValue)
+                          : DropdownLookup.titleCase(eventTypeValue));
+                  final priorityValueRaw =
+                      (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
+                  final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
+                      ? priorityValueRaw!.trim()
+                      : null;
+                  final priorityLabel =
+                      (enquiryData['priorityLabel'] as String?) ??
+                      (priorityValue != null
+                          ? (dropdownLookup != null
+                                ? dropdownLookup.labelForPriority(priorityValue)
+                                : DropdownLookup.titleCase(priorityValue))
+                          : 'N/A');
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(
-                          context,
-                          enquiryData['eventStatus'] as String?,
-                        ),
+                        backgroundColor: _getStatusColor(context, statusValue),
                         child: Text(
-                          _getStatusInitial(enquiryData['eventStatus'] as String?),
+                          _getStatusInitial(statusLabel),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -114,7 +149,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text((enquiryData['eventType'] as String?) ?? 'Unknown Event'),
+                          Text(eventTypeLabel),
                           Text(
                             'Date: ${_formatDate(enquiryData['eventDate'])}',
                             style: const TextStyle(fontSize: 12),
@@ -136,11 +171,11 @@ class EnquiriesListScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getPriorityColor(enquiryData['priority'] as String?),
+                              color: _getPriorityColor(priorityValue),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
+                              priorityLabel,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,

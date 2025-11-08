@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../utils/logger.dart';
 import '../constants/firestore_schema.dart';
 
 /// Service for setting up and managing Firestore database structure
@@ -10,7 +12,7 @@ class DatabaseSetupService {
   /// Reset and initialize the database with the correct schema
   Future<void> resetAndInitializeDatabase() async {
     try {
-      print('DatabaseSetupService: Starting database reset and initialization...');
+      Log.i('DatabaseSetupService reset started');
 
       // Delete existing collections if they exist
       await _deleteExistingCollections();
@@ -21,16 +23,16 @@ class DatabaseSetupService {
       // Initialize dropdowns with default values
       await _initializeDropdowns();
 
-      print('DatabaseSetupService: Database reset and initialization completed successfully!');
+      Log.i('DatabaseSetupService reset completed');
     } catch (e) {
-      print('DatabaseSetupService: Error during database setup: $e');
+      Log.e('DatabaseSetupService reset failed', error: e);
       rethrow;
     }
   }
 
   /// Delete existing collections to ensure clean slate
   Future<void> _deleteExistingCollections() async {
-    print('DatabaseSetupService: Deleting existing collections...');
+    Log.i('DatabaseSetupService deleting existing collections');
 
     try {
       // Delete enquiries collection (this will also delete subcollections)
@@ -40,9 +42,9 @@ class DatabaseSetupService {
       await _deleteCollection('dropdowns');
 
       // Note: We don't delete users collection as it contains user data
-      print('DatabaseSetupService: Existing collections deleted successfully');
+      Log.i('DatabaseSetupService collections deleted');
     } catch (e) {
-      print('DatabaseSetupService: Error deleting collections: $e');
+      Log.w('DatabaseSetupService delete collections warning', data: {'error': e.toString()});
       // Continue even if deletion fails (collections might not exist)
     }
   }
@@ -74,7 +76,7 @@ class DatabaseSetupService {
 
   /// Create the basic collection structure
   Future<void> _createCollections() async {
-    print('DatabaseSetupService: Creating collection structure...');
+    Log.i('DatabaseSetupService creating collection structure');
 
     // Create a dummy document in each collection to ensure they exist
     // These will be deleted after initialization
@@ -128,12 +130,12 @@ class DatabaseSetupService {
         .doc('_temp')
         .delete();
 
-    print('DatabaseSetupService: Collection structure created successfully');
+    Log.i('DatabaseSetupService collection structure created');
   }
 
   /// Initialize dropdowns with default values
   Future<void> _initializeDropdowns() async {
-    print('DatabaseSetupService: Initializing dropdowns with default values...');
+    Log.i('DatabaseSetupService initializing dropdowns');
 
     // Initialize event types
     await _initializeEventTypes();
@@ -144,7 +146,7 @@ class DatabaseSetupService {
     // Initialize payment statuses
     await _initializePaymentStatuses();
 
-    print('DatabaseSetupService: Dropdowns initialized successfully');
+    Log.i('DatabaseSetupService dropdowns initialized');
   }
 
   /// Initialize event types dropdown
@@ -158,7 +160,7 @@ class DatabaseSetupService {
     }
 
     await batch.commit();
-    print('DatabaseSetupService: Event types initialized');
+    Log.d('DatabaseSetupService event types initialized');
   }
 
   /// Initialize statuses dropdown
@@ -172,7 +174,7 @@ class DatabaseSetupService {
     }
 
     await batch.commit();
-    print('DatabaseSetupService: Statuses initialized');
+    Log.d('DatabaseSetupService statuses initialized');
   }
 
   /// Initialize payment statuses dropdown
@@ -189,7 +191,7 @@ class DatabaseSetupService {
     }
 
     await batch.commit();
-    print('DatabaseSetupService: Payment statuses initialized');
+    Log.d('DatabaseSetupService payment statuses initialized');
   }
 
   /// Create a sample enquiry for testing
@@ -244,10 +246,10 @@ class DatabaseSetupService {
             ).toMap(),
           );
 
-      print('DatabaseSetupService: Sample enquiry created with ID: ${docRef.id}');
+      Log.d('DatabaseSetupService sample enquiry created', data: {'enquiryId': docRef.id});
       return docRef.id;
     } catch (e) {
-      print('DatabaseSetupService: Error creating sample enquiry: $e');
+      Log.e('DatabaseSetupService sample enquiry failed', error: e);
       rethrow;
     }
   }
@@ -309,7 +311,7 @@ class DatabaseSetupService {
           .get();
       results['payment_statuses_has_data'] = (paymentStatusesCount.count ?? 0) > 0;
     } catch (e) {
-      print('DatabaseSetupService: Error verifying database structure: $e');
+      Log.e('DatabaseSetupService verification failed', error: e);
       results['verification_error'] = true;
     }
 

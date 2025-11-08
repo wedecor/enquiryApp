@@ -27,28 +27,20 @@ class StatusInlineControl extends ConsumerWidget {
         DropdownButton<String>(
           key: const Key('statusDropdown'),
           value: enquiry.status,
-          items:
-              const <String>[
-                    'new',
-                    'contacted',
-                    'quoted',
-                    'confirmed',
-                    'in_talks',
-                    'completed',
-                    'cancelled',
-                  ]
-                  .map(
-                    (s) => DropdownMenuItem<String>(value: s, child: Text(s)),
-                  )
-                  .toList(),
+          items: const <String>[
+            'new',
+            'contacted',
+            'quoted',
+            'confirmed',
+            'in_talks',
+            'completed',
+            'cancelled',
+            'not_interested',
+          ].map((s) => DropdownMenuItem<String>(value: s, child: Text(s))).toList(),
           onChanged: canChange
               ? (next) async {
                   if (next == null || next == enquiry.status) return;
-                  await repo.updateStatus(
-                    id: enquiry.id,
-                    nextStatus: next,
-                    userId: meUid ?? '',
-                  );
+                  await repo.updateStatus(id: enquiry.id, nextStatus: next, userId: meUid ?? '');
                 }
               : null,
         ),

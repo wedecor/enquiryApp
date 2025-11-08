@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../../../../utils/logger.dart';
 import '../domain/user_model.dart';
 
 class UsersRepository {
@@ -46,8 +48,13 @@ class UsersRepository {
             try {
               final user = UserModel.fromFirestore(doc);
               users.add(user);
-            } catch (e) {
-              print('Error parsing user document ${doc.id}: $e');
+            } catch (e, st) {
+              Log.e(
+                'UsersRepository: error parsing user document',
+                error: e,
+                stackTrace: st,
+                data: {'docId': doc.id},
+              );
               // Skip invalid documents instead of crashing
               continue;
             }
@@ -64,8 +71,8 @@ class UsersRepository {
 
           return users;
         })
-        .handleError((error) {
-          print('Error in users stream: $error');
+        .handleError((Object error, StackTrace stackTrace) {
+          Log.e('UsersRepository: users stream error', error: error, stackTrace: stackTrace);
           return <UserModel>[]; // Return empty list on stream error
         });
   }
