@@ -96,5 +96,3 @@ extension AppSecurityConfigFirestore on AppSecurityConfig {
     return json;
   }
 }
-
-

@@ -28,7 +28,10 @@ class FiltersBar extends ConsumerWidget {
         children: [
           // Active filters count
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTokens.space3,
+              vertical: AppTokens.space1,
+            ),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
               borderRadius: AppRadius.medium,

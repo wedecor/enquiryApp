@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../utils/logger.dart';
+
 /// Service for tracking audit trail and change history
 class AuditService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -27,9 +29,9 @@ class AuditService {
         'user_email': currentUser?.email ?? 'unknown',
       });
 
-      print('AuditService: Recorded change to $fieldChanged for enquiry $enquiryId');
-    } catch (e) {
-      print('AuditService: Error recording change: $e');
+      Log.d('AuditService: recorded change', data: {'field': fieldChanged, 'enquiryId': enquiryId});
+    } catch (e, st) {
+      Log.e('AuditService: error recording change', error: e, stackTrace: st);
     }
   }
 
@@ -65,17 +67,18 @@ class AuditService {
       }
 
       await batch.commit();
-      print('AuditService: Recorded ${changes.length} changes for enquiry $enquiryId');
-    } catch (e) {
-      print('AuditService: Error recording multiple changes: $e');
+      Log.d(
+        'AuditService: recorded multiple changes',
+        data: {'count': changes.length, 'enquiryId': enquiryId},
+      );
+    } catch (e, st) {
+      Log.e('AuditService: error recording multiple changes', error: e, stackTrace: st);
     }
   }
 
   /// Get change history for an enquiry (real-time stream)
   Stream<List<Map<String, dynamic>>> getEnquiryHistoryStream(String enquiryId) {
     try {
-      print('AuditService: Starting history stream for enquiry $enquiryId');
-
       // Try subcollection approach first (simpler, doesn't require index)
       return _firestore
           .collection('enquiries')
@@ -84,12 +87,13 @@ class AuditService {
           .snapshots()
           .timeout(const Duration(seconds: 10))
           .map((snapshot) {
-            print(
-              'AuditService: Received ${snapshot.docs.length} history documents for $enquiryId',
+            Log.d(
+              'AuditService: history snapshot received',
+              data: {'enquiryId': enquiryId, 'count': snapshot.docs.length},
             );
 
             if (snapshot.docs.isEmpty) {
-              print('AuditService: No history found for enquiry $enquiryId');
+              Log.d('AuditService: no history found', data: {'enquiryId': enquiryId});
               return <Map<String, dynamic>>[];
             }
 
@@ -115,16 +119,28 @@ class AuditService {
               return 0;
             });
 
-            print('AuditService: Returning ${docs.length} sorted history items');
+            Log.d(
+              'AuditService: returning sorted history items',
+              data: {'enquiryId': enquiryId, 'count': docs.length},
+            );
             return docs;
           })
           .handleError((error) {
-            print('AuditService: History stream error for $enquiryId: $error');
+            Log.e(
+              'AuditService: history stream error',
+              error: error,
+              data: {'enquiryId': enquiryId},
+            );
             // Return empty list on error instead of propagating
             return <Map<String, dynamic>>[];
           });
-    } catch (e) {
-      print('AuditService: Failed to create history stream for $enquiryId: $e');
+    } catch (e, st) {
+      Log.e(
+        'AuditService: failed to create history stream',
+        error: e,
+        stackTrace: st,
+        data: {'enquiryId': enquiryId},
+      );
       // Return a stream with empty list if setup fails
       return Stream.value(<Map<String, dynamic>>[]);
     }
@@ -144,8 +160,13 @@ class AuditService {
         final data = doc.data();
         return {'id': doc.id, ...data};
       }).toList();
-    } catch (e) {
-      print('AuditService: Error getting enquiry history: $e');
+    } catch (e, st) {
+      Log.e(
+        'AuditService: error getting enquiry history',
+        error: e,
+        stackTrace: st,
+        data: {'enquiryId': enquiryId},
+      );
       return [];
     }
   }
@@ -165,8 +186,13 @@ class AuditService {
         final data = doc.data();
         return {'id': doc.id, ...data};
       }).toList();
-    } catch (e) {
-      print('AuditService: Error getting field history: $e');
+    } catch (e, st) {
+      Log.e(
+        'AuditService: error getting field history',
+        error: e,
+        stackTrace: st,
+        data: {'enquiryId': enquiryId, 'field': fieldName},
+      );
       return [];
     }
   }
@@ -185,8 +211,13 @@ class AuditService {
         final data = doc.data();
         return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
-    } catch (e) {
-      print('AuditService: Error getting user changes: $e');
+    } catch (e, st) {
+      Log.e(
+        'AuditService: error getting user changes',
+        error: e,
+        stackTrace: st,
+        data: {'userId': userId},
+      );
       return [];
     }
   }
@@ -204,8 +235,8 @@ class AuditService {
         final data = doc.data();
         return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
       }).toList();
-    } catch (e) {
-      print('AuditService: Error getting recent changes: $e');
+    } catch (e, st) {
+      Log.e('AuditService: error getting recent changes', error: e, stackTrace: st);
       return [];
     }
   }
@@ -224,9 +255,12 @@ class AuditService {
         'app_version': '1.0.1+10', // TODO: Get from package_info
       });
 
-      print('AuditService: Admin action logged - $action');
-    } catch (e) {
-      print('AuditService: Error logging admin action: $e');
+      Log.i(
+        'AuditService: admin action logged',
+        data: {'action': action, 'userId': currentUser?.uid},
+      );
+    } catch (e, st) {
+      Log.e('AuditService: error logging admin action', error: e, stackTrace: st);
     }
   }
 
@@ -319,8 +353,8 @@ class AuditService {
       }
 
       return summary;
-    } catch (e) {
-      print('AuditService: Error getting change summary: $e');
+    } catch (e, st) {
+      Log.e('AuditService: error getting change summary', error: e, stackTrace: st);
       return {
         'total_changes': 0,
         'last_modified': null,

@@ -12,11 +12,7 @@ class EventTypeChip extends StatelessWidget {
     final accent = eventAccent(eventType);
     final label = (eventType ?? 'Event')
         .split(' ')
-        .map(
-          (word) => word.isEmpty
-              ? word
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
+        .map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
         .join(' ');
 
     return Chip(

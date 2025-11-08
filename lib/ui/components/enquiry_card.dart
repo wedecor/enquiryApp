@@ -54,10 +54,7 @@ class EnquiryCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (leadingBadge != null) ...[
-                    leadingBadge!,
-                    const SizedBox(width: 16),
-                  ],
+                  if (leadingBadge != null) ...[leadingBadge!, const SizedBox(width: 16)],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,8 +73,7 @@ class EnquiryCard extends StatelessWidget {
                             StatusChip(status: status),
                             AgeChip(createdAt: createdAt),
                             EventTypeChip(eventType: eventType),
-                            if (assignedTo != null &&
-                                assignedTo!.trim().isNotEmpty)
+                            if (assignedTo != null && assignedTo!.trim().isNotEmpty)
                               Chip(
                                 avatar: const Icon(Icons.person, size: 18),
                                 label: Text(assignedTo!),
@@ -98,24 +94,17 @@ class EnquiryCard extends StatelessWidget {
                 children: [
                   _InfoRow(
                     icon: Icons.event,
-                    label: eventDate != null
-                        ? _formatDate(eventDate!)
-                        : 'Date TBC',
+                    label: eventDate != null ? _formatDate(eventDate!) : 'Date TBC',
                   ),
                   if (location != null && location!.isNotEmpty)
-                    _InfoRow(
-                      icon: Icons.location_on_outlined,
-                      label: location!,
-                    ),
+                    _InfoRow(icon: Icons.location_on_outlined, label: location!),
                 ],
               ),
               if (notes != null && notes!.trim().isNotEmpty) ...[
                 const SizedBox(height: 20),
                 Text(
                   'Notes',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Text(notes!, style: theme.textTheme.bodyMedium),

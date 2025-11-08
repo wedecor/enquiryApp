@@ -11,6 +11,8 @@ analyzer:
     - test/**/golden_*.*
     - test_driver/**
     - integration_test/**
+    - scripts/**
+    - tool/**
     - lib/legacy/**
   errors:
     # Treat true problems as errors
@@ -21,13 +23,13 @@ analyzer:
     invalid_use_of_protected_member: error
     # Don't fail builds on stylistic nits
     lines_longer_than_80_chars: ignore
-    avoid_print: ignore  # we use safeLog; prints in tests allowed
+    avoid_print: error
     prefer_const_constructors: warning
     prefer_const_literals_to_create_immutables: warning
 
 linter:
   rules:
-    avoid_print: false
+    avoid_print: true
     prefer_const_constructors: true
     prefer_const_declarations: true
     always_declare_return_types: true

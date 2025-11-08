@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/contacts/contact_launcher.dart';
+import '../utils/logger.dart';
 
 class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   const EnquiryTileStatusStrip({
@@ -12,6 +13,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
     required this.name,
     required this.status,
     required this.eventType,
+    this.eventCountdownLabel,
     required this.ageLabel,
     this.assignee,
     required this.dateLabel,
@@ -33,6 +35,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final String name;
   final String status;
   final String eventType;
+  final String? eventCountdownLabel;
   final String ageLabel;
   final String? assignee;
   final String dateLabel;
@@ -51,12 +54,10 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final Future<void> Function()? onWhatsApp;
 
   @override
-  ConsumerState<EnquiryTileStatusStrip> createState() =>
-      _EnquiryTileStatusStripState();
+  ConsumerState<EnquiryTileStatusStrip> createState() => _EnquiryTileStatusStripState();
 }
 
-class _EnquiryTileStatusStripState
-    extends ConsumerState<EnquiryTileStatusStrip> {
+class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip> {
   bool _isHovered = false;
   bool _isLaunching = false;
 
@@ -75,11 +76,14 @@ class _EnquiryTileStatusStripState
     final neutralText = theme.colorScheme.onSurfaceVariant;
 
     if (kDebugMode) {
-      debugPrint(
-        '[TileColor] name=${widget.name} statusHex=${widget.statusColorHex} '
-        'eventHex=${widget.eventColorHex} | '
-        'status=${statusColor.value.toRadixString(16)} '
-        'event=${eventColor.value.toRadixString(16)}',
+      Log.d(
+        'Tile color debug',
+        data: {
+          'hasStatusHex': widget.statusColorHex != null,
+          'hasEventHex': widget.eventColorHex != null,
+          'statusColor': statusColor.value.toRadixString(16),
+          'eventColor': eventColor.value.toRadixString(16),
+        },
       );
     }
 
@@ -92,9 +96,7 @@ class _EnquiryTileStatusStripState
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Colors.white.withOpacity(0.04),
-          border: Border.all(
-            color: Colors.white.withOpacity(_isHovered ? 0.12 : 0.06),
-          ),
+          border: Border.all(color: Colors.white.withOpacity(_isHovered ? 0.12 : 0.06)),
           boxShadow: [
             BoxShadow(
               color: eventColor.withOpacity(_isHovered ? 0.25 : 0.15),
@@ -138,6 +140,7 @@ class _EnquiryTileStatusStripState
                               eventType: widget.eventType,
                               eventColor: eventColor,
                               ageLabel: widget.ageLabel,
+                              eventCountdownLabel: widget.eventCountdownLabel,
                               assignee: widget.assignee,
                               neutralBg: neutralBg,
                               neutralText: neutralText,
@@ -176,9 +179,7 @@ class _EnquiryTileStatusStripState
   }
 
   VoidCallback? _buildWhatsAppHandler(BuildContext context) {
-    final phone =
-        _sanitizeContact(widget.whatsappNumber) ??
-        _sanitizeContact(widget.phoneNumber);
+    final phone = _sanitizeContact(widget.whatsappNumber) ?? _sanitizeContact(widget.phoneNumber);
     if (phone == null) return null;
 
     return () async {
@@ -223,10 +224,7 @@ class _EnquiryTileStatusStripState
           await widget.onCall!();
         } else {
           final launcher = ref.read(contactLauncherProvider);
-          final status = await launcher.callNumberWithAudit(
-            phone,
-            enquiryId: widget.enquiryId,
-          );
+          final status = await launcher.callNumberWithAudit(phone, enquiryId: widget.enquiryId);
           if (!mounted) return;
           _showContactFeedback(
             context,
@@ -328,9 +326,7 @@ class _EnquiryTileStatusStripState
         candidate = candidate.substring(2);
       }
       if (candidate.length == 6 || candidate.length == 8) {
-        final isHex = RegExp(
-          r'^[0-9a-f]{6}([0-9a-f]{2})?$',
-        ).hasMatch(candidate);
+        final isHex = RegExp(r'^[0-9a-f]{6}([0-9a-f]{2})?$').hasMatch(candidate);
         if (isHex) {
           hexBody = candidate.toUpperCase();
         }
@@ -381,24 +377,14 @@ class _StatusStrip extends StatelessWidget {
           topLeft: Radius.circular(16),
           bottomLeft: Radius.circular(16),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.45),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: color.withOpacity(0.45), blurRadius: 10, spreadRadius: 1)],
       ),
     );
   }
 }
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({
-    required this.name,
-    required this.eventColor,
-    required this.onMorePressed,
-  });
+  const _HeaderRow({required this.name, required this.eventColor, required this.onMorePressed});
 
   final String name;
   final Color eventColor;
@@ -430,15 +416,10 @@ class _HeaderRow extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.more_vert),
-          onPressed: onMorePressed ?? () {},
-        ),
+        IconButton(icon: const Icon(Icons.more_vert), onPressed: onMorePressed ?? () {}),
       ],
     );
   }
@@ -449,6 +430,7 @@ class _ChipWrap extends StatelessWidget {
     required this.status,
     required this.statusColor,
     required this.eventType,
+    required this.eventCountdownLabel,
     required this.eventColor,
     required this.ageLabel,
     required this.assignee,
@@ -459,11 +441,31 @@ class _ChipWrap extends StatelessWidget {
   final String status;
   final Color statusColor;
   final String eventType;
+  final String? eventCountdownLabel;
   final Color eventColor;
   final String ageLabel;
   final String? assignee;
   final Color neutralBg;
   final Color neutralText;
+
+  String _prettify(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return 'Unknown';
+
+    final normalized = trimmed.replaceAll(RegExp(r'[_-]+'), ' ');
+    final words = normalized.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).toList();
+
+    if (words.isEmpty) return 'Unknown';
+
+    return words
+        .map((word) {
+          final lower = word.toLowerCase();
+          if (lower == 'vip') return 'VIP';
+          if (lower.length == 1) return lower.toUpperCase();
+          return '${lower[0].toUpperCase()}${lower.substring(1)}';
+        })
+        .join(' ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,29 +475,33 @@ class _ChipWrap extends StatelessWidget {
 
     final chips = <Widget>[
       Chip(
-        shape: StadiumBorder(
-          side: BorderSide(color: statusColor.withOpacity(0.3)),
-        ),
+        shape: StadiumBorder(side: BorderSide(color: statusColor.withOpacity(0.3))),
         backgroundColor: statusColor.withOpacity(0.18),
         label: Text(
-          status,
+          _prettify(status),
           style: TextStyle(color: statusColor, fontWeight: FontWeight.w500),
         ),
       ),
       Chip(
-        shape: StadiumBorder(
-          side: BorderSide(color: eventColor.withOpacity(0.3)),
-        ),
+        shape: StadiumBorder(side: BorderSide(color: eventColor.withOpacity(0.3))),
         backgroundColor: eventColor.withOpacity(0.18),
         label: Text(
-          eventType,
+          _prettify(eventType),
           style: TextStyle(color: eventColor, fontWeight: FontWeight.w500),
         ),
       ),
-      Chip(
-        shape: StadiumBorder(
-          side: BorderSide(color: neutralText.withOpacity(0.2)),
+      if (eventCountdownLabel != null && eventCountdownLabel!.trim().isNotEmpty)
+        Chip(
+          shape: StadiumBorder(side: BorderSide(color: eventColor.withOpacity(0.2))),
+          backgroundColor: eventColor.withOpacity(0.12),
+          avatar: Icon(Icons.calendar_today, size: 16, color: eventColor),
+          label: Text(
+            eventCountdownLabel!,
+            style: TextStyle(color: eventColor, fontWeight: FontWeight.w500),
+          ),
         ),
+      Chip(
+        shape: StadiumBorder(side: BorderSide(color: neutralText.withOpacity(0.2))),
         backgroundColor: neutralBackground(neutralBg),
         label: Text(
           ageLabel,
@@ -507,9 +513,7 @@ class _ChipWrap extends StatelessWidget {
     if (assignee != null && assignee!.trim().isNotEmpty) {
       chips.add(
         Chip(
-          shape: StadiumBorder(
-            side: BorderSide(color: neutralText.withOpacity(0.2)),
-          ),
+          shape: StadiumBorder(side: BorderSide(color: neutralText.withOpacity(0.2))),
           backgroundColor: neutralBackground(neutralBg),
           avatar: Icon(Icons.person, size: 18, color: neutralText),
           label: Text(
@@ -525,11 +529,7 @@ class _ChipWrap extends StatelessWidget {
 }
 
 class _MetaRow extends StatelessWidget {
-  const _MetaRow({
-    required this.dateLabel,
-    this.location,
-    required this.neutralText,
-  });
+  const _MetaRow({required this.dateLabel, this.location, required this.neutralText});
 
   final String dateLabel;
   final String? location;
@@ -541,28 +541,16 @@ class _MetaRow extends StatelessWidget {
       spacing: 24,
       runSpacing: 12,
       children: [
-        _MetaItem(
-          icon: Icons.calendar_today,
-          label: dateLabel,
-          color: neutralText,
-        ),
+        _MetaItem(icon: Icons.calendar_today, label: dateLabel, color: neutralText),
         if (location != null && location!.trim().isNotEmpty)
-          _MetaItem(
-            icon: Icons.location_on,
-            label: location!,
-            color: neutralText,
-          ),
+          _MetaItem(icon: Icons.location_on, label: location!, color: neutralText),
       ],
     );
   }
 }
 
 class _MetaItem extends StatelessWidget {
-  const _MetaItem({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+  const _MetaItem({required this.icon, required this.label, required this.color});
 
   final IconData icon;
   final String label;
@@ -606,12 +594,7 @@ class _NotesPreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 16, thickness: 0.5, color: Colors.white10),
-        Text(
-          'Notes',
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text('Notes', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
         Text(
           notes,
@@ -733,10 +716,7 @@ class _ActionButtonState extends State<_ActionButton> {
                           fontWeight: FontWeight.w600,
                           color: foreground,
                         ) ??
-                        TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: foreground,
-                        ),
+                        TextStyle(fontWeight: FontWeight.w600, color: foreground),
                   ),
                 ),
               ],

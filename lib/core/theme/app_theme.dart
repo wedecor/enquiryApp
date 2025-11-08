@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
+const Color _weDecorPrimary = Color(0xFF00B4D8);
+const Color _weDecorPrimaryDark = Color(0xFF0077B6);
+const Color _weDecorSecondary = Color(0xFF90E0EF);
+const Color _weDecorBackgroundLight = Color(0xFFF8FAFC);
+const Color _weDecorBackgroundDark = Color(0xFF0F172A);
+const Color _weDecorSurfaceDark = Color(0xFF1E293B);
+
 /// Light and dark color schemes following Material 3 design
 class AppColorScheme {
   AppColorScheme._();
@@ -9,67 +16,67 @@ class AppColorScheme {
   /// Light color scheme
   static const ColorScheme light = ColorScheme(
     brightness: Brightness.light,
-    primary: Color(0xFF7C3AED), // Purple 600
-    onPrimary: Color(0xFFFFFFFF), // White
-    primaryContainer: Color(0xFFEDE9FE), // Purple 100
-    onPrimaryContainer: Color(0xFF4C1D95), // Purple 800
-    secondary: Color(0xFF059669), // Emerald 600
-    onSecondary: Color(0xFFFFFFFF), // White
-    secondaryContainer: Color(0xFFD1FAE5), // Emerald 100
-    onSecondaryContainer: Color(0xFF064E3B), // Emerald 800
-    tertiary: Color(0xFF6366F1), // Indigo 500
-    onTertiary: Color(0xFFFFFFFF), // White
-    tertiaryContainer: Color(0xFFE0E7FF), // Indigo 100
-    onTertiaryContainer: Color(0xFF3730A3), // Indigo 800
-    error: Color(0xFFDC2626), // Red 600
-    onError: Color(0xFFFFFFFF), // White
-    errorContainer: Color(0xFFFEE2E2), // Red 100
-    onErrorContainer: Color(0xFF991B1B), // Red 800
-    surface: Color(0xFFFFFFFF), // White
-    onSurface: Color(0xFF111827), // Gray 900
-    surfaceContainerHighest: Color(0xFFF9FAFB), // Gray 50
-    onSurfaceVariant: Color(0xFF6B7280), // Gray 500
-    outline: Color(0xFFD1D5DB), // Gray 300
-    outlineVariant: Color(0xFFE5E7EB), // Gray 200
-    shadow: Color(0xFF000000), // Black
-    scrim: Color(0xFF000000), // Black
-    inverseSurface: Color(0xFF111827), // Gray 900
-    onInverseSurface: Color(0xFFF9FAFB), // Gray 50
-    inversePrimary: Color(0xFFA78BFA), // Purple 400
-    surfaceTint: Color(0xFF7C3AED), // Purple 600
+    primary: _weDecorPrimary,
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFFBFEFFF),
+    onPrimaryContainer: Color(0xFF003547),
+    secondary: _weDecorSecondary,
+    onSecondary: Color(0xFF002B3D),
+    secondaryContainer: Color(0xFFDFF6FB),
+    onSecondaryContainer: Color(0xFF003547),
+    tertiary: Color(0xFF0077B6),
+    onTertiary: Color(0xFFFFFFFF),
+    tertiaryContainer: Color(0xFFE0F4FF),
+    onTertiaryContainer: Color(0xFF002D44),
+    error: Color(0xFFDC2626),
+    onError: Color(0xFFFFFFFF),
+    errorContainer: Color(0xFFFEE2E2),
+    onErrorContainer: Color(0xFF991B1B),
+    surface: Color(0xFFFFFFFF),
+    onSurface: Color(0xFF0F172A),
+    surfaceContainerHighest: Color(0xFFF1F5F9),
+    onSurfaceVariant: Color(0xFF475569),
+    outline: Color(0xFFCBD5E1),
+    outlineVariant: Color(0xFFE2E8F0),
+    shadow: Color(0xFF000000),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFF0F172A),
+    onInverseSurface: Color(0xFFF8FAFC),
+    inversePrimary: _weDecorPrimaryDark,
+    surfaceTint: _weDecorPrimary,
   );
 
   /// Dark color scheme
   static const ColorScheme dark = ColorScheme(
     brightness: Brightness.dark,
-    primary: Color(0xFFA78BFA), // Purple 400
-    onPrimary: Color(0xFF000000), // Black for better contrast
-    primaryContainer: Color(0xFF6D28D9), // Purple 700
-    onPrimaryContainer: Color(0xFFEDE9FE), // Purple 100
-    secondary: Color(0xFF34D399), // Emerald 400
-    onSecondary: Color(0xFF000000), // Black for better contrast
-    secondaryContainer: Color(0xFF047857), // Emerald 700
-    onSecondaryContainer: Color(0xFFD1FAE5), // Emerald 100
-    tertiary: Color(0xFF818CF8), // Indigo 400
-    onTertiary: Color(0xFF000000), // Black for better contrast
-    tertiaryContainer: Color(0xFF3730A3), // Indigo 800
-    onTertiaryContainer: Color(0xFFE0E7FF), // Indigo 100
-    error: Color(0xFFF87171), // Red 400
-    onError: Color(0xFF000000), // Black for better contrast
-    errorContainer: Color(0xFFB91C1C), // Red 700
-    onErrorContainer: Color(0xFFFEE2E2), // Red 100
-    surface: Color(0xFF111827), // Gray 900
-    onSurface: Color(0xFFF9FAFB), // Gray 50
-    surfaceContainerHighest: Color(0xFF1F2937), // Gray 800
-    onSurfaceVariant: Color(0xFF9CA3AF), // Gray 400
-    outline: Color(0xFF4B5563), // Gray 600
-    outlineVariant: Color(0xFF374151), // Gray 700
-    shadow: Color(0xFF000000), // Black
-    scrim: Color(0xFF000000), // Black
-    inverseSurface: Color(0xFFF9FAFB), // Gray 50
-    onInverseSurface: Color(0xFF111827), // Gray 900
-    inversePrimary: Color(0xFF7C3AED), // Purple 600
-    surfaceTint: Color(0xFFA78BFA), // Purple 400
+    primary: _weDecorPrimaryDark,
+    onPrimary: Color(0xFFFFFFFF),
+    primaryContainer: Color(0xFF004A73),
+    onPrimaryContainer: Color(0xFFBFEFFF),
+    secondary: _weDecorSecondary,
+    onSecondary: Color(0xFF0F172A),
+    secondaryContainer: Color(0xFF1A5D76),
+    onSecondaryContainer: Color(0xFFE2F6FF),
+    tertiary: _weDecorPrimary,
+    onTertiary: Color(0xFF002D44),
+    tertiaryContainer: Color(0xFF134A62),
+    onTertiaryContainer: Color(0xFFE0F4FF),
+    error: Color(0xFFF87171),
+    onError: Color(0xFF290000),
+    errorContainer: Color(0xFFB91C1C),
+    onErrorContainer: Color(0xFFFEE2E2),
+    surface: _weDecorSurfaceDark,
+    onSurface: Color(0xFFE2E8F0),
+    surfaceContainerHighest: Color(0xFF243047),
+    onSurfaceVariant: Color(0xFFA0AEC0),
+    outline: Color(0xFF4B5563),
+    outlineVariant: Color(0xFF374151),
+    shadow: Color(0xFF000000),
+    scrim: Color(0xFF000000),
+    inverseSurface: Color(0xFFE2E8F0),
+    onInverseSurface: Color(0xFF0F172A),
+    inversePrimary: _weDecorPrimary,
+    surfaceTint: _weDecorPrimaryDark,
   );
 
   /// Additional semantic colors
@@ -111,14 +118,15 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: AppColorScheme.light,
     brightness: Brightness.light,
+    scaffoldBackgroundColor: _weDecorBackgroundLight,
 
     // App bar theme
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColorScheme.light.surface,
-      foregroundColor: AppColorScheme.light.onSurface,
+      backgroundColor: AppColorScheme.light.primary,
+      foregroundColor: AppColorScheme.light.onPrimary,
       elevation: AppTokens.elevation1,
       centerTitle: false,
-      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.light.onSurface),
+      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.light.onPrimary),
     ),
 
     // Card theme
@@ -126,7 +134,7 @@ class AppTheme {
       elevation: AppTokens.elevation2,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
       color: AppColorScheme.light.surface,
-      surfaceTintColor: AppColorScheme.light.surfaceTint,
+      surfaceTintColor: Colors.transparent,
     ),
 
     // Elevated button theme
@@ -136,7 +144,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.light.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -146,7 +157,10 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.light.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space4,
+          vertical: AppTokens.space2,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -155,11 +169,27 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColorScheme.light.primary,
-        side: BorderSide(color: AppColorScheme.light.outline),
+        side: BorderSide(color: AppColorScheme.light.primary.withValues(alpha: 0.4)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
+    ),
+
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: AppColorScheme.light.primary,
+      foregroundColor: AppColorScheme.light.onPrimary,
+      elevation: AppTokens.elevation2,
+    ),
+
+    tabBarTheme: TabBarThemeData(
+      labelColor: AppColorScheme.light.primary,
+      unselectedLabelColor: AppColorScheme.light.onSurfaceVariant,
+      indicatorColor: AppColorScheme.light.primary,
+      indicatorSize: TabBarIndicatorSize.label,
     ),
 
     // Input decoration theme
@@ -242,14 +272,15 @@ class AppTheme {
     useMaterial3: true,
     colorScheme: AppColorScheme.dark,
     brightness: Brightness.dark,
+    scaffoldBackgroundColor: _weDecorBackgroundDark,
 
     // App bar theme
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColorScheme.dark.surface,
-      foregroundColor: AppColorScheme.dark.onSurface,
+      backgroundColor: AppColorScheme.dark.primary,
+      foregroundColor: AppColorScheme.dark.onPrimary,
       elevation: AppTokens.elevation1,
       centerTitle: false,
-      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.dark.onSurface),
+      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.dark.onPrimary),
     ),
 
     // Card theme
@@ -257,7 +288,7 @@ class AppTheme {
       elevation: AppTokens.elevation2,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
       color: AppColorScheme.dark.surface,
-      surfaceTintColor: AppColorScheme.dark.surfaceTint,
+      surfaceTintColor: Colors.transparent,
     ),
 
     // Elevated button theme
@@ -267,7 +298,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.dark.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -277,7 +311,10 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.dark.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space4,
+          vertical: AppTokens.space2,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -286,11 +323,27 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColorScheme.dark.primary,
-        side: BorderSide(color: AppColorScheme.dark.outline),
+        side: BorderSide(color: AppColorScheme.dark.primary.withValues(alpha: 0.4)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
+    ),
+
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: AppColorScheme.dark.primary,
+      foregroundColor: AppColorScheme.dark.onPrimary,
+      elevation: AppTokens.elevation2,
+    ),
+
+    tabBarTheme: TabBarThemeData(
+      labelColor: AppColorScheme.dark.secondary,
+      unselectedLabelColor: AppColorScheme.dark.onSurfaceVariant,
+      indicatorColor: AppColorScheme.dark.secondary,
+      indicatorSize: TabBarIndicatorSize.label,
     ),
 
     // Input decoration theme
