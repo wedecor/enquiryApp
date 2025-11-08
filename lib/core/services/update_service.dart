@@ -11,8 +11,8 @@ import '../logging/logger.dart';
 
 /// Service for checking app updates and notifying users
 class UpdateService {
-  static const String _updateCheckUrl = 'https://wedecorenquries.web.app/internal/rc3/version.json';
-  static const String _downloadUrl = 'https://wedecorenquries.web.app/internal/rc3/app-release.apk';
+  static const String _updateCheckUrl = 'https://wedecorenquries.web.app/android/version.json';
+  static const String _downloadUrl = 'https://wedecorenquries.web.app/android/app-release.apk';
   static const String _lastDismissedKey = 'last_dismissed_update';
   static const String _lastCheckedKey = 'last_update_check';
 
