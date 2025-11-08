@@ -217,3 +217,6 @@ config/.env.*.local
 
 # Build outputs
 functions/lib
+
+# RC release artifacts
+public/internal/rc3/*.apk
