@@ -6,6 +6,7 @@ on:
 
 env:
   FLUTTER_VERSION: '3.32.8'
+  DEPLOY_MOBILE: ${{ vars.DEPLOY_MOBILE || 'false' }}
 
 jobs:
   deploy-web:
@@ -50,11 +51,14 @@ jobs:
               📅 **Deployed at**: ${new Date().toISOString()}`
             })
 
-  deploy-android:
-    name: Deploy Android to Play Store
+  deploy_android_play:
+    name: Deploy to Production / Deploy Android to Play Store (push)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && env.DEPLOY_MOBILE == 'true'
     steps:
+      - run: echo "Mobile deploy disabled (DEPLOY_MOBILE != true)."
+        if: ${{ env.DEPLOY_MOBILE != 'true' }}
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -78,11 +82,14 @@ jobs:
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
           track: internal
 
-  build-ios:
-    name: Build iOS for Manual Deployment
+  build_ios_manual:
+    name: Deploy to Production / Build iOS for Manual Deployment (push)
     runs-on: macos-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && env.DEPLOY_MOBILE == 'true'
     steps:
+      - run: echo "Mobile deploy disabled (DEPLOY_MOBILE != true)."
+        if: ${{ env.DEPLOY_MOBILE != 'true' }}
+
       - name: Checkout code
         uses: actions/checkout@v4
 
