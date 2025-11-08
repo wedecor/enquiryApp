@@ -105,6 +105,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           {'label': 'Approved', 'value': 'approved'},
           {'label': 'Scheduled', 'value': 'scheduled'},
           {'label': 'Completed', 'value': 'completed'},
+          {'label': 'Not Interested', 'value': 'not_interested'},
           {'label': 'Closed - Lost', 'value': 'closed_lost'},
           {'label': 'Cancelled', 'value': 'cancelled'},
         ];

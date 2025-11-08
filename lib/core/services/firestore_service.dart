@@ -214,6 +214,12 @@ class FirestoreService {
     double? advancePaid,
     String? paymentStatus,
     String? assignedTo,
+    String statusValue = 'new',
+    String? statusLabel,
+    String? eventTypeLabel,
+    String? priorityLabel,
+    String? sourceLabel,
+    String? paymentStatusLabel,
   }) async {
     final enquiryData = {
       'customerName': customerName,
@@ -226,8 +232,17 @@ class FirestoreService {
       'budgetRange': budgetRange,
       'description': description,
       // Defaults follow dropdown values (snake_case)
-      'eventStatus': 'new',
+      'eventStatus': statusValue,
+      'status': statusValue,
+      'statusValue': statusValue,
+      if (statusLabel != null) 'statusLabel': statusLabel,
+      'eventType': eventType,
+      'eventTypeValue': eventType,
+      if (eventTypeLabel != null) 'eventTypeLabel': eventTypeLabel,
       'paymentStatus': paymentStatus ?? 'unpaid',
+      'paymentStatusValue': paymentStatus ?? 'unpaid',
+      if (paymentStatusLabel != null)
+        'paymentStatusLabel': paymentStatusLabel,
       'totalCost': totalCost,
       'advancePaid': advancePaid,
       'assignedTo': assignedTo,
@@ -235,7 +250,11 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
       'createdBy': createdBy,
       'priority': priority,
+      'priorityValue': priority,
+      if (priorityLabel != null) 'priorityLabel': priorityLabel,
       'source': source,
+      'sourceValue': source,
+      if (sourceLabel != null) 'sourceLabel': sourceLabel,
     };
 
     final docRef = await _enquiriesCollection.add(enquiryData);

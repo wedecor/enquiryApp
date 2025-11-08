@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../core/services/user_firestore_sync_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
@@ -93,17 +94,20 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           }
 
           // Set dropdown values from database
-          _selectedEventType = data['eventType'] as String?;
+          _selectedEventType =
+              (data['eventTypeValue'] ?? data['eventType']) as String?;
           print('🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"');
 
           // Safely set dropdown values - ensure they exist in valid options
-          final eventStatus = data['eventStatus'] as String?;
+          final eventStatus =
+              (data['statusValue'] ?? data['eventStatus']) as String?;
           _selectedStatus = eventStatus;
 
-          final priority = data['priority'] as String?;
+          final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
 
-          final paymentStatus = data['paymentStatus'] as String?;
+          final paymentStatus =
+              (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
           _selectedPaymentStatus = paymentStatus;
 
           _selectedAssignedTo = data['assignedTo'] as String?;
@@ -219,24 +223,47 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
   Future<void> _createEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
+    final dropdownLookup = await ref.read(dropdownLookupProvider.future);
+
+    const statusValue = 'new';
+    final statusLabel = dropdownLookup.labelForStatus(statusValue);
+
+    final eventTypeValue = _selectedEventType!;
+    final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
+
+    final priorityValue = _selectedPriority ?? 'medium';
+    final priorityLabel = dropdownLookup.labelForPriority(priorityValue);
+
+    final paymentStatusValue = _selectedPaymentStatus ?? 'unpaid';
+    final paymentStatusLabel =
+        dropdownLookup.labelForPaymentStatus(paymentStatusValue);
+
+    const sourceValue = 'app';
+    final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
     final enquiryId = await firestoreService.createEnquiry(
       customerName: _nameController.text.trim(),
       customerEmail: '', // TODO: Add email field if needed
       customerPhone: _phoneController.text.trim(),
-      eventType: _selectedEventType!,
+      eventType: eventTypeValue,
       eventDate: _selectedDate!,
       eventLocation: _locationController.text.trim(),
       guestCount: 0, // TODO: Add guest count field
       budgetRange: '', // TODO: Add budget field
       description: _notesController.text.trim(),
       createdBy: currentUser.uid,
-      priority: _selectedPriority ?? 'medium',
-      source: 'app',
+      priority: priorityValue,
+      source: sourceValue,
       totalCost: _parseDouble(_totalCostController.text),
       advancePaid: _parseDouble(_advancePaidController.text),
-      paymentStatus: _selectedPaymentStatus,
+      paymentStatus: paymentStatusValue,
       assignedTo: _selectedAssignedTo,
+      statusValue: statusValue,
+      statusLabel: statusLabel,
+      eventTypeLabel: eventTypeLabel,
+      priorityLabel: priorityLabel,
+      sourceLabel: sourceLabel,
+      paymentStatusLabel: paymentStatusLabel,
     );
 
     // Upload reference images if any and save URLs
@@ -291,17 +318,43 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _updateEnquiry(UserModel currentUser) async {
+    final dropdownLookup = await ref.read(dropdownLookupProvider.future);
+
+    final statusValue = _selectedStatus ?? 'new';
+    final statusLabel = dropdownLookup.labelForStatus(statusValue);
+
+    final eventTypeValue = _selectedEventType ?? 'event';
+    final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
+
+    final priorityValue = _selectedPriority;
+    final priorityLabel =
+        priorityValue != null ? dropdownLookup.labelForPriority(priorityValue) : null;
+
+    final paymentStatusValue = _selectedPaymentStatus;
+    final paymentStatusLabel = paymentStatusValue != null
+        ? dropdownLookup.labelForPaymentStatus(paymentStatusValue)
+        : null;
+
     // Update the enquiry document directly
     await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
       'customerName': _nameController.text.trim(),
       'customerPhone': _phoneController.text.trim(),
       'eventLocation': _locationController.text.trim(),
       'description': _notesController.text.trim(),
-      'eventType': _selectedEventType,
+      'eventType': eventTypeValue,
+      'eventTypeValue': eventTypeValue,
+      'eventTypeLabel': eventTypeLabel,
       'eventDate': Timestamp.fromDate(_selectedDate!),
-      'priority': _selectedPriority,
-      'eventStatus': _selectedStatus,
-      'paymentStatus': _selectedPaymentStatus,
+      'priority': priorityValue,
+      'priorityValue': priorityValue,
+      'priorityLabel': priorityLabel,
+      'eventStatus': statusValue,
+      'status': statusValue,
+      'statusValue': statusValue,
+      'statusLabel': statusLabel,
+      'paymentStatus': paymentStatusValue,
+      'paymentStatusValue': paymentStatusValue,
+      'paymentStatusLabel': paymentStatusLabel,
       'assignedTo': _selectedAssignedTo,
       'totalCost': _parseDouble(_totalCostController.text),
       'advancePaid': _parseDouble(_advancePaidController.text),

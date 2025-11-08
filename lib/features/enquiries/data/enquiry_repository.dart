@@ -2,20 +2,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/firestore_service.dart';
+import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
 import '../filters/filters_state.dart';
 
 /// Provider for enquiry repository
 final enquiryRepositoryProvider = Provider<EnquiryRepository>((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
-  return EnquiryRepository(firestoreService);
+  final dropdownLookupFuture = ref.watch(dropdownLookupProvider.future);
+  return EnquiryRepository(
+    firestoreService,
+    dropdownLookupFuture,
+  );
 });
 
 /// Repository for enquiry data operations
 class EnquiryRepository {
   final FirestoreService _firestoreService;
+  final Future<DropdownLookup> _dropdownLookupFuture;
 
-  EnquiryRepository(this._firestoreService);
+  EnquiryRepository(this._firestoreService, this._dropdownLookupFuture);
 
   /// Get all enquiries as a stream
   Stream<List<Enquiry>> getEnquiries() {
@@ -63,8 +69,14 @@ class EnquiryRepository {
     required String nextStatus,
     required String userId,
   }) async {
+    final lookup = await _dropdownLookupFuture;
+    final statusLabel = lookup.labelForStatus(nextStatus);
+
     await FirebaseFirestore.instance.collection('enquiries').doc(id).update({
       'status': nextStatus,
+      'eventStatus': nextStatus,
+      'statusValue': nextStatus,
+      'statusLabel': statusLabel,
       'statusUpdatedAt': FieldValue.serverTimestamp(),
       'statusUpdatedBy': userId,
       'updatedAt': FieldValue.serverTimestamp(),

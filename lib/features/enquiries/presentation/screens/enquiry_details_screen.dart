@@ -8,6 +8,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../widgets/contact_buttons.dart';
 import 'enquiry_form_screen.dart';
+import '../../../../services/dropdown_lookup.dart';
 
 class NotificationService {
   Future<void> notifyStatusUpdated({
@@ -39,14 +40,15 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   // Allowed status transitions for staff users
   static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_talks', 'cancelled'],
-    'in_talks': ['quote_sent', 'cancelled'],
-    'quote_sent': ['confirmed', 'closed_lost'],
+    'new': ['in_talks', 'cancelled', 'not_interested'],
+    'in_talks': ['quote_sent', 'cancelled', 'not_interested'],
+    'quote_sent': ['confirmed', 'closed_lost', 'not_interested'],
     'confirmed': ['scheduled', 'cancelled'],
     'scheduled': ['completed', 'cancelled'],
     'completed': [],
     'cancelled': [],
     'closed_lost': [],
+    'not_interested': [],
   };
 
   @override
@@ -108,6 +110,78 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               }
 
               final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+              final dropdownLookup =
+                  ref.watch(dropdownLookupProvider).maybeWhen(data: (value) => value, orElse: () => null);
+
+              String _labelOrLookup(
+                String? label,
+                String value,
+                String Function(DropdownLookup, String) resolver,
+              ) {
+                if (label != null && label.trim().isNotEmpty) return label;
+                return dropdownLookup != null
+                    ? resolver(dropdownLookup, value)
+                    : DropdownLookup.titleCase(value);
+              }
+
+              final statusValueRaw =
+                  (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+              final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                  ? statusValueRaw!.trim()
+                  : 'new';
+              final statusLabel = _labelOrLookup(
+                enquiryData['statusLabel'] as String?,
+                statusValue,
+                (l, v) => l.labelForStatus(v),
+              );
+
+              final eventTypeValueRaw =
+                  (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
+              final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
+                  ? eventTypeValueRaw!.trim()
+                  : 'event';
+              final eventTypeLabel = _labelOrLookup(
+                enquiryData['eventTypeLabel'] as String?,
+                eventTypeValue,
+                (l, v) => l.labelForEventType(v),
+              );
+
+              final priorityValueRaw =
+                  (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
+              final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
+                  ? priorityValueRaw!.trim()
+                  : null;
+              final priorityLabel = priorityValue != null
+                  ? _labelOrLookup(
+                      enquiryData['priorityLabel'] as String?,
+                      priorityValue,
+                      (l, v) => l.labelForPriority(v),
+                    )
+                  : 'N/A';
+
+              final paymentStatusValueRaw =
+                  (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus']) as String?;
+              final paymentStatusValue =
+                  (paymentStatusValueRaw?.trim().isNotEmpty ?? false) ? paymentStatusValueRaw!.trim() : null;
+              final paymentStatusLabel = paymentStatusValue != null
+                  ? _labelOrLookup(
+                      enquiryData['paymentStatusLabel'] as String?,
+                      paymentStatusValue,
+                      (l, v) => l.labelForPaymentStatus(v),
+                    )
+                  : 'N/A';
+
+              final sourceValueRaw =
+                  (enquiryData['sourceValue'] ?? enquiryData['source']) as String?;
+              final sourceValue =
+                  (sourceValueRaw?.trim().isNotEmpty ?? false) ? sourceValueRaw!.trim() : null;
+              final sourceLabel = sourceValue != null
+                  ? _labelOrLookup(
+                      enquiryData['sourceLabel'] as String?,
+                      sourceValue,
+                      (l, v) => l.labelForSource(v),
+                    )
+                  : 'N/A';
 
               // Check if staff user can access this enquiry
               if (userRole != UserRole.admin) {
@@ -147,7 +221,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header with status
-                    _buildHeader(enquiryData, userRole, user.uid),
+                    _buildHeader(
+                      enquiryData,
+                      userRole,
+                      user.uid,
+                      statusValue,
+                      statusLabel,
+                    ),
                     const SizedBox(height: 24),
 
                     // Basic Information (Visible to all)
@@ -177,7 +257,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     _buildSection(
                       title: 'Event Details',
                       children: [
-                        _buildInfoRow('Event Type', (enquiryData['eventType'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Event Type', eventTypeLabel),
                         _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
                         _buildInfoRow(
                           'Guest Count',
@@ -187,11 +267,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           'Budget Range',
                           (enquiryData['budgetRange'] as String?) ?? 'N/A',
                         ),
-                        _buildInfoRow(
-                          'Priority',
-                          _capitalizeFirst((enquiryData['priority'] as String?) ?? 'N/A'),
-                        ),
-                        _buildInfoRow('Source', (enquiryData['source'] as String?) ?? 'N/A'),
+                        _buildInfoRow('Priority', priorityLabel),
+                        _buildInfoRow('Source', sourceLabel),
                       ],
                     ),
 
@@ -239,10 +316,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                             'Advance Paid',
                             _formatCurrency(enquiryData['advancePaid']),
                           ),
-                          _buildInfoRow(
-                            'Payment Status',
-                            _capitalizeFirst((enquiryData['paymentStatus'] as String?) ?? 'N/A'),
-                          ),
+                          _buildInfoRow('Payment Status', paymentStatusLabel),
                         ],
                       ),
                     ],
@@ -286,7 +360,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> enquiryData, UserRole? userRole, String currentUserId) {
+  Widget _buildHeader(
+    Map<String, dynamic> enquiryData,
+    UserRole? userRole,
+    String currentUserId,
+    String statusValue,
+    String statusLabel,
+  ) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -305,11 +385,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 ),
                 if (userRole == UserRole.admin) ...[
                   // Admin can edit status
-                  _buildStatusDropdown(enquiryData, isAdmin: true),
+                  _buildStatusDropdown(enquiryData, statusValue, statusLabel, isAdmin: true),
                 ] else if (userRole == UserRole.staff) ...[
                   // Staff can edit status (but only status) if assigned
                   _buildStatusDropdown(
                     enquiryData,
+                    statusValue,
+                    statusLabel,
                     isAdmin: false,
                     isAssignee: (enquiryData['assignedTo'] as String?) == currentUserId,
                   ),
@@ -318,11 +400,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(enquiryData['eventStatus'] as String?),
+                      color: _getStatusColor(statusValue),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      _capitalizeFirst(enquiryData['eventStatus'] as String? ?? 'N/A'),
+                      statusLabel,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
@@ -344,7 +426,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   }
 
   Widget _buildStatusDropdown(
-    Map<String, dynamic> enquiryData, {
+    Map<String, dynamic> enquiryData,
+    String currentStatusValue,
+    String currentStatusLabel, {
     required bool isAdmin,
     bool isAssignee = true,
   }) {
@@ -384,7 +468,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           statuses = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
         }
 
-        final currentStatus = (_selectedStatus ?? (enquiryData['eventStatus'] as String?)) ?? 'new';
+        final currentStatus = (_selectedStatus ?? currentStatusValue);
         final values = statuses.map((s) => (s['value'] as String?) ?? '').toList();
         final safeValue = values.contains(currentStatus)
             ? currentStatus
@@ -418,7 +502,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
                   : (value) async {
-                      if (value == null || value == enquiryData['eventStatus']) return;
+                      if (value == null || value == currentStatusValue) return;
 
                       // Staff transition guard
                       if (!isAdmin) {
@@ -442,13 +526,21 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       });
 
                       try {
-                        final oldStatus = (enquiryData['eventStatus'] as String?) ?? 'Unknown';
+                        final oldStatus = currentStatusLabel;
+                        final lookup = await ref.read(dropdownLookupProvider.future);
+                        final nextLabel = lookup.labelForStatus(value);
 
                         await FirebaseFirestore.instance
                             .collection('enquiries')
                             .doc(widget.enquiryId)
                             .update({
                               'eventStatus': value,
+                              'status': value,
+                              'statusValue': value,
+                              'statusLabel': nextLabel,
+                              'statusUpdatedAt': FieldValue.serverTimestamp(),
+                              'statusUpdatedBy':
+                                  ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                               'updatedAt': FieldValue.serverTimestamp(),
                               'updatedBy':
                                   ref.read(currentUserWithFirestoreProvider).value?.uid ??
@@ -461,7 +553,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           enquiryId: widget.enquiryId,
                           fieldChanged: 'eventStatus',
                           oldValue: oldStatus,
-                          newValue: value,
+                          newValue: nextLabel,
                         );
 
                         // Send notification for status update
@@ -471,7 +563,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           customerName:
                               enquiryData['customerName'] as String? ?? 'Unknown Customer',
                           oldStatus: oldStatus,
-                          newStatus: value,
+                          newStatus: nextLabel,
                           updatedBy:
                               ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                         );
@@ -487,7 +579,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       } catch (e) {
                         // Rollback optimistic selection on error
                         setState(() {
-                          _selectedStatus = enquiryData['eventStatus'] as String?;
+                          _selectedStatus = currentStatusValue;
                         });
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

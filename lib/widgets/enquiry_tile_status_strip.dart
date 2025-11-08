@@ -12,6 +12,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
     required this.name,
     required this.status,
     required this.eventType,
+    this.eventCountdownLabel,
     required this.ageLabel,
     this.assignee,
     required this.dateLabel,
@@ -33,6 +34,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final String name;
   final String status;
   final String eventType;
+  final String? eventCountdownLabel;
   final String ageLabel;
   final String? assignee;
   final String dateLabel;
@@ -138,6 +140,7 @@ class _EnquiryTileStatusStripState
                               eventType: widget.eventType,
                               eventColor: eventColor,
                               ageLabel: widget.ageLabel,
+                              eventCountdownLabel: widget.eventCountdownLabel,
                               assignee: widget.assignee,
                               neutralBg: neutralBg,
                               neutralText: neutralText,
@@ -449,6 +452,7 @@ class _ChipWrap extends StatelessWidget {
     required this.status,
     required this.statusColor,
     required this.eventType,
+    required this.eventCountdownLabel,
     required this.eventColor,
     required this.ageLabel,
     required this.assignee,
@@ -459,11 +463,30 @@ class _ChipWrap extends StatelessWidget {
   final String status;
   final Color statusColor;
   final String eventType;
+  final String? eventCountdownLabel;
   final Color eventColor;
   final String ageLabel;
   final String? assignee;
   final Color neutralBg;
   final Color neutralText;
+
+  String _prettify(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) return 'Unknown';
+
+    final normalized = trimmed.replaceAll(RegExp(r'[_-]+'), ' ');
+    final words =
+        normalized.split(RegExp(r'\\s+')).where((word) => word.isNotEmpty).toList();
+
+    if (words.isEmpty) return 'Unknown';
+
+    return words.map((word) {
+      final lower = word.toLowerCase();
+      if (lower == 'vip') return 'VIP';
+      if (lower.length == 1) return lower.toUpperCase();
+      return '${lower[0].toUpperCase()}${lower.substring(1)}';
+    }).join(' ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -478,7 +501,7 @@ class _ChipWrap extends StatelessWidget {
         ),
         backgroundColor: statusColor.withOpacity(0.18),
         label: Text(
-          status,
+          _prettify(status),
           style: TextStyle(color: statusColor, fontWeight: FontWeight.w500),
         ),
       ),
@@ -488,10 +511,22 @@ class _ChipWrap extends StatelessWidget {
         ),
         backgroundColor: eventColor.withOpacity(0.18),
         label: Text(
-          eventType,
+          _prettify(eventType),
           style: TextStyle(color: eventColor, fontWeight: FontWeight.w500),
         ),
       ),
+      if (eventCountdownLabel != null && eventCountdownLabel!.trim().isNotEmpty)
+        Chip(
+          shape: StadiumBorder(
+            side: BorderSide(color: eventColor.withOpacity(0.2)),
+          ),
+          backgroundColor: eventColor.withOpacity(0.12),
+          avatar: Icon(Icons.calendar_today, size: 16, color: eventColor),
+          label: Text(
+            eventCountdownLabel!,
+            style: TextStyle(color: eventColor, fontWeight: FontWeight.w500),
+          ),
+        ),
       Chip(
         shape: StadiumBorder(
           side: BorderSide(color: neutralText.withOpacity(0.2)),
