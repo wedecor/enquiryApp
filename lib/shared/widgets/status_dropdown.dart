@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/role_provider.dart';
+import '../../utils/logger.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
@@ -84,9 +85,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         _statuses = statuses;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
       // Fallback to default values if Firestore is not available
-      print('⚠️ Using fallback values for ${widget.collectionName}: $e');
+      Log.w(
+        'StatusDropdown fallback values',
+        data: {'collection': widget.collectionName, 'error': e.runtimeType.toString()},
+      );
+      Log.d('StatusDropdown fallback stack', data: st);
       setState(() {
         _statuses = _getDefaultValues(widget.collectionName);
         _isLoading = false;

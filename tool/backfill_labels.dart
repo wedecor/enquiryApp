@@ -1,13 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import '../lib/firebase_options.dart';
-import '../lib/services/dropdown_lookup.dart';
+import 'package:we_decor_enquiries/firebase_options.dart';
+import 'package:we_decor_enquiries/services/dropdown_lookup.dart';
 
 Future<void> main() async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final db = FirebaseFirestore.instance;
   final lookup = DropdownLookup(db);
@@ -18,8 +16,10 @@ Future<void> main() async {
   var totalUpdated = 0;
 
   while (true) {
-    Query<Map<String, dynamic>> query =
-        db.collection('enquiries').orderBy(FieldPath.documentId).limit(pageSize);
+    Query<Map<String, dynamic>> query = db
+        .collection('enquiries')
+        .orderBy(FieldPath.documentId)
+        .limit(pageSize);
     if (lastDoc != null) {
       query = query.startAfterDocument(lastDoc);
     }
@@ -36,16 +36,11 @@ Future<void> main() async {
       final data = doc.data();
       final updates = <String, dynamic>{};
 
-      final statusValue =
-          (data['statusValue'] ?? data['eventStatus']) as String?;
-      final eventTypeValue =
-          (data['eventTypeValue'] ?? data['eventType']) as String?;
-      final priorityValue =
-          (data['priorityValue'] ?? data['priority']) as String?;
-      final paymentStatusValue =
-          (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
-      final sourceValue =
-          (data['sourceValue'] ?? data['source']) as String?;
+      final statusValue = (data['statusValue'] ?? data['eventStatus']) as String?;
+      final eventTypeValue = (data['eventTypeValue'] ?? data['eventType']) as String?;
+      final priorityValue = (data['priorityValue'] ?? data['priority']) as String?;
+      final paymentStatusValue = (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
+      final sourceValue = (data['sourceValue'] ?? data['source']) as String?;
 
       if (statusValue != null) {
         if (data['statusValue'] == null) {
@@ -82,8 +77,7 @@ Future<void> main() async {
           updates['paymentStatusValue'] = paymentStatusValue;
         }
         if (data['paymentStatusLabel'] == null) {
-          updates['paymentStatusLabel'] =
-              lookup.labelForPaymentStatus(paymentStatusValue);
+          updates['paymentStatusLabel'] = lookup.labelForPaymentStatus(paymentStatusValue);
         }
         if (data['paymentStatus'] == null) {
           updates['paymentStatus'] = paymentStatusValue;
@@ -123,4 +117,3 @@ Future<void> main() async {
 
   print('Backfill complete. Updated $totalUpdated enquiry documents.');
 }
-

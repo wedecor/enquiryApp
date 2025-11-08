@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/audit_service.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
+import '../../../../utils/logger.dart';
 import '../widgets/contact_buttons.dart';
 import 'enquiry_form_screen.dart';
-import '../../../../services/dropdown_lookup.dart';
 
 class NotificationService {
   Future<void> notifyStatusUpdated({
@@ -19,7 +20,15 @@ class NotificationService {
     required String updatedBy,
   }) async {
     // TODO: Implement notification
-    print('Notification: Status updated for $customerName from $oldStatus to $newStatus');
+    Log.i(
+      'Status update notification pending implementation',
+      data: {
+        'enquiryId': enquiryId,
+        'oldStatus': oldStatus,
+        'newStatus': newStatus,
+        'updatedBy': updatedBy,
+      },
+    );
   }
 }
 
@@ -110,8 +119,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               }
 
               final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
-              final dropdownLookup =
-                  ref.watch(dropdownLookupProvider).maybeWhen(data: (value) => value, orElse: () => null);
+              final dropdownLookup = ref
+                  .watch(dropdownLookupProvider)
+                  .maybeWhen(data: (value) => value, orElse: () => null);
 
               String _labelOrLookup(
                 String? label,
@@ -161,8 +171,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
               final paymentStatusValueRaw =
                   (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus']) as String?;
-              final paymentStatusValue =
-                  (paymentStatusValueRaw?.trim().isNotEmpty ?? false) ? paymentStatusValueRaw!.trim() : null;
+              final paymentStatusValue = (paymentStatusValueRaw?.trim().isNotEmpty ?? false)
+                  ? paymentStatusValueRaw!.trim()
+                  : null;
               final paymentStatusLabel = paymentStatusValue != null
                   ? _labelOrLookup(
                       enquiryData['paymentStatusLabel'] as String?,
@@ -173,8 +184,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
               final sourceValueRaw =
                   (enquiryData['sourceValue'] ?? enquiryData['source']) as String?;
-              final sourceValue =
-                  (sourceValueRaw?.trim().isNotEmpty ?? false) ? sourceValueRaw!.trim() : null;
+              final sourceValue = (sourceValueRaw?.trim().isNotEmpty ?? false)
+                  ? sourceValueRaw!.trim()
+                  : null;
               final sourceLabel = sourceValue != null
                   ? _labelOrLookup(
                       enquiryData['sourceLabel'] as String?,
@@ -221,13 +233,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header with status
-                    _buildHeader(
-                      enquiryData,
-                      userRole,
-                      user.uid,
-                      statusValue,
-                      statusLabel,
-                    ),
+                    _buildHeader(enquiryData, userRole, user.uid, statusValue, statusLabel),
                     const SizedBox(height: 24),
 
                     // Basic Information (Visible to all)
@@ -540,7 +546,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               'statusLabel': nextLabel,
                               'statusUpdatedAt': FieldValue.serverTimestamp(),
                               'statusUpdatedBy':
-                                  ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                                  ref.read(currentUserWithFirestoreProvider).value?.uid ??
+                                  'unknown',
                               'updatedAt': FieldValue.serverTimestamp(),
                               'updatedBy':
                                   ref.read(currentUserWithFirestoreProvider).value?.uid ??

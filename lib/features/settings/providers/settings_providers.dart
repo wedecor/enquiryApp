@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/current_user_role_provider.dart';
+import '../../../utils/logger.dart';
 import '../data/app_config_service.dart';
 import '../data/user_settings_service.dart';
 import '../domain/app_config.dart';
@@ -55,18 +56,17 @@ final updateUserSettingsProvider = Provider<Future<void> Function(UserSettings)>
       throw Exception('User not authenticated - cannot save preferences');
     }
 
-    // Log authentication state
-    print('DEBUG: Saving preferences for UID: $uid');
-    print('DEBUG: Settings theme: ${settings.theme}');
-    print('DEBUG: Settings language: ${settings.language}');
+    Log.d(
+      'Saving user preferences',
+      data: {'uid': uid, 'theme': settings.theme, 'language': settings.language},
+    );
 
     final service = ref.read(userSettingsServiceProvider);
     try {
       await service.update(uid, settings);
-      print('DEBUG: Preferences saved successfully');
+      Log.d('Preferences saved successfully', data: {'uid': uid});
     } catch (e) {
-      print('DEBUG: Error saving preferences: $e');
-      print('DEBUG: Error type: ${e.runtimeType}');
+      Log.e('Error saving preferences', error: e);
       throw Exception('Failed to save preferences: $e');
     }
   };

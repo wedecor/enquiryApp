@@ -56,22 +56,19 @@ class Enquiry with _$Enquiry {
       customerName: data['customerName'] as String? ?? '',
       customerEmail: data['customerEmail'] as String?,
       customerPhone: data['customerPhone'] as String?,
-      eventType:
-          (data['eventTypeValue'] as String?) ?? (data['eventType'] as String?) ?? '',
+      eventType: (data['eventTypeValue'] as String?) ?? (data['eventType'] as String?) ?? '',
       eventTypeLabel: data['eventTypeLabel'] as String?,
       eventDate: (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       eventLocation: data['eventLocation'] as String?,
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
       description: data['description'] as String?,
-      status: (data['statusValue'] ??
-              data['eventStatus'] ??
-              data['status'] ??
-              data['status_slug']) as String? ??
+      status:
+          (data['statusValue'] ?? data['eventStatus'] ?? data['status'] ?? data['status_slug'])
+              as String? ??
           'new',
       statusLabel: data['statusLabel'] as String?,
-      paymentStatus:
-          (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
+      paymentStatus: (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
       paymentStatusLabel: data['paymentStatusLabel'] as String?,
       totalCost: (data['totalCost'] as num?)?.toDouble(),
       advancePaid: (data['advancePaid'] as num?)?.toDouble(),

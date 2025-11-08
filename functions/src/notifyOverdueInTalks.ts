@@ -66,7 +66,10 @@ export const notifyOverdueInTalks = onSchedule(
         );
 
         if (tokens.length === 0) {
-          logger.debug("No tokens for overdue enquiry assignee", { enquiryId: doc.id, assignedTo });
+          logger.debug("No notification devices found for overdue enquiry assignee", {
+            enquiryId: doc.id,
+            tokenCount: 0,
+          });
           continue;
         }
 

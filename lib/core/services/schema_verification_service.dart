@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../utils/logger.dart';
+
 /// Schema validation result
 class SchemaValidationResult {
   final bool isValid;
@@ -38,8 +40,8 @@ class SchemaVerificationService {
 
       // Verify history subcollections
       results['history'] = await _verifyHistorySchema();
-    } catch (e) {
-      print('SchemaVerificationService: Error during schema verification: $e');
+    } catch (e, st) {
+      Log.e('SchemaVerificationService error during verification', error: e, stackTrace: st);
     }
 
     return results;

@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/user_model.dart';
+import '../../utils/logger.dart';
 
 /// Service for handling Firebase Cloud Messaging (FCM)
 class FCMService {
@@ -26,24 +27,26 @@ class FCMService {
       );
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        print('FCM: User granted permission');
+        Log.i('FCM permission granted', data: {'status': 'authorized'});
       } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-        print('FCM: User granted provisional permission');
+        Log.i('FCM permission granted', data: {'status': 'provisional'});
       } else {
-        print('FCM: User declined or has not accepted permission');
+        Log.w(
+          'FCM permission denied or not accepted',
+          data: {'status': settings.authorizationStatus.name},
+        );
         return;
       }
 
       // Get FCM token
       final String? token = await _messaging.getToken();
       if (token != null) {
-        // TODO: Replace with safeLog - print('FCM Token: $token');
+        // TODO: Replace with safeLog - Log.i('FCM token retrieved');
         await _saveTokenToUserProfile(token);
       }
 
       // Listen for token refresh
       _messaging.onTokenRefresh.listen((newToken) {
-        // TODO: Replace with safeLog - print('FCM Token refreshed: $newToken');
         _saveTokenToUserProfile(newToken);
       });
 
@@ -64,8 +67,8 @@ class FCMService {
       if (initialMessage != null) {
         _handleMessageOpenedApp(initialMessage);
       }
-    } catch (e) {
-      print('FCM initialization error: $e');
+    } catch (e, st) {
+      Log.e('FCM initialization error', error: e, stackTrace: st);
     }
   }
 
@@ -87,10 +90,10 @@ class FCMService {
               'createdAt': FieldValue.serverTimestamp(),
               'lastUpdate': FieldValue.serverTimestamp(),
             }, SetOptions(merge: true));
-        // TODO: Replace with safeLog - print('FCM: Token saved to private collection');
+        // TODO: Replace with safeLog - Log.i('FCM: token saved to private collection');
       }
     } catch (e) {
-      // TODO: Replace with safeLog - print('FCM: Error saving token to user profile: $e');
+      // TODO: Replace with safeLog - Log.e('FCM: error saving token to user profile');
     }
   }
 
@@ -120,9 +123,9 @@ class FCMService {
         }
       }
 
-      print('FCM: Subscribed to relevant topics');
-    } catch (e) {
-      print('FCM: Error subscribing to topics: $e');
+      Log.i('FCM: subscribed to relevant topics');
+    } catch (e, st) {
+      Log.e('FCM: error subscribing to topics', error: e, stackTrace: st);
     }
   }
 
@@ -144,15 +147,15 @@ class FCMService {
         await _messaging.subscribeToTopic('user_${user.uid}');
       }
 
-      print('FCM: Updated topic subscriptions for user ${user.uid}');
-    } catch (e) {
-      print('FCM: Error updating topic subscriptions: $e');
+      Log.i('FCM: updated topic subscriptions', data: {'uid': user.uid, 'role': user.role.name});
+    } catch (e, st) {
+      Log.e('FCM: error updating topic subscriptions', error: e, stackTrace: st);
     }
   }
 
   /// Handle foreground messages
   void _handleForegroundMessage(RemoteMessage message) {
-    print('FCM: Received foreground message: ${message.messageId}');
+    Log.d('FCM: received foreground message', data: {'messageId': message.messageId});
 
     // Show local notification for foreground messages
     _showLocalNotification(message);
@@ -160,7 +163,7 @@ class FCMService {
 
   /// Handle message when app is opened from background
   void _handleMessageOpenedApp(RemoteMessage message) {
-    print('FCM: App opened from notification: ${message.messageId}');
+    Log.d('FCM: app opened from notification', data: {'messageId': message.messageId});
 
     // Handle navigation based on message data
     _handleNotificationNavigation(message);
@@ -168,9 +171,8 @@ class FCMService {
 
   /// Show local notification for foreground messages
   void _showLocalNotification(RemoteMessage message) {
-    // TODO: Implement local notification display
-    // This would typically use flutter_local_notifications package
-    print('FCM: Would show local notification: ${message.notification?.title}');
+    // TODO: Implement local notification display using flutter_local_notifications
+    Log.d('FCM: would show local notification', data: {'title': message.notification?.title});
   }
 
   /// Handle navigation based on notification data
@@ -181,19 +183,19 @@ class FCMService {
     switch (data['type']) {
       case 'new_enquiry':
         // Navigate to enquiry details
-        print('FCM: Navigate to enquiry: ${data['enquiryId']}');
+        Log.d('FCM: navigate to enquiry', data: {'enquiryId': data['enquiryId']});
         break;
       case 'enquiry_assigned':
         // Navigate to assigned enquiry
-        print('FCM: Navigate to assigned enquiry: ${data['enquiryId']}');
+        Log.d('FCM: navigate to assigned enquiry', data: {'enquiryId': data['enquiryId']});
         break;
       case 'status_update':
         // Navigate to updated enquiry
-        print('FCM: Navigate to updated enquiry: ${data['enquiryId']}');
+        Log.d('FCM: navigate to updated enquiry', data: {'enquiryId': data['enquiryId']});
         break;
       default:
         // Navigate to dashboard or general area
-        print('FCM: Navigate to general area');
+        Log.d('FCM: navigate to general area');
         break;
     }
   }
@@ -217,9 +219,9 @@ class FCMService {
         await _messaging.unsubscribeFromTopic('user_${currentUser.uid}');
       }
 
-      print('FCM: Unsubscribed from all topics');
-    } catch (e) {
-      print('FCM: Error unsubscribing from topics: $e');
+      Log.i('FCM: unsubscribed from all topics');
+    } catch (e, st) {
+      Log.e('FCM: error unsubscribing from topics', error: e, stackTrace: st);
     }
   }
 
@@ -239,11 +241,11 @@ class FCMService {
               .collection('tokens')
               .doc(token)
               .delete();
-          // TODO: Replace with safeLog - print('FCM: Token deleted from private collection');
+          // TODO: Replace with safeLog - Log.i('FCM: token deleted from private collection');
         }
       }
     } catch (e) {
-      // TODO: Replace with safeLog - print('FCM: Error deleting token from user profile: $e');
+      // TODO: Replace with safeLog - Log.e('FCM: error deleting token from user profile');
     }
   }
 }
@@ -251,7 +253,7 @@ class FCMService {
 /// Background message handler (must be top-level function)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  print('FCM: Handling background message: ${message.messageId}');
+  Log.d('FCM: handling background message', data: {'messageId': message.messageId});
 
   // Handle background message processing
   // This could include updating local storage, triggering sync, etc.

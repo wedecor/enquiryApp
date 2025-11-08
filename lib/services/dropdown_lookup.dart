@@ -17,15 +17,13 @@ class DropdownLookup {
   Future<void> ensureLoaded() async {
     if (_loaded) return;
 
-    final results = await Future.wait<Map<String, String>>(
-      <Future<Map<String, String>>>[
-        _loadMap('statuses'),
-        _loadMap('event_types'),
-        _loadMap('payment_statuses'),
-        _loadMap('priorities'),
-        _loadMap('sources'),
-      ],
-    );
+    final results = await Future.wait<Map<String, String>>(<Future<Map<String, String>>>[
+      _loadMap('statuses'),
+      _loadMap('event_types'),
+      _loadMap('payment_statuses'),
+      _loadMap('priorities'),
+      _loadMap('sources'),
+    ]);
 
     statusMap = results[0];
     eventTypeMap = results[1];
@@ -36,8 +34,7 @@ class DropdownLookup {
   }
 
   Future<Map<String, String>> _loadMap(String kind) async {
-    final snapshot =
-        await _db.collection('dropdowns').doc(kind).collection('items').get();
+    final snapshot = await _db.collection('dropdowns').doc(kind).collection('items').get();
     final map = <String, String>{};
     for (final doc in snapshot.docs) {
       final data = doc.data();
@@ -48,20 +45,16 @@ class DropdownLookup {
     return map;
   }
 
-  String labelForStatus(String value) =>
-      statusMap[value] ?? DropdownLookup.titleCase(value);
+  String labelForStatus(String value) => statusMap[value] ?? DropdownLookup.titleCase(value);
 
-  String labelForEventType(String value) =>
-      eventTypeMap[value] ?? DropdownLookup.titleCase(value);
+  String labelForEventType(String value) => eventTypeMap[value] ?? DropdownLookup.titleCase(value);
 
   String labelForPaymentStatus(String value) =>
       paymentStatusMap[value] ?? DropdownLookup.titleCase(value);
 
-  String labelForPriority(String value) =>
-      priorityMap[value] ?? DropdownLookup.titleCase(value);
+  String labelForPriority(String value) => priorityMap[value] ?? DropdownLookup.titleCase(value);
 
-  String labelForSource(String value) =>
-      sourceMap[value] ?? DropdownLookup.titleCase(value);
+  String labelForSource(String value) => sourceMap[value] ?? DropdownLookup.titleCase(value);
 
   static String titleCase(String value) {
     final normalized = value.replaceAll(RegExp(r'[_-]+'), ' ').trim();
@@ -70,9 +63,10 @@ class DropdownLookup {
     }
     final words = normalized.split(RegExp(r'\s+'));
     return words
-        .map((word) => word.isEmpty
-            ? word
-            : '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
+        .map(
+          (word) =>
+              word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+        )
         .join(' ');
   }
 
@@ -92,4 +86,3 @@ final dropdownLookupProvider = FutureProvider<DropdownLookup>((ref) async {
   ref.onDispose(lookup.reset);
   return lookup;
 });
-

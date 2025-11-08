@@ -241,8 +241,7 @@ class FirestoreService {
       if (eventTypeLabel != null) 'eventTypeLabel': eventTypeLabel,
       'paymentStatus': paymentStatus ?? 'unpaid',
       'paymentStatusValue': paymentStatus ?? 'unpaid',
-      if (paymentStatusLabel != null)
-        'paymentStatusLabel': paymentStatusLabel,
+      if (paymentStatusLabel != null) 'paymentStatusLabel': paymentStatusLabel,
       'totalCost': totalCost,
       'advancePaid': advancePaid,
       'assignedTo': assignedTo,

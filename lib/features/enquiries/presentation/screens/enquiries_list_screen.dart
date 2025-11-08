@@ -52,8 +52,9 @@ class EnquiriesListScreen extends ConsumerWidget {
             return const Center(child: Text('Please log in to view enquiries'));
           }
 
-          final dropdownLookup =
-              ref.watch(dropdownLookupProvider).maybeWhen(data: (value) => value, orElse: () => null);
+          final dropdownLookup = ref
+              .watch(dropdownLookupProvider)
+              .maybeWhen(data: (value) => value, orElse: () => null);
 
           return StreamBuilder<QuerySnapshot>(
             stream: _getEnquiriesStream(userRole, user.uid),
@@ -105,9 +106,9 @@ class EnquiriesListScreen extends ConsumerWidget {
                       : 'new';
                   final statusLabel =
                       (enquiryData['statusLabel'] as String?) ??
-                          (dropdownLookup != null
-                              ? dropdownLookup.labelForStatus(statusValue)
-                              : DropdownLookup.titleCase(statusValue));
+                      (dropdownLookup != null
+                          ? dropdownLookup.labelForStatus(statusValue)
+                          : DropdownLookup.titleCase(statusValue));
                   final eventTypeValueRaw =
                       (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
                   final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
@@ -115,28 +116,27 @@ class EnquiriesListScreen extends ConsumerWidget {
                       : 'event';
                   final eventTypeLabel =
                       (enquiryData['eventTypeLabel'] as String?) ??
-                          (dropdownLookup != null
-                              ? dropdownLookup.labelForEventType(eventTypeValue)
-                              : DropdownLookup.titleCase(eventTypeValue));
+                      (dropdownLookup != null
+                          ? dropdownLookup.labelForEventType(eventTypeValue)
+                          : DropdownLookup.titleCase(eventTypeValue));
                   final priorityValueRaw =
                       (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
-                  final priorityValue =
-                      (priorityValueRaw?.trim().isNotEmpty ?? false) ? priorityValueRaw!.trim() : null;
-                  final priorityLabel = (enquiryData['priorityLabel'] as String?) ??
+                  final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
+                      ? priorityValueRaw!.trim()
+                      : null;
+                  final priorityLabel =
+                      (enquiryData['priorityLabel'] as String?) ??
                       (priorityValue != null
                           ? (dropdownLookup != null
-                              ? dropdownLookup.labelForPriority(priorityValue)
-                              : DropdownLookup.titleCase(priorityValue))
+                                ? dropdownLookup.labelForPriority(priorityValue)
+                                : DropdownLookup.titleCase(priorityValue))
                           : 'N/A');
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: _getStatusColor(
-                          context,
-                          statusValue,
-                        ),
+                        backgroundColor: _getStatusColor(context, statusValue),
                         child: Text(
                           _getStatusInitial(statusLabel),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

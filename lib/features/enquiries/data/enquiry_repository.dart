@@ -10,10 +10,7 @@ import '../filters/filters_state.dart';
 final enquiryRepositoryProvider = Provider<EnquiryRepository>((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   final dropdownLookupFuture = ref.watch(dropdownLookupProvider.future);
-  return EnquiryRepository(
-    firestoreService,
-    dropdownLookupFuture,
-  );
+  return EnquiryRepository(firestoreService, dropdownLookupFuture);
 });
 
 /// Repository for enquiry data operations
