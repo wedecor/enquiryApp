@@ -31,6 +31,16 @@ jobs:
       - name: Generate code
         run: bash tool/ensure_codegen.sh
 
+      - name: Guard google-services.json secret
+        if: ${{ secrets.GOOGLE_SERVICES_JSON == '' }}
+        run: |
+          echo "::error::Missing GOOGLE_SERVICES_JSON secret. Add the Base64-encoded google-services.json to repository secrets."
+          exit 1
+
+      - name: Configure google-services.json
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 --decode > android/app/google-services.json
+
       - name: Build release APK
         run: flutter build apk --release
 
