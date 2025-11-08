@@ -28,6 +28,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate code
+        run: bash tool/ensure_codegen.sh
+
       - name: Build release APK
         run: flutter build apk --release
 
