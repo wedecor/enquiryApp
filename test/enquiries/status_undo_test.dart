@@ -84,10 +84,7 @@ void main() {
       await tester.tap(find.text('quoted').last);
       await tester.pump();
 
-      verify(
-        () =>
-            repo.updateStatus(id: 'E2', nextStatus: 'quoted', userId: 'staff1'),
-      ).called(1);
+      verify(() => repo.updateStatus(id: 'E2', nextStatus: 'quoted', userId: 'staff1')).called(1);
     });
   });
 }

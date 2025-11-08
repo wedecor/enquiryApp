@@ -25,7 +25,8 @@ class StatsCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final Color cardColor = background ??
+    final Color cardColor =
+        background ??
         (colorScheme.brightness == Brightness.dark
             ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.32)
             : colorScheme.surfaceContainerHighest.withValues(alpha: 0.18));
@@ -45,13 +46,9 @@ class StatsCard extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             );
-            final valueStyle = (compact
-                    ? theme.textTheme.headlineSmall
-                    : theme.textTheme.headlineMedium)
-                ?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
-            );
+            final valueStyle =
+                (compact ? theme.textTheme.headlineSmall : theme.textTheme.headlineMedium)
+                    ?.copyWith(fontWeight: FontWeight.w700, color: colorScheme.onSurface);
             final subtitleStyle = theme.textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             );
@@ -76,11 +73,7 @@ class StatsCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         alignment: Alignment.center,
-                        child: Icon(
-                          icon,
-                          size: compact ? 18 : 20,
-                          color: iconForeground,
-                        ),
+                        child: Icon(icon, size: compact ? 18 : 20, color: iconForeground),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -100,11 +93,7 @@ class StatsCard extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          value,
-                          maxLines: 1,
-                          style: valueStyle,
-                        ),
+                        child: Text(value, maxLines: 1, style: valueStyle),
                       ),
                     ),
                   ),

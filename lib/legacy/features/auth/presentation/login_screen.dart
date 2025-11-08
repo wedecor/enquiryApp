@@ -66,19 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     await _handle(
-      () => AuthService.instance.signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
-      ),
+      () => AuthService.instance.signIn(_emailController.text.trim(), _passwordController.text),
     );
   }
 
   Future<void> _signUp() async {
     await _handle(
-      () => AuthService.instance.signUp(
-        _emailController.text.trim(),
-        _passwordController.text,
-      ),
+      () => AuthService.instance.signUp(_emailController.text.trim(), _passwordController.text),
     );
   }
 
@@ -138,10 +132,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Welcome back',
-                        style: theme.textTheme.headlineMedium,
-                      ),
+                      Text('Welcome back', style: theme.textTheme.headlineMedium),
                       SizedBox(height: Spacing.sm),
                       Text(
                         'Sign in with your email and password.',
@@ -167,14 +158,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Password',
                           prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
-                            tooltip: _obscurePassword
-                                ? 'Show password'
-                                : 'Hide password',
+                            tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                             onPressed: _loading
                                 ? null
-                                : () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
+                                : () => setState(() => _obscurePassword = !_obscurePassword),
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_outlined
@@ -188,10 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: _validatePassword,
                       ),
                       SizedBox(height: Spacing.xxl),
-                      _PrimaryButton(
-                        label: 'Sign in',
-                        onPressed: _loading ? null : _signIn,
-                      ),
+                      _PrimaryButton(label: 'Sign in', onPressed: _loading ? null : _signIn),
                       SizedBox(height: Spacing.lg),
                       _SecondaryButton(
                         label: 'Create account',
@@ -242,9 +226,7 @@ class _PrimaryButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(Spacing.minTouchTarget),
-        ),
+        style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(Spacing.minTouchTarget)),
         child: Text(label),
       ),
     );
@@ -263,9 +245,7 @@ class _SecondaryButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(Spacing.minTouchTarget),
-        ),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(Spacing.minTouchTarget)),
         child: Text(label),
       ),
     );

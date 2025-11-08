@@ -90,6 +90,3 @@ extension SessionStateExtensions on SessionState {
     error: (_, __) => null,
   );
 }
-
-
-

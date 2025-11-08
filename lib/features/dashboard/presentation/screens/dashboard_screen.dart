@@ -9,6 +9,7 @@ import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/stats_card.dart';
+import '../../../../utils/logger.dart';
 import '../../../../widgets/enquiry_tile_status_strip.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
@@ -50,9 +51,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
     _primeDropdownColors();
-    _tabs = _statusTabs
-        .map((tab) => Tab(text: tab['label']!))
-        .toList(growable: false);
+    _tabs = _statusTabs.map((tab) => Tab(text: tab['label']!)).toList(growable: false);
   }
 
   Future<void> _primeDropdownColors() async {
@@ -92,18 +91,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
       }
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('Failed to load dropdown colors: $e');
-        debugPrint('$st');
-      }
+      Log.w('Failed to load dropdown colors', data: {'error': e.toString()});
+      Log.d('Dropdown color load stack', data: st.toString());
     }
 
     if (mounted) setState(() {});
 
     if (kDebugMode) {
-      debugPrint(
-        '[DropdownCaches] statuses=${_statusColorCache.map((k, v) => MapEntry(k, v.value.toRadixString(16)))} '
-        'events=${_eventColorCache.map((k, v) => MapEntry(k, v.value.toRadixString(16)))}',
+      Log.d(
+        'Dropdown caches primed',
+        data: {
+          'statuses': _statusColorCache.keys.toList(),
+          'eventTypes': _eventColorCache.keys.toList(),
+        },
       );
     }
   }
@@ -124,9 +124,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       final g = clampChannel(match.group(2)!);
       final b = clampChannel(match.group(3)!);
       final rawAlpha = match.group(4);
-      final alpha = rawAlpha != null
-          ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0)
-          : 1.0;
+      final alpha = rawAlpha != null ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0) : 1.0;
       return Color.fromRGBO(r, g, b, alpha);
     }
 
@@ -205,11 +203,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(
-              builder: (context) => const EnquiryFormScreen(),
-            ),
-          );
+          Navigator.of(
+            context,
+          ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
         },
         tooltip: 'Add New Enquiry',
         child: const Icon(Icons.add),
@@ -217,27 +213,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildDashboardContent(
-    BuildContext context,
-    UserModel? user,
-    bool isAdmin,
-  ) {
-    final tabBar = TabBar(
-      controller: _tabController,
-      tabs: _tabs,
-      isScrollable: true,
-    );
+  Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
+    final tabBar = TabBar(controller: _tabController, tabs: _tabs, isScrollable: true);
 
     return SafeArea(
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(
-            child: _buildWelcomeAndStats(user, isAdmin),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(tabBar),
-          ),
+          SliverToBoxAdapter(child: _buildWelcomeAndStats(user, isAdmin)),
+          SliverPersistentHeader(pinned: true, delegate: _TabBarDelegate(tabBar)),
         ],
         body: TabBarView(
           controller: _tabController,
@@ -272,9 +255,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 radius: 25,
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 child: Text(
-                  user?.name.isNotEmpty == true
-                      ? user!.name[0].toUpperCase()
-                      : 'U',
+                  user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -289,10 +270,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   children: [
                     Text(
                       'Welcome back, ${user?.name ?? 'User'}!',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       isAdmin ? 'Administrator' : 'Staff Member',
@@ -344,11 +322,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             value: totalEnquiries.toString(),
             label: 'Total enquiries',
           ),
-          StatsCard(
-            icon: Icons.fiber_new,
-            value: newEnquiries.toString(),
-            label: 'New',
-          ),
+          StatsCard(icon: Icons.fiber_new, value: newEnquiries.toString(), label: 'New'),
           StatsCard(
             icon: Icons.handshake_outlined,
             value: inProgressEnquiries.toString(),
@@ -368,11 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildEnquiriesTab(String status, bool isAdmin, String? userId) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(
-        isAdmin,
-        userId,
-        status == 'All' ? null : status,
-      ),
+      stream: _getEnquiriesStream(isAdmin, userId, status == 'All' ? null : status),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return _buildErrorWidget(context, snapshot.error!);
@@ -389,16 +359,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.sentiment_dissatisfied,
-                  size: 64,
-                  color: Colors.grey,
-                ),
+                const Icon(Icons.sentiment_dissatisfied, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
                 Text(
-                  status == 'All'
-                      ? 'No enquiries found'
-                      : 'No $status enquiries',
+                  status == 'All' ? 'No enquiries found' : 'No $status enquiries',
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -421,8 +385,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           return bCreated.compareTo(aCreated);
         });
 
-        final dropdownLookup =
-            ref.watch(dropdownLookupProvider).maybeWhen(data: (value) => value, orElse: () => null);
+        final dropdownLookup = ref
+            .watch(dropdownLookupProvider)
+            .maybeWhen(data: (value) => value, orElse: () => null);
 
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -433,8 +398,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final enquiry = rawEnquiries[index];
             final enquiryData = enquiry.data() as Map<String, dynamic>;
             final enquiryId = enquiry.id;
-            final customerName =
-                (enquiryData['customerName'] as String?) ?? 'Customer';
+            final customerName = (enquiryData['customerName'] as String?) ?? 'Customer';
             final phone = enquiryData['customerPhone'] as String?;
             final assignedUserId = enquiryData['assignedTo'] as String?;
 
@@ -451,15 +415,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ? 'Unknown'
                     : snapshot.data ?? 'Unassigned';
 
-                final createdAt =
-                    _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
+                final createdAt = _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
                 final eventDate = _parseDateTime(enquiryData['eventDate']);
                 final location =
                     (enquiryData['eventLocation'] as String?) ??
                     (enquiryData['location'] as String?);
                 final notes =
-                    (enquiryData['description'] as String?) ??
-                    (enquiryData['notes'] as String?);
+                    (enquiryData['description'] as String?) ?? (enquiryData['notes'] as String?);
 
                 final statusValueRaw =
                     (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
@@ -468,9 +430,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     : 'new';
                 final statusLabel =
                     (enquiryData['statusLabel'] as String?) ??
-                        (dropdownLookup != null
-                            ? dropdownLookup.labelForStatus(statusValue)
-                            : DropdownLookup.titleCase(statusValue));
+                    (dropdownLookup != null
+                        ? dropdownLookup.labelForStatus(statusValue)
+                        : DropdownLookup.titleCase(statusValue));
                 final eventTypeValueRaw =
                     (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
                 final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
@@ -478,13 +440,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     : 'event';
                 final eventTypeLabel =
                     (enquiryData['eventTypeLabel'] as String?) ??
-                        (dropdownLookup != null
-                            ? dropdownLookup.labelForEventType(eventTypeValue)
-                            : DropdownLookup.titleCase(eventTypeValue));
-                final whatsappContact =
-                    enquiryData['whatsappNumber'] as String? ?? phone;
-                final eventCountdownLabel =
-                    _formatEventCountdownLabel(eventDate);
+                    (dropdownLookup != null
+                        ? dropdownLookup.labelForEventType(eventTypeValue)
+                        : DropdownLookup.titleCase(eventTypeValue));
+                final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
+                final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
                 final statusColorHex =
                     (enquiryData['statusColorHex'] as String?) ??
                     (enquiryData['statusColor'] as String?);
@@ -504,16 +464,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     _colorFromDynamic(enquiryData['eventColor']) ??
                     _eventColorCache[eventTypeValue.toLowerCase()];
                 if (kDebugMode) {
-                  debugPrint(
-                    '[EnquiryData] id=$enquiryId '
-                    "eventType=${enquiryData['eventType']} "
-                    "status=${enquiryData['eventStatus']} "
-                    'keys=${enquiryData.keys} '
-                    'colors: statusHex=$statusColorHex eventHex=$eventColorHex '
-                    'statusOverride=${statusColorOverride?.value.toRadixString(16)} '
-                    'eventOverride=${eventColorOverride?.value.toRadixString(16)} '
-                    "rawStatusColor=${enquiryData['statusColor']} "
-                    "rawEventColor=${enquiryData['eventColor']}",
+                  Log.d(
+                    'Enquiry tile data snapshot',
+                    data: {
+                      'enquiryId': enquiryId,
+                      'status': statusValue,
+                      'eventType': eventTypeValue,
+                      'hasStatusColor': statusColorHex != null || statusColorOverride != null,
+                      'hasEventColor': eventColorHex != null || eventColorOverride != null,
+                    },
                   );
                 }
 
@@ -536,16 +495,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   whatsappPrefill: 'Hi $customerName, this is from We Decor.',
                   onView: () => _openEnquiryDetails(enquiryId),
                   enquiryId: enquiryId,
-                  onCall: phone == null
-                      ? null
-                      : () => _handleCall(phone, customerName, enquiryId),
+                  onCall: phone == null ? null : () => _handleCall(phone, customerName, enquiryId),
                   onWhatsApp: whatsappContact == null
                       ? null
-                      : () => _handleWhatsApp(
-                          whatsappContact,
-                          customerName,
-                          enquiryId,
-                        ),
+                      : () => _handleWhatsApp(whatsappContact, customerName, enquiryId),
                 );
               },
             );
@@ -604,21 +557,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return null;
   }
 
-  Future<void> _handleCall(
-    String? phone,
-    String customerName,
-    String enquiryId,
-  ) async {
+  Future<void> _handleCall(String? phone, String customerName, String enquiryId) async {
     if (phone == null || phone.trim().isEmpty) {
       _showSnack('No phone number available for $customerName');
       return;
     }
 
     final launcher = ref.read(contactLauncherProvider);
-    final status = await launcher.callNumberWithAudit(
-      phone,
-      enquiryId: enquiryId,
-    );
+    final status = await launcher.callNumberWithAudit(phone, enquiryId: enquiryId);
 
     switch (status) {
       case ContactLaunchStatus.opened:
@@ -636,11 +582,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Future<void> _handleWhatsApp(
-    String? phone,
-    String customerName,
-    String enquiryId,
-  ) async {
+  Future<void> _handleWhatsApp(String? phone, String customerName, String enquiryId) async {
     if (phone == null || phone.trim().isEmpty) {
       _showSnack('No phone number available for WhatsApp');
       return;
@@ -672,9 +614,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   void _openEnquiryDetails(String enquiryId) {
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
-      ),
+      MaterialPageRoute<void>(builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId)),
     );
   }
 
@@ -692,11 +632,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Stream<QuerySnapshot> _getEnquiriesStream(
-    bool isAdmin,
-    String? userId, [
-    String? status,
-  ]) {
+  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
     Query query = FirebaseFirestore.instance.collection('enquiries');
 
     if (!isAdmin && userId != null) {
@@ -715,10 +651,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (cached != null) return cached;
 
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       if (!doc.exists) {
         _userNameCache[userId] = 'Unknown';
         return 'Unknown';
@@ -726,10 +659,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       final data = doc.data();
       final name = (data?['name'] as String?)?.trim();
       final phone = (data?['phone'] as String?)?.trim();
-      final display = [
-        name,
-        phone,
-      ].where((e) => e != null && e.isNotEmpty).join(' · ');
+      final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
       final result = display.isNotEmpty ? display : 'Unknown';
       _userNameCache[userId] = result;
       return result;
@@ -769,10 +699,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Drawer _buildNavigationDrawer(
-    AsyncValue<UserModel?> currentUser,
-    bool isAdmin,
-  ) {
+  Drawer _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -797,11 +724,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     label: 'All Enquiries',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const EnquiriesListScreen(),
-                        ),
-                      );
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: (context) => const EnquiriesListScreen()));
                     },
                   ),
                   _buildDrawerTile(
@@ -809,11 +734,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     label: 'Add Enquiry',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const EnquiryFormScreen(),
-                        ),
-                      );
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: (context) => const EnquiryFormScreen()));
                     },
                   ),
                   if (isAdmin) ...[
@@ -825,9 +748,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const UserManagementScreen(),
-                          ),
+                          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
                         );
                       },
                     ),
@@ -836,11 +757,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       label: 'Analytics',
                       onTap: () {
                         Navigator.pop(context);
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const AnalyticsScreen(),
-                          ),
-                        );
+                        Navigator.of(
+                          context,
+                        ).push(MaterialPageRoute(builder: (context) => const AnalyticsScreen()));
                       },
                     ),
                     _buildDrawerTile(
@@ -849,10 +768,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const DropdownManagementScreen(),
-                          ),
+                          MaterialPageRoute(builder: (context) => const DropdownManagementScreen()),
                         );
                       },
                     ),
@@ -864,11 +780,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     label: 'Settings',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
                     },
                   ),
                 ],
@@ -898,10 +812,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withOpacity(0.8),
-          ],
+          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -914,8 +825,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               radius: 22,
               backgroundColor: Colors.white.withOpacity(0.2),
               child: Text(
-                (user?.name.isNotEmpty == true ? user!.name[0] : 'U')
-                    .toUpperCase(),
+                (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -935,10 +845,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(height: 4),
             Text(
               isAdmin ? 'Administrator' : 'Team Member',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 13,
-              ),
+              style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
             ),
           ],
         ),
@@ -946,10 +853,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           height: 40,
           child: Center(child: CircularProgressIndicator(color: Colors.white)),
         ),
-        error: (error, stack) => const Text(
-          'Error loading user',
-          style: TextStyle(color: Colors.white),
-        ),
+        error: (error, stack) =>
+            const Text('Error loading user', style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -975,15 +880,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     bool danger = false,
   }) {
     final theme = Theme.of(context);
-    final color = danger
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurface.withOpacity(0.85);
+    final color = danger ? theme.colorScheme.error : theme.colorScheme.onSurface.withOpacity(0.85);
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(
-        label,
-        style: theme.textTheme.bodyMedium?.copyWith(color: color),
-      ),
+      title: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: color)),
       onTap: onTap,
     );
   }
@@ -1001,15 +901,8 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Material(
-      elevation: overlapsContent ? 2 : 0,
-      child: _tabBar,
-    );
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(elevation: overlapsContent ? 2 : 0, child: _tabBar);
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/role_provider.dart';
+import '../../utils/logger.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
@@ -50,8 +51,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     super.didUpdateWidget(oldWidget);
     // Update the controller when the initial value changes
     if (oldWidget.initialValue != widget.initialValue) {
-      print(
-        '🔍 EventTypeAutocomplete: Initial value changed from "${oldWidget.initialValue}" to "${widget.initialValue}"',
+      Log.d(
+        'EventTypeAutocomplete initial value changed',
+        data: {'from': oldWidget.initialValue, 'to': widget.initialValue},
       );
       _isInitialized = false;
       if (!_isLoading) {
@@ -61,13 +63,13 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   Future<void> _loadEventTypes() async {
-    print('🔍 EventTypeAutocomplete: Starting to load event types...');
+    Log.d('EventTypeAutocomplete load start');
     setState(() {
       _isLoading = true;
     });
 
     // TEMPORARY: Always use fallback values for testing
-    print('🔍 EventTypeAutocomplete: Using fallback values for testing');
+    Log.d('EventTypeAutocomplete using fallback values');
     final defaultEventTypes = [
       {'label': 'Wedding', 'value': 'wedding'},
       {'label': 'Birthday', 'value': 'birthday'},
@@ -106,7 +108,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         };
       }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
 
-      print('🔍 EventTypeAutocomplete: Successfully loaded ${eventTypes.length} event types from Firestore');
+      // TODO: Log.d('EventTypeAutocomplete: loaded ${eventTypes.length} event types from Firestore');
       setState(() {
         _eventTypes = eventTypes;
         _filteredEventTypes = eventTypes;
@@ -117,7 +119,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       _setInitialValue();
     } catch (e) {
       // Fallback to default values if Firestore is not available
-      print('⚠️ Using fallback values for event types: $e');
+      // TODO: Log.w('EventTypeAutocomplete: using fallback values', data: {'error': e.toString()});
       final defaultEventTypes = [
         {'label': 'Wedding', 'value': 'wedding'},
         {'label': 'Birthday', 'value': 'birthday'},
@@ -139,9 +141,9 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   void _setInitialValue() {
-    print('🔍 EventTypeAutocomplete: Setting initial value: "${widget.initialValue}"');
-    print(
-      '🔍 EventTypeAutocomplete: Available event types: ${_eventTypes.map((e) => '${e['value']}: ${e['label']}').join(', ')}',
+    Log.d(
+      'EventTypeAutocomplete setting initial value',
+      data: {'value': widget.initialValue, 'eventCount': _eventTypes.length},
     );
     if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
       // Find the matching event type by value

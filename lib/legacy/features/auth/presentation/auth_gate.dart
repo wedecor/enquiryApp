@@ -12,18 +12,14 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (Firebase.apps.isEmpty) {
-      return const Scaffold(
-        body: Center(child: Text('Initializing Firebase…')),
-      );
+      return const Scaffold(body: Center(child: Text('Initializing Firebase…')));
     }
 
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         final user = snapshot.data;

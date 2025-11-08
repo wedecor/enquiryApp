@@ -9,10 +9,11 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
-import '../../../../services/dropdown_lookup.dart';
 import '../../../../core/services/user_firestore_sync_service.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
+import '../../../../utils/logger.dart';
 
 /// Screen for creating and editing enquiries
 class EnquiryFormScreen extends ConsumerStatefulWidget {
@@ -51,8 +52,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   @override
   void initState() {
     super.initState();
-    print(
-      '🔍 EnquiryFormScreen: initState called - mode: ${widget.mode}, enquiryId: ${widget.enquiryId}',
+    Log.d(
+      'EnquiryFormScreen initState',
+      data: {'mode': widget.mode, 'hasEnquiryId': widget.enquiryId != null},
     );
     // Set default values for dropdowns
     // Use dropdown value keys (snake_case)
@@ -62,15 +64,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Load existing data if in edit mode
     if (widget.mode == 'edit' && widget.enquiryId != null) {
-      print('🔍 EnquiryFormScreen: About to call _loadEnquiryData');
+      Log.d(
+        'EnquiryFormScreen scheduled load',
+        data: {'enquiryId': widget.enquiryId?.substring(0, 6)},
+      );
       _loadEnquiryData();
     } else {
-      print('🔍 EnquiryFormScreen: Not in edit mode or no enquiryId');
+      Log.d('EnquiryFormScreen skip load (create mode)');
     }
   }
 
   Future<void> _loadEnquiryData() async {
-    print('🔍 EnquiryFormScreen: _loadEnquiryData called for enquiryId: ${widget.enquiryId}');
+    Log.d('EnquiryFormScreen load start', data: {'enquiryId': widget.enquiryId?.substring(0, 6)});
     try {
       final doc = await FirebaseFirestore.instance
           .collection('enquiries')
@@ -94,20 +99,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           }
 
           // Set dropdown values from database
-          _selectedEventType =
-              (data['eventTypeValue'] ?? data['eventType']) as String?;
-          print('🔍 EnquiryFormScreen: Loaded eventType from database: "$_selectedEventType"');
+          _selectedEventType = (data['eventTypeValue'] ?? data['eventType']) as String?;
+          Log.d('EnquiryFormScreen loaded event type', data: {'eventType': _selectedEventType});
 
           // Safely set dropdown values - ensure they exist in valid options
-          final eventStatus =
-              (data['statusValue'] ?? data['eventStatus']) as String?;
+          final eventStatus = (data['statusValue'] ?? data['eventStatus']) as String?;
           _selectedStatus = eventStatus;
 
           final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
 
-          final paymentStatus =
-              (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
+          final paymentStatus = (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
           _selectedPaymentStatus = paymentStatus;
 
           _selectedAssignedTo = data['assignedTo'] as String?;
@@ -235,8 +237,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final priorityLabel = dropdownLookup.labelForPriority(priorityValue);
 
     final paymentStatusValue = _selectedPaymentStatus ?? 'unpaid';
-    final paymentStatusLabel =
-        dropdownLookup.labelForPaymentStatus(paymentStatusValue);
+    final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(paymentStatusValue);
 
     const sourceValue = 'app';
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
@@ -327,8 +328,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
 
     final priorityValue = _selectedPriority;
-    final priorityLabel =
-        priorityValue != null ? dropdownLookup.labelForPriority(priorityValue) : null;
+    final priorityLabel = priorityValue != null
+        ? dropdownLookup.labelForPriority(priorityValue)
+        : null;
 
     final paymentStatusValue = _selectedPaymentStatus;
     final paymentStatusLabel = paymentStatusValue != null

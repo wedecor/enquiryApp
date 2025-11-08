@@ -4,7 +4,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../firebase_options.dart';
+import '../utils/logger.dart';
 import 'seed_data.dart';
+
+void _info(String message, {Object? data}) => Log.i(message, data: data);
+void _error(String message, Object error, {StackTrace? stackTrace}) =>
+    Log.e(message, error: error, stackTrace: stackTrace);
 
 /// One-time seeding script for We Decor Enquiries application
 ///
@@ -31,7 +36,7 @@ import 'seed_data.dart';
 /// The script is designed to be run independently from the main application
 /// to avoid authentication and permission issues during app startup.
 void main() async {
-  print('🚀 Starting one-time seeding script...');
+  _info('🚀 Starting one-time seeding script');
 
   // Initialize Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +44,7 @@ void main() async {
   // Initialize Firebase with platform-specific options
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  print('✅ Firebase initialized successfully');
+  _info('✅ Firebase initialized successfully');
 
   // Uncomment the next line to reset the seed flag and force re-seeding
   await resetSeedFlag();
@@ -47,7 +52,7 @@ void main() async {
   // Run the seeding process
   await runSeedIfNeeded();
 
-  print('🎉 Seeding script completed!');
+  _info('🎉 Seeding script completed');
 
   // Keep the app running for a moment to see the output
   await Future.delayed(const Duration(seconds: 3));
@@ -67,25 +72,25 @@ Future<void> runSeedIfNeeded() async {
   final auth = FirebaseAuth.instance;
 
   try {
-    print('🔍 Checking if data has already been seeded...');
+    _info('🔍 Checking if data has already been seeded');
 
     // Check if seeding has already been completed
     final seedStatusDoc = await firestore.collection('meta').doc('seed_status').get();
 
     if (seedStatusDoc.exists && seedStatusDoc.data()?['isSeeded'] == true) {
       final timestamp = seedStatusDoc.data()?['timestamp'];
-      print('✅ Data has already been seeded on: $timestamp');
-      print('🔄 Skipping seeding process...');
+      _info('✅ Data already seeded', data: {'timestamp': timestamp});
+      _info('🔄 Skipping seeding process');
       return;
     }
 
-    print('🌱 Data not seeded yet. Starting seeding process...');
+    _info('🌱 Data not seeded yet. Starting seeding process');
 
     // Run the complete seeding process
     await seedAllData(firestore, auth: auth);
 
     // Set the seed flag to prevent future seeding
-    print('📝 Setting seed completion flag...');
+    _info('📝 Setting seed completion flag');
     await firestore.collection('meta').doc('seed_status').set({
       'isSeeded': true,
       'timestamp': FieldValue.serverTimestamp(),
@@ -93,11 +98,11 @@ Future<void> runSeedIfNeeded() async {
       'version': '1.0.0',
     });
 
-    print('✅ Seed completion flag set successfully!');
-    print('🎉 One-time seeding completed successfully!');
-  } catch (e) {
-    print('❌ Error during seeding process: $e');
-    print('💡 Please check your Firebase configuration and permissions');
+    _info('✅ Seed completion flag set successfully');
+    _info('🎉 One-time seeding completed successfully');
+  } catch (e, st) {
+    _error('❌ Error during seeding process', e, stackTrace: st);
+    _info('💡 Please check your Firebase configuration and permissions');
     rethrow;
   }
 }
@@ -115,14 +120,14 @@ Future<void> resetSeedFlag() async {
   final firestore = FirebaseFirestore.instance;
 
   try {
-    print('🔄 Resetting seed flag...');
+    _info('🔄 Resetting seed flag');
 
     await firestore.collection('meta').doc('seed_status').delete();
 
-    print('✅ Seed flag reset successfully!');
-    print('💡 You can now run the seeding process again');
-  } catch (e) {
-    print('❌ Error resetting seed flag: $e');
+    _info('✅ Seed flag reset successfully');
+    _info('💡 You can now run the seeding process again');
+  } catch (e, st) {
+    _error('❌ Error resetting seed flag', e, stackTrace: st);
     rethrow;
   }
 }
@@ -140,23 +145,26 @@ Future<void> checkSeedStatus() async {
   final firestore = FirebaseFirestore.instance;
 
   try {
-    print('🔍 Checking current seeding status...');
+    _info('🔍 Checking current seeding status');
 
     final seedStatusDoc = await firestore.collection('meta').doc('seed_status').get();
 
     if (seedStatusDoc.exists) {
       final data = seedStatusDoc.data()!;
-      print('📊 Current seeding status:');
-      print('   - Is Seeded: ${data['isSeeded']}');
-      print('   - Timestamp: ${data['timestamp']}');
-      print('   - Seeded By: ${data['seededBy']}');
-      print('   - Version: ${data['version']}');
+      _info(
+        '📊 Current seeding status',
+        data: {
+          'isSeeded': data['isSeeded'],
+          'timestamp': data['timestamp'],
+          'seededBy': data['seededBy'],
+          'version': data['version'],
+        },
+      );
     } else {
-      print('📊 Current seeding status: NOT SEEDED');
-      print('   - No seed status document found');
+      _info('📊 Current seeding status', data: {'status': 'NOT SEEDED'});
     }
-  } catch (e) {
-    print('❌ Error checking seed status: $e');
+  } catch (e, st) {
+    _error('❌ Error checking seed status', e, stackTrace: st);
     rethrow;
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../utils/logger.dart';
+
 // Removed shared user model import - using string-based roles instead
 
 /// Dialog for inviting new users via Cloud Function
@@ -223,9 +225,11 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
       final callable = functions.httpsCallable('inviteUser');
 
-      // Debug: Print the function configuration
-      print('🔧 DEBUG: Using Production Functions in region: asia-south1');
-      print('🔧 DEBUG: Function name: inviteUser');
+      // Debug configuration
+      Log.d(
+        'InviteUser callable configuration',
+        data: {'region': 'asia-south1', 'function': 'inviteUser'},
+      );
 
       final result = await callable.call<Map<String, dynamic>>({
         'email': _emailController.text.trim(),

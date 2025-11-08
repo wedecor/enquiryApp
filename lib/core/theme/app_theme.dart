@@ -144,7 +144,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.light.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -154,7 +157,10 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.light.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space4,
+          vertical: AppTokens.space2,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -165,7 +171,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.light.primary,
         side: BorderSide(color: AppColorScheme.light.primary.withValues(alpha: 0.4)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -289,7 +298,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.dark.onPrimary,
         elevation: AppTokens.elevation2,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -299,7 +311,10 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: AppColorScheme.dark.primary,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space4,
+          vertical: AppTokens.space2,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),
@@ -310,7 +325,10 @@ class AppTheme {
         foregroundColor: AppColorScheme.dark.primary,
         side: BorderSide(color: AppColorScheme.dark.primary.withValues(alpha: 0.4)),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: AppTokens.space3),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space6,
+          vertical: AppTokens.space3,
+        ),
         textStyle: AppTypography.labelLarge,
       ),
     ),

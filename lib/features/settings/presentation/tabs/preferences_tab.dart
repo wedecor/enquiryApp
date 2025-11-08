@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/widgets/appearance_setting.dart';
+import '../../../../utils/logger.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 
@@ -176,8 +177,14 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
     try {
       // Debug: Check authentication state
       final uid = ref.read(currentUserUidProvider);
-      print('DEBUG PREFERENCES: Current UID: $uid');
-      print('DEBUG PREFERENCES: Settings to save: ${_currentSettings!.toJson()}');
+      Log.d(
+        'Preferences save request',
+        data: {
+          'hasUid': uid != null,
+          'theme': _currentSettings!.theme,
+          'language': _currentSettings!.language,
+        },
+      );
 
       if (uid == null) {
         throw Exception('User not authenticated - UID is null');
@@ -207,8 +214,8 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         _isSaving = false;
       });
 
-      print('DEBUG PREFERENCES ERROR: $e');
-      print('DEBUG PREFERENCES ERROR TYPE: ${e.runtimeType}');
+      Log.e('Preferences save failed', error: e);
+      Log.d('Preferences save failure details', data: {'errorType': e.runtimeType.toString()});
 
       safeLog('preferences_save_error', {
         'error': e.toString(),

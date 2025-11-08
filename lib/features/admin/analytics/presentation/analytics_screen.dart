@@ -72,17 +72,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSummaryHeader(),
-                const SizedBox(height: 12),
-                filterBar,
-              ],
+              children: [_buildSummaryHeader(), const SizedBox(height: 12), filterBar],
             ),
           ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _PinnedBarDelegate(tabBar: tabBar),
-          ),
+          SliverPersistentHeader(pinned: true, delegate: _PinnedBarDelegate(tabBar: tabBar)),
         ],
         body: TabBarView(
           controller: _tabController,
@@ -112,10 +105,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Summary',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                  Text('Summary', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 12),
                   _buildKpiGrid(state),
                 ],
@@ -130,9 +120,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               'Unable to load analytics summary',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
             ),
           ),
         );
@@ -604,7 +594,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                   if (constraints.maxWidth < 600) {
                     return Column(
                       children: [
-                        StatusStackedBarChart(data: state.statusBreakdown, title: 'Status Breakdown'),
+                        StatusStackedBarChart(
+                          data: state.statusBreakdown,
+                          title: 'Status Breakdown',
+                        ),
                         const SizedBox(height: 16),
                         EventTypePieChart(data: state.eventTypeBreakdown, title: 'Event Types'),
                         const SizedBox(height: 16),

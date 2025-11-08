@@ -15,6 +15,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
 import 'firebase_options.dart';
+import 'utils/logger.dart';
 
 /// Main entry point for the We Decor Enquiries application.
 ///
@@ -36,7 +37,7 @@ Future<void> _bootstrap() async {
   // Initialize Firebase Core services
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    print('🔥 Firebase initialized successfully');
+    Log.i('Firebase initialized');
   }
 
   // Configure Crashlytics (gated by environment)
@@ -63,11 +64,16 @@ Future<void> _bootstrap() async {
 
   // Security check for environment variables
   if (kDebugMode) {
-    print(FirebaseConfig.securityWarning);
-    print('🔧 Environment: ${AppConfig.env}');
-    print('📊 Analytics: ${AppConfig.enableAnalytics}');
-    print('💥 Crashlytics: ${AppConfig.enableCrashlytics}');
-    print('⚡ Performance: ${AppConfig.enablePerformance}');
+    Log.w('Firebase security warning', data: FirebaseConfig.securityWarning);
+    Log.d(
+      'Runtime configuration',
+      data: {
+        'env': AppConfig.env,
+        'analyticsEnabled': AppConfig.enableAnalytics,
+        'crashlyticsEnabled': AppConfig.enableCrashlytics,
+        'performanceEnabled': AppConfig.enablePerformance,
+      },
+    );
   }
 }
 
@@ -82,7 +88,7 @@ void main() {
       if (kReleaseMode && AppConfig.enableCrashlytics) {
         FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
       } else {
-        debugPrint('Unhandled error: $error\n$stack');
+        Log.e('Unhandled zone error', error: error, stackTrace: stack);
       }
     },
   );

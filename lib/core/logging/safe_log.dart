@@ -4,6 +4,8 @@
 /// to prevent tokens, passwords, and other secrets from appearing in logs.
 library;
 
+import '../../utils/logger.dart';
+
 /// Redacts sensitive values based on key names
 String _redact(String key, Object? value) {
   final keyLower = key.toLowerCase();
@@ -61,8 +63,7 @@ String _redact(String key, Object? value) {
 void safeLog(String label, Map<String, Object?> data) {
   final redacted = data.map((key, value) => MapEntry(key, _redact(key, value)));
 
-  // ignore: avoid_print
-  print('$label $redacted');
+  Log.i(label, data: redacted);
 }
 
 /// Safely logs any object by converting to string and checking for sensitive patterns
@@ -73,8 +74,7 @@ void safeLog(String label, Map<String, Object?> data) {
 /// ```
 void safeLogObject(String label, Object? object) {
   if (object == null) {
-    // ignore: avoid_print
-    print('$label null');
+    Log.i(label, data: 'null');
     return;
   }
 
@@ -88,11 +88,9 @@ void safeLogObject(String label, Object? object) {
   );
 
   if (containsSensitive) {
-    // ignore: avoid_print
-    print('$label [REDACTED - contains sensitive data] (${objectStr.length} chars)');
+    Log.i('$label [REDACTED]', data: {'length': objectStr.length});
   } else {
-    // ignore: avoid_print
-    print('$label $objectStr');
+    Log.i(label, data: objectStr);
   }
 }
 

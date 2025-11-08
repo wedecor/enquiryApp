@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../shared/models/user_model.dart';
+import '../../utils/logger.dart';
 
 /// Service for managing notification triggers and sending notifications
 class NotificationService {
@@ -46,9 +48,16 @@ class NotificationService {
         },
       );
 
-      print('NotificationService: Sent new enquiry notifications to ${adminUsers.length} admins');
-    } catch (e) {
-      print('NotificationService: Error sending new enquiry notifications: $e');
+      Log.i(
+        'NotificationService: sent new enquiry notifications',
+        data: {'adminCount': adminUsers.length},
+      );
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: error sending new enquiry notifications',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -64,7 +73,7 @@ class NotificationService {
       // Get assigned user details
       final assignedUser = await _getUserById(assignedTo);
       if (assignedUser == null) {
-        print('NotificationService: Assigned user not found: $assignedTo');
+        Log.w('NotificationService: assigned user not found', data: {'assignedTo': assignedTo});
         return;
       }
 
@@ -115,9 +124,16 @@ class NotificationService {
         );
       }
 
-      print('NotificationService: Sent assignment notifications');
-    } catch (e) {
-      print('NotificationService: Error sending assignment notifications: $e');
+      Log.i(
+        'NotificationService: sent assignment notifications',
+        data: {'adminCount': adminUsers.length},
+      );
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: error sending assignment notifications',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -165,9 +181,16 @@ class NotificationService {
         },
       );
 
-      print('NotificationService: Sent status change notifications to ${adminUsers.length} admins');
-    } catch (e) {
-      print('NotificationService: Error sending status change notifications: $e');
+      Log.i(
+        'NotificationService: sent status change notifications',
+        data: {'adminCount': adminUsers.length},
+      );
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: error sending status change notifications',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -196,8 +219,8 @@ class NotificationService {
           .toList();
 
       return adminUsers;
-    } catch (e) {
-      print('NotificationService: Error getting admin users: $e');
+    } catch (e, st) {
+      Log.e('NotificationService: error getting admin users', error: e, stackTrace: st);
       return [];
     }
   }
@@ -216,8 +239,8 @@ class NotificationService {
         phone: data['phone'] as String? ?? '',
         role: data['role'] == 'admin' ? UserRole.admin : UserRole.staff,
       );
-    } catch (e) {
-      print('NotificationService: Error getting user by ID: $e');
+    } catch (e, st) {
+      Log.e('NotificationService: error getting user by ID', error: e, stackTrace: st);
       return null;
     }
   }
@@ -245,7 +268,7 @@ class NotificationService {
           .get();
 
       if (tokensSnapshot.docs.isEmpty) {
-        // TODO: Replace with safeLog - print('NotificationService: No FCM tokens for user $userId');
+        // TODO: Replace with safeLog - Log.i('NotificationService: No FCM tokens for user $userId');
         return;
       }
 
@@ -257,7 +280,7 @@ class NotificationService {
           .toList();
 
       if (tokens.isEmpty) {
-        // TODO: Replace with safeLog - print('NotificationService: No valid FCM tokens for user $userId');
+        // TODO: Replace with safeLog - Log.i('NotificationService: No valid FCM tokens for user $userId');
         return;
       }
 
@@ -270,14 +293,13 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TODO: Send actual FCM notification
-      // This would typically be done via a Cloud Function or server
-      print('NotificationService: Would send FCM notification to user $userId');
-      print('Title: $title');
-      print('Body: $body');
-      print('Data: $data');
-    } catch (e) {
-      print('NotificationService: Error sending notification to user $userId: $e');
+      // TODO: Send actual FCM notification via Cloud Function or server
+      Log.d(
+        'NotificationService: stubbed FCM send to user',
+        data: {'userId': userId, 'title': title, 'body': body, 'data': data},
+      );
+    } catch (e, st) {
+      Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
     }
   }
 
@@ -298,14 +320,12 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TODO: Send actual FCM notification to topic
-      // This would typically be done via a Cloud Function or server
-      print('NotificationService: Would send FCM notification to topic $topic');
-      print('Title: $title');
-      print('Body: $body');
-      print('Data: $data');
-    } catch (e) {
-      print('NotificationService: Error sending notification to topic $topic: $e');
+      Log.d(
+        'NotificationService: stubbed FCM send to topic',
+        data: {'topic': topic, 'title': title, 'body': body, 'data': data},
+      );
+    } catch (e, st) {
+      Log.e('NotificationService: error sending notification to topic', error: e, stackTrace: st);
     }
   }
 
@@ -324,8 +344,8 @@ class NotificationService {
         final data = doc.data();
         return {'id': doc.id, ...data};
       }).toList();
-    } catch (e) {
-      print('NotificationService: Error getting user notifications: $e');
+    } catch (e, st) {
+      Log.e('NotificationService: error getting user notifications', error: e, stackTrace: st);
       return [];
     }
   }
@@ -339,8 +359,8 @@ class NotificationService {
           .collection('notifications')
           .doc(notificationId)
           .update({'read': true, 'readAt': FieldValue.serverTimestamp()});
-    } catch (e) {
-      print('NotificationService: Error marking notification as read: $e');
+    } catch (e, st) {
+      Log.e('NotificationService: error marking notification as read', error: e, stackTrace: st);
     }
   }
 
@@ -360,8 +380,12 @@ class NotificationService {
       }
 
       await batch.commit();
-    } catch (e) {
-      print('NotificationService: Error marking all notifications as read: $e');
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: error marking all notifications as read',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }
