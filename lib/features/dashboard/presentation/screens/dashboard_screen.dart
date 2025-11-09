@@ -15,6 +15,7 @@ import '../../../../widgets/enquiry_tile_status_strip.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
+import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
@@ -33,7 +34,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final Map<String, String> _userNameCache = <String, String>{};
   final Map<String, Color> _statusColorCache = <String, Color>{};
   final Map<String, Color> _eventColorCache = <String, Color>{};
   final List<Map<String, String>> _statusTabs = [
@@ -439,108 +439,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final phone = enquiryData['customerPhone'] as String?;
             final assignedUserId = enquiryData['assignedTo'] as String?;
 
-            return FutureBuilder<String>(
-              future: assignedUserId != null
-                  ? _getUserDisplayName(assignedUserId)
-                  : Future.value('Unassigned'),
-              builder: (context, snapshot) {
-                final assignedDisplay = assignedUserId == null
-                    ? 'Unassigned'
-                    : snapshot.connectionState == ConnectionState.waiting
-                    ? 'Fetching assignee…'
-                    : snapshot.hasError
-                    ? 'Unknown'
-                    : snapshot.data ?? 'Unassigned';
+            final assignedDisplayAsync = assignedUserId == null
+                ? const AsyncValue.data('Unassigned')
+                : ref.watch(users_providers.userDisplayNameProvider(assignedUserId));
 
-                final createdAt = _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
-                final eventDate = _parseDateTime(enquiryData['eventDate']);
-                final location =
-                    (enquiryData['eventLocation'] as String?) ??
-                    (enquiryData['location'] as String?);
-                final notes =
-                    (enquiryData['description'] as String?) ?? (enquiryData['notes'] as String?);
-
-                final statusValueRaw =
-                    (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
-                final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                    ? statusValueRaw!.trim()
-                    : 'new';
-                final statusLabel =
-                    (enquiryData['statusLabel'] as String?) ??
-                    (dropdownLookup != null
-                        ? dropdownLookup.labelForStatus(statusValue)
-                        : DropdownLookup.titleCase(statusValue));
-                final eventTypeValueRaw =
-                    (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
-                final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
-                    ? eventTypeValueRaw!.trim()
-                    : 'event';
-                final eventTypeLabel =
-                    (enquiryData['eventTypeLabel'] as String?) ??
-                    (dropdownLookup != null
-                        ? dropdownLookup.labelForEventType(eventTypeValue)
-                        : DropdownLookup.titleCase(eventTypeValue));
-                final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
-                final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
-                final statusColorHex =
-                    (enquiryData['statusColorHex'] as String?) ??
-                    (enquiryData['statusColor'] as String?);
-                final eventColorHex =
-                    (enquiryData['eventColorHex'] as String?) ??
-                    (enquiryData['eventColor'] as String?);
-                final statusColorOverride =
-                    _colorFromDynamic(enquiryData['statusColorValue']) ??
-                    _colorFromDynamic(enquiryData['statusColorInt']) ??
-                    _colorFromDynamic(statusColorHex) ??
-                    _colorFromDynamic(enquiryData['statusColor']) ??
-                    _statusColorCache[statusValue.toLowerCase()];
-                final eventColorOverride =
-                    _colorFromDynamic(enquiryData['eventColorValue']) ??
-                    _colorFromDynamic(enquiryData['eventColorInt']) ??
-                    _colorFromDynamic(eventColorHex) ??
-                    _colorFromDynamic(enquiryData['eventColor']) ??
-                    _eventColorCache[eventTypeValue.toLowerCase()];
-                if (kDebugMode) {
-                  Log.d(
-                    'Enquiry tile data snapshot',
-                    data: {
-                      'enquiryId': enquiryId,
-                      'status': statusValue,
-                      'eventType': eventTypeValue,
-                      'hasStatusColor': statusColorHex != null || statusColorOverride != null,
-                      'hasEventColor': eventColorHex != null || eventColorOverride != null,
-                    },
+            final assignedDisplay = assignedUserId == null
+                ? 'Unassigned'
+                : assignedDisplayAsync.when(
+                    data: (value) => value,
+                    loading: () => 'Fetching assignee…',
+                    error: (_, __) => 'Unknown',
                   );
-                }
 
-                return EnquiryTileStatusStrip(
-                  name: customerName,
-                  status: statusLabel,
-                  eventType: eventTypeLabel,
-                  eventCountdownLabel: eventCountdownLabel,
-                  ageLabel: _formatAgeLabel(createdAt),
-                  assignee: assignedDisplay,
-                  dateLabel: _formatDateLabel(eventDate),
-                  location: location,
-                  notes: notes,
-                  phoneNumber: phone,
-                  whatsappNumber: whatsappContact,
-                  statusColorHex: statusColorHex,
-                  eventColorHex: eventColorHex,
-                  statusColorOverride: statusColorOverride,
-                  eventColorOverride: eventColorOverride,
-                  whatsappPrefill: 'Hi $customerName, this is from We Decor.',
-                  onView: () => _openEnquiryDetails(enquiryId),
-                  enquiryId: enquiryId,
-                  onCall: phone == null ? null : () => _handleCall(phone, customerName, enquiryId),
-                  onWhatsApp: whatsappContact == null
-                      ? null
-                      : () => _handleWhatsApp(whatsappContact, customerName, enquiryId),
-                  onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
-                  onShare: () => _shareEnquiry(enquiryModel),
-                  onAddNote: () => _showNotesSheet(enquiryModel),
-                );
-              },
+            final createdAt = _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
+            final eventDate = _parseDateTime(enquiryData['eventDate']);
+            final location =
+                (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?);
+            final notes =
+                (enquiryData['description'] as String?) ?? (enquiryData['notes'] as String?);
+
+            final statusValueRaw =
+                (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+            final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                ? statusValueRaw!.trim()
+                : 'new';
+            final statusLabel =
+                (enquiryData['statusLabel'] as String?) ??
+                (dropdownLookup != null
+                    ? dropdownLookup.labelForStatus(statusValue)
+                    : DropdownLookup.titleCase(statusValue));
+            final eventTypeValueRaw =
+                (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
+            final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
+                ? eventTypeValueRaw!.trim()
+                : 'event';
+            final eventTypeLabel =
+                (enquiryData['eventTypeLabel'] as String?) ??
+                (dropdownLookup != null
+                    ? dropdownLookup.labelForEventType(eventTypeValue)
+                    : DropdownLookup.titleCase(eventTypeValue));
+            final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
+            final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
+            final statusColorHex =
+                (enquiryData['statusColorHex'] as String?) ?? (enquiryData['statusColor'] as String?);
+            final eventColorHex =
+                (enquiryData['eventColorHex'] as String?) ?? (enquiryData['eventColor'] as String?);
+            final statusColorOverride =
+                _colorFromDynamic(enquiryData['statusColorValue']) ??
+                _colorFromDynamic(enquiryData['statusColorInt']) ??
+                _colorFromDynamic(statusColorHex) ??
+                _colorFromDynamic(enquiryData['statusColor']) ??
+                _statusColorCache[statusValue.toLowerCase()];
+            final eventColorOverride =
+                _colorFromDynamic(enquiryData['eventColorValue']) ??
+                _colorFromDynamic(enquiryData['eventColorInt']) ??
+                _colorFromDynamic(eventColorHex) ??
+                _colorFromDynamic(enquiryData['eventColor']) ??
+                _eventColorCache[eventTypeValue.toLowerCase()];
+            if (kDebugMode) {
+              Log.d(
+                'Enquiry tile data snapshot',
+                data: {
+                  'enquiryId': enquiryId,
+                  'status': statusValue,
+                  'eventType': eventTypeValue,
+                  'hasStatusColor': statusColorHex != null || statusColorOverride != null,
+                  'hasEventColor': eventColorHex != null || eventColorOverride != null,
+                },
+              );
+            }
+
+            return EnquiryTileStatusStrip(
+              name: customerName,
+              status: statusLabel,
+              eventType: eventTypeLabel,
+              eventCountdownLabel: eventCountdownLabel,
+              ageLabel: _formatAgeLabel(createdAt),
+              assignee: assignedDisplay,
+              dateLabel: _formatDateLabel(eventDate),
+              location: location,
+              notes: notes,
+              phoneNumber: phone,
+              whatsappNumber: whatsappContact,
+              statusColorHex: statusColorHex,
+              eventColorHex: eventColorHex,
+              statusColorOverride: statusColorOverride,
+              eventColorOverride: eventColorOverride,
+              whatsappPrefill: 'Hi $customerName, this is from We Decor.',
+              onView: () => _openEnquiryDetails(enquiryId),
+              enquiryId: enquiryId,
+              onCall: phone == null ? null : () => _handleCall(phone, customerName, enquiryId),
+              onWhatsApp: whatsappContact == null
+                  ? null
+                  : () => _handleWhatsApp(whatsappContact, customerName, enquiryId),
+              onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
+              onShare: () => _shareEnquiry(enquiryModel),
+              onAddNote: () => _showNotesSheet(enquiryModel),
             );
           },
         );
@@ -801,28 +795,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();
-  }
-
-  Future<String> _getUserDisplayName(String userId) async {
-    final cached = _userNameCache[userId];
-    if (cached != null) return cached;
-
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (!doc.exists) {
-        _userNameCache[userId] = 'Unknown';
-        return 'Unknown';
-      }
-      final data = doc.data();
-      final name = (data?['name'] as String?)?.trim();
-      final phone = (data?['phone'] as String?)?.trim();
-      final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
-      final result = display.isNotEmpty ? display : 'Unknown';
-      _userNameCache[userId] = result;
-      return result;
-    } catch (_) {
-      return 'Unknown';
-    }
   }
 
   Widget _buildErrorWidget(BuildContext context, Object error) {
