@@ -1,20 +1,20 @@
 {
-  "version": "2.0.0",
-  "buildNumber": 23,
-  "releaseDate": "2025-11-08",
-  "releaseNotes": "📌 Enquiry tile overflow menu is now live\n✅ Quick actions for viewing details, updating status, sharing, and notes\n📝 Follow-up notes editor with inline save/clear\n📱 Latest Chrome/Android UI sync and polish",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.0-23-20251108-144934.apk",
-  "sha256": "2c9304843288e9e4b9e41089ff3389dbe881bcfc07532804520aafbe552be84a",
+  "version": "2.0.1",
+  "buildNumber": 25,
+  "releaseDate": "2025-11-09",
+  "releaseNotes": "🚀 Maintenance refresh\n✅ Latest APK rebuild with clean baseline\n🛠️ Hosting entrypoint fixes to serve web + Android downloads",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.1-25-20251109-085522.apk",
+  "sha256": "5ea7dab12039179d27f9fd64c4699b0cdd6546102f593d406cf33bf997a892d8",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "We Decor teal/blue branding",
-    "Responsive dashboard KPI cards",
-    "Pinned tab layout improvements"
+    "Updated hosting redirects",
+    "Latest build artifacts",
+    "Baseline QA verification"
   ],
   "bugFixes": [
-    "Resolved dashboard KPI overflow on phones",
-    "Unified theme colors across dashboard and analytics",
-    "General stability and UI tweaks"
+    "Restored dashboard to stable state",
+    "Fixed 404 on hosting root",
+    "General stability"
   ]
 }

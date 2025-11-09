@@ -218,3 +218,7 @@ functions/lib
 
 # RC release artifacts
 public/internal/rc3/*.apk
+
+# Android release artifacts
+public/android/*.apk
+public/android/*.apk.sha256.txt
