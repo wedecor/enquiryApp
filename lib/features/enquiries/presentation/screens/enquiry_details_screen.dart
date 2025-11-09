@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../services/dropdown_lookup.dart';
+import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../utils/logger.dart';
