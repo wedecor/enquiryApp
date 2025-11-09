@@ -1,19 +1,19 @@
 {
-  "version": "2.0.2",
-  "buildNumber": 26,
+  "version": "2.0.3",
+  "buildNumber": 27,
   "releaseDate": "2025-11-09",
-  "releaseNotes": "✨ Analytics labels + dashboard assignee names\n✅ Friendly display names and context labels everywhere\n📱 Updated APK built from clean baseline",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.2-26-20251109-101155.apk",
-  "sha256": "248bec5585b5eb89dc8c4451ea64ac017ad563b094a3b9d53d38bdd0ec7a77f8",
+  "releaseNotes": "📱 Privacy tab now shows living app version\n✅ Analytics labels + assignee names retained\n🛠️ General polish",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.3-27-20251109-102228.apk",
+  "sha256": "ec2b83b3721e760ad371f54104fb4e7695b4fbf05dd023d9d1831e0b8dbe4d81",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
+    "Privacy tab version pulled from PackageInfo",
     "Dashboard assignee friendly names",
-    "Analytics charts use dropdown labels",
-    "Latest performance + bug fixes"
+    "Analytics charts show dropdown labels"
   ],
   "bugFixes": [
-    "Resolved ID display for assignees",
-    "Updated analytics dropdown legends"
+    "Fixed stale version string in settings",
+    "General stability improvements"
   ]
 }
