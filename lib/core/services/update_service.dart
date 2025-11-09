@@ -89,13 +89,17 @@ class UpdateService {
   }
 
   /// Show update dialog to user
-  static Future<void> showUpdateDialog(BuildContext context, UpdateInfo updateInfo) async {
+  static Future<void> showUpdateDialog(
+    BuildContext context,
+    UpdateInfo updateInfo, {
+    bool bypassCooldown = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final lastDismissed = prefs.getInt(_lastDismissedKey) ?? 0;
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Don't show again if dismissed within last 24 hours (unless forced)
-    if (!updateInfo.isForced && now - lastDismissed < 86400000) {
+    if (!bypassCooldown && !updateInfo.isForced && now - lastDismissed < 86400000) {
       // 24 hours
       return;
     }

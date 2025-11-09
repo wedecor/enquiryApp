@@ -246,7 +246,11 @@ class AccountTab extends ConsumerWidget {
       if (updateInfo != null) {
         // Update available - show update dialog
         if (context.mounted) {
-          await UpdateService.showUpdateDialog(context, updateInfo);
+          await UpdateService.showUpdateDialog(
+            context,
+            updateInfo,
+            bypassCooldown: true,
+          );
         }
       } else {
         // No updates available - show current version info
