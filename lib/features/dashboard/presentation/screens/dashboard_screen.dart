@@ -9,6 +9,7 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import '../../../../ui/components/stats_card.dart';
 import '../../../../utils/logger.dart';
 import '../../../../widgets/enquiry_tile_status_strip.dart';
@@ -48,6 +49,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   ];
 
   late final List<Tab> _tabs;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -55,6 +58,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _tabController = TabController(length: _statusTabs.length, vsync: this);
     _primeDropdownColors();
     _tabs = _statusTabs.map((tab) => Tab(text: tab['label']!)).toList(growable: false);
+    _searchController.addListener(_handleSearchChanged);
   }
 
   Future<void> _primeDropdownColors() async {
@@ -164,8 +168,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   void dispose() {
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+    });
   }
 
   @override
@@ -286,6 +300,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
           const SizedBox(height: 24),
           _buildStatisticsCards(isAdmin, user?.uid),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by name or phone number',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      tooltip: 'Clear search',
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _handleSearchChanged();
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
+            ),
+            textInputAction: TextInputAction.search,
+          ),
+          if (_searchQuery.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Filtering results for "$_searchQuery"',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ),
         ],
       ),
     );
@@ -358,6 +406,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final rawEnquiries = snapshot.data!.docs.toList();
 
         if (rawEnquiries.isEmpty) {
+          if (_searchQuery.isNotEmpty) {
+            return SearchEmptyState(
+              query: _searchQuery,
+              onClearSearch: () {
+                _searchController.clear();
+                _handleSearchChanged();
+              },
+            );
+          }
+
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -379,46 +437,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
 
         final now = DateTime.now();
+        rawEnquiries.sort((a, b) => _compareByNearestEventDate(a, b, now));
 
-        if (status == 'in_talks') {
-          rawEnquiries.sort((a, b) {
-            final aData = a.data() as Map<String, dynamic>;
-            final bData = b.data() as Map<String, dynamic>;
-            final aEvent = _parseDateTime(aData['eventDate']);
-            final bEvent = _parseDateTime(bData['eventDate']);
+        final filteredEnquiries = _searchQuery.isEmpty
+            ? rawEnquiries
+            : rawEnquiries
+                .where((doc) => _matchesSearchQuery(doc.data() as Map<String, dynamic>))
+                .toList(growable: false);
 
-            final aDiff = aEvent != null ? aEvent.difference(now).inSeconds.abs() : 1 << 62;
-            final bDiff = bEvent != null ? bEvent.difference(now).inSeconds.abs() : 1 << 62;
-
-            if (aDiff != bDiff) {
-              return aDiff.compareTo(bDiff);
-            }
-
-            if (aEvent != null && bEvent != null) {
-              final eventComparison = aEvent.compareTo(bEvent);
-              if (eventComparison != 0) return eventComparison;
-            } else if (aEvent == null && bEvent != null) {
-              return 1;
-            } else if (aEvent != null && bEvent == null) {
-              return -1;
-            }
-
-            final aCreated =
-                _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final bCreated =
-                _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return bCreated.compareTo(aCreated);
-          });
-        } else {
-          rawEnquiries.sort((a, b) {
-            final aCreated =
-                _parseDateTime((a.data() as Map<String, dynamic>)['createdAt']) ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            final bCreated =
-                _parseDateTime((b.data() as Map<String, dynamic>)['createdAt']) ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            return bCreated.compareTo(aCreated);
-          });
+        if (_searchQuery.isNotEmpty && filteredEnquiries.isEmpty) {
+          return SearchEmptyState(
+            query: _searchQuery,
+            onClearSearch: () {
+              _searchController.clear();
+              _handleSearchChanged();
+            },
+          );
         }
 
         final dropdownLookup = ref
@@ -428,10 +462,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         return ListView.separated(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
           physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: rawEnquiries.length,
+          itemCount: filteredEnquiries.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final enquiry = rawEnquiries[index];
+            final enquiry = filteredEnquiries[index];
             final enquiryData = enquiry.data() as Map<String, dynamic>;
             final enquiryId = enquiry.id;
             final enquiryModel = Enquiry.fromFirestore(enquiry);
@@ -776,6 +810,87 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return null;
   }
 
+  int _compareByNearestEventDate(
+    QueryDocumentSnapshot<Object?> a,
+    QueryDocumentSnapshot<Object?> b,
+    DateTime now,
+  ) {
+    const int maxDiffMagnitude = 1 << 62;
+
+    final aData = a.data() as Map<String, dynamic>;
+    final bData = b.data() as Map<String, dynamic>;
+
+    final aEvent = _parseDateTime(aData['eventDate']);
+    final bEvent = _parseDateTime(bData['eventDate']);
+
+    final aDiff = aEvent?.difference(now);
+    final bDiff = bEvent?.difference(now);
+
+    final aIsFuture = aDiff != null && !aDiff.isNegative;
+    final bIsFuture = bDiff != null && !bDiff.isNegative;
+
+    if (aIsFuture != bIsFuture) {
+      // Prioritise upcoming events over past ones.
+      return aIsFuture ? -1 : 1;
+    }
+
+    final aMagnitude = aDiff != null ? aDiff.inMilliseconds.abs() : maxDiffMagnitude;
+    final bMagnitude = bDiff != null ? bDiff.inMilliseconds.abs() : maxDiffMagnitude;
+
+    final magnitudeComparison = aMagnitude.compareTo(bMagnitude);
+    if (magnitudeComparison != 0) {
+      return magnitudeComparison;
+    }
+
+    if (aEvent != null && bEvent != null) {
+      final eventComparison = aEvent.compareTo(bEvent);
+      if (eventComparison != 0) {
+        return eventComparison;
+      }
+    } else if (aEvent == null && bEvent != null) {
+      return 1;
+    } else if (aEvent != null && bEvent == null) {
+      return -1;
+    }
+
+    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return bCreated.compareTo(aCreated);
+  }
+
+  bool _matchesSearchQuery(Map<String, dynamic> data) {
+    if (_searchQuery.isEmpty) return true;
+
+    final query = _searchQuery.trim();
+    final queryLower = query.toLowerCase();
+
+    if (queryLower.isNotEmpty) {
+      final lowerFields = <String>[
+        (data['customerName'] as String? ?? '').toLowerCase(),
+        (data['customerNameLower'] as String? ?? '').toLowerCase(),
+        (data['textIndex'] as String? ?? '').toLowerCase(),
+      ];
+      if (lowerFields.any((field) => field.contains(queryLower))) {
+        return true;
+      }
+    }
+
+    final digitQuery = query.replaceAll(RegExp(r'\D'), '');
+    if (digitQuery.isEmpty) {
+      return false;
+    }
+
+    bool matchesDigits(String? input) {
+      if (input == null || input.isEmpty) return false;
+      final cleaned = input.replaceAll(RegExp(r'\D'), '');
+      return cleaned.contains(digitQuery);
+    }
+
+    return matchesDigits(data['customerPhone'] as String?) ||
+        matchesDigits(data['whatsappNumber'] as String?) ||
+        matchesDigits(data['phoneNormalized'] as String?);
+  }
+
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -790,7 +905,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       query = query.where('assignedTo', isEqualTo: userId);
     }
 
-    if (status != null && status != 'All') {
+    if (_searchQuery.isEmpty && status != null && status != 'All') {
       query = query.where('eventStatus', isEqualTo: status);
     }
 

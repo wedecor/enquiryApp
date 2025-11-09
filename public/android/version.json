@@ -1,22 +1,20 @@
 {
-  "version": "2.0.4",
-  "buildNumber": 28,
-  "releaseDate": "2025-11-09",
-  "releaseNotes": "📱 Save customer to device contacts straight from the enquiry tile\n📞 Normalizes phone numbers before saving, skips duplicates automatically\n🌐 Updated web build + latest fixes deployed",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.4-28-20251109-172654.apk",
-  "sha256": "880cf23daf26a0501c0d130c36ac84b3852b0bc6ac2175c29e87e4e887bf618d",
+  "version": "2.0.5",
+  "buildNumber": 29,
+  "releaseDate": "2025-11-10",
+  "releaseNotes": "🔍 Universal dashboard search with phone/name matching across every tab\n⚙️ Auto-completes past confirmed events + 4-hour overdue nudges for admins & assignees\n☁️ Backend + web redeploy with latest indexes and crash hardening",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.5-29-20251110-020103.apk",
+  "sha256": "7a1b1734d40e7412ffb918fd533f9ceb18e91656f04511505d9db5c58d055dda",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "Privacy tab version pulled from PackageInfo",
-    "Dashboard assignee friendly names",
-    "Analytics charts show dropdown labels",
-    "Change history renders human-readable values",
-    "Save enquiry contact to device (Android)"
+    "Global dashboard search spans all status tabs with phone/name matching",
+    "Automatic completion for past confirmed enquiries",
+    "Recurring 4-hour reminders for overdue enquiries to admins and assignees"
   ],
   "bugFixes": [
-    "Fixed stale version string in settings",
-    "General stability improvements",
-    "Phone numbers normalized before saving to contacts"
+    "Resolved sorting drift by prioritising nearest event dates",
+    "Hardened Firestore queries with new indexes and consistent status fields",
+    "Upgraded Cloud Functions runtime dependencies"
   ]
 }
