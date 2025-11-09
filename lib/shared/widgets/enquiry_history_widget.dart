@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/audit_provider.dart';
+import '../../features/admin/users/presentation/users_providers.dart' as users_providers;
+import '../../services/dropdown_lookup.dart';
 
 /// Widget to display enquiry change history
 class EnquiryHistoryWidget extends ConsumerWidget {
@@ -13,6 +15,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(enquiryHistoryProvider(enquiryId));
+
+    final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => null,
+        );
 
     return historyAsync.when(
       data: (history) {
@@ -52,7 +59,12 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           itemCount: history.length,
           itemBuilder: (context, index) {
             final change = history[index];
-            return _buildHistoryItem(context, change);
+            return _buildHistoryItem(
+              context,
+              change,
+              ref,
+              dropdownLookup,
+            );
           },
         );
       },
@@ -107,12 +119,18 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryItem(BuildContext context, Map<String, dynamic> change) {
+  Widget _buildHistoryItem(
+    BuildContext context,
+    Map<String, dynamic> change,
+    WidgetRef ref,
+    DropdownLookup? dropdownLookup,
+  ) {
     final fieldChanged = change['field_changed'] as String? ?? 'Unknown Field';
     final oldValue = change['old_value'];
     final newValue = change['new_value'];
     final userEmail = change['user_email'] as String? ?? 'Unknown User';
     final timestamp = change['timestamp'] as Timestamp?;
+    final fieldKey = fieldChanged.toLowerCase();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -150,26 +168,13 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'From:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      const Text('From:', style: _sectionLabelStyle),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red[50],
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.red[200]!),
-                        ),
-                        child: Text(
-                          _formatValue(oldValue),
-                          style: TextStyle(color: Colors.red[700], fontSize: 14),
-                        ),
+                      _ValueChip(
+                        value: oldValue,
+                        fieldKey: fieldKey,
+                        dropdownLookup: dropdownLookup,
+                        isNew: false,
                       ),
                     ],
                   ),
@@ -181,26 +186,13 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'To:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      const Text('To:', style: _sectionLabelStyle),
                       const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: Colors.green[200]!),
-                        ),
-                        child: Text(
-                          _formatValue(newValue),
-                          style: TextStyle(color: Colors.green[700], fontSize: 14),
-                        ),
+                      _ValueChip(
+                        value: newValue,
+                        fieldKey: fieldKey,
+                        dropdownLookup: dropdownLookup,
+                        isNew: true,
                       ),
                     ],
                   ),
@@ -230,6 +222,8 @@ class EnquiryHistoryWidget extends ConsumerWidget {
         return Icons.flag;
       case 'assignedto':
         return Icons.person_add;
+      case 'eventstatus':
+        return Icons.timeline;
       case 'priority':
         return Icons.priority_high;
       case 'totalcost':
@@ -287,6 +281,8 @@ class EnquiryHistoryWidget extends ConsumerWidget {
         return 'Status';
       case 'assignedto':
         return 'Assignment';
+      case 'eventstatus':
+        return 'Event Status';
       case 'priority':
         return 'Priority';
       case 'totalcost':
@@ -312,20 +308,6 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     }
   }
 
-  String _formatValue(dynamic value) {
-    if (value == null) return 'Not Set';
-    if (value is Timestamp) {
-      return '${value.toDate().day}/${value.toDate().month}/${value.toDate().year}';
-    }
-    if (value is num) {
-      return value.toString();
-    }
-    if (value is String) {
-      return value.isEmpty ? 'Empty' : value;
-    }
-    return value.toString();
-  }
-
   String _formatTimestamp(Timestamp timestamp) {
     final now = DateTime.now();
     final changeTime = timestamp.toDate();
@@ -342,6 +324,117 @@ class EnquiryHistoryWidget extends ConsumerWidget {
     }
   }
 }
+
+class _ValueChip extends ConsumerWidget {
+  const _ValueChip({
+    required this.value,
+    required this.fieldKey,
+    required this.dropdownLookup,
+    required this.isNew,
+  });
+
+  final dynamic value;
+  final String fieldKey;
+  final DropdownLookup? dropdownLookup;
+  final bool isNew;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bgColor = isNew ? Colors.green[50] : Colors.red[50];
+    final borderColor = isNew ? Colors.green[200]! : Colors.red[200]!;
+    final textColor = isNew ? Colors.green[700]! : Colors.red[700]!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borderColor),
+      ),
+      child: _ValueText(
+        value: value,
+        fieldKey: fieldKey,
+        dropdownLookup: dropdownLookup,
+        textColor: textColor,
+      ),
+    );
+  }
+}
+
+class _ValueText extends ConsumerWidget {
+  const _ValueText({
+    required this.value,
+    required this.fieldKey,
+    required this.dropdownLookup,
+    required this.textColor,
+  });
+
+  final dynamic value;
+  final String fieldKey;
+  final DropdownLookup? dropdownLookup;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final style = TextStyle(color: textColor, fontSize: 14);
+
+    if (value == null) return Text('Not Set', style: style);
+    if (value is String) {
+      final normalized = (value as String).trim();
+      if (normalized.isEmpty || normalized.toLowerCase() == 'not set') {
+        return Text('Not Set', style: style);
+      }
+    }
+
+    if (value is Timestamp) {
+      final date = value.toDate();
+      return Text('${date.day}/${date.month}/${date.year}', style: style);
+    }
+
+    final stringValue = value.toString();
+
+    switch (fieldKey) {
+      case 'assignedto':
+        final asyncName = ref.watch(
+          users_providers.userDisplayNameProvider(stringValue),
+        );
+        return asyncName.when(
+          data: (name) => Text(name, style: style),
+          loading: () => Text('Loading...', style: style),
+          error: (err, _) => Text(stringValue, style: style),
+        );
+      case 'status':
+      case 'eventstatus':
+        final label = dropdownLookup?.labelForStatus(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
+        return Text(label, style: style);
+      case 'eventtype':
+        final label = dropdownLookup?.labelForEventType(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
+        return Text(label, style: style);
+      case 'priority':
+        final label = dropdownLookup?.labelForPriority(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
+        return Text(label, style: style);
+      case 'paymentstatus':
+        final label = dropdownLookup?.labelForPaymentStatus(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
+        return Text(label, style: style);
+      case 'source':
+        final label = dropdownLookup?.labelForSource(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
+        return Text(label, style: style);
+      default:
+        return Text(stringValue.isEmpty ? 'Not Set' : stringValue, style: style);
+    }
+  }
+}
+
+const TextStyle _sectionLabelStyle = TextStyle(
+  fontSize: 12,
+  color: Color(0xFF757575),
+  fontWeight: FontWeight.w500,
+);
 
 /// Extension to convert string to title case
 extension StringExtension on String {
