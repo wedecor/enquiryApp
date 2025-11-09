@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
 
 /// Pie chart for event type breakdown
@@ -72,7 +73,7 @@ class EventTypePieChart extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${item.key} (${item.count})',
+                  '${_labelFor(item)} (${item.count})',
                   style: Theme.of(context).textTheme.bodySmall,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -133,6 +134,9 @@ class EventTypePieChart extends StatelessWidget {
       ),
     );
   }
+
+  String _labelFor(CategoryCount item) =>
+      item.label ?? DropdownLookup.titleCase(item.key);
 }
 
 /// Horizontal bar chart for source breakdown
@@ -178,7 +182,7 @@ class SourceBarChart extends StatelessWidget {
               if (groupIndex < data.length) {
                 final item = data[groupIndex];
                 return BarTooltipItem(
-                  '${item.key}\n${item.count} (${item.percentage.toStringAsFixed(1)}%)',
+                  '${_labelFor(item)}\n${item.count} (${item.percentage.toStringAsFixed(1)}%)',
                   const TextStyle(color: Colors.white),
                 );
               }
@@ -199,7 +203,7 @@ class SourceBarChart extends StatelessWidget {
                   return SideTitleWidget(
                     axisSide: meta.axisSide,
                     child: Text(
-                      _truncateLabel(data[index].key),
+                      _truncateLabel(_labelFor(data[index])),
                       style: const TextStyle(fontSize: 10, color: Colors.grey),
                     ),
                   );
@@ -290,6 +294,9 @@ class SourceBarChart extends StatelessWidget {
   }
 }
 
+  String _labelFor(CategoryCount item) =>
+      item.label ?? DropdownLookup.titleCase(item.key);
+
 /// Stacked bar chart for status breakdown
 class StatusStackedBarChart extends StatelessWidget {
   final List<CategoryCount> data;
@@ -337,7 +344,7 @@ class StatusStackedBarChart extends StatelessWidget {
                     if (rodIndex < data.length) {
                       final item = data[rodIndex];
                       return BarTooltipItem(
-                        '${item.key}: ${item.count}',
+                        '${_statusLabel(item)}: ${item.count}',
                         const TextStyle(color: Colors.white),
                       );
                     }
@@ -402,7 +409,7 @@ class StatusStackedBarChart extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '${_formatStatusName(item.key)} (${item.count})',
+                  '${_statusLabel(item)} (${item.count})',
                   style: Theme.of(context).textTheme.bodySmall,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -434,6 +441,9 @@ class StatusStackedBarChart extends StatelessWidget {
         return Colors.grey;
     }
   }
+
+  String _statusLabel(CategoryCount item) =>
+      item.label ?? _formatStatusName(item.key);
 
   String _formatStatusName(String status) {
     return status

@@ -12,8 +12,7 @@ part of 'enquiry.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 Enquiry _$EnquiryFromJson(Map<String, dynamic> json) {
   return _Enquiry.fromJson(json);
@@ -61,12 +60,8 @@ mixin _$Enquiry {
   String? get statusUpdatedBy => throw _privateConstructorUsedError;
   String? get textIndex => throw _privateConstructorUsedError;
 
-  /// Serializes this Enquiry to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Enquiry
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $EnquiryCopyWith<Enquiry> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -75,41 +70,40 @@ abstract class $EnquiryCopyWith<$Res> {
   factory $EnquiryCopyWith(Enquiry value, $Res Function(Enquiry) then) =
       _$EnquiryCopyWithImpl<$Res, Enquiry>;
   @useResult
-  $Res call({
-    String id,
-    String customerName,
-    String? customerEmail,
-    String? customerPhone,
-    @JsonKey(name: 'eventTypeValue') String eventType,
-    String? eventTypeLabel,
-    DateTime eventDate,
-    String? eventLocation,
-    int? guestCount,
-    String? budgetRange,
-    String? description,
-    @JsonKey(name: 'statusValue') String status,
-    String? statusLabel,
-    @JsonKey(name: 'paymentStatusValue') String? paymentStatus,
-    String? paymentStatusLabel,
-    double? totalCost,
-    double? advancePaid,
-    String? assignedTo,
-    DateTime createdAt,
-    DateTime? updatedAt,
-    String? createdBy,
-    @JsonKey(name: 'priorityValue') String? priority,
-    String? priorityLabel,
-    @JsonKey(name: 'sourceValue') String? source,
-    String? sourceLabel,
-    String? notes,
-    String? customerNameLower,
-    String? phoneNormalized,
-    String? assigneeName,
-    String? createdByName,
-    DateTime? statusUpdatedAt,
-    String? statusUpdatedBy,
-    String? textIndex,
-  });
+  $Res call(
+      {String id,
+      String customerName,
+      String? customerEmail,
+      String? customerPhone,
+      @JsonKey(name: 'eventTypeValue') String eventType,
+      String? eventTypeLabel,
+      DateTime eventDate,
+      String? eventLocation,
+      int? guestCount,
+      String? budgetRange,
+      String? description,
+      @JsonKey(name: 'statusValue') String status,
+      String? statusLabel,
+      @JsonKey(name: 'paymentStatusValue') String? paymentStatus,
+      String? paymentStatusLabel,
+      double? totalCost,
+      double? advancePaid,
+      String? assignedTo,
+      DateTime createdAt,
+      DateTime? updatedAt,
+      String? createdBy,
+      @JsonKey(name: 'priorityValue') String? priority,
+      String? priorityLabel,
+      @JsonKey(name: 'sourceValue') String? source,
+      String? sourceLabel,
+      String? notes,
+      String? customerNameLower,
+      String? phoneNormalized,
+      String? assigneeName,
+      String? createdByName,
+      DateTime? statusUpdatedAt,
+      String? statusUpdatedBy,
+      String? textIndex});
 }
 
 /// @nodoc
@@ -122,8 +116,6 @@ class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Enquiry
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -161,189 +153,184 @@ class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry>
     Object? statusUpdatedBy = freezed,
     Object? textIndex = freezed,
   }) {
-    return _then(
-      _value.copyWith(
-            id: null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                      as String,
-            customerName: null == customerName
-                ? _value.customerName
-                : customerName // ignore: cast_nullable_to_non_nullable
-                      as String,
-            customerEmail: freezed == customerEmail
-                ? _value.customerEmail
-                : customerEmail // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            customerPhone: freezed == customerPhone
-                ? _value.customerPhone
-                : customerPhone // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            eventType: null == eventType
-                ? _value.eventType
-                : eventType // ignore: cast_nullable_to_non_nullable
-                      as String,
-            eventTypeLabel: freezed == eventTypeLabel
-                ? _value.eventTypeLabel
-                : eventTypeLabel // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            eventDate: null == eventDate
-                ? _value.eventDate
-                : eventDate // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
-            eventLocation: freezed == eventLocation
-                ? _value.eventLocation
-                : eventLocation // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            guestCount: freezed == guestCount
-                ? _value.guestCount
-                : guestCount // ignore: cast_nullable_to_non_nullable
-                      as int?,
-            budgetRange: freezed == budgetRange
-                ? _value.budgetRange
-                : budgetRange // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            description: freezed == description
-                ? _value.description
-                : description // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            status: null == status
-                ? _value.status
-                : status // ignore: cast_nullable_to_non_nullable
-                      as String,
-            statusLabel: freezed == statusLabel
-                ? _value.statusLabel
-                : statusLabel // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            paymentStatus: freezed == paymentStatus
-                ? _value.paymentStatus
-                : paymentStatus // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            paymentStatusLabel: freezed == paymentStatusLabel
-                ? _value.paymentStatusLabel
-                : paymentStatusLabel // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            totalCost: freezed == totalCost
-                ? _value.totalCost
-                : totalCost // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            advancePaid: freezed == advancePaid
-                ? _value.advancePaid
-                : advancePaid // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            assignedTo: freezed == assignedTo
-                ? _value.assignedTo
-                : assignedTo // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            createdAt: null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
-            updatedAt: freezed == updatedAt
-                ? _value.updatedAt
-                : updatedAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
-            createdBy: freezed == createdBy
-                ? _value.createdBy
-                : createdBy // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            priority: freezed == priority
-                ? _value.priority
-                : priority // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            priorityLabel: freezed == priorityLabel
-                ? _value.priorityLabel
-                : priorityLabel // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            source: freezed == source
-                ? _value.source
-                : source // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            sourceLabel: freezed == sourceLabel
-                ? _value.sourceLabel
-                : sourceLabel // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            notes: freezed == notes
-                ? _value.notes
-                : notes // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            customerNameLower: freezed == customerNameLower
-                ? _value.customerNameLower
-                : customerNameLower // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            phoneNormalized: freezed == phoneNormalized
-                ? _value.phoneNormalized
-                : phoneNormalized // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            assigneeName: freezed == assigneeName
-                ? _value.assigneeName
-                : assigneeName // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            createdByName: freezed == createdByName
-                ? _value.createdByName
-                : createdByName // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            statusUpdatedAt: freezed == statusUpdatedAt
-                ? _value.statusUpdatedAt
-                : statusUpdatedAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
-            statusUpdatedBy: freezed == statusUpdatedBy
-                ? _value.statusUpdatedBy
-                : statusUpdatedBy // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            textIndex: freezed == textIndex
-                ? _value.textIndex
-                : textIndex // ignore: cast_nullable_to_non_nullable
-                      as String?,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      customerName: null == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String,
+      customerEmail: freezed == customerEmail
+          ? _value.customerEmail
+          : customerEmail // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerPhone: freezed == customerPhone
+          ? _value.customerPhone
+          : customerPhone // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventType: null == eventType
+          ? _value.eventType
+          : eventType // ignore: cast_nullable_to_non_nullable
+              as String,
+      eventTypeLabel: freezed == eventTypeLabel
+          ? _value.eventTypeLabel
+          : eventTypeLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventDate: null == eventDate
+          ? _value.eventDate
+          : eventDate // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      eventLocation: freezed == eventLocation
+          ? _value.eventLocation
+          : eventLocation // ignore: cast_nullable_to_non_nullable
+              as String?,
+      guestCount: freezed == guestCount
+          ? _value.guestCount
+          : guestCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      budgetRange: freezed == budgetRange
+          ? _value.budgetRange
+          : budgetRange // ignore: cast_nullable_to_non_nullable
+              as String?,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
+      statusLabel: freezed == statusLabel
+          ? _value.statusLabel
+          : statusLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      paymentStatus: freezed == paymentStatus
+          ? _value.paymentStatus
+          : paymentStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      paymentStatusLabel: freezed == paymentStatusLabel
+          ? _value.paymentStatusLabel
+          : paymentStatusLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      totalCost: freezed == totalCost
+          ? _value.totalCost
+          : totalCost // ignore: cast_nullable_to_non_nullable
+              as double?,
+      advancePaid: freezed == advancePaid
+          ? _value.advancePaid
+          : advancePaid // ignore: cast_nullable_to_non_nullable
+              as double?,
+      assignedTo: freezed == assignedTo
+          ? _value.assignedTo
+          : assignedTo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: freezed == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      createdBy: freezed == createdBy
+          ? _value.createdBy
+          : createdBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      priority: freezed == priority
+          ? _value.priority
+          : priority // ignore: cast_nullable_to_non_nullable
+              as String?,
+      priorityLabel: freezed == priorityLabel
+          ? _value.priorityLabel
+          : priorityLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      source: freezed == source
+          ? _value.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceLabel: freezed == sourceLabel
+          ? _value.sourceLabel
+          : sourceLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerNameLower: freezed == customerNameLower
+          ? _value.customerNameLower
+          : customerNameLower // ignore: cast_nullable_to_non_nullable
+              as String?,
+      phoneNormalized: freezed == phoneNormalized
+          ? _value.phoneNormalized
+          : phoneNormalized // ignore: cast_nullable_to_non_nullable
+              as String?,
+      assigneeName: freezed == assigneeName
+          ? _value.assigneeName
+          : assigneeName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdByName: freezed == createdByName
+          ? _value.createdByName
+          : createdByName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      statusUpdatedAt: freezed == statusUpdatedAt
+          ? _value.statusUpdatedAt
+          : statusUpdatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      statusUpdatedBy: freezed == statusUpdatedBy
+          ? _value.statusUpdatedBy
+          : statusUpdatedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      textIndex: freezed == textIndex
+          ? _value.textIndex
+          : textIndex // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$EnquiryImplCopyWith<$Res> implements $EnquiryCopyWith<$Res> {
   factory _$$EnquiryImplCopyWith(
-    _$EnquiryImpl value,
-    $Res Function(_$EnquiryImpl) then,
-  ) = __$$EnquiryImplCopyWithImpl<$Res>;
+          _$EnquiryImpl value, $Res Function(_$EnquiryImpl) then) =
+      __$$EnquiryImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String id,
-    String customerName,
-    String? customerEmail,
-    String? customerPhone,
-    @JsonKey(name: 'eventTypeValue') String eventType,
-    String? eventTypeLabel,
-    DateTime eventDate,
-    String? eventLocation,
-    int? guestCount,
-    String? budgetRange,
-    String? description,
-    @JsonKey(name: 'statusValue') String status,
-    String? statusLabel,
-    @JsonKey(name: 'paymentStatusValue') String? paymentStatus,
-    String? paymentStatusLabel,
-    double? totalCost,
-    double? advancePaid,
-    String? assignedTo,
-    DateTime createdAt,
-    DateTime? updatedAt,
-    String? createdBy,
-    @JsonKey(name: 'priorityValue') String? priority,
-    String? priorityLabel,
-    @JsonKey(name: 'sourceValue') String? source,
-    String? sourceLabel,
-    String? notes,
-    String? customerNameLower,
-    String? phoneNormalized,
-    String? assigneeName,
-    String? createdByName,
-    DateTime? statusUpdatedAt,
-    String? statusUpdatedBy,
-    String? textIndex,
-  });
+  $Res call(
+      {String id,
+      String customerName,
+      String? customerEmail,
+      String? customerPhone,
+      @JsonKey(name: 'eventTypeValue') String eventType,
+      String? eventTypeLabel,
+      DateTime eventDate,
+      String? eventLocation,
+      int? guestCount,
+      String? budgetRange,
+      String? description,
+      @JsonKey(name: 'statusValue') String status,
+      String? statusLabel,
+      @JsonKey(name: 'paymentStatusValue') String? paymentStatus,
+      String? paymentStatusLabel,
+      double? totalCost,
+      double? advancePaid,
+      String? assignedTo,
+      DateTime createdAt,
+      DateTime? updatedAt,
+      String? createdBy,
+      @JsonKey(name: 'priorityValue') String? priority,
+      String? priorityLabel,
+      @JsonKey(name: 'sourceValue') String? source,
+      String? sourceLabel,
+      String? notes,
+      String? customerNameLower,
+      String? phoneNormalized,
+      String? assigneeName,
+      String? createdByName,
+      DateTime? statusUpdatedAt,
+      String? statusUpdatedBy,
+      String? textIndex});
 }
 
 /// @nodoc
@@ -351,12 +338,9 @@ class __$$EnquiryImplCopyWithImpl<$Res>
     extends _$EnquiryCopyWithImpl<$Res, _$EnquiryImpl>
     implements _$$EnquiryImplCopyWith<$Res> {
   __$$EnquiryImplCopyWithImpl(
-    _$EnquiryImpl _value,
-    $Res Function(_$EnquiryImpl) _then,
-  ) : super(_value, _then);
+      _$EnquiryImpl _value, $Res Function(_$EnquiryImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of Enquiry
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -394,183 +378,181 @@ class __$$EnquiryImplCopyWithImpl<$Res>
     Object? statusUpdatedBy = freezed,
     Object? textIndex = freezed,
   }) {
-    return _then(
-      _$EnquiryImpl(
-        id: null == id
-            ? _value.id
-            : id // ignore: cast_nullable_to_non_nullable
-                  as String,
-        customerName: null == customerName
-            ? _value.customerName
-            : customerName // ignore: cast_nullable_to_non_nullable
-                  as String,
-        customerEmail: freezed == customerEmail
-            ? _value.customerEmail
-            : customerEmail // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        customerPhone: freezed == customerPhone
-            ? _value.customerPhone
-            : customerPhone // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        eventType: null == eventType
-            ? _value.eventType
-            : eventType // ignore: cast_nullable_to_non_nullable
-                  as String,
-        eventTypeLabel: freezed == eventTypeLabel
-            ? _value.eventTypeLabel
-            : eventTypeLabel // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        eventDate: null == eventDate
-            ? _value.eventDate
-            : eventDate // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
-        eventLocation: freezed == eventLocation
-            ? _value.eventLocation
-            : eventLocation // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        guestCount: freezed == guestCount
-            ? _value.guestCount
-            : guestCount // ignore: cast_nullable_to_non_nullable
-                  as int?,
-        budgetRange: freezed == budgetRange
-            ? _value.budgetRange
-            : budgetRange // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        description: freezed == description
-            ? _value.description
-            : description // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        status: null == status
-            ? _value.status
-            : status // ignore: cast_nullable_to_non_nullable
-                  as String,
-        statusLabel: freezed == statusLabel
-            ? _value.statusLabel
-            : statusLabel // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        paymentStatus: freezed == paymentStatus
-            ? _value.paymentStatus
-            : paymentStatus // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        paymentStatusLabel: freezed == paymentStatusLabel
-            ? _value.paymentStatusLabel
-            : paymentStatusLabel // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        totalCost: freezed == totalCost
-            ? _value.totalCost
-            : totalCost // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        advancePaid: freezed == advancePaid
-            ? _value.advancePaid
-            : advancePaid // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        assignedTo: freezed == assignedTo
-            ? _value.assignedTo
-            : assignedTo // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        createdAt: null == createdAt
-            ? _value.createdAt
-            : createdAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
-        updatedAt: freezed == updatedAt
-            ? _value.updatedAt
-            : updatedAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
-        createdBy: freezed == createdBy
-            ? _value.createdBy
-            : createdBy // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        priority: freezed == priority
-            ? _value.priority
-            : priority // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        priorityLabel: freezed == priorityLabel
-            ? _value.priorityLabel
-            : priorityLabel // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        source: freezed == source
-            ? _value.source
-            : source // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        sourceLabel: freezed == sourceLabel
-            ? _value.sourceLabel
-            : sourceLabel // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        notes: freezed == notes
-            ? _value.notes
-            : notes // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        customerNameLower: freezed == customerNameLower
-            ? _value.customerNameLower
-            : customerNameLower // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        phoneNormalized: freezed == phoneNormalized
-            ? _value.phoneNormalized
-            : phoneNormalized // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        assigneeName: freezed == assigneeName
-            ? _value.assigneeName
-            : assigneeName // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        createdByName: freezed == createdByName
-            ? _value.createdByName
-            : createdByName // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        statusUpdatedAt: freezed == statusUpdatedAt
-            ? _value.statusUpdatedAt
-            : statusUpdatedAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
-        statusUpdatedBy: freezed == statusUpdatedBy
-            ? _value.statusUpdatedBy
-            : statusUpdatedBy // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        textIndex: freezed == textIndex
-            ? _value.textIndex
-            : textIndex // ignore: cast_nullable_to_non_nullable
-                  as String?,
-      ),
-    );
+    return _then(_$EnquiryImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      customerName: null == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String,
+      customerEmail: freezed == customerEmail
+          ? _value.customerEmail
+          : customerEmail // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerPhone: freezed == customerPhone
+          ? _value.customerPhone
+          : customerPhone // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventType: null == eventType
+          ? _value.eventType
+          : eventType // ignore: cast_nullable_to_non_nullable
+              as String,
+      eventTypeLabel: freezed == eventTypeLabel
+          ? _value.eventTypeLabel
+          : eventTypeLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eventDate: null == eventDate
+          ? _value.eventDate
+          : eventDate // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      eventLocation: freezed == eventLocation
+          ? _value.eventLocation
+          : eventLocation // ignore: cast_nullable_to_non_nullable
+              as String?,
+      guestCount: freezed == guestCount
+          ? _value.guestCount
+          : guestCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      budgetRange: freezed == budgetRange
+          ? _value.budgetRange
+          : budgetRange // ignore: cast_nullable_to_non_nullable
+              as String?,
+      description: freezed == description
+          ? _value.description
+          : description // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: null == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String,
+      statusLabel: freezed == statusLabel
+          ? _value.statusLabel
+          : statusLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      paymentStatus: freezed == paymentStatus
+          ? _value.paymentStatus
+          : paymentStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      paymentStatusLabel: freezed == paymentStatusLabel
+          ? _value.paymentStatusLabel
+          : paymentStatusLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      totalCost: freezed == totalCost
+          ? _value.totalCost
+          : totalCost // ignore: cast_nullable_to_non_nullable
+              as double?,
+      advancePaid: freezed == advancePaid
+          ? _value.advancePaid
+          : advancePaid // ignore: cast_nullable_to_non_nullable
+              as double?,
+      assignedTo: freezed == assignedTo
+          ? _value.assignedTo
+          : assignedTo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: freezed == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      createdBy: freezed == createdBy
+          ? _value.createdBy
+          : createdBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      priority: freezed == priority
+          ? _value.priority
+          : priority // ignore: cast_nullable_to_non_nullable
+              as String?,
+      priorityLabel: freezed == priorityLabel
+          ? _value.priorityLabel
+          : priorityLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      source: freezed == source
+          ? _value.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceLabel: freezed == sourceLabel
+          ? _value.sourceLabel
+          : sourceLabel // ignore: cast_nullable_to_non_nullable
+              as String?,
+      notes: freezed == notes
+          ? _value.notes
+          : notes // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerNameLower: freezed == customerNameLower
+          ? _value.customerNameLower
+          : customerNameLower // ignore: cast_nullable_to_non_nullable
+              as String?,
+      phoneNormalized: freezed == phoneNormalized
+          ? _value.phoneNormalized
+          : phoneNormalized // ignore: cast_nullable_to_non_nullable
+              as String?,
+      assigneeName: freezed == assigneeName
+          ? _value.assigneeName
+          : assigneeName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdByName: freezed == createdByName
+          ? _value.createdByName
+          : createdByName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      statusUpdatedAt: freezed == statusUpdatedAt
+          ? _value.statusUpdatedAt
+          : statusUpdatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      statusUpdatedBy: freezed == statusUpdatedBy
+          ? _value.statusUpdatedBy
+          : statusUpdatedBy // ignore: cast_nullable_to_non_nullable
+              as String?,
+      textIndex: freezed == textIndex
+          ? _value.textIndex
+          : textIndex // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$EnquiryImpl extends _Enquiry {
-  const _$EnquiryImpl({
-    required this.id,
-    required this.customerName,
-    this.customerEmail,
-    this.customerPhone,
-    @JsonKey(name: 'eventTypeValue') required this.eventType,
-    this.eventTypeLabel,
-    required this.eventDate,
-    this.eventLocation,
-    this.guestCount,
-    this.budgetRange,
-    this.description,
-    @JsonKey(name: 'statusValue') this.status = 'new',
-    this.statusLabel,
-    @JsonKey(name: 'paymentStatusValue') this.paymentStatus,
-    this.paymentStatusLabel,
-    this.totalCost,
-    this.advancePaid,
-    this.assignedTo,
-    required this.createdAt,
-    this.updatedAt,
-    this.createdBy,
-    @JsonKey(name: 'priorityValue') this.priority,
-    this.priorityLabel,
-    @JsonKey(name: 'sourceValue') this.source,
-    this.sourceLabel,
-    this.notes,
-    this.customerNameLower,
-    this.phoneNormalized,
-    this.assigneeName,
-    this.createdByName,
-    this.statusUpdatedAt,
-    this.statusUpdatedBy,
-    this.textIndex,
-  }) : super._();
+  const _$EnquiryImpl(
+      {required this.id,
+      required this.customerName,
+      this.customerEmail,
+      this.customerPhone,
+      @JsonKey(name: 'eventTypeValue') required this.eventType,
+      this.eventTypeLabel,
+      required this.eventDate,
+      this.eventLocation,
+      this.guestCount,
+      this.budgetRange,
+      this.description,
+      @JsonKey(name: 'statusValue') this.status = 'new',
+      this.statusLabel,
+      @JsonKey(name: 'paymentStatusValue') this.paymentStatus,
+      this.paymentStatusLabel,
+      this.totalCost,
+      this.advancePaid,
+      this.assignedTo,
+      required this.createdAt,
+      this.updatedAt,
+      this.createdBy,
+      @JsonKey(name: 'priorityValue') this.priority,
+      this.priorityLabel,
+      @JsonKey(name: 'sourceValue') this.source,
+      this.sourceLabel,
+      this.notes,
+      this.customerNameLower,
+      this.phoneNormalized,
+      this.assigneeName,
+      this.createdByName,
+      this.statusUpdatedAt,
+      this.statusUpdatedBy,
+      this.textIndex})
+      : super._();
 
   factory _$EnquiryImpl.fromJson(Map<String, dynamic> json) =>
       _$$EnquiryImplFromJson(json);
@@ -632,7 +614,7 @@ class _$EnquiryImpl extends _Enquiry {
   final String? sourceLabel;
   @override
   final String? notes;
-  // New denormalized and search fields (optional for back-compat)
+// New denormalized and search fields (optional for back-compat)
   @override
   final String? customerNameLower;
   @override
@@ -722,48 +704,46 @@ class _$EnquiryImpl extends _Enquiry {
                 other.textIndex == textIndex));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hashAll([
-    runtimeType,
-    id,
-    customerName,
-    customerEmail,
-    customerPhone,
-    eventType,
-    eventTypeLabel,
-    eventDate,
-    eventLocation,
-    guestCount,
-    budgetRange,
-    description,
-    status,
-    statusLabel,
-    paymentStatus,
-    paymentStatusLabel,
-    totalCost,
-    advancePaid,
-    assignedTo,
-    createdAt,
-    updatedAt,
-    createdBy,
-    priority,
-    priorityLabel,
-    source,
-    sourceLabel,
-    notes,
-    customerNameLower,
-    phoneNormalized,
-    assigneeName,
-    createdByName,
-    statusUpdatedAt,
-    statusUpdatedBy,
-    textIndex,
-  ]);
+        runtimeType,
+        id,
+        customerName,
+        customerEmail,
+        customerPhone,
+        eventType,
+        eventTypeLabel,
+        eventDate,
+        eventLocation,
+        guestCount,
+        budgetRange,
+        description,
+        status,
+        statusLabel,
+        paymentStatus,
+        paymentStatusLabel,
+        totalCost,
+        advancePaid,
+        assignedTo,
+        createdAt,
+        updatedAt,
+        createdBy,
+        priority,
+        priorityLabel,
+        source,
+        sourceLabel,
+        notes,
+        customerNameLower,
+        phoneNormalized,
+        assigneeName,
+        createdByName,
+        statusUpdatedAt,
+        statusUpdatedBy,
+        textIndex
+      ]);
 
-  /// Create a copy of Enquiry
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$EnquiryImplCopyWith<_$EnquiryImpl> get copyWith =>
@@ -771,46 +751,47 @@ class _$EnquiryImpl extends _Enquiry {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$EnquiryImplToJson(this);
+    return _$$EnquiryImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _Enquiry extends Enquiry {
-  const factory _Enquiry({
-    required final String id,
-    required final String customerName,
-    final String? customerEmail,
-    final String? customerPhone,
-    @JsonKey(name: 'eventTypeValue') required final String eventType,
-    final String? eventTypeLabel,
-    required final DateTime eventDate,
-    final String? eventLocation,
-    final int? guestCount,
-    final String? budgetRange,
-    final String? description,
-    @JsonKey(name: 'statusValue') final String status,
-    final String? statusLabel,
-    @JsonKey(name: 'paymentStatusValue') final String? paymentStatus,
-    final String? paymentStatusLabel,
-    final double? totalCost,
-    final double? advancePaid,
-    final String? assignedTo,
-    required final DateTime createdAt,
-    final DateTime? updatedAt,
-    final String? createdBy,
-    @JsonKey(name: 'priorityValue') final String? priority,
-    final String? priorityLabel,
-    @JsonKey(name: 'sourceValue') final String? source,
-    final String? sourceLabel,
-    final String? notes,
-    final String? customerNameLower,
-    final String? phoneNormalized,
-    final String? assigneeName,
-    final String? createdByName,
-    final DateTime? statusUpdatedAt,
-    final String? statusUpdatedBy,
-    final String? textIndex,
-  }) = _$EnquiryImpl;
+  const factory _Enquiry(
+      {required final String id,
+      required final String customerName,
+      final String? customerEmail,
+      final String? customerPhone,
+      @JsonKey(name: 'eventTypeValue') required final String eventType,
+      final String? eventTypeLabel,
+      required final DateTime eventDate,
+      final String? eventLocation,
+      final int? guestCount,
+      final String? budgetRange,
+      final String? description,
+      @JsonKey(name: 'statusValue') final String status,
+      final String? statusLabel,
+      @JsonKey(name: 'paymentStatusValue') final String? paymentStatus,
+      final String? paymentStatusLabel,
+      final double? totalCost,
+      final double? advancePaid,
+      final String? assignedTo,
+      required final DateTime createdAt,
+      final DateTime? updatedAt,
+      final String? createdBy,
+      @JsonKey(name: 'priorityValue') final String? priority,
+      final String? priorityLabel,
+      @JsonKey(name: 'sourceValue') final String? source,
+      final String? sourceLabel,
+      final String? notes,
+      final String? customerNameLower,
+      final String? phoneNormalized,
+      final String? assigneeName,
+      final String? createdByName,
+      final DateTime? statusUpdatedAt,
+      final String? statusUpdatedBy,
+      final String? textIndex}) = _$EnquiryImpl;
   const _Enquiry._() : super._();
 
   factory _Enquiry.fromJson(Map<String, dynamic> json) = _$EnquiryImpl.fromJson;
@@ -871,8 +852,8 @@ abstract class _Enquiry extends Enquiry {
   @override
   String? get sourceLabel;
   @override
-  String? get notes; // New denormalized and search fields (optional for back-compat)
-  @override
+  String? get notes;
+  @override // New denormalized and search fields (optional for back-compat)
   String? get customerNameLower;
   @override
   String? get phoneNormalized;
@@ -886,11 +867,8 @@ abstract class _Enquiry extends Enquiry {
   String? get statusUpdatedBy;
   @override
   String? get textIndex;
-
-  /// Create a copy of Enquiry
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$EnquiryImplCopyWith<_$EnquiryImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

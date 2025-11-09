@@ -12,8 +12,7 @@ part of 'dropdown_item.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 DropdownItem _$DropdownItemFromJson(Map<String, dynamic> json) {
   return _DropdownItem.fromJson(json);
@@ -29,12 +28,8 @@ mixin _$DropdownItem {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
-  /// Serializes this DropdownItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of DropdownItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DropdownItemCopyWith<DropdownItem> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -42,19 +37,17 @@ mixin _$DropdownItem {
 /// @nodoc
 abstract class $DropdownItemCopyWith<$Res> {
   factory $DropdownItemCopyWith(
-    DropdownItem value,
-    $Res Function(DropdownItem) then,
-  ) = _$DropdownItemCopyWithImpl<$Res, DropdownItem>;
+          DropdownItem value, $Res Function(DropdownItem) then) =
+      _$DropdownItemCopyWithImpl<$Res, DropdownItem>;
   @useResult
-  $Res call({
-    String value,
-    String label,
-    int order,
-    bool active,
-    String? color,
-    DateTime createdAt,
-    DateTime updatedAt,
-  });
+  $Res call(
+      {String value,
+      String label,
+      int order,
+      bool active,
+      String? color,
+      DateTime createdAt,
+      DateTime updatedAt});
 }
 
 /// @nodoc
@@ -67,8 +60,6 @@ class _$DropdownItemCopyWithImpl<$Res, $Val extends DropdownItem>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DropdownItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -80,39 +71,36 @@ class _$DropdownItemCopyWithImpl<$Res, $Val extends DropdownItem>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(
-      _value.copyWith(
-            value: null == value
-                ? _value.value
-                : value // ignore: cast_nullable_to_non_nullable
-                      as String,
-            label: null == label
-                ? _value.label
-                : label // ignore: cast_nullable_to_non_nullable
-                      as String,
-            order: null == order
-                ? _value.order
-                : order // ignore: cast_nullable_to_non_nullable
-                      as int,
-            active: null == active
-                ? _value.active
-                : active // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            color: freezed == color
-                ? _value.color
-                : color // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            createdAt: null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
-            updatedAt: null == updatedAt
-                ? _value.updatedAt
-                : updatedAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _value.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      order: null == order
+          ? _value.order
+          : order // ignore: cast_nullable_to_non_nullable
+              as int,
+      active: null == active
+          ? _value.active
+          : active // ignore: cast_nullable_to_non_nullable
+              as bool,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ) as $Val);
   }
 }
 
@@ -120,20 +108,18 @@ class _$DropdownItemCopyWithImpl<$Res, $Val extends DropdownItem>
 abstract class _$$DropdownItemImplCopyWith<$Res>
     implements $DropdownItemCopyWith<$Res> {
   factory _$$DropdownItemImplCopyWith(
-    _$DropdownItemImpl value,
-    $Res Function(_$DropdownItemImpl) then,
-  ) = __$$DropdownItemImplCopyWithImpl<$Res>;
+          _$DropdownItemImpl value, $Res Function(_$DropdownItemImpl) then) =
+      __$$DropdownItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String value,
-    String label,
-    int order,
-    bool active,
-    String? color,
-    DateTime createdAt,
-    DateTime updatedAt,
-  });
+  $Res call(
+      {String value,
+      String label,
+      int order,
+      bool active,
+      String? color,
+      DateTime createdAt,
+      DateTime updatedAt});
 }
 
 /// @nodoc
@@ -141,12 +127,9 @@ class __$$DropdownItemImplCopyWithImpl<$Res>
     extends _$DropdownItemCopyWithImpl<$Res, _$DropdownItemImpl>
     implements _$$DropdownItemImplCopyWith<$Res> {
   __$$DropdownItemImplCopyWithImpl(
-    _$DropdownItemImpl _value,
-    $Res Function(_$DropdownItemImpl) _then,
-  ) : super(_value, _then);
+      _$DropdownItemImpl _value, $Res Function(_$DropdownItemImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of DropdownItem
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -158,53 +141,50 @@ class __$$DropdownItemImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(
-      _$DropdownItemImpl(
-        value: null == value
-            ? _value.value
-            : value // ignore: cast_nullable_to_non_nullable
-                  as String,
-        label: null == label
-            ? _value.label
-            : label // ignore: cast_nullable_to_non_nullable
-                  as String,
-        order: null == order
-            ? _value.order
-            : order // ignore: cast_nullable_to_non_nullable
-                  as int,
-        active: null == active
-            ? _value.active
-            : active // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        color: freezed == color
-            ? _value.color
-            : color // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        createdAt: null == createdAt
-            ? _value.createdAt
-            : createdAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
-        updatedAt: null == updatedAt
-            ? _value.updatedAt
-            : updatedAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime,
-      ),
-    );
+    return _then(_$DropdownItemImpl(
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _value.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      order: null == order
+          ? _value.order
+          : order // ignore: cast_nullable_to_non_nullable
+              as int,
+      active: null == active
+          ? _value.active
+          : active // ignore: cast_nullable_to_non_nullable
+              as bool,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
+      createdAt: null == createdAt
+          ? _value.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$DropdownItemImpl implements _DropdownItem {
-  const _$DropdownItemImpl({
-    required this.value,
-    required this.label,
-    required this.order,
-    required this.active,
-    this.color,
-    required this.createdAt,
-    required this.updatedAt,
-  });
+  const _$DropdownItemImpl(
+      {required this.value,
+      required this.label,
+      required this.order,
+      required this.active,
+      this.color,
+      required this.createdAt,
+      required this.updatedAt});
 
   factory _$DropdownItemImpl.fromJson(Map<String, dynamic> json) =>
       _$$DropdownItemImplFromJson(json);
@@ -245,22 +225,12 @@ class _$DropdownItemImpl implements _DropdownItem {
                 other.updatedAt == updatedAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-    runtimeType,
-    value,
-    label,
-    order,
-    active,
-    color,
-    createdAt,
-    updatedAt,
-  );
+      runtimeType, value, label, order, active, color, createdAt, updatedAt);
 
-  /// Create a copy of DropdownItem
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DropdownItemImplCopyWith<_$DropdownItemImpl> get copyWith =>
@@ -268,20 +238,21 @@ class _$DropdownItemImpl implements _DropdownItem {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$DropdownItemImplToJson(this);
+    return _$$DropdownItemImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _DropdownItem implements DropdownItem {
-  const factory _DropdownItem({
-    required final String value,
-    required final String label,
-    required final int order,
-    required final bool active,
-    final String? color,
-    required final DateTime createdAt,
-    required final DateTime updatedAt,
-  }) = _$DropdownItemImpl;
+  const factory _DropdownItem(
+      {required final String value,
+      required final String label,
+      required final int order,
+      required final bool active,
+      final String? color,
+      required final DateTime createdAt,
+      required final DateTime updatedAt}) = _$DropdownItemImpl;
 
   factory _DropdownItem.fromJson(Map<String, dynamic> json) =
       _$DropdownItemImpl.fromJson;
@@ -300,11 +271,8 @@ abstract class _DropdownItem implements DropdownItem {
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
-
-  /// Create a copy of DropdownItem
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DropdownItemImplCopyWith<_$DropdownItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -316,9 +284,7 @@ mixin _$DropdownItemInput {
   String? get color => throw _privateConstructorUsedError;
   bool get active => throw _privateConstructorUsedError;
 
-  /// Create a copy of DropdownItemInput
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DropdownItemInputCopyWith<DropdownItemInput> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -326,9 +292,8 @@ mixin _$DropdownItemInput {
 /// @nodoc
 abstract class $DropdownItemInputCopyWith<$Res> {
   factory $DropdownItemInputCopyWith(
-    DropdownItemInput value,
-    $Res Function(DropdownItemInput) then,
-  ) = _$DropdownItemInputCopyWithImpl<$Res, DropdownItemInput>;
+          DropdownItemInput value, $Res Function(DropdownItemInput) then) =
+      _$DropdownItemInputCopyWithImpl<$Res, DropdownItemInput>;
   @useResult
   $Res call({String value, String label, String? color, bool active});
 }
@@ -343,8 +308,6 @@ class _$DropdownItemInputCopyWithImpl<$Res, $Val extends DropdownItemInput>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DropdownItemInput
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -353,37 +316,33 @@ class _$DropdownItemInputCopyWithImpl<$Res, $Val extends DropdownItemInput>
     Object? color = freezed,
     Object? active = null,
   }) {
-    return _then(
-      _value.copyWith(
-            value: null == value
-                ? _value.value
-                : value // ignore: cast_nullable_to_non_nullable
-                      as String,
-            label: null == label
-                ? _value.label
-                : label // ignore: cast_nullable_to_non_nullable
-                      as String,
-            color: freezed == color
-                ? _value.color
-                : color // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            active: null == active
-                ? _value.active
-                : active // ignore: cast_nullable_to_non_nullable
-                      as bool,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _value.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
+      active: null == active
+          ? _value.active
+          : active // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$DropdownItemInputImplCopyWith<$Res>
     implements $DropdownItemInputCopyWith<$Res> {
-  factory _$$DropdownItemInputImplCopyWith(
-    _$DropdownItemInputImpl value,
-    $Res Function(_$DropdownItemInputImpl) then,
-  ) = __$$DropdownItemInputImplCopyWithImpl<$Res>;
+  factory _$$DropdownItemInputImplCopyWith(_$DropdownItemInputImpl value,
+          $Res Function(_$DropdownItemInputImpl) then) =
+      __$$DropdownItemInputImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({String value, String label, String? color, bool active});
@@ -393,13 +352,10 @@ abstract class _$$DropdownItemInputImplCopyWith<$Res>
 class __$$DropdownItemInputImplCopyWithImpl<$Res>
     extends _$DropdownItemInputCopyWithImpl<$Res, _$DropdownItemInputImpl>
     implements _$$DropdownItemInputImplCopyWith<$Res> {
-  __$$DropdownItemInputImplCopyWithImpl(
-    _$DropdownItemInputImpl _value,
-    $Res Function(_$DropdownItemInputImpl) _then,
-  ) : super(_value, _then);
+  __$$DropdownItemInputImplCopyWithImpl(_$DropdownItemInputImpl _value,
+      $Res Function(_$DropdownItemInputImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of DropdownItemInput
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -408,38 +364,35 @@ class __$$DropdownItemInputImplCopyWithImpl<$Res>
     Object? color = freezed,
     Object? active = null,
   }) {
-    return _then(
-      _$DropdownItemInputImpl(
-        value: null == value
-            ? _value.value
-            : value // ignore: cast_nullable_to_non_nullable
-                  as String,
-        label: null == label
-            ? _value.label
-            : label // ignore: cast_nullable_to_non_nullable
-                  as String,
-        color: freezed == color
-            ? _value.color
-            : color // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        active: null == active
-            ? _value.active
-            : active // ignore: cast_nullable_to_non_nullable
-                  as bool,
-      ),
-    );
+    return _then(_$DropdownItemInputImpl(
+      value: null == value
+          ? _value.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _value.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      color: freezed == color
+          ? _value.color
+          : color // ignore: cast_nullable_to_non_nullable
+              as String?,
+      active: null == active
+          ? _value.active
+          : active // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 
 /// @nodoc
 
 class _$DropdownItemInputImpl implements _DropdownItemInput {
-  const _$DropdownItemInputImpl({
-    required this.value,
-    required this.label,
-    this.color,
-    this.active = true,
-  });
+  const _$DropdownItemInputImpl(
+      {required this.value,
+      required this.label,
+      this.color,
+      this.active = true});
 
   @override
   final String value;
@@ -470,25 +423,20 @@ class _$DropdownItemInputImpl implements _DropdownItemInput {
   @override
   int get hashCode => Object.hash(runtimeType, value, label, color, active);
 
-  /// Create a copy of DropdownItemInput
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DropdownItemInputImplCopyWith<_$DropdownItemInputImpl> get copyWith =>
       __$$DropdownItemInputImplCopyWithImpl<_$DropdownItemInputImpl>(
-        this,
-        _$identity,
-      );
+          this, _$identity);
 }
 
 abstract class _DropdownItemInput implements DropdownItemInput {
-  const factory _DropdownItemInput({
-    required final String value,
-    required final String label,
-    final String? color,
-    final bool active,
-  }) = _$DropdownItemInputImpl;
+  const factory _DropdownItemInput(
+      {required final String value,
+      required final String label,
+      final String? color,
+      final bool active}) = _$DropdownItemInputImpl;
 
   @override
   String get value;
@@ -498,11 +446,8 @@ abstract class _DropdownItemInput implements DropdownItemInput {
   String? get color;
   @override
   bool get active;
-
-  /// Create a copy of DropdownItemInput
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DropdownItemInputImplCopyWith<_$DropdownItemInputImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

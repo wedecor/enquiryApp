@@ -8,13 +8,11 @@ part of 'filters_state.dart';
 
 _$EnquiryFiltersImpl _$$EnquiryFiltersImplFromJson(Map<String, dynamic> json) =>
     _$EnquiryFiltersImpl(
-      statuses:
-          (json['statuses'] as List<dynamic>?)
+      statuses: (json['statuses'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      eventTypes:
-          (json['eventTypes'] as List<dynamic>?)
+      eventTypes: (json['eventTypes'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -23,25 +21,23 @@ _$EnquiryFiltersImpl _$$EnquiryFiltersImplFromJson(Map<String, dynamic> json) =>
           ? null
           : FilterDateRange.fromJson(json['dateRange'] as Map<String, dynamic>),
       searchQuery: json['searchQuery'] as String?,
-      sortBy:
-          $enumDecodeNullable(_$EnquirySortByEnumMap, json['sortBy']) ??
+      sortBy: $enumDecodeNullable(_$EnquirySortByEnumMap, json['sortBy']) ??
           EnquirySortBy.createdAt,
-      sortOrder:
-          $enumDecodeNullable(_$SortOrderEnumMap, json['sortOrder']) ??
+      sortOrder: $enumDecodeNullable(_$SortOrderEnumMap, json['sortOrder']) ??
           SortOrder.descending,
     );
 
 Map<String, dynamic> _$$EnquiryFiltersImplToJson(
-  _$EnquiryFiltersImpl instance,
-) => <String, dynamic>{
-  'statuses': instance.statuses,
-  'eventTypes': instance.eventTypes,
-  'assigneeId': instance.assigneeId,
-  'dateRange': instance.dateRange,
-  'searchQuery': instance.searchQuery,
-  'sortBy': _$EnquirySortByEnumMap[instance.sortBy]!,
-  'sortOrder': _$SortOrderEnumMap[instance.sortOrder]!,
-};
+        _$EnquiryFiltersImpl instance) =>
+    <String, dynamic>{
+      'statuses': instance.statuses,
+      'eventTypes': instance.eventTypes,
+      'assigneeId': instance.assigneeId,
+      'dateRange': instance.dateRange,
+      'searchQuery': instance.searchQuery,
+      'sortBy': _$EnquirySortByEnumMap[instance.sortBy]!,
+      'sortOrder': _$SortOrderEnumMap[instance.sortOrder]!,
+    };
 
 const _$EnquirySortByEnumMap = {
   EnquirySortBy.createdAt: 'createdAt',
@@ -59,18 +55,18 @@ const _$SortOrderEnumMap = {
 };
 
 _$FilterDateRangeImpl _$$FilterDateRangeImplFromJson(
-  Map<String, dynamic> json,
-) => _$FilterDateRangeImpl(
-  start: DateTime.parse(json['start'] as String),
-  end: DateTime.parse(json['end'] as String),
-);
+        Map<String, dynamic> json) =>
+    _$FilterDateRangeImpl(
+      start: DateTime.parse(json['start'] as String),
+      end: DateTime.parse(json['end'] as String),
+    );
 
 Map<String, dynamic> _$$FilterDateRangeImplToJson(
-  _$FilterDateRangeImpl instance,
-) => <String, dynamic>{
-  'start': instance.start.toIso8601String(),
-  'end': instance.end.toIso8601String(),
-};
+        _$FilterDateRangeImpl instance) =>
+    <String, dynamic>{
+      'start': instance.start.toIso8601String(),
+      'end': instance.end.toIso8601String(),
+    };
 
 _$SavedViewImpl _$$SavedViewImplFromJson(Map<String, dynamic> json) =>
     _$SavedViewImpl(

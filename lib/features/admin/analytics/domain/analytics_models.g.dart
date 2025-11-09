@@ -47,8 +47,8 @@ _$KpiDeltasImpl _$$KpiDeltasImplFromJson(Map<String, dynamic> json) =>
       wonEnquiriesChange: (json['wonEnquiriesChange'] as num).toDouble(),
       lostEnquiriesChange: (json['lostEnquiriesChange'] as num).toDouble(),
       conversionRateChange: (json['conversionRateChange'] as num).toDouble(),
-      estimatedRevenueChange: (json['estimatedRevenueChange'] as num)
-          .toDouble(),
+      estimatedRevenueChange:
+          (json['estimatedRevenueChange'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$$KpiDeltasImplToJson(_$KpiDeltasImpl instance) =>
@@ -78,6 +78,7 @@ _$CategoryCountImpl _$$CategoryCountImplFromJson(Map<String, dynamic> json) =>
       key: json['key'] as String,
       count: (json['count'] as num).toInt(),
       percentage: (json['percentage'] as num).toDouble(),
+      label: json['label'] as String?,
     );
 
 Map<String, dynamic> _$$CategoryCountImplToJson(_$CategoryCountImpl instance) =>
@@ -85,6 +86,7 @@ Map<String, dynamic> _$$CategoryCountImplToJson(_$CategoryCountImpl instance) =>
       'key': instance.key,
       'count': instance.count,
       'percentage': instance.percentage,
+      'label': instance.label,
     };
 
 _$RecentEnquiryImpl _$$RecentEnquiryImplFromJson(Map<String, dynamic> json) =>
@@ -112,26 +114,26 @@ Map<String, dynamic> _$$RecentEnquiryImplToJson(_$RecentEnquiryImpl instance) =>
     };
 
 _$AnalyticsFiltersImpl _$$AnalyticsFiltersImplFromJson(
-  Map<String, dynamic> json,
-) => _$AnalyticsFiltersImpl(
-  dateRange: DateRange.fromJson(json['dateRange'] as Map<String, dynamic>),
-  preset: $enumDecode(_$DateRangePresetEnumMap, json['preset']),
-  eventType: json['eventType'] as String?,
-  status: json['status'] as String?,
-  priority: json['priority'] as String?,
-  source: json['source'] as String?,
-);
+        Map<String, dynamic> json) =>
+    _$AnalyticsFiltersImpl(
+      dateRange: DateRange.fromJson(json['dateRange'] as Map<String, dynamic>),
+      preset: $enumDecode(_$DateRangePresetEnumMap, json['preset']),
+      eventType: json['eventType'] as String?,
+      status: json['status'] as String?,
+      priority: json['priority'] as String?,
+      source: json['source'] as String?,
+    );
 
 Map<String, dynamic> _$$AnalyticsFiltersImplToJson(
-  _$AnalyticsFiltersImpl instance,
-) => <String, dynamic>{
-  'dateRange': instance.dateRange,
-  'preset': _$DateRangePresetEnumMap[instance.preset]!,
-  'eventType': instance.eventType,
-  'status': instance.status,
-  'priority': instance.priority,
-  'source': instance.source,
-};
+        _$AnalyticsFiltersImpl instance) =>
+    <String, dynamic>{
+      'dateRange': instance.dateRange,
+      'preset': _$DateRangePresetEnumMap[instance.preset]!,
+      'eventType': instance.eventType,
+      'status': instance.status,
+      'priority': instance.priority,
+      'source': instance.source,
+    };
 
 const _$DateRangePresetEnumMap = {
   DateRangePreset.today: 'today',
@@ -144,44 +146,36 @@ const _$DateRangePresetEnumMap = {
 
 _$AnalyticsStateImpl _$$AnalyticsStateImplFromJson(Map<String, dynamic> json) =>
     _$AnalyticsStateImpl(
-      filters: AnalyticsFilters.fromJson(
-        json['filters'] as Map<String, dynamic>,
-      ),
+      filters:
+          AnalyticsFilters.fromJson(json['filters'] as Map<String, dynamic>),
       kpiSummary: json['kpiSummary'] == null
           ? null
           : KpiSummary.fromJson(json['kpiSummary'] as Map<String, dynamic>),
-      timeSeries:
-          (json['timeSeries'] as List<dynamic>?)
+      timeSeries: (json['timeSeries'] as List<dynamic>?)
               ?.map((e) => SeriesPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      statusBreakdown:
-          (json['statusBreakdown'] as List<dynamic>?)
+      statusBreakdown: (json['statusBreakdown'] as List<dynamic>?)
               ?.map((e) => CategoryCount.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      eventTypeBreakdown:
-          (json['eventTypeBreakdown'] as List<dynamic>?)
+      eventTypeBreakdown: (json['eventTypeBreakdown'] as List<dynamic>?)
               ?.map((e) => CategoryCount.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      sourceBreakdown:
-          (json['sourceBreakdown'] as List<dynamic>?)
+      sourceBreakdown: (json['sourceBreakdown'] as List<dynamic>?)
               ?.map((e) => CategoryCount.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      recentEnquiries:
-          (json['recentEnquiries'] as List<dynamic>?)
+      recentEnquiries: (json['recentEnquiries'] as List<dynamic>?)
               ?.map((e) => RecentEnquiry.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      topEventTypes:
-          (json['topEventTypes'] as List<dynamic>?)
+      topEventTypes: (json['topEventTypes'] as List<dynamic>?)
               ?.map((e) => CategoryCount.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
-      topSources:
-          (json['topSources'] as List<dynamic>?)
+      topSources: (json['topSources'] as List<dynamic>?)
               ?.map((e) => CategoryCount.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
@@ -191,18 +185,18 @@ _$AnalyticsStateImpl _$$AnalyticsStateImplFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$$AnalyticsStateImplToJson(
-  _$AnalyticsStateImpl instance,
-) => <String, dynamic>{
-  'filters': instance.filters,
-  'kpiSummary': instance.kpiSummary,
-  'timeSeries': instance.timeSeries,
-  'statusBreakdown': instance.statusBreakdown,
-  'eventTypeBreakdown': instance.eventTypeBreakdown,
-  'sourceBreakdown': instance.sourceBreakdown,
-  'recentEnquiries': instance.recentEnquiries,
-  'topEventTypes': instance.topEventTypes,
-  'topSources': instance.topSources,
-  'isLoading': instance.isLoading,
-  'isRefreshing': instance.isRefreshing,
-  'error': instance.error,
-};
+        _$AnalyticsStateImpl instance) =>
+    <String, dynamic>{
+      'filters': instance.filters,
+      'kpiSummary': instance.kpiSummary,
+      'timeSeries': instance.timeSeries,
+      'statusBreakdown': instance.statusBreakdown,
+      'eventTypeBreakdown': instance.eventTypeBreakdown,
+      'sourceBreakdown': instance.sourceBreakdown,
+      'recentEnquiries': instance.recentEnquiries,
+      'topEventTypes': instance.topEventTypes,
+      'topSources': instance.topSources,
+      'isLoading': instance.isLoading,
+      'isRefreshing': instance.isRefreshing,
+      'error': instance.error,
+    };

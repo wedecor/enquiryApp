@@ -117,6 +117,7 @@ class CategoryCount with _$CategoryCount {
     required String key,
     required int count,
     required double percentage,
+    String? label,
   }) = _CategoryCount;
 
   factory CategoryCount.fromJson(Map<String, dynamic> json) => _$CategoryCountFromJson(json);

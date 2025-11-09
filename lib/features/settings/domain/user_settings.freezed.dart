@@ -12,8 +12,7 @@ part of 'user_settings.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
+    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 UserSettings _$UserSettingsFromJson(Map<String, dynamic> json) {
   return _UserSettings.fromJson(json);
@@ -28,12 +27,8 @@ mixin _$UserSettings {
   NotificationSettings get notifications => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
-  /// Serializes this UserSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $UserSettingsCopyWith<UserSettings> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -41,18 +36,16 @@ mixin _$UserSettings {
 /// @nodoc
 abstract class $UserSettingsCopyWith<$Res> {
   factory $UserSettingsCopyWith(
-    UserSettings value,
-    $Res Function(UserSettings) then,
-  ) = _$UserSettingsCopyWithImpl<$Res, UserSettings>;
+          UserSettings value, $Res Function(UserSettings) then) =
+      _$UserSettingsCopyWithImpl<$Res, UserSettings>;
   @useResult
-  $Res call({
-    String theme,
-    String language,
-    String timezone,
-    DashboardSettings dashboard,
-    NotificationSettings notifications,
-    DateTime? updatedAt,
-  });
+  $Res call(
+      {String theme,
+      String language,
+      String timezone,
+      DashboardSettings dashboard,
+      NotificationSettings notifications,
+      DateTime? updatedAt});
 
   $DashboardSettingsCopyWith<$Res> get dashboard;
   $NotificationSettingsCopyWith<$Res> get notifications;
@@ -68,8 +61,6 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -80,39 +71,34 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
     Object? notifications = null,
     Object? updatedAt = freezed,
   }) {
-    return _then(
-      _value.copyWith(
-            theme: null == theme
-                ? _value.theme
-                : theme // ignore: cast_nullable_to_non_nullable
-                      as String,
-            language: null == language
-                ? _value.language
-                : language // ignore: cast_nullable_to_non_nullable
-                      as String,
-            timezone: null == timezone
-                ? _value.timezone
-                : timezone // ignore: cast_nullable_to_non_nullable
-                      as String,
-            dashboard: null == dashboard
-                ? _value.dashboard
-                : dashboard // ignore: cast_nullable_to_non_nullable
-                      as DashboardSettings,
-            notifications: null == notifications
-                ? _value.notifications
-                : notifications // ignore: cast_nullable_to_non_nullable
-                      as NotificationSettings,
-            updatedAt: freezed == updatedAt
-                ? _value.updatedAt
-                : updatedAt // ignore: cast_nullable_to_non_nullable
-                      as DateTime?,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      theme: null == theme
+          ? _value.theme
+          : theme // ignore: cast_nullable_to_non_nullable
+              as String,
+      language: null == language
+          ? _value.language
+          : language // ignore: cast_nullable_to_non_nullable
+              as String,
+      timezone: null == timezone
+          ? _value.timezone
+          : timezone // ignore: cast_nullable_to_non_nullable
+              as String,
+      dashboard: null == dashboard
+          ? _value.dashboard
+          : dashboard // ignore: cast_nullable_to_non_nullable
+              as DashboardSettings,
+      notifications: null == notifications
+          ? _value.notifications
+          : notifications // ignore: cast_nullable_to_non_nullable
+              as NotificationSettings,
+      updatedAt: freezed == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+    ) as $Val);
   }
 
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $DashboardSettingsCopyWith<$Res> get dashboard {
@@ -121,8 +107,6 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
     });
   }
 
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $NotificationSettingsCopyWith<$Res> get notifications {
@@ -136,19 +120,17 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
 abstract class _$$UserSettingsImplCopyWith<$Res>
     implements $UserSettingsCopyWith<$Res> {
   factory _$$UserSettingsImplCopyWith(
-    _$UserSettingsImpl value,
-    $Res Function(_$UserSettingsImpl) then,
-  ) = __$$UserSettingsImplCopyWithImpl<$Res>;
+          _$UserSettingsImpl value, $Res Function(_$UserSettingsImpl) then) =
+      __$$UserSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String theme,
-    String language,
-    String timezone,
-    DashboardSettings dashboard,
-    NotificationSettings notifications,
-    DateTime? updatedAt,
-  });
+  $Res call(
+      {String theme,
+      String language,
+      String timezone,
+      DashboardSettings dashboard,
+      NotificationSettings notifications,
+      DateTime? updatedAt});
 
   @override
   $DashboardSettingsCopyWith<$Res> get dashboard;
@@ -161,12 +143,9 @@ class __$$UserSettingsImplCopyWithImpl<$Res>
     extends _$UserSettingsCopyWithImpl<$Res, _$UserSettingsImpl>
     implements _$$UserSettingsImplCopyWith<$Res> {
   __$$UserSettingsImplCopyWithImpl(
-    _$UserSettingsImpl _value,
-    $Res Function(_$UserSettingsImpl) _then,
-  ) : super(_value, _then);
+      _$UserSettingsImpl _value, $Res Function(_$UserSettingsImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -177,48 +156,45 @@ class __$$UserSettingsImplCopyWithImpl<$Res>
     Object? notifications = null,
     Object? updatedAt = freezed,
   }) {
-    return _then(
-      _$UserSettingsImpl(
-        theme: null == theme
-            ? _value.theme
-            : theme // ignore: cast_nullable_to_non_nullable
-                  as String,
-        language: null == language
-            ? _value.language
-            : language // ignore: cast_nullable_to_non_nullable
-                  as String,
-        timezone: null == timezone
-            ? _value.timezone
-            : timezone // ignore: cast_nullable_to_non_nullable
-                  as String,
-        dashboard: null == dashboard
-            ? _value.dashboard
-            : dashboard // ignore: cast_nullable_to_non_nullable
-                  as DashboardSettings,
-        notifications: null == notifications
-            ? _value.notifications
-            : notifications // ignore: cast_nullable_to_non_nullable
-                  as NotificationSettings,
-        updatedAt: freezed == updatedAt
-            ? _value.updatedAt
-            : updatedAt // ignore: cast_nullable_to_non_nullable
-                  as DateTime?,
-      ),
-    );
+    return _then(_$UserSettingsImpl(
+      theme: null == theme
+          ? _value.theme
+          : theme // ignore: cast_nullable_to_non_nullable
+              as String,
+      language: null == language
+          ? _value.language
+          : language // ignore: cast_nullable_to_non_nullable
+              as String,
+      timezone: null == timezone
+          ? _value.timezone
+          : timezone // ignore: cast_nullable_to_non_nullable
+              as String,
+      dashboard: null == dashboard
+          ? _value.dashboard
+          : dashboard // ignore: cast_nullable_to_non_nullable
+              as DashboardSettings,
+      notifications: null == notifications
+          ? _value.notifications
+          : notifications // ignore: cast_nullable_to_non_nullable
+              as NotificationSettings,
+      updatedAt: freezed == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$UserSettingsImpl implements _UserSettings {
-  const _$UserSettingsImpl({
-    this.theme = 'system',
-    this.language = 'en',
-    this.timezone = 'Asia/Kolkata',
-    this.dashboard = const DashboardSettings(),
-    this.notifications = const NotificationSettings(),
-    this.updatedAt,
-  });
+  const _$UserSettingsImpl(
+      {this.theme = 'system',
+      this.language = 'en',
+      this.timezone = 'Asia/Kolkata',
+      this.dashboard = const DashboardSettings(),
+      this.notifications = const NotificationSettings(),
+      this.updatedAt});
 
   factory _$UserSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserSettingsImplFromJson(json);
@@ -264,21 +240,12 @@ class _$UserSettingsImpl implements _UserSettings {
                 other.updatedAt == updatedAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    theme,
-    language,
-    timezone,
-    dashboard,
-    notifications,
-    updatedAt,
-  );
+  int get hashCode => Object.hash(runtimeType, theme, language, timezone,
+      dashboard, notifications, updatedAt);
 
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$UserSettingsImplCopyWith<_$UserSettingsImpl> get copyWith =>
@@ -286,19 +253,20 @@ class _$UserSettingsImpl implements _UserSettings {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$UserSettingsImplToJson(this);
+    return _$$UserSettingsImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _UserSettings implements UserSettings {
-  const factory _UserSettings({
-    final String theme,
-    final String language,
-    final String timezone,
-    final DashboardSettings dashboard,
-    final NotificationSettings notifications,
-    final DateTime? updatedAt,
-  }) = _$UserSettingsImpl;
+  const factory _UserSettings(
+      {final String theme,
+      final String language,
+      final String timezone,
+      final DashboardSettings dashboard,
+      final NotificationSettings notifications,
+      final DateTime? updatedAt}) = _$UserSettingsImpl;
 
   factory _UserSettings.fromJson(Map<String, dynamic> json) =
       _$UserSettingsImpl.fromJson;
@@ -315,11 +283,8 @@ abstract class _UserSettings implements UserSettings {
   NotificationSettings get notifications;
   @override
   DateTime? get updatedAt;
-
-  /// Create a copy of UserSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$UserSettingsImplCopyWith<_$UserSettingsImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -334,12 +299,8 @@ mixin _$DashboardSettings {
   List<String> get statusTabs => throw _privateConstructorUsedError;
   List<ColumnSettings> get columns => throw _privateConstructorUsedError;
 
-  /// Serializes this DashboardSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of DashboardSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $DashboardSettingsCopyWith<DashboardSettings> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -347,15 +308,13 @@ mixin _$DashboardSettings {
 /// @nodoc
 abstract class $DashboardSettingsCopyWith<$Res> {
   factory $DashboardSettingsCopyWith(
-    DashboardSettings value,
-    $Res Function(DashboardSettings) then,
-  ) = _$DashboardSettingsCopyWithImpl<$Res, DashboardSettings>;
+          DashboardSettings value, $Res Function(DashboardSettings) then) =
+      _$DashboardSettingsCopyWithImpl<$Res, DashboardSettings>;
   @useResult
-  $Res call({
-    String dateRange,
-    List<String> statusTabs,
-    List<ColumnSettings> columns,
-  });
+  $Res call(
+      {String dateRange,
+      List<String> statusTabs,
+      List<ColumnSettings> columns});
 }
 
 /// @nodoc
@@ -368,8 +327,6 @@ class _$DashboardSettingsCopyWithImpl<$Res, $Val extends DashboardSettings>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of DashboardSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -377,53 +334,45 @@ class _$DashboardSettingsCopyWithImpl<$Res, $Val extends DashboardSettings>
     Object? statusTabs = null,
     Object? columns = null,
   }) {
-    return _then(
-      _value.copyWith(
-            dateRange: null == dateRange
-                ? _value.dateRange
-                : dateRange // ignore: cast_nullable_to_non_nullable
-                      as String,
-            statusTabs: null == statusTabs
-                ? _value.statusTabs
-                : statusTabs // ignore: cast_nullable_to_non_nullable
-                      as List<String>,
-            columns: null == columns
-                ? _value.columns
-                : columns // ignore: cast_nullable_to_non_nullable
-                      as List<ColumnSettings>,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      dateRange: null == dateRange
+          ? _value.dateRange
+          : dateRange // ignore: cast_nullable_to_non_nullable
+              as String,
+      statusTabs: null == statusTabs
+          ? _value.statusTabs
+          : statusTabs // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      columns: null == columns
+          ? _value.columns
+          : columns // ignore: cast_nullable_to_non_nullable
+              as List<ColumnSettings>,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$DashboardSettingsImplCopyWith<$Res>
     implements $DashboardSettingsCopyWith<$Res> {
-  factory _$$DashboardSettingsImplCopyWith(
-    _$DashboardSettingsImpl value,
-    $Res Function(_$DashboardSettingsImpl) then,
-  ) = __$$DashboardSettingsImplCopyWithImpl<$Res>;
+  factory _$$DashboardSettingsImplCopyWith(_$DashboardSettingsImpl value,
+          $Res Function(_$DashboardSettingsImpl) then) =
+      __$$DashboardSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String dateRange,
-    List<String> statusTabs,
-    List<ColumnSettings> columns,
-  });
+  $Res call(
+      {String dateRange,
+      List<String> statusTabs,
+      List<ColumnSettings> columns});
 }
 
 /// @nodoc
 class __$$DashboardSettingsImplCopyWithImpl<$Res>
     extends _$DashboardSettingsCopyWithImpl<$Res, _$DashboardSettingsImpl>
     implements _$$DashboardSettingsImplCopyWith<$Res> {
-  __$$DashboardSettingsImplCopyWithImpl(
-    _$DashboardSettingsImpl _value,
-    $Res Function(_$DashboardSettingsImpl) _then,
-  ) : super(_value, _then);
+  __$$DashboardSettingsImplCopyWithImpl(_$DashboardSettingsImpl _value,
+      $Res Function(_$DashboardSettingsImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of DashboardSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -431,40 +380,38 @@ class __$$DashboardSettingsImplCopyWithImpl<$Res>
     Object? statusTabs = null,
     Object? columns = null,
   }) {
-    return _then(
-      _$DashboardSettingsImpl(
-        dateRange: null == dateRange
-            ? _value.dateRange
-            : dateRange // ignore: cast_nullable_to_non_nullable
-                  as String,
-        statusTabs: null == statusTabs
-            ? _value._statusTabs
-            : statusTabs // ignore: cast_nullable_to_non_nullable
-                  as List<String>,
-        columns: null == columns
-            ? _value._columns
-            : columns // ignore: cast_nullable_to_non_nullable
-                  as List<ColumnSettings>,
-      ),
-    );
+    return _then(_$DashboardSettingsImpl(
+      dateRange: null == dateRange
+          ? _value.dateRange
+          : dateRange // ignore: cast_nullable_to_non_nullable
+              as String,
+      statusTabs: null == statusTabs
+          ? _value._statusTabs
+          : statusTabs // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      columns: null == columns
+          ? _value._columns
+          : columns // ignore: cast_nullable_to_non_nullable
+              as List<ColumnSettings>,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$DashboardSettingsImpl implements _DashboardSettings {
-  const _$DashboardSettingsImpl({
-    this.dateRange = '30d',
-    final List<String> statusTabs = const ['new', 'in_talks', 'quote_sent'],
-    final List<ColumnSettings> columns = const [
-      ColumnSettings(id: 'customer', visible: true, order: 0),
-      ColumnSettings(id: 'eventType', visible: true, order: 1),
-      ColumnSettings(id: 'status', visible: true, order: 2),
-      ColumnSettings(id: 'priority', visible: true, order: 3),
-      ColumnSettings(id: 'createdAt', visible: true, order: 4),
-    ],
-  }) : _statusTabs = statusTabs,
-       _columns = columns;
+  const _$DashboardSettingsImpl(
+      {this.dateRange = '30d',
+      final List<String> statusTabs = const ['new', 'in_talks', 'quote_sent'],
+      final List<ColumnSettings> columns = const [
+        ColumnSettings(id: 'customer', visible: true, order: 0),
+        ColumnSettings(id: 'eventType', visible: true, order: 1),
+        ColumnSettings(id: 'status', visible: true, order: 2),
+        ColumnSettings(id: 'priority', visible: true, order: 3),
+        ColumnSettings(id: 'createdAt', visible: true, order: 4)
+      ]})
+      : _statusTabs = statusTabs,
+        _columns = columns;
 
   factory _$DashboardSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$DashboardSettingsImplFromJson(json);
@@ -502,45 +449,39 @@ class _$DashboardSettingsImpl implements _DashboardSettings {
             other is _$DashboardSettingsImpl &&
             (identical(other.dateRange, dateRange) ||
                 other.dateRange == dateRange) &&
-            const DeepCollectionEquality().equals(
-              other._statusTabs,
-              _statusTabs,
-            ) &&
+            const DeepCollectionEquality()
+                .equals(other._statusTabs, _statusTabs) &&
             const DeepCollectionEquality().equals(other._columns, _columns));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-    runtimeType,
-    dateRange,
-    const DeepCollectionEquality().hash(_statusTabs),
-    const DeepCollectionEquality().hash(_columns),
-  );
+      runtimeType,
+      dateRange,
+      const DeepCollectionEquality().hash(_statusTabs),
+      const DeepCollectionEquality().hash(_columns));
 
-  /// Create a copy of DashboardSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$DashboardSettingsImplCopyWith<_$DashboardSettingsImpl> get copyWith =>
       __$$DashboardSettingsImplCopyWithImpl<_$DashboardSettingsImpl>(
-        this,
-        _$identity,
-      );
+          this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$DashboardSettingsImplToJson(this);
+    return _$$DashboardSettingsImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _DashboardSettings implements DashboardSettings {
-  const factory _DashboardSettings({
-    final String dateRange,
-    final List<String> statusTabs,
-    final List<ColumnSettings> columns,
-  }) = _$DashboardSettingsImpl;
+  const factory _DashboardSettings(
+      {final String dateRange,
+      final List<String> statusTabs,
+      final List<ColumnSettings> columns}) = _$DashboardSettingsImpl;
 
   factory _DashboardSettings.fromJson(Map<String, dynamic> json) =
       _$DashboardSettingsImpl.fromJson;
@@ -551,11 +492,8 @@ abstract class _DashboardSettings implements DashboardSettings {
   List<String> get statusTabs;
   @override
   List<ColumnSettings> get columns;
-
-  /// Create a copy of DashboardSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$DashboardSettingsImplCopyWith<_$DashboardSettingsImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -570,12 +508,8 @@ mixin _$ColumnSettings {
   bool get visible => throw _privateConstructorUsedError;
   int get order => throw _privateConstructorUsedError;
 
-  /// Serializes this ColumnSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ColumnSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ColumnSettingsCopyWith<ColumnSettings> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -583,9 +517,8 @@ mixin _$ColumnSettings {
 /// @nodoc
 abstract class $ColumnSettingsCopyWith<$Res> {
   factory $ColumnSettingsCopyWith(
-    ColumnSettings value,
-    $Res Function(ColumnSettings) then,
-  ) = _$ColumnSettingsCopyWithImpl<$Res, ColumnSettings>;
+          ColumnSettings value, $Res Function(ColumnSettings) then) =
+      _$ColumnSettingsCopyWithImpl<$Res, ColumnSettings>;
   @useResult
   $Res call({String id, bool visible, int order});
 }
@@ -600,38 +533,36 @@ class _$ColumnSettingsCopyWithImpl<$Res, $Val extends ColumnSettings>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ColumnSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? id = null, Object? visible = null, Object? order = null}) {
-    return _then(
-      _value.copyWith(
-            id: null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                      as String,
-            visible: null == visible
-                ? _value.visible
-                : visible // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            order: null == order
-                ? _value.order
-                : order // ignore: cast_nullable_to_non_nullable
-                      as int,
-          )
-          as $Val,
-    );
+  $Res call({
+    Object? id = null,
+    Object? visible = null,
+    Object? order = null,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      visible: null == visible
+          ? _value.visible
+          : visible // ignore: cast_nullable_to_non_nullable
+              as bool,
+      order: null == order
+          ? _value.order
+          : order // ignore: cast_nullable_to_non_nullable
+              as int,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$ColumnSettingsImplCopyWith<$Res>
     implements $ColumnSettingsCopyWith<$Res> {
-  factory _$$ColumnSettingsImplCopyWith(
-    _$ColumnSettingsImpl value,
-    $Res Function(_$ColumnSettingsImpl) then,
-  ) = __$$ColumnSettingsImplCopyWithImpl<$Res>;
+  factory _$$ColumnSettingsImplCopyWith(_$ColumnSettingsImpl value,
+          $Res Function(_$ColumnSettingsImpl) then) =
+      __$$ColumnSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({String id, bool visible, int order});
@@ -642,42 +573,38 @@ class __$$ColumnSettingsImplCopyWithImpl<$Res>
     extends _$ColumnSettingsCopyWithImpl<$Res, _$ColumnSettingsImpl>
     implements _$$ColumnSettingsImplCopyWith<$Res> {
   __$$ColumnSettingsImplCopyWithImpl(
-    _$ColumnSettingsImpl _value,
-    $Res Function(_$ColumnSettingsImpl) _then,
-  ) : super(_value, _then);
+      _$ColumnSettingsImpl _value, $Res Function(_$ColumnSettingsImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of ColumnSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? id = null, Object? visible = null, Object? order = null}) {
-    return _then(
-      _$ColumnSettingsImpl(
-        id: null == id
-            ? _value.id
-            : id // ignore: cast_nullable_to_non_nullable
-                  as String,
-        visible: null == visible
-            ? _value.visible
-            : visible // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        order: null == order
-            ? _value.order
-            : order // ignore: cast_nullable_to_non_nullable
-                  as int,
-      ),
-    );
+  $Res call({
+    Object? id = null,
+    Object? visible = null,
+    Object? order = null,
+  }) {
+    return _then(_$ColumnSettingsImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      visible: null == visible
+          ? _value.visible
+          : visible // ignore: cast_nullable_to_non_nullable
+              as bool,
+      order: null == order
+          ? _value.order
+          : order // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$ColumnSettingsImpl implements _ColumnSettings {
-  const _$ColumnSettingsImpl({
-    required this.id,
-    this.visible = true,
-    this.order = 0,
-  });
+  const _$ColumnSettingsImpl(
+      {required this.id, this.visible = true, this.order = 0});
 
   factory _$ColumnSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$ColumnSettingsImplFromJson(json);
@@ -706,33 +633,30 @@ class _$ColumnSettingsImpl implements _ColumnSettings {
             (identical(other.order, order) || other.order == order));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, visible, order);
 
-  /// Create a copy of ColumnSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ColumnSettingsImplCopyWith<_$ColumnSettingsImpl> get copyWith =>
       __$$ColumnSettingsImplCopyWithImpl<_$ColumnSettingsImpl>(
-        this,
-        _$identity,
-      );
+          this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$ColumnSettingsImplToJson(this);
+    return _$$ColumnSettingsImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _ColumnSettings implements ColumnSettings {
-  const factory _ColumnSettings({
-    required final String id,
-    final bool visible,
-    final int order,
-  }) = _$ColumnSettingsImpl;
+  const factory _ColumnSettings(
+      {required final String id,
+      final bool visible,
+      final int order}) = _$ColumnSettingsImpl;
 
   factory _ColumnSettings.fromJson(Map<String, dynamic> json) =
       _$ColumnSettingsImpl.fromJson;
@@ -743,11 +667,8 @@ abstract class _ColumnSettings implements ColumnSettings {
   bool get visible;
   @override
   int get order;
-
-  /// Create a copy of ColumnSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ColumnSettingsImplCopyWith<_$ColumnSettingsImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -762,37 +683,27 @@ mixin _$NotificationSettings {
   bool get emailEnabled => throw _privateConstructorUsedError;
   NotificationChannels get channels => throw _privateConstructorUsedError;
 
-  /// Serializes this NotificationSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $NotificationSettingsCopyWith<NotificationSettings> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $NotificationSettingsCopyWith<$Res> {
-  factory $NotificationSettingsCopyWith(
-    NotificationSettings value,
-    $Res Function(NotificationSettings) then,
-  ) = _$NotificationSettingsCopyWithImpl<$Res, NotificationSettings>;
+  factory $NotificationSettingsCopyWith(NotificationSettings value,
+          $Res Function(NotificationSettings) then) =
+      _$NotificationSettingsCopyWithImpl<$Res, NotificationSettings>;
   @useResult
-  $Res call({
-    bool pushEnabled,
-    bool emailEnabled,
-    NotificationChannels channels,
-  });
+  $Res call(
+      {bool pushEnabled, bool emailEnabled, NotificationChannels channels});
 
   $NotificationChannelsCopyWith<$Res> get channels;
 }
 
 /// @nodoc
-class _$NotificationSettingsCopyWithImpl<
-  $Res,
-  $Val extends NotificationSettings
->
+class _$NotificationSettingsCopyWithImpl<$Res,
+        $Val extends NotificationSettings>
     implements $NotificationSettingsCopyWith<$Res> {
   _$NotificationSettingsCopyWithImpl(this._value, this._then);
 
@@ -801,8 +712,6 @@ class _$NotificationSettingsCopyWithImpl<
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -810,27 +719,22 @@ class _$NotificationSettingsCopyWithImpl<
     Object? emailEnabled = null,
     Object? channels = null,
   }) {
-    return _then(
-      _value.copyWith(
-            pushEnabled: null == pushEnabled
-                ? _value.pushEnabled
-                : pushEnabled // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            emailEnabled: null == emailEnabled
-                ? _value.emailEnabled
-                : emailEnabled // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            channels: null == channels
-                ? _value.channels
-                : channels // ignore: cast_nullable_to_non_nullable
-                      as NotificationChannels,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      pushEnabled: null == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      emailEnabled: null == emailEnabled
+          ? _value.emailEnabled
+          : emailEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      channels: null == channels
+          ? _value.channels
+          : channels // ignore: cast_nullable_to_non_nullable
+              as NotificationChannels,
+    ) as $Val);
   }
 
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $NotificationChannelsCopyWith<$Res> get channels {
@@ -843,17 +747,13 @@ class _$NotificationSettingsCopyWithImpl<
 /// @nodoc
 abstract class _$$NotificationSettingsImplCopyWith<$Res>
     implements $NotificationSettingsCopyWith<$Res> {
-  factory _$$NotificationSettingsImplCopyWith(
-    _$NotificationSettingsImpl value,
-    $Res Function(_$NotificationSettingsImpl) then,
-  ) = __$$NotificationSettingsImplCopyWithImpl<$Res>;
+  factory _$$NotificationSettingsImplCopyWith(_$NotificationSettingsImpl value,
+          $Res Function(_$NotificationSettingsImpl) then) =
+      __$$NotificationSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    bool pushEnabled,
-    bool emailEnabled,
-    NotificationChannels channels,
-  });
+  $Res call(
+      {bool pushEnabled, bool emailEnabled, NotificationChannels channels});
 
   @override
   $NotificationChannelsCopyWith<$Res> get channels;
@@ -863,13 +763,10 @@ abstract class _$$NotificationSettingsImplCopyWith<$Res>
 class __$$NotificationSettingsImplCopyWithImpl<$Res>
     extends _$NotificationSettingsCopyWithImpl<$Res, _$NotificationSettingsImpl>
     implements _$$NotificationSettingsImplCopyWith<$Res> {
-  __$$NotificationSettingsImplCopyWithImpl(
-    _$NotificationSettingsImpl _value,
-    $Res Function(_$NotificationSettingsImpl) _then,
-  ) : super(_value, _then);
+  __$$NotificationSettingsImplCopyWithImpl(_$NotificationSettingsImpl _value,
+      $Res Function(_$NotificationSettingsImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -877,33 +774,30 @@ class __$$NotificationSettingsImplCopyWithImpl<$Res>
     Object? emailEnabled = null,
     Object? channels = null,
   }) {
-    return _then(
-      _$NotificationSettingsImpl(
-        pushEnabled: null == pushEnabled
-            ? _value.pushEnabled
-            : pushEnabled // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        emailEnabled: null == emailEnabled
-            ? _value.emailEnabled
-            : emailEnabled // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        channels: null == channels
-            ? _value.channels
-            : channels // ignore: cast_nullable_to_non_nullable
-                  as NotificationChannels,
-      ),
-    );
+    return _then(_$NotificationSettingsImpl(
+      pushEnabled: null == pushEnabled
+          ? _value.pushEnabled
+          : pushEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      emailEnabled: null == emailEnabled
+          ? _value.emailEnabled
+          : emailEnabled // ignore: cast_nullable_to_non_nullable
+              as bool,
+      channels: null == channels
+          ? _value.channels
+          : channels // ignore: cast_nullable_to_non_nullable
+              as NotificationChannels,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$NotificationSettingsImpl implements _NotificationSettings {
-  const _$NotificationSettingsImpl({
-    this.pushEnabled = true,
-    this.emailEnabled = false,
-    this.channels = const NotificationChannels(),
-  });
+  const _$NotificationSettingsImpl(
+      {this.pushEnabled = true,
+      this.emailEnabled = false,
+      this.channels = const NotificationChannels()});
 
   factory _$NotificationSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$NotificationSettingsImplFromJson(json);
@@ -936,35 +830,32 @@ class _$NotificationSettingsImpl implements _NotificationSettings {
                 other.channels == channels));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, pushEnabled, emailEnabled, channels);
 
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl>
-  get copyWith =>
-      __$$NotificationSettingsImplCopyWithImpl<_$NotificationSettingsImpl>(
-        this,
-        _$identity,
-      );
+      get copyWith =>
+          __$$NotificationSettingsImplCopyWithImpl<_$NotificationSettingsImpl>(
+              this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$NotificationSettingsImplToJson(this);
+    return _$$NotificationSettingsImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _NotificationSettings implements NotificationSettings {
-  const factory _NotificationSettings({
-    final bool pushEnabled,
-    final bool emailEnabled,
-    final NotificationChannels channels,
-  }) = _$NotificationSettingsImpl;
+  const factory _NotificationSettings(
+      {final bool pushEnabled,
+      final bool emailEnabled,
+      final NotificationChannels channels}) = _$NotificationSettingsImpl;
 
   factory _NotificationSettings.fromJson(Map<String, dynamic> json) =
       _$NotificationSettingsImpl.fromJson;
@@ -975,13 +866,10 @@ abstract class _NotificationSettings implements NotificationSettings {
   bool get emailEnabled;
   @override
   NotificationChannels get channels;
-
-  /// Create a copy of NotificationSettings
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl>
-  get copyWith => throw _privateConstructorUsedError;
+      get copyWith => throw _privateConstructorUsedError;
 }
 
 NotificationChannels _$NotificationChannelsFromJson(Map<String, dynamic> json) {
@@ -995,31 +883,24 @@ mixin _$NotificationChannels {
   bool get payment => throw _privateConstructorUsedError;
   bool get reminders => throw _privateConstructorUsedError;
 
-  /// Serializes this NotificationChannels to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of NotificationChannels
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $NotificationChannelsCopyWith<NotificationChannels> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $NotificationChannelsCopyWith<$Res> {
-  factory $NotificationChannelsCopyWith(
-    NotificationChannels value,
-    $Res Function(NotificationChannels) then,
-  ) = _$NotificationChannelsCopyWithImpl<$Res, NotificationChannels>;
+  factory $NotificationChannelsCopyWith(NotificationChannels value,
+          $Res Function(NotificationChannels) then) =
+      _$NotificationChannelsCopyWithImpl<$Res, NotificationChannels>;
   @useResult
   $Res call({bool assignment, bool statusChange, bool payment, bool reminders});
 }
 
 /// @nodoc
-class _$NotificationChannelsCopyWithImpl<
-  $Res,
-  $Val extends NotificationChannels
->
+class _$NotificationChannelsCopyWithImpl<$Res,
+        $Val extends NotificationChannels>
     implements $NotificationChannelsCopyWith<$Res> {
   _$NotificationChannelsCopyWithImpl(this._value, this._then);
 
@@ -1028,8 +909,6 @@ class _$NotificationChannelsCopyWithImpl<
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of NotificationChannels
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1038,37 +917,33 @@ class _$NotificationChannelsCopyWithImpl<
     Object? payment = null,
     Object? reminders = null,
   }) {
-    return _then(
-      _value.copyWith(
-            assignment: null == assignment
-                ? _value.assignment
-                : assignment // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            statusChange: null == statusChange
-                ? _value.statusChange
-                : statusChange // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            payment: null == payment
-                ? _value.payment
-                : payment // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            reminders: null == reminders
-                ? _value.reminders
-                : reminders // ignore: cast_nullable_to_non_nullable
-                      as bool,
-          )
-          as $Val,
-    );
+    return _then(_value.copyWith(
+      assignment: null == assignment
+          ? _value.assignment
+          : assignment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      statusChange: null == statusChange
+          ? _value.statusChange
+          : statusChange // ignore: cast_nullable_to_non_nullable
+              as bool,
+      payment: null == payment
+          ? _value.payment
+          : payment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      reminders: null == reminders
+          ? _value.reminders
+          : reminders // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ) as $Val);
   }
 }
 
 /// @nodoc
 abstract class _$$NotificationChannelsImplCopyWith<$Res>
     implements $NotificationChannelsCopyWith<$Res> {
-  factory _$$NotificationChannelsImplCopyWith(
-    _$NotificationChannelsImpl value,
-    $Res Function(_$NotificationChannelsImpl) then,
-  ) = __$$NotificationChannelsImplCopyWithImpl<$Res>;
+  factory _$$NotificationChannelsImplCopyWith(_$NotificationChannelsImpl value,
+          $Res Function(_$NotificationChannelsImpl) then) =
+      __$$NotificationChannelsImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({bool assignment, bool statusChange, bool payment, bool reminders});
@@ -1078,13 +953,10 @@ abstract class _$$NotificationChannelsImplCopyWith<$Res>
 class __$$NotificationChannelsImplCopyWithImpl<$Res>
     extends _$NotificationChannelsCopyWithImpl<$Res, _$NotificationChannelsImpl>
     implements _$$NotificationChannelsImplCopyWith<$Res> {
-  __$$NotificationChannelsImplCopyWithImpl(
-    _$NotificationChannelsImpl _value,
-    $Res Function(_$NotificationChannelsImpl) _then,
-  ) : super(_value, _then);
+  __$$NotificationChannelsImplCopyWithImpl(_$NotificationChannelsImpl _value,
+      $Res Function(_$NotificationChannelsImpl) _then)
+      : super(_value, _then);
 
-  /// Create a copy of NotificationChannels
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -1093,38 +965,35 @@ class __$$NotificationChannelsImplCopyWithImpl<$Res>
     Object? payment = null,
     Object? reminders = null,
   }) {
-    return _then(
-      _$NotificationChannelsImpl(
-        assignment: null == assignment
-            ? _value.assignment
-            : assignment // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        statusChange: null == statusChange
-            ? _value.statusChange
-            : statusChange // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        payment: null == payment
-            ? _value.payment
-            : payment // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        reminders: null == reminders
-            ? _value.reminders
-            : reminders // ignore: cast_nullable_to_non_nullable
-                  as bool,
-      ),
-    );
+    return _then(_$NotificationChannelsImpl(
+      assignment: null == assignment
+          ? _value.assignment
+          : assignment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      statusChange: null == statusChange
+          ? _value.statusChange
+          : statusChange // ignore: cast_nullable_to_non_nullable
+              as bool,
+      payment: null == payment
+          ? _value.payment
+          : payment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      reminders: null == reminders
+          ? _value.reminders
+          : reminders // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$NotificationChannelsImpl implements _NotificationChannels {
-  const _$NotificationChannelsImpl({
-    this.assignment = true,
-    this.statusChange = true,
-    this.payment = true,
-    this.reminders = true,
-  });
+  const _$NotificationChannelsImpl(
+      {this.assignment = true,
+      this.statusChange = true,
+      this.payment = true,
+      this.reminders = true});
 
   factory _$NotificationChannelsImpl.fromJson(Map<String, dynamic> json) =>
       _$$NotificationChannelsImplFromJson(json);
@@ -1161,36 +1030,33 @@ class _$NotificationChannelsImpl implements _NotificationChannels {
                 other.reminders == reminders));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode =>
       Object.hash(runtimeType, assignment, statusChange, payment, reminders);
 
-  /// Create a copy of NotificationChannels
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl>
-  get copyWith =>
-      __$$NotificationChannelsImplCopyWithImpl<_$NotificationChannelsImpl>(
-        this,
-        _$identity,
-      );
+      get copyWith =>
+          __$$NotificationChannelsImplCopyWithImpl<_$NotificationChannelsImpl>(
+              this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$NotificationChannelsImplToJson(this);
+    return _$$NotificationChannelsImplToJson(
+      this,
+    );
   }
 }
 
 abstract class _NotificationChannels implements NotificationChannels {
-  const factory _NotificationChannels({
-    final bool assignment,
-    final bool statusChange,
-    final bool payment,
-    final bool reminders,
-  }) = _$NotificationChannelsImpl;
+  const factory _NotificationChannels(
+      {final bool assignment,
+      final bool statusChange,
+      final bool payment,
+      final bool reminders}) = _$NotificationChannelsImpl;
 
   factory _NotificationChannels.fromJson(Map<String, dynamic> json) =
       _$NotificationChannelsImpl.fromJson;
@@ -1203,11 +1069,8 @@ abstract class _NotificationChannels implements NotificationChannels {
   bool get payment;
   @override
   bool get reminders;
-
-  /// Create a copy of NotificationChannels
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl>
-  get copyWith => throw _privateConstructorUsedError;
+      get copyWith => throw _privateConstructorUsedError;
 }
