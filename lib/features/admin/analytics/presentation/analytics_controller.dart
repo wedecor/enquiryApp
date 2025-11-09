@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../../services/dropdown_lookup.dart';
 import '../data/analytics_repository.dart';
 import '../domain/analytics_models.dart';
 
@@ -79,6 +80,13 @@ class AnalyticsController extends _$AnalyticsController {
   Future<AnalyticsState> _loadAnalyticsData(AnalyticsFilters filters) async {
     final repository = ref.read(analyticsRepositoryProvider);
 
+    DropdownLookup? dropdownLookup;
+    try {
+      dropdownLookup = await ref.watch(dropdownLookupProvider.future);
+    } catch (_) {
+      dropdownLookup = null;
+    }
+
     try {
       // Calculate previous period for deltas
       final currentRange = filters.dateRange;
@@ -103,9 +111,18 @@ class AnalyticsController extends _$AnalyticsController {
       final kpiSummary = _calculateKpiSummary(currentData, previousData);
 
       // Convert breakdowns to CategoryCount lists
-      final statusBreakdown = _convertToCategories(currentData.statusCounts);
-      final eventTypeBreakdown = _convertToCategories(currentData.eventTypeCounts);
-      final sourceBreakdown = _convertToCategories(currentData.sourceCounts);
+      final statusBreakdown = _convertToCategories(
+        currentData.statusCounts,
+        labelResolver: dropdownLookup?.labelForStatus,
+      );
+      final eventTypeBreakdown = _convertToCategories(
+        currentData.eventTypeCounts,
+        labelResolver: dropdownLookup?.labelForEventType,
+      );
+      final sourceBreakdown = _convertToCategories(
+        currentData.sourceCounts,
+        labelResolver: dropdownLookup?.labelForSource,
+      );
 
       // Get top lists (sorted by count, limited)
       final topEventTypes = statusBreakdown.take(10).toList();
@@ -250,7 +267,10 @@ class AnalyticsController extends _$AnalyticsController {
   }
 
   /// Convert count map to CategoryCount list with percentages
-  List<CategoryCount> _convertToCategories(Map<String, int> counts) {
+  List<CategoryCount> _convertToCategories(
+    Map<String, int> counts, {
+    String Function(String value)? labelResolver,
+  }) {
     final total = counts.values.fold<int>(0, (sum, count) => sum + count);
 
     if (total == 0) return [];
@@ -261,6 +281,9 @@ class AnalyticsController extends _$AnalyticsController {
             key: entry.key,
             count: entry.value,
             percentage: (entry.value / total) * 100,
+            label: labelResolver != null
+                ? labelResolver(entry.key)
+                : DropdownLookup.titleCase(entry.key),
           ),
         )
         .toList()

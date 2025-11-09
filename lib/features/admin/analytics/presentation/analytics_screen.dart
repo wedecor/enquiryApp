@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_controller.dart';
 import 'widgets/breakdown_charts.dart';
@@ -329,6 +330,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       builder: (context, ref, child) {
         final eventTypesAsync = ref.watch(eventTypesForFilterProvider);
         final analyticsAsync = ref.watch(analyticsControllerProvider);
+        final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+              data: (value) => value,
+              orElse: () => null,
+            );
 
         return eventTypesAsync.when(
           data: (eventTypes) {
@@ -345,8 +350,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               items: [
                 const DropdownMenuItem<String?>(value: null, child: Text('All Event Types')),
                 ...eventTypes.map(
-                  (eventType) =>
-                      DropdownMenuItem<String?>(value: eventType, child: Text(eventType)),
+                  (eventType) {
+                    final label = dropdownLookup?.labelForEventType(eventType) ??
+                        DropdownLookup.titleCase(eventType);
+                    return DropdownMenuItem<String?>(
+                      value: eventType,
+                      child: Text(label),
+                    );
+                  },
                 ),
               ],
               onChanged: (eventType) {
@@ -382,6 +393,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       builder: (context, ref, child) {
         final statusesAsync = ref.watch(statusesForFilterProvider);
         final analyticsAsync = ref.watch(analyticsControllerProvider);
+        final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+              data: (value) => value,
+              orElse: () => null,
+            );
 
         return statusesAsync.when(
           data: (statuses) {
@@ -398,7 +413,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               items: [
                 const DropdownMenuItem<String?>(value: null, child: Text('All Statuses')),
                 ...statuses.map(
-                  (status) => DropdownMenuItem<String?>(value: status, child: Text(status)),
+                  (status) {
+                    final label = dropdownLookup?.labelForStatus(status) ??
+                        DropdownLookup.titleCase(status);
+                    return DropdownMenuItem<String?>(
+                      value: status,
+                      child: Text(label),
+                    );
+                  },
                 ),
               ],
               onChanged: (status) {
@@ -434,6 +456,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       builder: (context, ref, child) {
         final prioritiesAsync = ref.watch(prioritiesForFilterProvider);
         final analyticsAsync = ref.watch(analyticsControllerProvider);
+        final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+              data: (value) => value,
+              orElse: () => null,
+            );
 
         return prioritiesAsync.when(
           data: (priorities) {
@@ -450,7 +476,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               items: [
                 const DropdownMenuItem<String?>(value: null, child: Text('All Priorities')),
                 ...priorities.map(
-                  (priority) => DropdownMenuItem<String?>(value: priority, child: Text(priority)),
+                  (priority) {
+                    final label = dropdownLookup?.labelForPriority(priority) ??
+                        DropdownLookup.titleCase(priority);
+                    return DropdownMenuItem<String?>(
+                      value: priority,
+                      child: Text(label),
+                    );
+                  },
                 ),
               ],
               onChanged: (priority) {
@@ -486,6 +519,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       builder: (context, ref, child) {
         final sourcesAsync = ref.watch(sourcesForFilterProvider);
         final analyticsAsync = ref.watch(analyticsControllerProvider);
+        final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+              data: (value) => value,
+              orElse: () => null,
+            );
 
         return sourcesAsync.when(
           data: (sources) {
@@ -502,7 +539,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               items: [
                 const DropdownMenuItem<String?>(value: null, child: Text('All Sources')),
                 ...sources.map(
-                  (source) => DropdownMenuItem<String?>(value: source, child: Text(source)),
+                  (source) {
+                    final label = dropdownLookup?.labelForSource(source) ??
+                        DropdownLookup.titleCase(source);
+                    return DropdownMenuItem<String?>(
+                      value: source,
+                      child: Text(label),
+                    );
+                  },
                 ),
               ],
               onChanged: (source) {

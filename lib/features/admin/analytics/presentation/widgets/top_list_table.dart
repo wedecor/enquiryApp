@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
 
 /// Reusable table widget for displaying top lists and recent enquiries
@@ -59,15 +62,17 @@ class TopListTable extends StatelessWidget {
         ),
 
         // Data rows
-        ...displayData.map(
-          (item) => TableRow(
+        ...displayData.map((item) {
+          final label = item.label ?? _formatName(item.key);
+          return TableRow(
             children: [
-              _buildDataCell(context, item.key),
+              _buildDataCell(context, label),
               _buildDataCell(context, item.count.toString()),
-              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
+              if (showPercentage)
+                _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
             ],
-          ),
-        ),
+          );
+        }),
       ],
     );
   }
@@ -113,10 +118,12 @@ class TopListTable extends StatelessWidget {
       ),
     );
   }
+
+  String _formatName(String value) => DropdownLookup.titleCase(value);
 }
 
 /// Recent enquiries table with more detailed information
-class RecentEnquiriesTable extends StatelessWidget {
+class RecentEnquiriesTable extends ConsumerWidget {
   final List<RecentEnquiry> data;
   final String title;
   final int maxItems;
@@ -129,7 +136,12 @@ class RecentEnquiriesTable extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => null,
+        );
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -142,14 +154,16 @@ class RecentEnquiriesTable extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
+            data.isEmpty
+                ? _buildEmptyState(context)
+                : _buildTable(context, dropdownLookup),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTable(BuildContext context) {
+  Widget _buildTable(BuildContext context, DropdownLookup? dropdownLookup) {
     final displayData = data.take(maxItems).toList();
 
     return SingleChildScrollView(
@@ -214,7 +228,13 @@ class RecentEnquiriesTable extends StatelessWidget {
                       ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
-                  DataCell(Text(enquiry.eventType, style: Theme.of(context).textTheme.bodyMedium)),
+                  DataCell(
+                    Text(
+                      dropdownLookup?.labelForEventType(enquiry.eventType) ??
+                          DropdownLookup.titleCase(enquiry.eventType),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -223,7 +243,8 @@ class RecentEnquiriesTable extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _formatStatusName(enquiry.status),
+                        dropdownLookup?.labelForStatus(enquiry.status) ??
+                            _formatStatusName(enquiry.status),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -232,7 +253,13 @@ class RecentEnquiriesTable extends StatelessWidget {
                       ),
                     ),
                   ),
-                  DataCell(Text(enquiry.source, style: Theme.of(context).textTheme.bodyMedium)),
+                  DataCell(
+                    Text(
+                      dropdownLookup?.labelForSource(enquiry.source) ??
+                          DropdownLookup.titleCase(enquiry.source),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
                   DataCell(
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -241,7 +268,8 @@ class RecentEnquiriesTable extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _formatPriorityName(enquiry.priority),
+                        dropdownLookup?.labelForPriority(enquiry.priority) ??
+                            _formatPriorityName(enquiry.priority),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
