@@ -1,20 +1,19 @@
 {
-  "version": "2.0.1",
-  "buildNumber": 25,
+  "version": "2.0.2",
+  "buildNumber": 26,
   "releaseDate": "2025-11-09",
-  "releaseNotes": "🚀 Maintenance refresh\n✅ Latest APK rebuild with dialer compatibility fixes\n🛠️ Hosting entrypoint fixes to serve web + Android downloads",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.1-25-20251109-085522.apk",
-  "sha256": "481cf14e78a5d79b09cddb7f6c7e48268b0fdd79d9ef4bea393d8c7c4ce4e010",
+  "releaseNotes": "✨ Analytics labels + dashboard assignee names\n✅ Friendly display names and context labels everywhere\n📱 Updated APK built from clean baseline",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.2-26-20251109-101155.apk",
+  "sha256": "248bec5585b5eb89dc8c4451ea64ac017ad563b094a3b9d53d38bdd0ec7a77f8",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "Updated hosting redirects",
-    "Latest build artifacts",
-    "Baseline QA verification"
+    "Dashboard assignee friendly names",
+    "Analytics charts use dropdown labels",
+    "Latest performance + bug fixes"
   ],
   "bugFixes": [
-    "Restored dashboard to stable state",
-    "Fixed 404 on hosting root",
-    "Dialer availability on modern Android"
+    "Resolved ID display for assignees",
+    "Updated analytics dropdown legends"
   ]
 }
