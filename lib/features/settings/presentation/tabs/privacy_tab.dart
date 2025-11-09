@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/app_config.dart';
 import '../../../../core/feedback/feedback_sheet.dart';
@@ -18,11 +19,14 @@ class PrivacyTab extends ConsumerStatefulWidget {
 class _PrivacyTabState extends ConsumerState<PrivacyTab> {
   bool _analyticsConsent = false;
   bool _crashlyticsConsent = false;
+  String? _versionDisplay;
+  bool _isLoadingVersion = true;
 
   @override
   void initState() {
     super.initState();
     _loadConsentState();
+    _loadAppInfo();
   }
 
   Future<void> _loadConsentState() async {
@@ -31,6 +35,23 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
       _analyticsConsent = ConsentService.instance.hasAnalyticsConsent;
       _crashlyticsConsent = ConsentService.instance.hasCrashlyticsConsent;
     });
+  }
+
+  Future<void> _loadAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _versionDisplay = '${packageInfo.version}+${packageInfo.buildNumber}';
+        _isLoadingVersion = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _versionDisplay = 'Unknown';
+        _isLoadingVersion = false;
+      });
+    }
   }
 
   @override
@@ -172,9 +193,9 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                const Text('Version: 1.0.0+1'),
-                const Text('Environment: ${AppConfig.env}'),
-                const Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
+                Text('Version: ${_versionDisplay ?? (_isLoadingVersion ? "Loading…" : "Unknown")}'),
+                Text('Environment: ${AppConfig.env}'),
+                Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
                 const SizedBox(height: 8),
                 Text('© ${DateTime.now().year} We Decor Enquiries. All rights reserved.'),
               ],
