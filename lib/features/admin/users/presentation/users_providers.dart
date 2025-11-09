@@ -156,6 +156,38 @@ final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, P
   return PaginationStateNotifier();
 });
 
+/// Display name lookup (name · phone with fallbacks)
+final userDisplayNameProvider = FutureProvider.family<String, String>((ref, userId) async {
+  final repository = ref.watch(usersRepositoryProvider);
+
+  final user = await repository.getUserByUid(userId);
+  if (user == null) {
+    return 'Unknown';
+  }
+
+  final name = user.name.trim();
+  final phone = user.phone?.trim() ?? '';
+  final email = user.email.trim();
+
+  final parts = <String>[];
+  if (name.isNotEmpty) {
+    parts.add(name);
+  }
+
+  if (phone.isNotEmpty) {
+    parts.add(phone);
+  } else if (name.isEmpty && email.isNotEmpty) {
+    // Use email only when no other human-friendly info exists
+    parts.add(email);
+  }
+
+  if (parts.isEmpty) {
+    return email.isNotEmpty ? email : 'Unknown';
+  }
+
+  return parts.join(' · ');
+});
+
 class PaginationStateNotifier extends StateNotifier<PaginationState> {
   PaginationStateNotifier() : super(const PaginationState());
 
