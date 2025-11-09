@@ -2,15 +2,16 @@
   "version": "2.0.3",
   "buildNumber": 27,
   "releaseDate": "2025-11-09",
-  "releaseNotes": "📱 Privacy tab now shows living app version\n✅ Analytics labels + assignee names retained\n🛠️ General polish",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.3-27-20251109-102228.apk",
-  "sha256": "ec2b83b3721e760ad371f54104fb4e7695b4fbf05dd023d9d1831e0b8dbe4d81",
+  "releaseNotes": "📋 Change history now shows friendly labels instead of IDs\n🛠️ Update dialog ignores dismissal cooldown when you manually check\n🌐 Latest web build deployed",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.3-27-20251109-162909.apk",
+  "sha256": "c8d61d9badc685948ab94656e95910e063566294e58dab0724a9d749d545fbe8",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
     "Privacy tab version pulled from PackageInfo",
     "Dashboard assignee friendly names",
-    "Analytics charts show dropdown labels"
+    "Analytics charts show dropdown labels",
+    "Change history renders human-readable values"
   ],
   "bugFixes": [
     "Fixed stale version string in settings",
