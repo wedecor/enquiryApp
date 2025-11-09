@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -5,9 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/contacts/contact_launcher.dart';
+import '../core/services/contact_service.dart';
 import '../utils/logger.dart';
 
-enum _TileAction { viewDetails, updateStatus, share, notes }
+enum _TileAction { viewDetails, updateStatus, share, notes, saveContact }
 
 class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   const EnquiryTileStatusStrip({
@@ -83,6 +85,9 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
       case _TileAction.notes:
         widget.onAddNote?.call();
         break;
+      case _TileAction.saveContact:
+        unawaited(_handleSaveContact());
+        break;
     }
   }
 
@@ -96,6 +101,9 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
     }
     if (widget.onAddNote != null) {
       actions.add(_TileAction.notes);
+    }
+    if (_hasPhoneNumber()) {
+      actions.add(_TileAction.saveContact);
     }
     return actions;
   }
@@ -316,7 +324,57 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
     return trimmed;
   }
 
+  Future<void> _handleSaveContact() async {
+    final rawPhone = widget.phoneNumber?.trim();
+    if (rawPhone == null || rawPhone.isEmpty) {
+      _showContactSaveFeedback(context, ContactSaveStatus.invalidInput);
+      return;
+    }
+
+    final launcher = ref.read(contactLauncherProvider);
+    final formattedPhone = launcher.normalize(rawPhone);
+    if (formattedPhone.isEmpty) {
+      _showContactSaveFeedback(context, ContactSaveStatus.invalidInput);
+      return;
+    }
+
+    final service = ref.read(contactServiceProvider);
+    final status = await service.saveContact(
+      ContactSaveRequest(
+        displayName: widget.name,
+        phoneNumber: formattedPhone,
+      ),
+    );
+
+    if (!mounted) return;
+    _showContactSaveFeedback(context, status);
+  }
+
+  void _showContactSaveFeedback(BuildContext context, ContactSaveStatus status) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    final message = switch (status) {
+      ContactSaveStatus.saved =>
+        'Saved ${widget.name.isEmpty ? 'contact' : widget.name} to this device.',
+      ContactSaveStatus.alreadyExists =>
+        'Contact already saved on this device.',
+      ContactSaveStatus.permissionDenied =>
+        'Contacts permission is required to save to your device.',
+      ContactSaveStatus.invalidInput =>
+        'No valid phone number available to save.',
+      ContactSaveStatus.failed =>
+        'Could not save contact. Please try again.',
+    };
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   bool _hasNotes(String? notes) => notes != null && notes.trim().isNotEmpty;
+
+  bool _hasPhoneNumber() => widget.phoneNumber != null && widget.phoneNumber!.trim().isNotEmpty;
 
   Color? _parseColor(String? input) {
     if (input == null) return null;
@@ -446,6 +504,8 @@ class _HeaderRow extends StatelessWidget {
         return 'Share / export';
       case _TileAction.notes:
         return 'Follow-up notes';
+      case _TileAction.saveContact:
+        return 'Save contact';
     }
   }
 
@@ -459,6 +519,8 @@ class _HeaderRow extends StatelessWidget {
         return Icons.ios_share_outlined;
       case _TileAction.notes:
         return Icons.note_alt_outlined;
+      case _TileAction.saveContact:
+        return Icons.person_add_alt_1_outlined;
     }
   }
 
