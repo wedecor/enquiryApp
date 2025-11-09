@@ -1,20 +1,22 @@
 {
-  "version": "2.0.3",
-  "buildNumber": 27,
+  "version": "2.0.4",
+  "buildNumber": 28,
   "releaseDate": "2025-11-09",
-  "releaseNotes": "📋 Change history now shows friendly labels instead of IDs\n🛠️ Update dialog ignores dismissal cooldown when you manually check\n🌐 Latest web build deployed",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.3-27-20251109-162909.apk",
-  "sha256": "c8d61d9badc685948ab94656e95910e063566294e58dab0724a9d749d545fbe8",
+  "releaseNotes": "📱 Save customer to device contacts straight from the enquiry tile\n📞 Normalizes phone numbers before saving, skips duplicates automatically\n🌐 Updated web build + latest fixes deployed",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.4-28-20251109-172654.apk",
+  "sha256": "880cf23daf26a0501c0d130c36ac84b3852b0bc6ac2175c29e87e4e887bf618d",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
     "Privacy tab version pulled from PackageInfo",
     "Dashboard assignee friendly names",
     "Analytics charts show dropdown labels",
-    "Change history renders human-readable values"
+    "Change history renders human-readable values",
+    "Save enquiry contact to device (Android)"
   ],
   "bugFixes": [
     "Fixed stale version string in settings",
-    "General stability improvements"
+    "General stability improvements",
+    "Phone numbers normalized before saving to contacts"
   ]
 }
