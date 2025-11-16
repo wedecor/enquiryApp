@@ -84,11 +84,7 @@ void main() {
       test('updates status successfully', () async {
         if (!firebaseAvailable) return;
         await expectLater(
-          repository.updateStatus(
-            id: 'test-id',
-            nextStatus: 'contacted',
-            userId: 'user123',
-          ),
+          repository.updateStatus(id: 'test-id', nextStatus: 'contacted', userId: 'user123'),
           completes,
         );
       });

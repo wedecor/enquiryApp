@@ -686,7 +686,7 @@ class _ChipWrap extends StatelessWidget {
         ),
       ),
       if (eventCountdownLabel != null && eventCountdownLabel!.trim().isNotEmpty)
-      Chip(
+        Chip(
           shape: StadiumBorder(side: BorderSide(color: eventColor.withOpacity(0.2))),
           backgroundColor: eventColor.withOpacity(0.12),
           avatar: Icon(Icons.calendar_today, size: 16, color: eventColor),

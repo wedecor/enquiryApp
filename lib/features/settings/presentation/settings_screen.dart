@@ -36,24 +36,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     final roleAsync = ref.watch(roleProvider);
-    
+
     return roleAsync.when(
       data: (role) {
         final isAdmin = role == UserRole.admin;
         return _buildSettingsScreen(context, isAdmin);
       },
       loading: () => Scaffold(
-        appBar: AppBar(
-          title: const Text('Settings'),
-          centerTitle: true,
-        ),
+        appBar: AppBar(title: const Text('Settings'), centerTitle: true),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Settings'),
-          centerTitle: true,
-        ),
+        appBar: AppBar(title: const Text('Settings'), centerTitle: true),
         body: Center(child: Text('Error: $error')),
       ),
     );
@@ -77,18 +71,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
     ];
 
     final tabs = isAdmin
-        ? [
-            ...baseTabs,
-            const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'),
-          ]
+        ? [...baseTabs, const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin')]
         : baseTabs;
 
-    final tabViews = isAdmin
-        ? [
-            ...baseTabViews,
-            const AdminTab(),
-          ]
-        : baseTabViews;
+    final tabViews = isAdmin ? [...baseTabViews, const AdminTab()] : baseTabViews;
 
     // Update tab controller length if needed
     if (_tabController.length != tabs.length) {
@@ -100,16 +86,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: tabs,
-          isScrollable: true,
-        ),
+        bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: tabViews,
-      ),
+      body: TabBarView(controller: _tabController, children: tabViews),
     );
   }
 }

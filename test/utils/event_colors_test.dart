@@ -99,10 +99,7 @@ void main() {
 
     test('uses fallback when provided', () {
       const fallback = Colors.red;
-      expect(
-        EventColors.accentFor('unknown', fallback: fallback),
-        const Color(0xFF7AA2FF),
-      );
+      expect(EventColors.accentFor('unknown', fallback: fallback), const Color(0xFF7AA2FF));
     });
   });
 }

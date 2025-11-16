@@ -68,8 +68,7 @@ class TopListTable extends StatelessWidget {
             children: [
               _buildDataCell(context, label),
               _buildDataCell(context, item.count.toString()),
-              if (showPercentage)
-                _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
+              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
             ],
           );
         }),
@@ -137,10 +136,9 @@ class RecentEnquiriesTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => null,
-        );
+    final dropdownLookup = ref
+        .watch(dropdownLookupProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
 
     return Card(
       elevation: 2,
@@ -154,9 +152,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            data.isEmpty
-                ? _buildEmptyState(context)
-                : _buildTable(context, dropdownLookup),
+            data.isEmpty ? _buildEmptyState(context) : _buildTable(context, dropdownLookup),
           ],
         ),
       ),

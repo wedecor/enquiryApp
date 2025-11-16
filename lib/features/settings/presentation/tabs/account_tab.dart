@@ -37,7 +37,8 @@ class AccountTab extends ConsumerWidget {
             const SizedBox(height: 16),
 
             currentUserRole.when(
-              data: (role) => _buildRoleSection(context, role == UserRole.admin ? 'admin' : 'staff'),
+              data: (role) =>
+                  _buildRoleSection(context, role == UserRole.admin ? 'admin' : 'staff'),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => _buildRoleSection(context, 'staff'),
             ),
@@ -250,11 +251,7 @@ class AccountTab extends ConsumerWidget {
       if (updateInfo != null) {
         // Update available - show update dialog
         if (context.mounted) {
-          await UpdateService.showUpdateDialog(
-            context,
-            updateInfo,
-            bypassCooldown: true,
-          );
+          await UpdateService.showUpdateDialog(context, updateInfo, bypassCooldown: true);
         }
       } else {
         // No updates available - show current version info

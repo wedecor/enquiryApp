@@ -7,19 +7,16 @@ import '../../../test_helper.dart';
 
 class MockFirestore extends Mock implements FirebaseFirestore {}
 
-class MockCollectionReference extends Mock
-    implements CollectionReference<Map<String, dynamic>> {}
+class MockCollectionReference extends Mock implements CollectionReference<Map<String, dynamic>> {}
 
 // ignore: subtype_of_sealed_class
 class MockQuery extends Mock implements Query<Map<String, dynamic>> {}
 
 // ignore: subtype_of_sealed_class
-class MockDocumentReference extends Mock
-    implements DocumentReference<Map<String, dynamic>> {}
+class MockDocumentReference extends Mock implements DocumentReference<Map<String, dynamic>> {}
 
 // ignore: subtype_of_sealed_class
-class MockDocumentSnapshot extends Mock
-    implements DocumentSnapshot<Map<String, dynamic>> {}
+class MockDocumentSnapshot extends Mock implements DocumentSnapshot<Map<String, dynamic>> {}
 
 void main() {
   late bool firebaseAvailable;
@@ -63,16 +60,13 @@ void main() {
         expect(stream, isA<Stream<UserSettings>>());
       });
 
-      test(
-        'stream emits default settings when document does not exist',
-        () async {
-          if (!firebaseAvailable) return;
-          final stream = service.observe('test-uid');
-          // Note: This tests the stream structure
-          // In a real test with mocks, you'd verify the stream emits defaults
-          expect(stream, isA<Stream<UserSettings>>());
-        },
-      );
+      test('stream emits default settings when document does not exist', () async {
+        if (!firebaseAvailable) return;
+        final stream = service.observe('test-uid');
+        // Note: This tests the stream structure
+        // In a real test with mocks, you'd verify the stream emits defaults
+        expect(stream, isA<Stream<UserSettings>>());
+      });
     });
 
     group('update', () {
@@ -94,28 +88,19 @@ void main() {
       test('initializes settings if missing', () async {
         if (!firebaseAvailable) return;
         const defaults = UserSettings();
-        await expectLater(
-          service.initIfMissing('test-uid', defaults),
-          completes,
-        );
+        await expectLater(service.initIfMissing('test-uid', defaults), completes);
       });
 
       test('does not overwrite existing settings', () async {
         if (!firebaseAvailable) return;
         const defaults = UserSettings();
-        await expectLater(
-          service.initIfMissing('test-uid', defaults),
-          completes,
-        );
+        await expectLater(service.initIfMissing('test-uid', defaults), completes);
       });
 
       test('handles initialization errors gracefully', () async {
         if (!firebaseAvailable) return;
         const defaults = UserSettings();
-        await expectLater(
-          service.initIfMissing('invalid-uid', defaults),
-          completes,
-        );
+        await expectLater(service.initIfMissing('invalid-uid', defaults), completes);
       });
     });
   });

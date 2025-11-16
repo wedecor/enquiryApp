@@ -52,7 +52,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
   Future<void> _runCleanup() async {
     final roleAsync = ref.read(roleProvider);
     final role = roleAsync.valueOrNull;
-    
+
     if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -74,7 +74,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
     try {
       final service = ref.read(pastEnquiryCleanupServiceProvider);
       final updatedCount = await service.markPastEnquiriesAsNotInterested(userId: userId);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -82,7 +82,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
             backgroundColor: Colors.green,
           ),
         );
-        
+
         setState(() {
           _pendingCount = 0;
           _isRunning = false;
@@ -92,10 +92,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
       safeLog('past_enquiry_cleanup_error', {'error': e.toString()});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error running cleanup: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error running cleanup: $e'), backgroundColor: Colors.red),
         );
         setState(() {
           _isRunning = false;
@@ -109,10 +106,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Update Past Enquiries Status',
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
+        const Text('Update Past Enquiries Status', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         Text(
           'Automatically update enquiries with passed event dates:\n'
@@ -132,7 +126,9 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
             else if (_pendingCount != null)
               Chip(
                 label: Text('$_pendingCount pending'),
-                backgroundColor: _pendingCount! > 0 ? Colors.orange.shade100 : Colors.green.shade100,
+                backgroundColor: _pendingCount! > 0
+                    ? Colors.orange.shade100
+                    : Colors.green.shade100,
               ),
             const Spacer(),
             ElevatedButton.icon(
@@ -158,4 +154,3 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
     );
   }
 }
-

@@ -12,7 +12,8 @@ part of 'user_model.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 UserModel _$UserModelFromJson(Map<String, dynamic> json) {
   return _UserModel.fromJson(json);
@@ -32,8 +33,7 @@ mixin _$UserModel {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $UserModelCopyWith<UserModel> get copyWith =>
-      throw _privateConstructorUsedError;
+  $UserModelCopyWith<UserModel> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -41,20 +41,20 @@ abstract class $UserModelCopyWith<$Res> {
   factory $UserModelCopyWith(UserModel value, $Res Function(UserModel) then) =
       _$UserModelCopyWithImpl<$Res, UserModel>;
   @useResult
-  $Res call(
-      {String uid,
-      String name,
-      String email,
-      String? phone,
-      String role,
-      bool active,
-      DateTime createdAt,
-      DateTime updatedAt});
+  $Res call({
+    String uid,
+    String name,
+    String email,
+    String? phone,
+    String role,
+    bool active,
+    DateTime createdAt,
+    DateTime updatedAt,
+  });
 }
 
 /// @nodoc
-class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
-    implements $UserModelCopyWith<$Res> {
+class _$UserModelCopyWithImpl<$Res, $Val extends UserModel> implements $UserModelCopyWith<$Res> {
   _$UserModelCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -74,69 +74,69 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(_value.copyWith(
-      uid: null == uid
-          ? _value.uid
-          : uid // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      phone: freezed == phone
-          ? _value.phone
-          : phone // ignore: cast_nullable_to_non_nullable
-              as String?,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as String,
-      active: null == active
-          ? _value.active
-          : active // ignore: cast_nullable_to_non_nullable
-              as bool,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            uid: null == uid
+                ? _value.uid
+                : uid // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            email: null == email
+                ? _value.email
+                : email // ignore: cast_nullable_to_non_nullable
+                      as String,
+            phone: freezed == phone
+                ? _value.phone
+                : phone // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            role: null == role
+                ? _value.role
+                : role // ignore: cast_nullable_to_non_nullable
+                      as String,
+            active: null == active
+                ? _value.active
+                : active // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            createdAt: null == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            updatedAt: null == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
-abstract class _$$UserModelImplCopyWith<$Res>
-    implements $UserModelCopyWith<$Res> {
-  factory _$$UserModelImplCopyWith(
-          _$UserModelImpl value, $Res Function(_$UserModelImpl) then) =
+abstract class _$$UserModelImplCopyWith<$Res> implements $UserModelCopyWith<$Res> {
+  factory _$$UserModelImplCopyWith(_$UserModelImpl value, $Res Function(_$UserModelImpl) then) =
       __$$UserModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String uid,
-      String name,
-      String email,
-      String? phone,
-      String role,
-      bool active,
-      DateTime createdAt,
-      DateTime updatedAt});
+  $Res call({
+    String uid,
+    String name,
+    String email,
+    String? phone,
+    String role,
+    bool active,
+    DateTime createdAt,
+    DateTime updatedAt,
+  });
 }
 
 /// @nodoc
-class __$$UserModelImplCopyWithImpl<$Res>
-    extends _$UserModelCopyWithImpl<$Res, _$UserModelImpl>
+class __$$UserModelImplCopyWithImpl<$Res> extends _$UserModelCopyWithImpl<$Res, _$UserModelImpl>
     implements _$$UserModelImplCopyWith<$Res> {
-  __$$UserModelImplCopyWithImpl(
-      _$UserModelImpl _value, $Res Function(_$UserModelImpl) _then)
-      : super(_value, _then);
+  __$$UserModelImplCopyWithImpl(_$UserModelImpl _value, $Res Function(_$UserModelImpl) _then)
+    : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -150,58 +150,60 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(_$UserModelImpl(
-      uid: null == uid
-          ? _value.uid
-          : uid // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      phone: freezed == phone
-          ? _value.phone
-          : phone // ignore: cast_nullable_to_non_nullable
-              as String?,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as String,
-      active: null == active
-          ? _value.active
-          : active // ignore: cast_nullable_to_non_nullable
-              as bool,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ));
+    return _then(
+      _$UserModelImpl(
+        uid: null == uid
+            ? _value.uid
+            : uid // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        email: null == email
+            ? _value.email
+            : email // ignore: cast_nullable_to_non_nullable
+                  as String,
+        phone: freezed == phone
+            ? _value.phone
+            : phone // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        role: null == role
+            ? _value.role
+            : role // ignore: cast_nullable_to_non_nullable
+                  as String,
+        active: null == active
+            ? _value.active
+            : active // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        createdAt: null == createdAt
+            ? _value.createdAt
+            : createdAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        updatedAt: null == updatedAt
+            ? _value.updatedAt
+            : updatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$UserModelImpl implements _UserModel {
-  const _$UserModelImpl(
-      {required this.uid,
-      required this.name,
-      required this.email,
-      this.phone,
-      required this.role,
-      this.active = true,
-      required this.createdAt,
-      required this.updatedAt});
+  const _$UserModelImpl({
+    required this.uid,
+    required this.name,
+    required this.email,
+    this.phone,
+    required this.role,
+    this.active = true,
+    required this.createdAt,
+    required this.updatedAt,
+  });
 
-  factory _$UserModelImpl.fromJson(Map<String, dynamic> json) =>
-      _$$UserModelImplFromJson(json);
+  factory _$UserModelImpl.fromJson(Map<String, dynamic> json) => _$$UserModelImplFromJson(json);
 
   @override
   final String uid;
@@ -213,11 +215,11 @@ class _$UserModelImpl implements _UserModel {
   final String? phone;
   @override
   final String role;
-// 'admin' or 'staff'
+  // 'admin' or 'staff'
   @override
   @JsonKey()
   final bool active;
-// fcmToken removed for security - now stored in private subcollection
+  // fcmToken removed for security - now stored in private subcollection
   @override
   final DateTime createdAt;
   @override
@@ -239,16 +241,14 @@ class _$UserModelImpl implements _UserModel {
             (identical(other.phone, phone) || other.phone == phone) &&
             (identical(other.role, role) || other.role == role) &&
             (identical(other.active, active) || other.active == active) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, uid, name, email, phone, role, active, createdAt, updatedAt);
+  int get hashCode =>
+      Object.hash(runtimeType, uid, name, email, phone, role, active, createdAt, updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -258,25 +258,23 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$UserModelImplToJson(
-      this,
-    );
+    return _$$UserModelImplToJson(this);
   }
 }
 
 abstract class _UserModel implements UserModel {
-  const factory _UserModel(
-      {required final String uid,
-      required final String name,
-      required final String email,
-      final String? phone,
-      required final String role,
-      final bool active,
-      required final DateTime createdAt,
-      required final DateTime updatedAt}) = _$UserModelImpl;
+  const factory _UserModel({
+    required final String uid,
+    required final String name,
+    required final String email,
+    final String? phone,
+    required final String role,
+    final bool active,
+    required final DateTime createdAt,
+    required final DateTime updatedAt,
+  }) = _$UserModelImpl;
 
-  factory _UserModel.fromJson(Map<String, dynamic> json) =
-      _$UserModelImpl.fromJson;
+  factory _UserModel.fromJson(Map<String, dynamic> json) = _$UserModelImpl.fromJson;
 
   @override
   String get uid;
@@ -296,6 +294,5 @@ abstract class _UserModel implements UserModel {
   DateTime get updatedAt;
   @override
   @JsonKey(ignore: true)
-  _$$UserModelImplCopyWith<_$UserModelImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$UserModelImplCopyWith<_$UserModelImpl> get copyWith => throw _privateConstructorUsedError;
 }

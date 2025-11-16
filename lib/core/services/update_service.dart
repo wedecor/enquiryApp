@@ -55,7 +55,11 @@ class UpdateService {
       final remoteBuildNumber = versionData['buildNumber'] as int?;
       final releaseNotes = versionData['releaseNotes'] as String?;
       final isForced = versionData['forceUpdate'] as bool? ?? false;
-      final downloadUrl = versionData['downloadUrl'] as String? ?? _downloadUrl;
+      String downloadUrl = versionData['downloadUrl'] as String? ?? _downloadUrl;
+      // Convert relative URLs to absolute URLs
+      if (downloadUrl.isNotEmpty && !downloadUrl.startsWith('http')) {
+        downloadUrl = 'https://wedecorenquries.web.app/android/$downloadUrl';
+      }
 
       if (remoteVersion == null || remoteBuildNumber == null) {
         Logger.warn('Invalid version data received', tag: 'UpdateService');

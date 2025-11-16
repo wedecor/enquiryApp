@@ -1,20 +1,23 @@
 {
   "version": "2.0.5",
-  "buildNumber": 29,
-  "releaseDate": "2025-11-10",
-  "releaseNotes": "🔍 Universal dashboard search with phone/name matching across every tab\n⚙️ Auto-completes past confirmed events + 4-hour overdue nudges for admins & assignees\n☁️ Backend + web redeploy with latest indexes and crash hardening",
-  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.5-29-20251110-020103.apk",
+  "buildNumber": 30,
+  "releaseDate": "2025-11-17",
+  "releaseNotes": "✨ Review request feature for completed events\n🔔 Fixed admin notifications - all admins notified except the person making changes\n📱 Improved contact saving - works on web with vCard clipboard support\n🔧 Fixed version display in About tab - shows dynamic version info\n🌐 Restored detailed Android download page with changelog and features",
+  "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "7a1b1734d40e7412ffb918fd533f9ceb18e91656f04511505d9db5c58d055dda",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "Global dashboard search spans all status tabs with phone/name matching",
-    "Automatic completion for past confirmed enquiries",
-    "Recurring 4-hour reminders for overdue enquiries to admins and assignees"
+    "Review request feature - request Google reviews and Instagram follows for completed events",
+    "Fixed admin notifications - all admins and assigned users notified except the person making changes",
+    "Improved contact saving - works on web by copying vCard to clipboard, includes event type and date",
+    "Dynamic version display - About tab now shows actual version and platform info",
+    "Detailed Android download page - restored changelog, features, and version details"
   ],
   "bugFixes": [
-    "Resolved sorting drift by prioritising nearest event dates",
-    "Hardened Firestore queries with new indexes and consistent status fields",
-    "Upgraded Cloud Functions runtime dependencies"
+    "Fixed update notification - download URL now uses absolute path",
+    "Fixed version display - About tab shows dynamic version instead of hardcoded values",
+    "Fixed contact saving on web - gracefully handles platform differences",
+    "Fixed admin feature loading delay - improved role check performance"
   ]
 }

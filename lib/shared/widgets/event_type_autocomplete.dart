@@ -380,7 +380,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   Widget _buildAddOptionCard() {
-
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
