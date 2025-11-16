@@ -24,6 +24,10 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "predeploy": [
+      "flutter build web --release",
+      "bash scripts/copy-apk-to-web.sh"
+    ],
     "headers": [
       {
         "source": "**/*.apk",
@@ -37,6 +41,10 @@
       {
         "source": "/web/**",
         "destination": "/web/index.html"
+      },
+      {
+        "source": "/android",
+        "destination": "/android/app-release.apk"
       }
     ]
   },
