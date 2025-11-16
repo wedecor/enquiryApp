@@ -12,6 +12,9 @@ class AppGeneralConfig with _$AppGeneralConfig {
     @Default('INR') String currency,
     @Default('Asia/Kolkata') String timezone,
     @Default(18.0) double vatPercent,
+    @Default('https://share.google/qba1n2A4MKJiUy3PA') String googleReviewLink,
+    @Default('@wedecorbangalore') String instagramHandle,
+    @Default('https://www.wedecorevents.com/') String websiteUrl,
     DateTime? updatedAt,
   }) = _AppGeneralConfig;
 

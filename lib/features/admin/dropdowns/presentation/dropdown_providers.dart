@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../data/dropdowns_repository.dart';
 import '../domain/dropdown_item.dart';
 

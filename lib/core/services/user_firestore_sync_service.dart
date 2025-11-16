@@ -99,42 +99,12 @@ class UserFirestoreSyncService {
   }
 }
 
-/// Enhanced current user provider that syncs with Firestore
-final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  final syncService = UserFirestoreSyncService(firestoreService);
-
-  return Stream.periodic(const Duration(seconds: 1)).asyncMap((_) async {
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    if (firebaseUser == null) return null;
-    return await syncService.syncCurrentUser();
-  });
-});
-
 /// Provider for user sync service
 final userFirestoreSyncServiceProvider = Provider<UserFirestoreSyncService>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return UserFirestoreSyncService(firestoreService);
+  return UserFirestoreSyncService(FirestoreService());
 });
 
-/// Provider for current user's role
-final currentUserRoleProvider = Provider<UserRole>((ref) {
-  final currentUser = ref.watch(currentUserWithFirestoreProvider);
-  return currentUser.when(
-    data: (user) => user?.role ?? UserRole.staff,
-    loading: () => UserRole.staff,
-    error: (error, stack) => UserRole.staff,
-  );
-});
-
-/// Provider for checking if current user is admin
-final currentUserIsAdminProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentUserRoleProvider);
-  return role == UserRole.admin;
-});
-
-/// Provider for checking if current user is staff
-final currentUserIsStaffProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentUserRoleProvider);
-  return role == UserRole.staff;
-});
+// NOTE: currentUserWithFirestoreProvider, currentUserRoleProvider, currentUserIsAdminProvider,
+// and currentUserIsStaffProvider are now provided by lib/core/providers/role_provider.dart
+// which uses efficient Firestore snapshots instead of polling.
+// Import and use those providers instead of the ones that were here.

@@ -4,34 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/audit_service.dart';
+import '../../../../core/services/notification_service.dart' as notification_service;
 import '../../../../services/dropdown_lookup.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../utils/logger.dart';
 import '../widgets/contact_buttons.dart';
+import '../widgets/review_request_button.dart';
 import 'enquiry_form_screen.dart';
-
-class NotificationService {
-  Future<void> notifyStatusUpdated({
-    required String enquiryId,
-    required String customerName,
-    required String oldStatus,
-    required String newStatus,
-    required String updatedBy,
-  }) async {
-    // TODO: Implement notification
-    Log.i(
-      'Status update notification pending implementation',
-      data: {
-        'enquiryId': enquiryId,
-        'oldStatus': oldStatus,
-        'newStatus': newStatus,
-        'updatedBy': updatedBy,
-      },
-    );
-  }
-}
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
   final String enquiryId;
@@ -64,35 +45,47 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
-    final userRole = currentUser.value?.role;
+    final roleAsync = ref.watch(roleProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Enquiry Details'),
         actions: [
-          if (userRole == UserRole.admin) ...[
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (context) =>
-                        EnquiryFormScreen(enquiryId: widget.enquiryId, mode: 'edit'),
-                  ),
-                );
-              },
-              tooltip: 'Edit Enquiry',
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _isUpdatingStatus
-                  ? null
-                  : () async {
-                      await _confirmAndDelete(context);
+          roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return const SizedBox.shrink();
+              }
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (context) =>
+                              EnquiryFormScreen(enquiryId: widget.enquiryId, mode: 'edit'),
+                        ),
+                      );
                     },
-              tooltip: 'Delete Enquiry',
-            ),
-          ],
+                    tooltip: 'Edit Enquiry',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: _isUpdatingStatus
+                        ? null
+                        : () async {
+                            await _confirmAndDelete(context);
+                          },
+                    tooltip: 'Delete Enquiry',
+                  ),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
       body: currentUser.when(
@@ -101,141 +94,143 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             return const Center(child: Text('Please log in to view enquiry details'));
           }
 
-          return StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('enquiries')
-                .doc(widget.enquiryId)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
+          return roleAsync.when(
+            data: (userRole) {
+              return StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('enquiries')
+                    .doc(widget.enquiryId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
 
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-              if (!snapshot.hasData || !snapshot.data!.exists) {
-                return const Center(child: Text('Enquiry not found'));
-              }
+                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                    return const Center(child: Text('Enquiry not found'));
+                  }
 
-              final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
-              final dropdownLookup = ref
-                  .watch(dropdownLookupProvider)
-                  .maybeWhen(data: (value) => value, orElse: () => null);
+                  final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+                  final dropdownLookup = ref
+                      .watch(dropdownLookupProvider)
+                      .maybeWhen(data: (value) => value, orElse: () => null);
 
-              String _labelOrLookup(
-                String? label,
-                String value,
-                String Function(DropdownLookup, String) resolver,
-              ) {
-                if (label != null && label.trim().isNotEmpty) return label;
-                return dropdownLookup != null
-                    ? resolver(dropdownLookup, value)
-                    : DropdownLookup.titleCase(value);
-              }
+                  String _labelOrLookup(
+                    String? label,
+                    String value,
+                    String Function(DropdownLookup, String) resolver,
+                  ) {
+                    if (label != null && label.trim().isNotEmpty) return label;
+                    return dropdownLookup != null
+                        ? resolver(dropdownLookup, value)
+                        : DropdownLookup.titleCase(value);
+                  }
 
-              final statusValueRaw =
-                  (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
-              final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                  ? statusValueRaw!.trim()
-                  : 'new';
-              final statusLabel = _labelOrLookup(
-                enquiryData['statusLabel'] as String?,
-                statusValue,
-                (l, v) => l.labelForStatus(v),
-              );
-
-              final eventTypeValueRaw =
-                  (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
-              final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
-                  ? eventTypeValueRaw!.trim()
-                  : 'event';
-              final eventTypeLabel = _labelOrLookup(
-                enquiryData['eventTypeLabel'] as String?,
-                eventTypeValue,
-                (l, v) => l.labelForEventType(v),
-              );
-
-              final priorityValueRaw =
-                  (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
-              final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
-                  ? priorityValueRaw!.trim()
-                  : null;
-              final priorityLabel = priorityValue != null
-                  ? _labelOrLookup(
-                      enquiryData['priorityLabel'] as String?,
-                      priorityValue,
-                      (l, v) => l.labelForPriority(v),
-                    )
-                  : 'N/A';
-
-              final paymentStatusValueRaw =
-                  (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus']) as String?;
-              final paymentStatusValue = (paymentStatusValueRaw?.trim().isNotEmpty ?? false)
-                  ? paymentStatusValueRaw!.trim()
-                  : null;
-              final paymentStatusLabel = paymentStatusValue != null
-                  ? _labelOrLookup(
-                      enquiryData['paymentStatusLabel'] as String?,
-                      paymentStatusValue,
-                      (l, v) => l.labelForPaymentStatus(v),
-                    )
-                  : 'N/A';
-
-              final sourceValueRaw =
-                  (enquiryData['sourceValue'] ?? enquiryData['source']) as String?;
-              final sourceValue = (sourceValueRaw?.trim().isNotEmpty ?? false)
-                  ? sourceValueRaw!.trim()
-                  : null;
-              final sourceLabel = sourceValue != null
-                  ? _labelOrLookup(
-                      enquiryData['sourceLabel'] as String?,
-                      sourceValue,
-                      (l, v) => l.labelForSource(v),
-                    )
-                  : 'N/A';
-
-              // Check if staff user can access this enquiry
-              if (userRole != UserRole.admin) {
-                final assignedTo = enquiryData['assignedTo'] as String?;
-                final currentUserId = user.uid;
-
-                if (assignedTo != null && assignedTo != currentUserId) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Access Denied',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'You can only view enquiries assigned to you.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                  final statusValueRaw =
+                      (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+                  final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                      ? statusValueRaw!.trim()
+                      : 'new';
+                  final statusLabel = _labelOrLookup(
+                    enquiryData['statusLabel'] as String?,
+                    statusValue,
+                    (l, v) => l.labelForStatus(v),
                   );
-                }
-              }
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with status
-                    _buildHeader(enquiryData, userRole, user.uid, statusValue, statusLabel),
-                    const SizedBox(height: 24),
+                  final eventTypeValueRaw =
+                      (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
+                  final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
+                      ? eventTypeValueRaw!.trim()
+                      : 'event';
+                  final eventTypeLabel = _labelOrLookup(
+                    enquiryData['eventTypeLabel'] as String?,
+                    eventTypeValue,
+                    (l, v) => l.labelForEventType(v),
+                  );
+
+                  final priorityValueRaw =
+                      (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
+                  final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
+                      ? priorityValueRaw!.trim()
+                      : null;
+                  final priorityLabel = priorityValue != null
+                      ? _labelOrLookup(
+                          enquiryData['priorityLabel'] as String?,
+                          priorityValue,
+                          (l, v) => l.labelForPriority(v),
+                        )
+                      : 'N/A';
+
+                  final paymentStatusValueRaw =
+                      (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus']) as String?;
+                  final paymentStatusValue = (paymentStatusValueRaw?.trim().isNotEmpty ?? false)
+                      ? paymentStatusValueRaw!.trim()
+                      : null;
+                  final paymentStatusLabel = paymentStatusValue != null
+                      ? _labelOrLookup(
+                          enquiryData['paymentStatusLabel'] as String?,
+                          paymentStatusValue,
+                          (l, v) => l.labelForPaymentStatus(v),
+                        )
+                      : 'N/A';
+
+                  final sourceValueRaw =
+                      (enquiryData['sourceValue'] ?? enquiryData['source']) as String?;
+                  final sourceValue = (sourceValueRaw?.trim().isNotEmpty ?? false)
+                      ? sourceValueRaw!.trim()
+                      : null;
+                  final sourceLabel = sourceValue != null
+                      ? _labelOrLookup(
+                          enquiryData['sourceLabel'] as String?,
+                          sourceValue,
+                          (l, v) => l.labelForSource(v),
+                        )
+                      : 'N/A';
+
+                  // Check if staff user can access this enquiry
+                  if (userRole != UserRole.admin) {
+                    final assignedTo = enquiryData['assignedTo'] as String?;
+                    final currentUserId = user.uid;
+
+                    if (assignedTo != null && assignedTo != currentUserId) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.lock,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Access Denied',
+                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'You can only view enquiries assigned to you.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header with status
+                        _buildHeader(enquiryData, userRole, user.uid, statusValue, statusLabel),
+                        const SizedBox(height: 24),
 
                     // Basic Information (Visible to all)
                     _buildSection(
@@ -252,6 +247,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
                           enquiryId: widget.enquiryId,
                         ),
+                        // Review request button for completed enquiries
+                        if (statusValue == 'completed')
+                          ReviewRequestButton(
+                            customerPhone: enquiryData['customerPhone'] as String?,
+                            customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+                            enquiryId: widget.enquiryId,
+                          ),
                         _buildInfoRow(
                           'Location',
                           (enquiryData['eventLocation'] as String?) ??
@@ -279,12 +281,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       ],
                     ),
 
-                    // Reference Images (Admins and Assignee)
-                    if (_canViewImages(userRole, enquiryData, user.uid))
-                      _buildImagesSection(enquiryData),
+                        // Reference Images (Admins and Assignee)
+                        if (_canViewImages(userRole, enquiryData, user.uid))
+                          _buildImagesSection(enquiryData),
 
-                    // Assignment Information (Admin Only)
-                    if (userRole == UserRole.admin) ...[
+                        // Assignment Information (Admin Only)
+                        if (userRole == UserRole.admin) ...[
                       _buildSection(
                         title: 'Assignment',
                         children: [
@@ -299,7 +301,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           ),
                         ],
                       ),
-                    ] else if (userRole == UserRole.staff) ...[
+                        ] else if (userRole == UserRole.staff) ...[
                       // Staff can see their own assignment status
                       _buildSection(
                         title: 'Assignment',
@@ -358,7 +360,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   ],
                 ),
               );
+                },
+              );
             },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stack) => Center(child: Text('Error checking permissions: $error')),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -565,7 +571,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         );
 
                         // Send notification for status update
-                        final notificationService = NotificationService();
+                        final notificationService = notification_service.NotificationService();
                         await notificationService.notifyStatusUpdated(
                           enquiryId: widget.enquiryId,
                           customerName:
@@ -574,6 +580,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           newStatus: nextLabel,
                           updatedBy:
                               ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                          assignedTo: enquiryData['assignedTo'] as String?,
                         );
 
                         if (mounted) {

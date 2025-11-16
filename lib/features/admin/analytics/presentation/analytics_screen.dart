@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../services/dropdown_lookup.dart';
+import '../../../../shared/models/user_model.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_controller.dart';
 import 'widgets/breakdown_charts.dart';
@@ -37,7 +38,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(isAdminProvider);
+    final roleAsync = ref.watch(roleProvider);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -47,7 +48,30 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: isAdmin ? _buildAnalyticsContent(context) : _buildNoAccessContent(),
+      body: roleAsync.when(
+        data: (role) {
+          if (role != UserRole.admin) {
+            return _buildNoAccessContent();
+          }
+          // User is admin, build analytics content with Consumer to watch providers
+          return Consumer(
+            builder: (context, ref, child) {
+              return _buildAnalyticsContent(context);
+            },
+          );
+        },
+        loading: () => const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Checking permissions...'),
+            ],
+          ),
+        ),
+        error: (error, stack) => _buildNoAccessContent(),
+      ),
     );
   }
 

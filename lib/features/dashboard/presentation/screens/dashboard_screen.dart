@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../core/services/past_enquiry_cleanup_service.dart';
+import '../../../../core/services/review_request_service.dart';
+import '../../../settings/providers/settings_providers.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -59,6 +62,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _primeDropdownColors();
     _tabs = _statusTabs.map((tab) => Tab(text: tab['label']!)).toList(growable: false);
     _searchController.addListener(_handleSearchChanged);
+    // Run automatic cleanup for past enquiries (only for admins, runs silently in background)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _runAutomaticCleanup();
+    });
   }
 
   Future<void> _primeDropdownColors() async {
@@ -112,6 +119,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           'eventTypes': _eventColorCache.keys.toList(),
         },
       );
+    }
+  }
+
+  /// Runs automatic cleanup for past enquiries (only for admins)
+  /// This runs silently in the background without blocking the UI
+  Future<void> _runAutomaticCleanup() async {
+    try {
+      final roleAsync = ref.read(roleProvider);
+      final role = roleAsync.valueOrNull;
+      
+      // Only run for admins
+      if (role != UserRole.admin) {
+        return;
+      }
+      
+      final currentUserAsync = ref.read(currentUserWithFirestoreProvider);
+      final currentUser = currentUserAsync.valueOrNull;
+      final userId = currentUser?.uid ?? 'system';
+      
+      // Run cleanup in background (non-blocking)
+      final cleanupService = ref.read(pastEnquiryCleanupServiceProvider);
+      cleanupService.runAutomaticCleanup(userId: userId).then((updatedCount) {
+        if (updatedCount != null && updatedCount > 0 && mounted) {
+          // Optionally show a subtle notification
+          Log.i('Automatic cleanup completed', data: {'updatedCount': updatedCount});
+        }
+      }).catchError((Object error, StackTrace stack) {
+        Log.e('Automatic cleanup error', error: error, stackTrace: stack);
+      });
+    } catch (e) {
+      Log.e('Error initiating automatic cleanup', error: e);
     }
   }
 
@@ -184,9 +222,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final authUser = ref.watch(auth_provider.firebaseAuthUserProvider);
-    final currentUser = ref.watch(auth_provider.currentUserAsyncProvider);
-    final isAdmin = ref.watch(auth_provider.isAdminProvider);
+    final currentUser = ref.watch(currentUserWithFirestoreProvider);
+    final roleAsync = ref.watch(roleProvider);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -202,21 +239,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ),
         ],
       ),
-      drawer: _buildNavigationDrawer(currentUser, isAdmin),
-      body: authUser.when(
-        data: (user) {
-          if (user != null) {
-            return currentUser.when(
-              data: (user) => _buildDashboardContent(context, user, isAdmin),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildErrorWidget(context, error),
-            );
-          } else {
-            return const Center(child: Text('Authentication required'));
-          }
-        },
+      drawer: roleAsync.when(
+        data: (role) => _buildNavigationDrawer(role == UserRole.admin),
+        loading: () => _buildNavigationDrawer(false), // Show non-admin drawer while loading
+        error: (_, __) => _buildNavigationDrawer(false),
+      ),
+      body: currentUser.when(
+        data: (user) => roleAsync.when(
+          data: (role) => _buildDashboardContent(context, user, role == UserRole.admin),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => _buildDashboardContent(context, user, false),
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorWidget(context, error),
+        error: (Object error, StackTrace stack) => _buildErrorWidget(context, error),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -569,6 +604,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
               onShare: () => _shareEnquiry(enquiryModel),
               onAddNote: () => _showNotesSheet(enquiryModel),
+              onRequestReview: statusValue.toLowerCase() == 'completed' && phone != null
+                  ? () => _handleReviewRequest(phone!, customerName, enquiryId)
+                  : null,
             );
           },
         );
@@ -677,6 +715,59 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case ContactLaunchStatus.failed:
         _showSnack('Unable to launch WhatsApp');
         break;
+    }
+  }
+
+  Future<void> _handleReviewRequest(String phone, String customerName, String enquiryId) async {
+    try {
+      final reviewService = ref.read(reviewRequestServiceProvider);
+      final appConfigAsync = ref.read(appGeneralConfigProvider);
+
+      final appConfig = appConfigAsync.valueOrNull;
+      if (appConfig == null) {
+        _showSnack('Error loading app configuration');
+        return;
+      }
+
+      final googleReviewLink = appConfig.googleReviewLink.isNotEmpty 
+          ? appConfig.googleReviewLink 
+          : null;
+      final instagramHandle = appConfig.instagramHandle.isNotEmpty 
+          ? appConfig.instagramHandle 
+          : null;
+      final websiteUrl = appConfig.websiteUrl.isNotEmpty 
+          ? appConfig.websiteUrl 
+          : null;
+
+      final status = await reviewService.sendReviewRequest(
+        customerPhone: phone,
+        customerName: customerName,
+        googleReviewLink: googleReviewLink,
+        instagramHandle: instagramHandle,
+        websiteUrl: websiteUrl,
+        enquiryId: enquiryId,
+      );
+
+      if (!mounted) return;
+
+      switch (status) {
+        case ContactLaunchStatus.opened:
+          _showSnack('Review request sent to $customerName');
+          break;
+        case ContactLaunchStatus.invalidNumber:
+          _showSnack('Invalid phone number for review request');
+          break;
+        case ContactLaunchStatus.notInstalled:
+          _showSnack('WhatsApp not installed. Opened in browser instead.');
+          break;
+        case ContactLaunchStatus.failed:
+          _showSnack('Could not send review request');
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnack('Error sending review request: $e');
+      }
     }
   }
 
@@ -943,7 +1034,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Drawer _buildNavigationDrawer(AsyncValue<UserModel?> currentUser, bool isAdmin) {
+  Drawer _buildNavigationDrawer(bool isAdmin) {
+    final currentUser = ref.watch(currentUserWithFirestoreProvider);
     return Drawer(
       child: SafeArea(
         child: Column(

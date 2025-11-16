@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/auth/current_user_role_provider.dart';
-import '../../domain/user_model.dart';
+import '../../../../../core/providers/role_provider.dart';
+import '../../../../../shared/models/user_model.dart';
+import '../../domain/user_model.dart' as domain;
 import '../users_providers.dart';
 
 class UserFormDialog extends ConsumerStatefulWidget {
-  final UserModel? user; // null for create, non-null for edit
+  final domain.UserModel? user; // null for create, non-null for edit
 
   const UserFormDialog({super.key, this.user});
 
@@ -45,7 +46,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.user != null;
-    final isAdmin = ref.watch(isAdminProvider);
+    final roleAsync = ref.watch(roleProvider);
 
     return AlertDialog(
       title: Text(isEdit ? 'Edit User' : 'Add User'),
@@ -123,7 +124,19 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        if (isAdmin) FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create')),
+        roleAsync.when(
+          data: (role) {
+            if (role != UserRole.admin) {
+              return const SizedBox.shrink();
+            }
+            return FilledButton(
+              onPressed: _submit,
+              child: Text(isEdit ? 'Update' : 'Create'),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -131,7 +144,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = UserModel(
+    final user = domain.UserModel(
       uid: widget.user?.uid ?? '', // Will be set by Firestore
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),

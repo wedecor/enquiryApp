@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/auth/current_user_role_provider.dart' as auth_provider;
+import '../../../core/providers/role_provider.dart';
+import '../../../shared/models/user_model.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/admin_tab.dart';
 import 'tabs/dashboard_defaults_tab.dart';
@@ -22,7 +23,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    // Initialize with max possible tabs (including admin)
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -33,12 +35,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(auth_provider.isAdminProvider);
-    return _buildSettingsScreen(context, isAdmin);
+    final roleAsync = ref.watch(roleProvider);
+    
+    return roleAsync.when(
+      data: (role) {
+        final isAdmin = role == UserRole.admin;
+        return _buildSettingsScreen(context, isAdmin);
+      },
+      loading: () => Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          centerTitle: true,
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          centerTitle: true,
+        ),
+        body: Center(child: Text('Error: $error')),
+      ),
+    );
   }
 
   Widget _buildSettingsScreen(BuildContext context, bool isAdmin) {
-    final tabs = [
+    final baseTabs = [
       const Tab(icon: Icon(Icons.person), text: 'Account'),
       const Tab(icon: Icon(Icons.tune), text: 'Preferences'),
       const Tab(icon: Icon(Icons.notifications), text: 'Notifications'),
@@ -46,7 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
       const Tab(icon: Icon(Icons.privacy_tip), text: 'Privacy'),
     ];
 
-    final tabViews = [
+    final baseTabViews = [
       const AccountTab(),
       const PreferencesTab(),
       const NotificationsTab(),
@@ -54,22 +76,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
       const PrivacyTab(),
     ];
 
-    if (isAdmin) {
-      tabs.add(const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'));
-      tabViews.add(const AdminTab());
+    final tabs = isAdmin
+        ? [
+            ...baseTabs,
+            const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'),
+          ]
+        : baseTabs;
 
-      // Update tab controller length for admin
+    final tabViews = isAdmin
+        ? [
+            ...baseTabViews,
+            const AdminTab(),
+          ]
+        : baseTabViews;
+
+    // Update tab controller length if needed
+    if (_tabController.length != tabs.length) {
       _tabController.dispose();
-      _tabController = TabController(length: 6, vsync: this);
+      _tabController = TabController(length: tabs.length, vsync: this);
     }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
-        bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: tabs,
+          isScrollable: true,
+        ),
       ),
-      body: TabBarView(controller: _tabController, children: tabViews),
+      body: TabBarView(
+        controller: _tabController,
+        children: tabViews,
+      ),
     );
   }
 }

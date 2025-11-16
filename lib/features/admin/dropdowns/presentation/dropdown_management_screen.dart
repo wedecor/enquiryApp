@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/role_provider.dart';
+import '../../../../shared/models/user_model.dart';
 import '../domain/dropdown_item.dart';
 import 'dropdown_form_dialog.dart';
 import 'dropdown_providers.dart';
@@ -48,7 +50,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   @override
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(dropdownGroupProvider);
-    final isAdmin = ref.watch(isDropdownAdminProvider);
+    final roleAsync = ref.watch(roleProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -76,12 +78,20 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           const SizedBox(width: 8),
 
           // Add button (admin only)
-          if (isAdmin)
-            ElevatedButton.icon(
-              onPressed: () => _showAddDialog(context, currentGroup),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Item'),
-            ),
+          roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return const SizedBox.shrink();
+              }
+              return ElevatedButton.icon(
+                onPressed: () => _showAddDialog(context, currentGroup),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Item'),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
 
           const SizedBox(width: 8),
 
@@ -110,7 +120,12 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   }
 
   Widget _buildGroupContent(DropdownGroup group) {
-    final isAdmin = ref.watch(isDropdownAdminProvider);
+    final roleAsync = ref.watch(roleProvider);
+    final isAdmin = roleAsync.when(
+      data: (role) => role == UserRole.admin,
+      loading: () => false,
+      error: (_, __) => false,
+    );
     final dropdownsAsync = ref.watch(filteredDropdownsProvider(group));
 
     return Column(

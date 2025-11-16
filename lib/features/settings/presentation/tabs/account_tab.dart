@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../../../core/auth/current_user_role_provider.dart' as auth_provider;
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/services/update_service.dart';
 import '../../../../shared/models/user_model.dart';
@@ -13,8 +13,8 @@ class AccountTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUserAsync = ref.watch(auth_provider.currentUserAsyncProvider);
-    final currentUserRole = ref.watch(auth_provider.currentUserRoleProvider);
+    final currentUserAsync = ref.watch(currentUserWithFirestoreProvider);
+    final currentUserRole = ref.watch(roleProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -36,7 +36,11 @@ class AccountTab extends ConsumerWidget {
             Text('Role Information', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
 
-            _buildRoleSection(context, currentUserRole ?? 'staff'),
+            currentUserRole.when(
+              data: (role) => _buildRoleSection(context, role == UserRole.admin ? 'admin' : 'staff'),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => _buildRoleSection(context, 'staff'),
+            ),
 
             const SizedBox(height: 32),
 

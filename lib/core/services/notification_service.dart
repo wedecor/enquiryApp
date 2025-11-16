@@ -15,10 +15,10 @@ class NotificationService {
     required String createdBy,
   }) async {
     try {
-      // Get all admin users except the creator
+      // Get all admin users EXCEPT the creator
       final adminUsers = await _getAdminUsers(excludeUserId: createdBy);
 
-      // Send notification to all admins
+      // Send notification to all admins (excluding the creator)
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,
@@ -105,10 +105,10 @@ class NotificationService {
         },
       );
 
-      // Get all admin users except the assigner
+      // Get all admin users EXCEPT the assigner
       final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
 
-      // Send notification to all admins
+      // Send notification to all admins (excluding the assigner)
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,
@@ -144,12 +144,13 @@ class NotificationService {
     required String oldStatus,
     required String newStatus,
     required String updatedBy,
+    String? assignedTo,
   }) async {
     try {
-      // Get all admin users except the updater
+      // Get all admin users EXCEPT the updater
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
 
-      // Send notification to all admins
+      // Send notification to all admins (excluding the updater)
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,
@@ -164,6 +165,30 @@ class NotificationService {
             'updatedBy': updatedBy,
           },
         );
+      }
+
+      // Also send notification to assigned user if they exist and are different from updater
+      if (assignedTo != null && assignedTo != updatedBy) {
+        final assignedUser = await _getUserById(assignedTo);
+        if (assignedUser != null) {
+          // Only send if they're not already an admin (to avoid duplicate)
+          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
+          if (!isAssignedUserAdmin) {
+            await _sendNotificationToUser(
+              userId: assignedTo,
+              title: 'Enquiry Status Updated',
+              body: 'Status changed from $oldStatus to $newStatus for $customerName',
+              data: {
+                'type': 'status_update',
+                'enquiryId': enquiryId,
+                'customerName': customerName,
+                'oldStatus': oldStatus,
+                'newStatus': newStatus,
+                'updatedBy': updatedBy,
+              },
+            );
+          }
+        }
       }
 
       // Also send to general admin topic
@@ -183,11 +208,89 @@ class NotificationService {
 
       Log.i(
         'NotificationService: sent status change notifications',
-        data: {'adminCount': adminUsers.length},
+        data: {'adminCount': adminUsers.length, 'assignedTo': assignedTo},
       );
     } catch (e, st) {
       Log.e(
         'NotificationService: error sending status change notifications',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  /// Send notification when an enquiry is updated (edited)
+  Future<void> notifyEnquiryUpdated({
+    required String enquiryId,
+    required String customerName,
+    required String eventType,
+    required String updatedBy,
+    String? assignedTo,
+  }) async {
+    try {
+      // Get all admin users EXCEPT the updater
+      final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
+
+      // Send notification to all admins (excluding the updater)
+      for (final admin in adminUsers) {
+        await _sendNotificationToUser(
+          userId: admin.uid,
+          title: 'Enquiry Updated',
+          body: 'Enquiry from $customerName for $eventType has been updated',
+          data: {
+            'type': 'enquiry_updated',
+            'enquiryId': enquiryId,
+            'customerName': customerName,
+            'eventType': eventType,
+            'updatedBy': updatedBy,
+          },
+        );
+      }
+
+      // Also send notification to assigned user if they exist and are different from updater
+      if (assignedTo != null && assignedTo != updatedBy) {
+        final assignedUser = await _getUserById(assignedTo);
+        if (assignedUser != null) {
+          // Only send if they're not already an admin (to avoid duplicate)
+          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
+          if (!isAssignedUserAdmin) {
+            await _sendNotificationToUser(
+              userId: assignedTo,
+              title: 'Enquiry Updated',
+              body: 'Enquiry from $customerName for $eventType has been updated',
+              data: {
+                'type': 'enquiry_updated',
+                'enquiryId': enquiryId,
+                'customerName': customerName,
+                'eventType': eventType,
+                'updatedBy': updatedBy,
+              },
+            );
+          }
+        }
+      }
+
+      // Also send to general admin topic
+      await _sendNotificationToTopic(
+        topic: 'admin',
+        title: 'Enquiry Updated',
+        body: 'Enquiry from $customerName for $eventType has been updated',
+        data: {
+          'type': 'enquiry_updated',
+          'enquiryId': enquiryId,
+          'customerName': customerName,
+          'eventType': eventType,
+          'updatedBy': updatedBy,
+        },
+      );
+
+      Log.i(
+        'NotificationService: sent enquiry update notifications',
+        data: {'adminCount': adminUsers.length, 'assignedTo': assignedTo},
+      );
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: error sending enquiry update notifications',
         error: e,
         stackTrace: st,
       );

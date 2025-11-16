@@ -1,15 +1,17 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/audit_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
-import '../../../../core/services/user_firestore_sync_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
@@ -45,6 +47,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   String? _selectedPaymentStatus;
   String? _selectedAssignedTo;
   final List<XFile> _selectedImages = [];
+  final List<String> _existingImageUrls = []; // URLs from Firestore
   bool _isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -117,6 +120,27 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           if (data['eventDate'] != null) {
             final timestamp = data['eventDate'] as Timestamp;
             _selectedDate = timestamp.toDate();
+          }
+
+          // Load existing images
+          _existingImageUrls.clear();
+          if (data['images'] != null) {
+            final images = data['images'] as List<dynamic>?;
+            if (images != null && images.isNotEmpty) {
+              final imageUrls = images
+                  .map((e) => e.toString())
+                  .where((url) => url.isNotEmpty)
+                  .toList();
+              _existingImageUrls.addAll(imageUrls);
+              Log.d('EnquiryFormScreen loaded images', data: {
+                'count': imageUrls.length,
+                'urls': imageUrls,
+              });
+            } else {
+              Log.d('EnquiryFormScreen images field is empty or null');
+            }
+          } else {
+            Log.d('EnquiryFormScreen no images field found in document');
           }
         });
       }
@@ -277,8 +301,19 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
             'updatedAt': FieldValue.serverTimestamp(),
             'updatedBy': currentUser.uid,
           });
+          // Clear selected images after successful upload
+          setState(() {
+            _selectedImages.clear();
+          });
         }
-      } catch (_) {}
+      } catch (e) {
+        Log.e('Error uploading images', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading images: $e')),
+          );
+        }
+      }
     }
 
     // Send notification for new enquiry creation
@@ -364,6 +399,38 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'updatedBy': currentUser.uid,
     });
 
+    // Upload reference images if any and save URLs
+    if (_selectedImages.isNotEmpty) {
+      try {
+        final urls = await _uploadImages(widget.enquiryId!);
+        if (urls.isNotEmpty) {
+          Log.d('EnquiryFormScreen updating images', data: {
+            'enquiryId': widget.enquiryId,
+            'urlCount': urls.length,
+            'urls': urls,
+          });
+          await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
+            'images': FieldValue.arrayUnion(urls),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'updatedBy': currentUser.uid,
+          });
+          Log.d('EnquiryFormScreen images updated successfully');
+          // Add to existing images list for display
+          setState(() {
+            _existingImageUrls.addAll(urls);
+            _selectedImages.clear(); // Clear after upload
+          });
+        }
+      } catch (e) {
+        Log.e('Error uploading images', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading images: $e')),
+          );
+        }
+      }
+    }
+
     // Record audit trail for the update
     final auditService = AuditService();
     await auditService.recordChange(
@@ -371,6 +438,16 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       fieldChanged: 'general_update',
       oldValue: 'Previous values',
       newValue: 'Updated enquiry data',
+    );
+
+    // Send notification for enquiry update
+    final notificationService = NotificationService();
+    await notificationService.notifyEnquiryUpdated(
+      enquiryId: widget.enquiryId!,
+      customerName: _nameController.text.trim(),
+      eventType: eventTypeValue,
+      updatedBy: currentUser.uid,
+      assignedTo: _selectedAssignedTo,
     );
 
     if (mounted) {
@@ -386,21 +463,92 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final List<String> downloadUrls = [];
 
     for (final xfile in _selectedImages) {
-      final file = File(xfile.path);
-      final fileName = xfile.name;
-      final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
-      final task = await ref.putFile(file);
-      final url = await task.ref.getDownloadURL();
-      downloadUrls.add(url);
+      try {
+        if (kIsWeb) {
+          // For web, read bytes from XFile
+          final bytes = await xfile.readAsBytes();
+          final fileName = xfile.name;
+          final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
+          
+          // Set content type based on file extension
+          final contentType = _getContentType(fileName);
+          
+          // Upload with metadata
+          final metadata = SettableMetadata(
+            contentType: contentType,
+            cacheControl: 'max-age=3600',
+          );
+          
+          final task = await ref.putData(
+            bytes,
+            metadata,
+          );
+          final url = await task.ref.getDownloadURL();
+          downloadUrls.add(url);
+          Log.d('EnquiryFormScreen image uploaded', data: {
+            'fileName': fileName,
+            'url': url,
+          });
+        } else {
+          // For mobile, use File
+          final file = File(xfile.path);
+          final fileName = xfile.name;
+          final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
+          
+          // Set content type
+          final contentType = _getContentType(fileName);
+          final metadata = SettableMetadata(contentType: contentType);
+          
+          final task = await ref.putFile(file, metadata);
+          final url = await task.ref.getDownloadURL();
+          downloadUrls.add(url);
+          Log.d('EnquiryFormScreen image uploaded', data: {
+            'fileName': fileName,
+            'url': url,
+          });
+        }
+      } catch (e) {
+        Log.e('Error uploading image ${xfile.name}', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading ${xfile.name}: $e')),
+          );
+        }
+        // Continue with other images
+      }
     }
 
     return downloadUrls;
   }
 
+  String _getContentType(String fileName) {
+    final extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg'; // Default fallback
+    }
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      _existingImageUrls.removeAt(index);
+    });
+    // TODO: Optionally delete from Firestore and Storage
+  }
+
   @override
   Widget build(BuildContext context) {
-    final activeUsers = ref.watch(activeUsersProvider);
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
+    // Watch role provider directly to handle loading state properly
+    final roleAsync = ref.watch(roleProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -564,144 +712,186 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               const SizedBox(height: 16),
 
               // Assignment Field (Admin Only)
-              if (isAdmin) ...[
-                activeUsers.when(
-                  data: (users) {
-                    return DropdownButtonFormField<String>(
-                      initialValue: _selectedAssignedTo,
-                      decoration: const InputDecoration(
-                        labelText: 'Assign To',
-                        prefixIcon: Icon(Icons.person_add),
-                        border: OutlineInputBorder(),
-                      ),
-                      hint: const Text('Select user to assign'),
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
-                        ...users.docs.map((doc) {
-                          final user = doc.data() as Map<String, dynamic>;
-                          return DropdownMenuItem<String>(
-                            value: doc.id,
-                            child: Text(
-                              (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
+              // Show loading state while checking admin status
+              roleAsync.when(
+                data: (role) {
+                  if (role != UserRole.admin) {
+                    return const SizedBox.shrink();
+                  }
+                  
+                  // User is admin, use Consumer to watch activeUsersProvider
+                  return Consumer(
+                    builder: (context, ref, child) {
+                      final activeUsers = ref.watch(activeUsersProvider);
+                      
+                      return activeUsers.when(
+                        data: (users) {
+                          return DropdownButtonFormField<String>(
+                            value: _selectedAssignedTo,
+                            decoration: const InputDecoration(
+                              labelText: 'Assign To',
+                              prefixIcon: Icon(Icons.person_add),
+                              border: OutlineInputBorder(),
                             ),
+                            hint: const Text('Select user to assign'),
+                            items: [
+                              const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
+                              ...users.docs.map((doc) {
+                                final user = doc.data() as Map<String, dynamic>;
+                                return DropdownMenuItem<String>(
+                                  value: doc.id,
+                                  child: Text(
+                                    (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
+                                  ),
+                                );
+                              }),
+                            ],
+                            onChanged: (value) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                setState(() {
+                                  _selectedAssignedTo = value;
+                                });
+                              });
+                            },
                           );
-                        }),
-                      ],
-                      onChanged: (value) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          setState(() {
-                            _selectedAssignedTo = value;
-                          });
-                        });
-                      },
-                    );
-                  },
-                  loading: () => TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Assign To',
-                      prefixIcon: Icon(Icons.person_add),
-                      border: OutlineInputBorder(),
-                      hintText: 'Loading users...',
-                    ),
-                    enabled: false,
-                  ),
-                  error: (error, stack) => TextFormField(
-                    initialValue: _selectedAssignedTo ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Assign To (User ID)',
-                      prefixIcon: Icon(Icons.person_add),
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter user ID or leave empty for unassigned',
-                    ),
-                    onChanged: (value) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        setState(() {
-                          _selectedAssignedTo = value.isEmpty ? null : value;
-                        });
-                      });
+                        },
+                        loading: () => TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Assign To',
+                            prefixIcon: Icon(Icons.person_add),
+                            border: OutlineInputBorder(),
+                            hintText: 'Loading users...',
+                          ),
+                          enabled: false,
+                        ),
+                        error: (error, stack) {
+                          Log.e('Error loading users for assignment', error: error);
+                          return TextFormField(
+                            initialValue: _selectedAssignedTo ?? '',
+                            decoration: const InputDecoration(
+                              labelText: 'Assign To (User ID)',
+                              prefixIcon: Icon(Icons.person_add),
+                              border: OutlineInputBorder(),
+                              hintText: 'Enter user ID or leave empty for unassigned',
+                            ),
+                            onChanged: (value) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                setState(() {
+                                  _selectedAssignedTo = value.isEmpty ? null : value;
+                                });
+                              });
+                            },
+                          );
+                        },
+                      );
                     },
+                  );
+                },
+                loading: () => TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Assign To',
+                    prefixIcon: Icon(Icons.person_add),
+                    border: OutlineInputBorder(),
+                    hintText: 'Checking permissions...',
                   ),
+                  enabled: false,
                 ),
-                const SizedBox(height: 16),
-              ],
+                error: (error, stack) {
+                  Log.e('Error checking admin status', error: error);
+                  return const SizedBox.shrink();
+                },
+              ),
+              const SizedBox(height: 16),
               const SizedBox(height: 24),
 
               // Financial Information Section (Admin Only)
-              if (isAdmin) ...[
-                _buildSectionHeader('Financial Information (Admin Only)'),
-                const SizedBox(height: 16),
+              roleAsync.when(
+                data: (role) {
+                  if (role != UserRole.admin) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSectionHeader('Financial Information (Admin Only)'),
+                      const SizedBox(height: 16),
 
-                // Total Cost Field
-                TextFormField(
-                  controller: _totalCostController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Total Cost',
-                    prefixIcon: Icon(Icons.attach_money),
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter total cost',
-                  ),
-                  validator: (value) {
-                    if (value != null && value.trim().isNotEmpty) {
-                      final cost = _parseDouble(value);
-                      if (cost == null || cost < 0) {
-                        return 'Please enter a valid amount';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                      // Total Cost Field
+                      TextFormField(
+                        controller: _totalCostController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Total Cost',
+                          prefixIcon: Icon(Icons.attach_money),
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter total cost',
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().isNotEmpty) {
+                            final cost = _parseDouble(value);
+                            if (cost == null || cost < 0) {
+                              return 'Please enter a valid amount';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
 
-                // Advance Paid Field
-                TextFormField(
-                  controller: _advancePaidController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Advance Paid',
-                    prefixIcon: Icon(Icons.payment),
-                    border: OutlineInputBorder(),
-                    hintText: 'Enter advance amount',
-                  ),
-                  validator: (value) {
-                    if (value != null && value.trim().isNotEmpty) {
-                      final advance = _parseDouble(value);
-                      if (advance == null || advance < 0) {
-                        return 'Please enter a valid amount';
-                      }
+                      // Advance Paid Field
+                      TextFormField(
+                        controller: _advancePaidController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Advance Paid',
+                          prefixIcon: Icon(Icons.payment),
+                          border: OutlineInputBorder(),
+                          hintText: 'Enter advance amount',
+                        ),
+                        validator: (value) {
+                          if (value != null && value.trim().isNotEmpty) {
+                            final advance = _parseDouble(value);
+                            if (advance == null || advance < 0) {
+                              return 'Please enter a valid amount';
+                            }
 
-                      // Check if advance is more than total cost
-                      final totalCost = _parseDouble(_totalCostController.text);
-                      if (totalCost != null && advance > totalCost) {
-                        return 'Advance cannot be more than total cost';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+                            // Check if advance is more than total cost
+                            final totalCost = _parseDouble(_totalCostController.text);
+                            if (totalCost != null && advance > totalCost) {
+                              return 'Advance cannot be more than total cost';
+                            }
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
 
-                // Payment Status Field
-                StatusDropdown(
-                  collectionName: 'payment_statuses',
-                  value: _selectedPaymentStatus,
-                  label: 'Payment Status',
-                  onChanged: (value) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _selectedPaymentStatus = value;
-                      });
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please select a payment status';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-              ],
+                      // Payment Status Field
+                      StatusDropdown(
+                        collectionName: 'payment_statuses',
+                        value: _selectedPaymentStatus,
+                        label: 'Payment Status',
+                        onChanged: (value) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {
+                              _selectedPaymentStatus = value;
+                            });
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please select a payment status';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
 
               // Notes Section
               _buildSectionHeader('Additional Information'),
@@ -733,10 +923,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Selected Images
+              // Selected Images (new uploads)
               if (_selectedImages.isNotEmpty) ...[
                 Text(
-                  'Selected Images (${_selectedImages.length})',
+                  'New Images (${_selectedImages.length})',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -759,10 +949,26 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(_selectedImages[index].path),
-                                  fit: BoxFit.cover,
-                                ),
+                                child: kIsWeb
+                                    ? FutureBuilder<Uint8List>(
+                                        future: _selectedImages[index].readAsBytes(),
+                                        builder: (context, snapshot) {
+                                          if (snapshot.connectionState == ConnectionState.waiting) {
+                                            return const Center(child: CircularProgressIndicator());
+                                          }
+                                          if (snapshot.hasData) {
+                                            return Image.memory(
+                                              snapshot.data!,
+                                              fit: BoxFit.cover,
+                                            );
+                                          }
+                                          return const Icon(Icons.error);
+                                        },
+                                      )
+                                    : Image.file(
+                                        File(_selectedImages[index].path),
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
                             ),
                             Positioned(
@@ -770,6 +976,79 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                               right: 4,
                               child: GestureDetector(
                                 onTap: () => _removeImage(index),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Existing Images (from Firestore)
+              // Debug: Always show section header to verify images are loaded
+              Text(
+                'Existing Images (${_existingImageUrls.length})',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (_existingImageUrls.isEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'No existing images found',
+                    style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _existingImageUrls.length,
+                    itemBuilder: (context, index) {
+                      final url = _existingImageUrls[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  url,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.error);
+                                  },
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => _removeExistingImage(index),
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/user_model.dart';
 import '../providers/role_provider.dart';
+import '../services/firebase_auth_service.dart';
 
 /// Route guard utilities for protecting admin-only screens
 class RouteGuards {
@@ -20,11 +21,11 @@ class RouteGuards {
   /// }
   /// ```
   static Future<bool> requireAdmin(BuildContext context, WidgetRef ref) async {
-    final currentUser = ref.read(currentUserWithFirestoreProvider);
+    final roleAsync = ref.read(roleProvider);
 
-    return currentUser.when(
-      data: (user) {
-        if (user?.role == UserRole.admin) {
+    return roleAsync.when(
+      data: (role) {
+        if (role == UserRole.admin) {
           return true;
         } else {
           _showAccessDeniedDialog(context);
@@ -176,18 +177,40 @@ class AdminOnlyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUser = ref.watch(currentUserWithFirestoreProvider);
+    final roleAsync = ref.watch(roleProvider);
 
-    return currentUser.when(
-      data: (user) {
-        if (user?.role == UserRole.admin) {
+    return roleAsync.when(
+      data: (role) {
+        if (role == UserRole.admin) {
           return child;
         } else {
           return _buildAccessDeniedScreen();
         }
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, stack) => Scaffold(body: Center(child: Text('Error: $error'))),
+      loading: () => const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Checking permissions...'),
+            ],
+          ),
+        ),
+      ),
+      error: (error, stack) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error checking permissions: $error'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

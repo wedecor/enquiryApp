@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/role_provider.dart';
+import '../../shared/models/user_model.dart';
 import '../../utils/logger.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
@@ -153,8 +154,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   }
 
   Future<void> _addNewStatus() async {
-    final isAdmin = ref.read(currentUserIsAdminProvider);
-    if (!isAdmin) {
+    final roleAsync = ref.read(roleProvider);
+    final role = roleAsync.valueOrNull ?? UserRole.staff;
+    if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
@@ -233,8 +235,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   }
 
   void _showAddDialog() {
-    final isAdmin = ref.read(currentUserIsAdminProvider);
-    if (!isAdmin) {
+    final roleAsync = ref.read(roleProvider);
+    final role = roleAsync.valueOrNull ?? UserRole.staff;
+    if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
@@ -278,7 +281,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
+    final roleAsync = ref.watch(roleProvider);
+    final isAdmin = roleAsync.when(
+      data: (role) => role == UserRole.admin,
+      loading: () => false,
+      error: (_, __) => false,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,14 +325,26 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 validator: widget.validator,
               ),
             ),
-            if (isAdmin) ...[
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: _showAddDialog,
-                icon: const Icon(Icons.add_circle, color: Colors.green),
-                tooltip: 'Add new ${widget.label.toLowerCase()}',
-              ),
-            ],
+            roleAsync.when(
+              data: (role) {
+                if (role != UserRole.admin) {
+                  return const SizedBox.shrink();
+                }
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _showAddDialog,
+                      icon: const Icon(Icons.add_circle, color: Colors.green),
+                      tooltip: 'Add new ${widget.label.toLowerCase()}',
+                    ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
           ],
         ),
       ],

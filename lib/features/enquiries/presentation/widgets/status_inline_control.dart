@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../shared/models/user_model.dart';
 import '../../data/enquiry_repository.dart';
 import '../../domain/enquiry.dart';
 
@@ -12,12 +13,14 @@ class StatusInlineControl extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(currentUserRoleProvider);
-    final meUid = ref.watch(currentUserUidProvider);
+    final roleAsync = ref.watch(roleProvider);
+    final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final repo = ref.watch(enquiryRepositoryProvider);
 
-    final isAdmin = role == 'admin';
-    final isStaff = role == 'staff';
+    final role = roleAsync.valueOrNull ?? UserRole.staff;
+    final isAdmin = role == UserRole.admin;
+    final isStaff = role == UserRole.staff;
+    final meUid = currentUser.valueOrNull?.uid;
     final isAssignee = enquiry.assignedTo == meUid;
     final canChange = isAdmin || (isStaff && isAssignee);
 
