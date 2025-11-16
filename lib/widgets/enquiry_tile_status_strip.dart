@@ -9,7 +9,7 @@ import '../core/contacts/contact_launcher.dart';
 import '../core/services/contact_service.dart';
 import '../utils/logger.dart';
 
-enum _TileAction { viewDetails, updateStatus, share, notes, saveContact }
+enum _TileAction { viewDetails, updateStatus, share, notes, saveContact, requestReview }
 
 class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   const EnquiryTileStatusStrip({
@@ -37,6 +37,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
     this.onUpdateStatus,
     this.onShare,
     this.onAddNote,
+    this.onRequestReview,
   });
 
   final String name;
@@ -62,6 +63,7 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final Future<void> Function()? onUpdateStatus;
   final Future<void> Function()? onShare;
   final Future<void> Function()? onAddNote;
+  final Future<void> Function()? onRequestReview;
 
   @override
   ConsumerState<EnquiryTileStatusStrip> createState() => _EnquiryTileStatusStripState();
@@ -88,6 +90,9 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
       case _TileAction.saveContact:
         unawaited(_handleSaveContact());
         break;
+      case _TileAction.requestReview:
+        widget.onRequestReview?.call();
+        break;
     }
   }
 
@@ -104,6 +109,9 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
     }
     if (_hasPhoneNumber()) {
       actions.add(_TileAction.saveContact);
+    }
+    if (widget.onRequestReview != null && widget.status.toLowerCase() == 'completed') {
+      actions.add(_TileAction.requestReview);
     }
     return actions;
   }
@@ -343,6 +351,8 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
       ContactSaveRequest(
         displayName: widget.name,
         phoneNumber: formattedPhone,
+        eventType: widget.eventType,
+        eventDate: widget.dateLabel,
       ),
     );
 
@@ -354,22 +364,49 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
-    final message = switch (status) {
-      ContactSaveStatus.saved =>
-        'Saved ${widget.name.isEmpty ? 'contact' : widget.name} to this device.',
-      ContactSaveStatus.alreadyExists =>
-        'Contact already saved on this device.',
-      ContactSaveStatus.permissionDenied =>
-        'Contacts permission is required to save to your device.',
-      ContactSaveStatus.invalidInput =>
-        'No valid phone number available to save.',
-      ContactSaveStatus.failed =>
-        'Could not save contact. Please try again.',
-    };
+    String message;
+    Color backgroundColor;
+
+    switch (status) {
+      case ContactSaveStatus.saved:
+        message = 'Contact saved successfully';
+        backgroundColor = Colors.green;
+        break;
+      case ContactSaveStatus.copiedToClipboard:
+        message = 'Contact info copied to clipboard. You can paste it into your contacts app.';
+        backgroundColor = Colors.blue;
+        break;
+      case ContactSaveStatus.alreadyExists:
+        message = 'Contact already exists';
+        backgroundColor = Colors.orange;
+        break;
+      case ContactSaveStatus.permissionDenied:
+        message = 'Permission denied. Please enable contacts permission in settings.';
+        backgroundColor = Colors.red;
+        break;
+      case ContactSaveStatus.invalidInput:
+        message = 'Invalid contact information';
+        backgroundColor = Colors.red;
+        break;
+      case ContactSaveStatus.notSupportedOnWeb:
+        message = 'Saving contacts is not supported on web. Contact info copied to clipboard.';
+        backgroundColor = Colors.blue;
+        break;
+      case ContactSaveStatus.failed:
+        message = 'Failed to save contact';
+        backgroundColor = Colors.red;
+        break;
+    }
 
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: backgroundColor,
+          duration: const Duration(seconds: 3),
+        ),
+      );
   }
 
   bool _hasNotes(String? notes) => notes != null && notes.trim().isNotEmpty;
@@ -506,6 +543,8 @@ class _HeaderRow extends StatelessWidget {
         return 'Follow-up notes';
       case _TileAction.saveContact:
         return 'Save contact';
+      case _TileAction.requestReview:
+        return 'Request review';
     }
   }
 
@@ -521,6 +560,8 @@ class _HeaderRow extends StatelessWidget {
         return Icons.note_alt_outlined;
       case _TileAction.saveContact:
         return Icons.person_add_alt_1_outlined;
+      case _TileAction.requestReview:
+        return Icons.star_rate_rounded;
     }
   }
 

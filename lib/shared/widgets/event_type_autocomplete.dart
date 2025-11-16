@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/role_provider.dart';
+import '../../shared/models/user_model.dart';
 import '../../utils/logger.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
@@ -200,15 +201,17 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       setState(() {
         _filteredEventTypes = filtered;
         // Show add button if no exact match found and admin
-        final isAdmin = ref.read(currentUserIsAdminProvider);
-        _showAddButton = filtered.isEmpty && isAdmin;
+        final roleAsync = ref.read(roleProvider);
+        final role = roleAsync.valueOrNull ?? UserRole.staff;
+        _showAddButton = filtered.isEmpty && role == UserRole.admin;
       });
     }
   }
 
   Future<void> _addNewEventType(String newType) async {
-    final isAdmin = ref.read(currentUserIsAdminProvider);
-    if (!isAdmin) {
+    final roleAsync = ref.read(roleProvider);
+    final role = roleAsync.valueOrNull ?? UserRole.staff;
+    if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Only admins can add new event types'),
@@ -363,8 +366,20 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   }
 
   Widget _buildAddNewOption() {
-    final isAdmin = ref.watch(currentUserIsAdminProvider);
-    if (!isAdmin) return const SizedBox.shrink();
+    final roleAsync = ref.watch(roleProvider);
+    return roleAsync.when(
+      data: (role) {
+        if (role != UserRole.admin) {
+          return const SizedBox.shrink();
+        }
+        return _buildAddOptionCard();
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildAddOptionCard() {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

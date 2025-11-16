@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../domain/app_config.dart';
 import '../../providers/settings_providers.dart';
+import 'past_enquiry_cleanup_widget.dart';
 
 class AdminTab extends ConsumerStatefulWidget {
   const AdminTab({super.key});
@@ -89,6 +90,9 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
     _currencyController.dispose();
     _timezoneController.dispose();
     _vatPercentController.dispose();
+    _googleReviewLinkController.dispose();
+    _instagramHandleController.dispose();
+    _websiteUrlController.dispose();
     super.dispose();
   }
 
@@ -110,12 +114,19 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
     );
   }
 
+  final _googleReviewLinkController = TextEditingController();
+  final _instagramHandleController = TextEditingController();
+  final _websiteUrlController = TextEditingController();
+
   void _initializeControllers(AppGeneralConfig config) {
     _companyNameController.text = config.companyName;
     _logoUrlController.text = config.logoUrl ?? '';
     _currencyController.text = config.currency;
     _timezoneController.text = config.timezone;
     _vatPercentController.text = config.vatPercent.toString();
+    _googleReviewLinkController.text = config.googleReviewLink;
+    _instagramHandleController.text = config.instagramHandle;
+    _websiteUrlController.text = config.websiteUrl;
   }
 
   Widget _buildCompanyForm(BuildContext context, AppGeneralConfig config) {
@@ -238,6 +249,59 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Review & Social Links',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _googleReviewLinkController,
+                    decoration: const InputDecoration(
+                      labelText: 'Google Review Link',
+                      border: OutlineInputBorder(),
+                      hintText: 'https://share.google/...',
+                      helperText: 'Used in review request messages',
+                    ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final uri = Uri.tryParse(value);
+                        if (uri == null || !uri.hasScheme) {
+                          return 'Please enter a valid URL';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _instagramHandleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Instagram Handle',
+                      border: OutlineInputBorder(),
+                      hintText: '@wedecorbangalore',
+                      helperText: 'Used in review request messages',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _websiteUrlController,
+                    decoration: const InputDecoration(
+                      labelText: 'Website URL',
+                      border: OutlineInputBorder(),
+                      hintText: 'https://www.wedecorevents.com/',
+                      helperText: 'Used in review request messages',
+                    ),
+                    validator: (value) {
+                      if (value != null && value.isNotEmpty) {
+                        final uri = Uri.tryParse(value);
+                        if (uri == null || !uri.hasScheme) {
+                          return 'Please enter a valid URL';
+                        }
+                      }
+                      return null;
+                    },
+                  ),
                 ],
               ),
             ),
@@ -253,7 +317,10 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
         _logoUrlController.text != (config.logoUrl ?? '') ||
         _currencyController.text != config.currency ||
         _timezoneController.text != config.timezone ||
-        _vatPercentController.text != config.vatPercent.toString();
+        _vatPercentController.text != config.vatPercent.toString() ||
+        _googleReviewLinkController.text != config.googleReviewLink ||
+        _instagramHandleController.text != config.instagramHandle ||
+        _websiteUrlController.text != config.websiteUrl;
   }
 
   Widget _buildSaveSection(BuildContext context, AppGeneralConfig config) {
@@ -303,6 +370,9 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
         currency: _currencyController.text.trim().toUpperCase(),
         timezone: _timezoneController.text,
         vatPercent: double.parse(_vatPercentController.text),
+        googleReviewLink: _googleReviewLinkController.text.trim(),
+        instagramHandle: _instagramHandleController.text.trim(),
+        websiteUrl: _websiteUrlController.text.trim(),
       );
 
       final updateConfig = ref.read(updateAppGeneralConfigProvider);
@@ -766,6 +836,22 @@ class DataIntegrationsTab extends ConsumerWidget {
                       Navigator.of(context).pushNamed('/admin/analytics');
                     },
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Maintenance', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  PastEnquiryCleanupWidget(),
                 ],
               ),
             ),

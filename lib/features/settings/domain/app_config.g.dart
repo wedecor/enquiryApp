@@ -14,6 +14,12 @@ _$AppGeneralConfigImpl _$$AppGeneralConfigImplFromJson(
       currency: json['currency'] as String? ?? 'INR',
       timezone: json['timezone'] as String? ?? 'Asia/Kolkata',
       vatPercent: (json['vatPercent'] as num?)?.toDouble() ?? 18.0,
+      googleReviewLink: json['googleReviewLink'] as String? ??
+          'https://share.google/qba1n2A4MKJiUy3PA',
+      instagramHandle:
+          json['instagramHandle'] as String? ?? '@wedecorbangalore',
+      websiteUrl:
+          json['websiteUrl'] as String? ?? 'https://www.wedecorevents.com/',
       updatedAt: json['updatedAt'] == null
           ? null
           : DateTime.parse(json['updatedAt'] as String),
@@ -27,6 +33,9 @@ Map<String, dynamic> _$$AppGeneralConfigImplToJson(
       'currency': instance.currency,
       'timezone': instance.timezone,
       'vatPercent': instance.vatPercent,
+      'googleReviewLink': instance.googleReviewLink,
+      'instagramHandle': instance.instagramHandle,
+      'websiteUrl': instance.websiteUrl,
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 

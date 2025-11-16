@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../core/auth/current_user_role_provider.dart' as auth_providers;
 import '../data/users_repository.dart';
 import '../domain/user_model.dart';
 
@@ -111,8 +112,8 @@ final userFormControllerProvider = StateNotifierProvider<UserFormController, Asy
 
 // Current user provider (for role checking) - now using the new auth system
 final currentUserProvider = Provider<UserModel?>((ref) {
-  final authUser = ref.watch(firebaseAuthUserProvider).value;
-  final userData = ref.watch(currentUserDataProvider);
+  final authUser = ref.watch(auth_providers.firebaseAuthUserProvider).value;
+  final userData = ref.watch(auth_providers.currentUserDataProvider);
 
   if (authUser == null || userData == null) return null;
 

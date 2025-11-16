@@ -4,9 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/auth/role_guards.dart';
-import '../domain/user_model.dart';
+import '../../../../shared/models/user_model.dart' show UserRole;
+import '../domain/user_model.dart' as domain;
 import 'invite_user_dialog.dart';
 import 'role_checker_panel.dart';
 import 'users_providers.dart';
@@ -47,10 +48,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(usersFilterProvider);
-    final usersAsync = ref.watch(usersStreamProvider(filter));
-    final isAdmin = ref.watch(isAdminProvider);
-    final role = ref.watch(currentUserRoleProvider);
-    final authUser = ref.watch(firebaseAuthUserProvider).value;
+    final roleAsync = ref.watch(roleProvider);
+    final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final paginationState = ref.watch(paginationStateProvider);
 
     return Scaffold(
@@ -58,46 +57,64 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         title: const Text('User Management'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          if (isAdmin) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: FilledButton.icon(
-                onPressed: () => _showInviteUserDialog(context),
-                icon: const Icon(Icons.email),
-                label: const Text('Invite'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: FilledButton.icon(
-                onPressed: () => _showAddUserDialog(context),
-                icon: const Icon(Icons.person_add),
-                label: const Text('Add User'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ),
-          ],
+          roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return const SizedBox.shrink();
+              }
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: FilledButton.icon(
+                      onPressed: () => _showInviteUserDialog(context),
+                      icon: const Icon(Icons.email),
+                      label: const Text('Invite'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    child: FilledButton.icon(
+                      onPressed: () => _showAddUserDialog(context),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Add User'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
         ],
       ),
       body: Column(
         children: [
           // Role Checker Panel
-          RoleCheckerPanel(
-            email: authUser?.email,
-            uid: authUser?.uid,
-            isAdmin: isAdmin,
-            role: role,
-            onRefresh: () => ref.invalidate(currentUserDocProvider),
-            onSignOut: () async {
-              await fb.FirebaseAuth.instance.signOut();
+          roleAsync.when(
+            data: (role) {
+              return RoleCheckerPanel(
+                email: currentUser.valueOrNull?.email,
+                uid: currentUser.valueOrNull?.uid,
+                isAdmin: role == UserRole.admin,
+                role: role == UserRole.admin ? 'admin' : 'staff',
+                onRefresh: () => ref.invalidate(roleProvider),
+                onSignOut: () async {
+                  await fb.FirebaseAuth.instance.signOut();
+                },
+              );
             },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
           // Header with search and filters
           Container(
@@ -182,14 +199,60 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             ),
           ),
           // Users list
-          Expanded(child: _buildUsersListArea(usersAsync, isAdmin, role != null, paginationState)),
+          roleAsync.when(
+            data: (role) {
+              if (role != UserRole.admin) {
+                return const Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'Access Denied',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        Text('Only administrators can access user management.'),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              // User is admin, watch users provider
+              return Consumer(
+                builder: (context, ref, child) {
+                  final usersAsync = ref.watch(usersStreamProvider(filter));
+                  return Expanded(
+                    child: _buildUsersListArea(usersAsync, true, true, paginationState),
+                  );
+                },
+              );
+            },
+            loading: () => const Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Checking permissions...'),
+                  ],
+                ),
+              ),
+            ),
+            error: (error, stack) => Expanded(
+              child: Center(child: Text('Error checking permissions: $error')),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildUsersListArea(
-    AsyncValue<List<UserModel>> usersAsync,
+    AsyncValue<List<domain.UserModel>> usersAsync,
     bool isAdmin,
     bool roleKnown,
     PaginationState paginationState,
@@ -202,7 +265,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   Widget _buildUsersList(
-    List<UserModel> users,
+    List<domain.UserModel> users,
     bool isAdmin,
     bool roleKnown,
     PaginationState paginationState,
@@ -258,7 +321,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildTableLayout(List<UserModel> users, bool isAdmin, PaginationState paginationState) {
+  Widget _buildTableLayout(List<domain.UserModel> users, bool isAdmin, PaginationState paginationState) {
     return Column(
       children: [
         Expanded(
@@ -311,7 +374,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildCardLayout(List<UserModel> users, bool isAdmin, PaginationState paginationState) {
+  Widget _buildCardLayout(List<domain.UserModel> users, bool isAdmin, PaginationState paginationState) {
     return Column(
       children: [
         Expanded(
@@ -414,7 +477,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildActionButtons(UserModel user, bool isAdmin) {
+  Widget _buildActionButtons(domain.UserModel user, bool isAdmin) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -480,7 +543,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return months[month - 1];
   }
 
-  void _loadMore(List<UserModel> users) {
+  void _loadMore(List<domain.UserModel> users) {
     if (users.isNotEmpty) {
       ref.read(paginationStateProvider.notifier).setLoading(true);
       ref.read(usersFilterProvider.notifier).loadMore(users.last.email);
@@ -506,14 +569,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     }
   }
 
-  void _showEditUserDialog(BuildContext context, UserModel user) {
+  void _showEditUserDialog(BuildContext context, domain.UserModel user) {
     showDialog<void>(
       context: context,
       builder: (context) => UserFormDialog(user: user),
     );
   }
 
-  void _handleUserAction(String action, UserModel user) {
+  void _handleUserAction(String action, domain.UserModel user) {
     switch (action) {
       case 'edit':
         _showEditUserDialog(context, user);
@@ -525,7 +588,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     }
   }
 
-  void _toggleUserStatus(UserModel user) {
+  void _toggleUserStatus(domain.UserModel user) {
     try {
       requireAdmin(ref);
       final action = user.active ? 'deactivate' : 'activate';

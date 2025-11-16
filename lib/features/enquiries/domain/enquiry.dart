@@ -36,6 +36,7 @@ class Enquiry with _$Enquiry {
     @JsonKey(name: 'sourceValue') String? source,
     String? sourceLabel,
     String? notes,
+    @Default([]) List<String> images, // Reference image URLs from Firebase Storage
     // New denormalized and search fields (optional for back-compat)
     String? customerNameLower,
     String? phoneNormalized,
@@ -81,6 +82,15 @@ class Enquiry with _$Enquiry {
       source: (data['sourceValue'] ?? data['source']) as String?,
       sourceLabel: data['sourceLabel'] as String?,
       notes: data['notes'] as String?,
+      images: (data['images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .where((url) => url.isNotEmpty)
+              .toList() ??
+          (data['referenceImages'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .where((url) => url.isNotEmpty)
+              .toList() ??
+          [],
       customerNameLower:
           (data['customerNameLower'] as String?) ??
           (data['customerName'] as String? ?? '').toLowerCase(),

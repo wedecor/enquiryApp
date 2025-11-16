@@ -50,8 +50,10 @@ mixin _$Enquiry {
   @JsonKey(name: 'sourceValue')
   String? get source => throw _privateConstructorUsedError;
   String? get sourceLabel => throw _privateConstructorUsedError;
-  String? get notes =>
-      throw _privateConstructorUsedError; // New denormalized and search fields (optional for back-compat)
+  String? get notes => throw _privateConstructorUsedError;
+  List<String> get images =>
+      throw _privateConstructorUsedError; // Reference image URLs from Firebase Storage
+// New denormalized and search fields (optional for back-compat)
   String? get customerNameLower => throw _privateConstructorUsedError;
   String? get phoneNormalized => throw _privateConstructorUsedError;
   String? get assigneeName => throw _privateConstructorUsedError;
@@ -97,6 +99,7 @@ abstract class $EnquiryCopyWith<$Res> {
       @JsonKey(name: 'sourceValue') String? source,
       String? sourceLabel,
       String? notes,
+      List<String> images,
       String? customerNameLower,
       String? phoneNormalized,
       String? assigneeName,
@@ -145,6 +148,7 @@ class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry>
     Object? source = freezed,
     Object? sourceLabel = freezed,
     Object? notes = freezed,
+    Object? images = null,
     Object? customerNameLower = freezed,
     Object? phoneNormalized = freezed,
     Object? assigneeName = freezed,
@@ -258,6 +262,10 @@ class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      images: null == images
+          ? _value.images
+          : images // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       customerNameLower: freezed == customerNameLower
           ? _value.customerNameLower
           : customerNameLower // ignore: cast_nullable_to_non_nullable
@@ -324,6 +332,7 @@ abstract class _$$EnquiryImplCopyWith<$Res> implements $EnquiryCopyWith<$Res> {
       @JsonKey(name: 'sourceValue') String? source,
       String? sourceLabel,
       String? notes,
+      List<String> images,
       String? customerNameLower,
       String? phoneNormalized,
       String? assigneeName,
@@ -370,6 +379,7 @@ class __$$EnquiryImplCopyWithImpl<$Res>
     Object? source = freezed,
     Object? sourceLabel = freezed,
     Object? notes = freezed,
+    Object? images = null,
     Object? customerNameLower = freezed,
     Object? phoneNormalized = freezed,
     Object? assigneeName = freezed,
@@ -483,6 +493,10 @@ class __$$EnquiryImplCopyWithImpl<$Res>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      images: null == images
+          ? _value._images
+          : images // ignore: cast_nullable_to_non_nullable
+              as List<String>,
       customerNameLower: freezed == customerNameLower
           ? _value.customerNameLower
           : customerNameLower // ignore: cast_nullable_to_non_nullable
@@ -545,6 +559,7 @@ class _$EnquiryImpl extends _Enquiry {
       @JsonKey(name: 'sourceValue') this.source,
       this.sourceLabel,
       this.notes,
+      final List<String> images = const [],
       this.customerNameLower,
       this.phoneNormalized,
       this.assigneeName,
@@ -552,7 +567,8 @@ class _$EnquiryImpl extends _Enquiry {
       this.statusUpdatedAt,
       this.statusUpdatedBy,
       this.textIndex})
-      : super._();
+      : _images = images,
+        super._();
 
   factory _$EnquiryImpl.fromJson(Map<String, dynamic> json) =>
       _$$EnquiryImplFromJson(json);
@@ -614,6 +630,16 @@ class _$EnquiryImpl extends _Enquiry {
   final String? sourceLabel;
   @override
   final String? notes;
+  final List<String> _images;
+  @override
+  @JsonKey()
+  List<String> get images {
+    if (_images is EqualUnmodifiableListView) return _images;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_images);
+  }
+
+// Reference image URLs from Firebase Storage
 // New denormalized and search fields (optional for back-compat)
   @override
   final String? customerNameLower;
@@ -632,7 +658,7 @@ class _$EnquiryImpl extends _Enquiry {
 
   @override
   String toString() {
-    return 'Enquiry(id: $id, customerName: $customerName, customerEmail: $customerEmail, customerPhone: $customerPhone, eventType: $eventType, eventTypeLabel: $eventTypeLabel, eventDate: $eventDate, eventLocation: $eventLocation, guestCount: $guestCount, budgetRange: $budgetRange, description: $description, status: $status, statusLabel: $statusLabel, paymentStatus: $paymentStatus, paymentStatusLabel: $paymentStatusLabel, totalCost: $totalCost, advancePaid: $advancePaid, assignedTo: $assignedTo, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, priority: $priority, priorityLabel: $priorityLabel, source: $source, sourceLabel: $sourceLabel, notes: $notes, customerNameLower: $customerNameLower, phoneNormalized: $phoneNormalized, assigneeName: $assigneeName, createdByName: $createdByName, statusUpdatedAt: $statusUpdatedAt, statusUpdatedBy: $statusUpdatedBy, textIndex: $textIndex)';
+    return 'Enquiry(id: $id, customerName: $customerName, customerEmail: $customerEmail, customerPhone: $customerPhone, eventType: $eventType, eventTypeLabel: $eventTypeLabel, eventDate: $eventDate, eventLocation: $eventLocation, guestCount: $guestCount, budgetRange: $budgetRange, description: $description, status: $status, statusLabel: $statusLabel, paymentStatus: $paymentStatus, paymentStatusLabel: $paymentStatusLabel, totalCost: $totalCost, advancePaid: $advancePaid, assignedTo: $assignedTo, createdAt: $createdAt, updatedAt: $updatedAt, createdBy: $createdBy, priority: $priority, priorityLabel: $priorityLabel, source: $source, sourceLabel: $sourceLabel, notes: $notes, images: $images, customerNameLower: $customerNameLower, phoneNormalized: $phoneNormalized, assigneeName: $assigneeName, createdByName: $createdByName, statusUpdatedAt: $statusUpdatedAt, statusUpdatedBy: $statusUpdatedBy, textIndex: $textIndex)';
   }
 
   @override
@@ -688,6 +714,7 @@ class _$EnquiryImpl extends _Enquiry {
             (identical(other.sourceLabel, sourceLabel) ||
                 other.sourceLabel == sourceLabel) &&
             (identical(other.notes, notes) || other.notes == notes) &&
+            const DeepCollectionEquality().equals(other._images, _images) &&
             (identical(other.customerNameLower, customerNameLower) ||
                 other.customerNameLower == customerNameLower) &&
             (identical(other.phoneNormalized, phoneNormalized) ||
@@ -734,6 +761,7 @@ class _$EnquiryImpl extends _Enquiry {
         source,
         sourceLabel,
         notes,
+        const DeepCollectionEquality().hash(_images),
         customerNameLower,
         phoneNormalized,
         assigneeName,
@@ -785,6 +813,7 @@ abstract class _Enquiry extends Enquiry {
       @JsonKey(name: 'sourceValue') final String? source,
       final String? sourceLabel,
       final String? notes,
+      final List<String> images,
       final String? customerNameLower,
       final String? phoneNormalized,
       final String? assigneeName,
@@ -853,7 +882,10 @@ abstract class _Enquiry extends Enquiry {
   String? get sourceLabel;
   @override
   String? get notes;
-  @override // New denormalized and search fields (optional for back-compat)
+  @override
+  List<String> get images;
+  @override // Reference image URLs from Firebase Storage
+// New denormalized and search fields (optional for back-compat)
   String? get customerNameLower;
   @override
   String? get phoneNormalized;

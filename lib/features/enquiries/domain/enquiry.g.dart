@@ -36,6 +36,10 @@ _$EnquiryImpl _$$EnquiryImplFromJson(Map<String, dynamic> json) =>
       source: json['sourceValue'] as String?,
       sourceLabel: json['sourceLabel'] as String?,
       notes: json['notes'] as String?,
+      images: (json['images'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       customerNameLower: json['customerNameLower'] as String?,
       phoneNormalized: json['phoneNormalized'] as String?,
       assigneeName: json['assigneeName'] as String?,
@@ -75,6 +79,7 @@ Map<String, dynamic> _$$EnquiryImplToJson(_$EnquiryImpl instance) =>
       'sourceValue': instance.source,
       'sourceLabel': instance.sourceLabel,
       'notes': instance.notes,
+      'images': instance.images,
       'customerNameLower': instance.customerNameLower,
       'phoneNormalized': instance.phoneNormalized,
       'assigneeName': instance.assigneeName,

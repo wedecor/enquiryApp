@@ -2,18 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logging/logger.dart';
 import '../providers/audit_provider.dart';
-import 'current_user_role_provider.dart';
+import '../providers/role_provider.dart';
+import '../../shared/models/user_model.dart';
 
 /// Provides boolean value indicating if current user is an admin
+/// Uses the standardized isAdminProvider from role_provider.dart
 final isAdminValueProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentUserRoleProvider);
-  return role == 'admin';
+  return ref.watch(isAdminProvider);
 });
 
 /// Provides boolean value indicating if current user is staff
 final isStaffValueProvider = Provider<bool>((ref) {
-  final role = ref.watch(currentUserRoleProvider);
-  return role == 'staff';
+  return ref.watch(isStaffProvider);
 });
 
 /// Check if current user has admin role
@@ -25,7 +25,8 @@ bool isStaff(WidgetRef ref) => ref.read(isStaffValueProvider);
 /// Require admin role - throws StateError if not admin
 void requireAdmin(WidgetRef ref) {
   final adminStatus = ref.read(isAdminValueProvider);
-  final currentRole = ref.read(currentUserRoleProvider);
+  final roleAsync = ref.read(roleProvider);
+  final currentRole = roleAsync.valueOrNull ?? UserRole.staff;
 
   Logger.info('Role check: requireAdmin called', tag: 'RoleGuards');
 
@@ -45,7 +46,8 @@ bool canEditEnquiry(WidgetRef ref, {required String? assigneeId}) {
   }
 
   // Staff can only edit enquiries assigned to them
-  final currentUserId = ref.read(firebaseAuthUserProvider).valueOrNull?.uid;
+  final currentUser = ref.read(currentUserWithFirestoreProvider);
+  final currentUserId = currentUser.valueOrNull?.uid;
   final canEdit = currentUserId != null && assigneeId == currentUserId;
 
   Logger.debug('Staff enquiry edit check', tag: 'RoleGuards');
@@ -84,8 +86,9 @@ bool canConfigureSystem(WidgetRef ref) {
 /// Helper to log admin actions for audit trail
 Future<void> logAdminAction(WidgetRef ref, String action, Map<String, Object?> data) async {
   try {
-    final userId = ref.read(firebaseAuthUserProvider).valueOrNull?.uid;
-    final userEmail = ref.read(firebaseAuthUserProvider).valueOrNull?.email;
+    final currentUser = ref.read(currentUserWithFirestoreProvider);
+    final userId = currentUser.valueOrNull?.uid;
+    final userEmail = currentUser.valueOrNull?.email;
 
     final auditData = {
       'action': action,
@@ -122,11 +125,12 @@ bool validateEnquiryAccess(
 
 /// Helper to get user-friendly role display name
 String getRoleDisplayName(WidgetRef ref) {
-  final role = ref.read(currentUserRoleProvider);
+  final roleAsync = ref.read(roleProvider);
+  final role = roleAsync.valueOrNull ?? UserRole.staff;
   switch (role) {
-    case 'admin':
+    case UserRole.admin:
       return 'Administrator';
-    case 'staff':
+    case UserRole.staff:
       return 'Staff Member';
     default:
       return 'Unknown Role';

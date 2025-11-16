@@ -25,6 +25,9 @@ mixin _$AppGeneralConfig {
   String get currency => throw _privateConstructorUsedError;
   String get timezone => throw _privateConstructorUsedError;
   double get vatPercent => throw _privateConstructorUsedError;
+  String get googleReviewLink => throw _privateConstructorUsedError;
+  String get instagramHandle => throw _privateConstructorUsedError;
+  String get websiteUrl => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -45,6 +48,9 @@ abstract class $AppGeneralConfigCopyWith<$Res> {
       String currency,
       String timezone,
       double vatPercent,
+      String googleReviewLink,
+      String instagramHandle,
+      String websiteUrl,
       DateTime? updatedAt});
 }
 
@@ -66,6 +72,9 @@ class _$AppGeneralConfigCopyWithImpl<$Res, $Val extends AppGeneralConfig>
     Object? currency = null,
     Object? timezone = null,
     Object? vatPercent = null,
+    Object? googleReviewLink = null,
+    Object? instagramHandle = null,
+    Object? websiteUrl = null,
     Object? updatedAt = freezed,
   }) {
     return _then(_value.copyWith(
@@ -89,6 +98,18 @@ class _$AppGeneralConfigCopyWithImpl<$Res, $Val extends AppGeneralConfig>
           ? _value.vatPercent
           : vatPercent // ignore: cast_nullable_to_non_nullable
               as double,
+      googleReviewLink: null == googleReviewLink
+          ? _value.googleReviewLink
+          : googleReviewLink // ignore: cast_nullable_to_non_nullable
+              as String,
+      instagramHandle: null == instagramHandle
+          ? _value.instagramHandle
+          : instagramHandle // ignore: cast_nullable_to_non_nullable
+              as String,
+      websiteUrl: null == websiteUrl
+          ? _value.websiteUrl
+          : websiteUrl // ignore: cast_nullable_to_non_nullable
+              as String,
       updatedAt: freezed == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -111,6 +132,9 @@ abstract class _$$AppGeneralConfigImplCopyWith<$Res>
       String currency,
       String timezone,
       double vatPercent,
+      String googleReviewLink,
+      String instagramHandle,
+      String websiteUrl,
       DateTime? updatedAt});
 }
 
@@ -130,6 +154,9 @@ class __$$AppGeneralConfigImplCopyWithImpl<$Res>
     Object? currency = null,
     Object? timezone = null,
     Object? vatPercent = null,
+    Object? googleReviewLink = null,
+    Object? instagramHandle = null,
+    Object? websiteUrl = null,
     Object? updatedAt = freezed,
   }) {
     return _then(_$AppGeneralConfigImpl(
@@ -153,6 +180,18 @@ class __$$AppGeneralConfigImplCopyWithImpl<$Res>
           ? _value.vatPercent
           : vatPercent // ignore: cast_nullable_to_non_nullable
               as double,
+      googleReviewLink: null == googleReviewLink
+          ? _value.googleReviewLink
+          : googleReviewLink // ignore: cast_nullable_to_non_nullable
+              as String,
+      instagramHandle: null == instagramHandle
+          ? _value.instagramHandle
+          : instagramHandle // ignore: cast_nullable_to_non_nullable
+              as String,
+      websiteUrl: null == websiteUrl
+          ? _value.websiteUrl
+          : websiteUrl // ignore: cast_nullable_to_non_nullable
+              as String,
       updatedAt: freezed == updatedAt
           ? _value.updatedAt
           : updatedAt // ignore: cast_nullable_to_non_nullable
@@ -170,6 +209,9 @@ class _$AppGeneralConfigImpl implements _AppGeneralConfig {
       this.currency = 'INR',
       this.timezone = 'Asia/Kolkata',
       this.vatPercent = 18.0,
+      this.googleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA',
+      this.instagramHandle = '@wedecorbangalore',
+      this.websiteUrl = 'https://www.wedecorevents.com/',
       this.updatedAt});
 
   factory _$AppGeneralConfigImpl.fromJson(Map<String, dynamic> json) =>
@@ -190,11 +232,20 @@ class _$AppGeneralConfigImpl implements _AppGeneralConfig {
   @JsonKey()
   final double vatPercent;
   @override
+  @JsonKey()
+  final String googleReviewLink;
+  @override
+  @JsonKey()
+  final String instagramHandle;
+  @override
+  @JsonKey()
+  final String websiteUrl;
+  @override
   final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'AppGeneralConfig(companyName: $companyName, logoUrl: $logoUrl, currency: $currency, timezone: $timezone, vatPercent: $vatPercent, updatedAt: $updatedAt)';
+    return 'AppGeneralConfig(companyName: $companyName, logoUrl: $logoUrl, currency: $currency, timezone: $timezone, vatPercent: $vatPercent, googleReviewLink: $googleReviewLink, instagramHandle: $instagramHandle, websiteUrl: $websiteUrl, updatedAt: $updatedAt)';
   }
 
   @override
@@ -211,14 +262,29 @@ class _$AppGeneralConfigImpl implements _AppGeneralConfig {
                 other.timezone == timezone) &&
             (identical(other.vatPercent, vatPercent) ||
                 other.vatPercent == vatPercent) &&
+            (identical(other.googleReviewLink, googleReviewLink) ||
+                other.googleReviewLink == googleReviewLink) &&
+            (identical(other.instagramHandle, instagramHandle) ||
+                other.instagramHandle == instagramHandle) &&
+            (identical(other.websiteUrl, websiteUrl) ||
+                other.websiteUrl == websiteUrl) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, companyName, logoUrl, currency,
-      timezone, vatPercent, updatedAt);
+  int get hashCode => Object.hash(
+      runtimeType,
+      companyName,
+      logoUrl,
+      currency,
+      timezone,
+      vatPercent,
+      googleReviewLink,
+      instagramHandle,
+      websiteUrl,
+      updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -242,6 +308,9 @@ abstract class _AppGeneralConfig implements AppGeneralConfig {
       final String currency,
       final String timezone,
       final double vatPercent,
+      final String googleReviewLink,
+      final String instagramHandle,
+      final String websiteUrl,
       final DateTime? updatedAt}) = _$AppGeneralConfigImpl;
 
   factory _AppGeneralConfig.fromJson(Map<String, dynamic> json) =
@@ -257,6 +326,12 @@ abstract class _AppGeneralConfig implements AppGeneralConfig {
   String get timezone;
   @override
   double get vatPercent;
+  @override
+  String get googleReviewLink;
+  @override
+  String get instagramHandle;
+  @override
+  String get websiteUrl;
   @override
   DateTime? get updatedAt;
   @override

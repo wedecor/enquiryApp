@@ -180,22 +180,8 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
   );
 });
 
-/// Provider for Firestore service.
-///
-/// This provider provides access to the Firestore service for database
-/// operations. It creates a singleton instance of the service that can
-/// be used throughout the application.
-///
-/// Returns a [Provider<FirestoreService>] that provides the Firestore service.
-///
-/// Usage:
-/// ```dart
-/// final firestoreService = ref.read(firestoreServiceProvider);
-/// final enquiries = await firestoreService.getEnquiries();
-/// ```
-final firestoreServiceProvider = Provider<FirestoreService>((ref) {
-  return FirestoreService();
-});
+// NOTE: firestoreServiceProvider is defined in lib/core/services/firestore_service.dart
+// Import it from there instead of defining it here to avoid conflicts.
 
 /// Riverpod provider that provides comprehensive user permissions.
 ///

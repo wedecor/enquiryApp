@@ -1,5 +1,8 @@
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' show Contact, Name, Phone, PhoneLabel, FlutterContacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../utils/logger.dart';
 
 final contactServiceProvider = Provider<ContactService>((ref) {
@@ -12,16 +15,22 @@ enum ContactSaveStatus {
   permissionDenied,
   invalidInput,
   failed,
+  notSupportedOnWeb,
+  copiedToClipboard,
 }
 
 class ContactSaveRequest {
   const ContactSaveRequest({
     required this.displayName,
     required this.phoneNumber,
+    this.eventType,
+    this.eventDate,
   });
 
   final String displayName;
   final String phoneNumber;
+  final String? eventType;
+  final String? eventDate;
 }
 
 class ContactService {
@@ -37,6 +46,12 @@ class ContactService {
       return ContactSaveStatus.invalidInput;
     }
 
+    // Web platform: Copy contact info to clipboard instead
+    if (kIsWeb) {
+      return await _saveContactForWeb(request, sanitizedName, formattedPhone);
+    }
+
+    // Mobile platform: Use flutter_contacts
     final permissionGranted = await FlutterContacts.requestPermission(readonly: false);
 
     if (!permissionGranted) {
@@ -56,7 +71,22 @@ class ContactService {
       return ContactSaveStatus.alreadyExists;
     }
 
-    final nameParts = _splitName(sanitizedName);
+    // Build display name with event information
+    String displayNameWithEvent = sanitizedName;
+    final eventParts = <String>[];
+    
+    if (request.eventType != null && request.eventType!.isNotEmpty) {
+      eventParts.add(request.eventType!);
+    }
+    if (request.eventDate != null && request.eventDate!.isNotEmpty) {
+      eventParts.add(request.eventDate!);
+    }
+    
+    if (eventParts.isNotEmpty) {
+      displayNameWithEvent = '$sanitizedName - ${eventParts.join(' - ')}';
+    }
+
+    final nameParts = _splitName(displayNameWithEvent);
     final contact = Contact()
       ..name = Name(
         first: nameParts.firstName,
@@ -87,7 +117,67 @@ class ContactService {
     }
   }
 
+  /// Save contact for web platform by copying to clipboard
+  Future<ContactSaveStatus> _saveContactForWeb(
+    ContactSaveRequest request,
+    String sanitizedName,
+    String formattedPhone,
+  ) async {
+    try {
+      // Build display name with event information
+      String displayNameWithEvent = sanitizedName;
+      final eventParts = <String>[];
+      
+      if (request.eventType != null && request.eventType!.isNotEmpty) {
+        eventParts.add(request.eventType!);
+      }
+      if (request.eventDate != null && request.eventDate!.isNotEmpty) {
+        eventParts.add(request.eventDate!);
+      }
+      
+      if (eventParts.isNotEmpty) {
+        displayNameWithEvent = '$sanitizedName - ${eventParts.join(' - ')}';
+      }
+
+      // Create vCard format for clipboard
+      final vCard = StringBuffer();
+      vCard.writeln('BEGIN:VCARD');
+      vCard.writeln('VERSION:3.0');
+      vCard.writeln('FN:$displayNameWithEvent');
+      vCard.writeln('TEL;TYPE=CELL:$formattedPhone');
+      if (request.eventType != null && request.eventType!.isNotEmpty) {
+        vCard.writeln('NOTE:Event Type: ${request.eventType}');
+      }
+      if (request.eventDate != null && request.eventDate!.isNotEmpty) {
+        vCard.writeln('NOTE:Event Date: ${request.eventDate}');
+      }
+      vCard.writeln('END:VCARD');
+
+      // Copy to clipboard
+      await Clipboard.setData(ClipboardData(text: vCard.toString()));
+
+      Log.i(
+        'contact_save_web_clipboard',
+        data: {'name': sanitizedName, 'phone': formattedPhone},
+      );
+      return ContactSaveStatus.copiedToClipboard;
+    } catch (error, stack) {
+      Log.e(
+        'contact_save_web_failed',
+        error: error,
+        stackTrace: stack,
+        data: {'name': sanitizedName, 'phone': formattedPhone},
+      );
+      return ContactSaveStatus.failed;
+    }
+  }
+
   Future<bool> _findByPhone(String phoneDigits) async {
+    if (kIsWeb) {
+      // On web, we can't check existing contacts
+      return false;
+    }
+    
     final candidates = await FlutterContacts.getContacts(
       withProperties: true,
       withPhoto: false,
@@ -113,7 +203,28 @@ class ContactService {
       return const _NameParts(firstName: 'Customer', lastName: '');
     }
 
-    final segments = trimmed.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    // Split by ' - ' first to separate customer name from event info
+    final parts = trimmed.split(' - ');
+    final customerName = parts.first.trim();
+    
+    // If there's event info, put it in the last name
+    if (parts.length > 1) {
+      final eventInfo = parts.sublist(1).join(' - ');
+      // Split customer name into first and last
+      final nameSegments = customerName.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+      if (nameSegments.isEmpty) {
+        return const _NameParts(firstName: 'Customer', lastName: '');
+      } else if (nameSegments.length == 1) {
+        return _NameParts(firstName: nameSegments.first, lastName: eventInfo);
+      } else {
+        final firstName = nameSegments.first;
+        final lastName = '${nameSegments.sublist(1).join(' ')} - $eventInfo';
+        return _NameParts(firstName: firstName, lastName: lastName);
+      }
+    }
+
+    // No event info, just split the name normally
+    final segments = customerName.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
     if (segments.length == 1) {
       return _NameParts(firstName: segments.first, lastName: '');
     }
