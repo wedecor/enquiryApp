@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/logging/safe_log.dart';
 import '../../domain/app_config.dart';
@@ -250,10 +252,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'Review & Social Links',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                  Text('Review & Social Links', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _googleReviewLinkController,
@@ -913,11 +912,45 @@ class DataIntegrationsTab extends ConsumerWidget {
   }
 }
 
-class AboutTab extends ConsumerWidget {
+class AboutTab extends ConsumerStatefulWidget {
   const AboutTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AboutTab> createState() => _AboutTabState();
+}
+
+class _AboutTabState extends ConsumerState<AboutTab> {
+  String? _versionDisplay;
+  String? _buildNumber;
+  bool _isLoadingVersion = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppInfo();
+  }
+
+  Future<void> _loadAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _versionDisplay = packageInfo.version;
+        _buildNumber = packageInfo.buildNumber;
+        _isLoadingVersion = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _versionDisplay = 'Unknown';
+        _buildNumber = 'Unknown';
+        _isLoadingVersion = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -950,10 +983,10 @@ class AboutTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildInfoRow('Version', '1.0.0'),
-                  _buildInfoRow('Build', 'Release'),
+                  _buildInfoRow('Version', _isLoadingVersion ? 'Loading...' : '$_versionDisplay+$_buildNumber'),
+                  _buildInfoRow('Build', kDebugMode ? 'Debug' : 'Release'),
                   _buildInfoRow('Region', 'asia-south1'),
-                  _buildInfoRow('Platform', 'Web'),
+                  _buildInfoRow('Platform', kIsWeb ? 'Web' : (defaultTargetPlatform == TargetPlatform.android ? 'Android' : defaultTargetPlatform == TargetPlatform.iOS ? 'iOS' : 'Unknown')),
                   _buildInfoRow('Framework', 'Flutter 3.x'),
                   _buildInfoRow('Backend', 'Firebase'),
                 ],
