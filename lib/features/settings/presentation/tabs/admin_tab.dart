@@ -983,10 +983,22 @@ class _AboutTabState extends ConsumerState<AboutTab> {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildInfoRow('Version', _isLoadingVersion ? 'Loading...' : '$_versionDisplay+$_buildNumber'),
+                  _buildInfoRow(
+                    'Version',
+                    _isLoadingVersion ? 'Loading...' : '$_versionDisplay+$_buildNumber',
+                  ),
                   _buildInfoRow('Build', kDebugMode ? 'Debug' : 'Release'),
                   _buildInfoRow('Region', 'asia-south1'),
-                  _buildInfoRow('Platform', kIsWeb ? 'Web' : (defaultTargetPlatform == TargetPlatform.android ? 'Android' : defaultTargetPlatform == TargetPlatform.iOS ? 'iOS' : 'Unknown')),
+                  _buildInfoRow(
+                    'Platform',
+                    kIsWeb
+                        ? 'Web'
+                        : (defaultTargetPlatform == TargetPlatform.android
+                              ? 'Android'
+                              : defaultTargetPlatform == TargetPlatform.iOS
+                              ? 'iOS'
+                              : 'Unknown'),
+                  ),
                   _buildInfoRow('Framework', 'Flutter 3.x'),
                   _buildInfoRow('Backend', 'Firebase'),
                 ],

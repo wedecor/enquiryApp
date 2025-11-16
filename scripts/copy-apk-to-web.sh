@@ -26,9 +26,22 @@ else
     echo "✅ APK built and copied successfully"
 fi
 
-# Ensure index.html exists
-if [ ! -f "build/web/android/index.html" ]; then
-    echo "📄 Creating index.html..."
+# Copy version.json if it exists
+if [ -f "public/android/version.json" ]; then
+    cp public/android/version.json build/web/android/version.json
+    echo "✅ version.json copied"
+fi
+
+# Copy detailed index.html from public/android if it exists, otherwise create a simple one
+if [ -f "public/android/index.html" ]; then
+    cp public/android/index.html build/web/android/index.html
+    echo "✅ Detailed index.html copied from public/android/"
+    
+    # Update the download URL in index.html to point to app-release.apk
+    sed -i '' 's|href="[^"]*\.apk"|href="app-release.apk"|g' build/web/android/index.html 2>/dev/null || \
+    sed -i 's|href="[^"]*\.apk"|href="app-release.apk"|g' build/web/android/index.html
+else
+    echo "📄 Creating simple index.html..."
     cat > build/web/android/index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -98,7 +111,7 @@ if [ ! -f "build/web/android/index.html" ]; then
 </body>
 </html>
 EOF
-    echo "✅ index.html created"
+    echo "✅ Simple index.html created"
 fi
 
 echo "✅ APK setup complete for web deployment"

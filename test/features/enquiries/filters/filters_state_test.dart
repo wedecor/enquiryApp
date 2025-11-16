@@ -50,10 +50,7 @@ void main() {
 
       test('returns true when dateRange is set', () {
         final filters = EnquiryFilters(
-          dateRange: FilterDateRange(
-            start: DateTime.now(),
-            end: DateTime.now(),
-          ),
+          dateRange: FilterDateRange(start: DateTime.now(), end: DateTime.now()),
         );
         expect(filters.hasActiveFilters, isTrue);
       });

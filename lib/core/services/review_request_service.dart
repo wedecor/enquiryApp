@@ -16,13 +16,13 @@ class ReviewRequestService {
   ReviewRequestService(this._contactLauncher);
 
   /// Generates a review request message with Google review link, Instagram follow request, and website
-  /// 
+  ///
   /// Parameters:
   /// - [customerName]: Name of the customer
   /// - [googleReviewLink]: Google review URL (optional, defaults to We Decor's review link)
   /// - [instagramHandle]: Instagram handle (optional, defaults to @wedecorbangalore)
   /// - [websiteUrl]: Website URL (optional, defaults to https://www.wedecorevents.com/)
-  /// 
+  ///
   /// Returns formatted message ready to send via WhatsApp
   String generateReviewMessage({
     required String customerName,
@@ -34,24 +34,24 @@ class ReviewRequestService {
     final defaultGoogleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA';
     final defaultInstagramHandle = '@wedecorbangalore';
     final defaultWebsiteUrl = 'https://www.wedecorevents.com/';
-    
-    final reviewLink = googleReviewLink?.isNotEmpty == true 
-        ? googleReviewLink! 
+
+    final reviewLink = googleReviewLink?.isNotEmpty == true
+        ? googleReviewLink!
         : defaultGoogleReviewLink;
-    
+
     final instagram = instagramHandle?.isNotEmpty == true
         ? (instagramHandle!.startsWith('@') ? instagramHandle : '@$instagramHandle')
         : defaultInstagramHandle;
-    
-    final website = websiteUrl?.isNotEmpty == true
-        ? websiteUrl!
-        : defaultWebsiteUrl;
-    
+
+    final website = websiteUrl?.isNotEmpty == true ? websiteUrl! : defaultWebsiteUrl;
+
     final buffer = StringBuffer();
-    
+
     buffer.writeln('Hi $customerName! 👋');
     buffer.writeln('');
-    buffer.writeln('Thank you for choosing We Decor for your event! We hope you had a wonderful experience. 🙏');
+    buffer.writeln(
+      'Thank you for choosing We Decor for your event! We hope you had a wonderful experience. 🙏',
+    );
     buffer.writeln('');
     buffer.writeln('We would be grateful if you could:');
     buffer.writeln('');
@@ -68,12 +68,12 @@ class ReviewRequestService {
     buffer.writeln('');
     buffer.writeln('Thank you!');
     buffer.writeln('We Decor Team');
-    
+
     return buffer.toString();
   }
 
   /// Sends review request via WhatsApp
-  /// 
+  ///
   /// Returns the status of the WhatsApp launch
   Future<ContactLaunchStatus> sendReviewRequest({
     required String customerPhone,
@@ -91,12 +91,15 @@ class ReviewRequestService {
         websiteUrl: websiteUrl,
       );
 
-      Log.i('Sending review request', data: {
-        'customerName': customerName,
-        'hasGoogleLink': googleReviewLink != null,
-        'hasInstagram': instagramHandle != null,
-        'hasWebsite': websiteUrl != null,
-      });
+      Log.i(
+        'Sending review request',
+        data: {
+          'customerName': customerName,
+          'hasGoogleLink': googleReviewLink != null,
+          'hasInstagram': instagramHandle != null,
+          'hasWebsite': websiteUrl != null,
+        },
+      );
 
       return await _contactLauncher.openWhatsAppWithAudit(
         customerPhone,
@@ -109,4 +112,3 @@ class ReviewRequestService {
     }
   }
 }
-

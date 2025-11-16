@@ -33,28 +33,24 @@ class ReviewRequestButton extends ConsumerWidget {
     return configAsync.when(
       data: (config) {
         // Use config values or defaults
-        final googleReviewLink = config.googleReviewLink.isNotEmpty 
-            ? config.googleReviewLink 
+        final googleReviewLink = config.googleReviewLink.isNotEmpty
+            ? config.googleReviewLink
             : null;
-        final instagramHandle = config.instagramHandle.isNotEmpty 
-            ? config.instagramHandle 
-            : null;
-        final websiteUrl = config.websiteUrl.isNotEmpty 
-            ? config.websiteUrl 
-            : null;
-            
+        final instagramHandle = config.instagramHandle.isNotEmpty ? config.instagramHandle : null;
+        final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
+
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
           child: ElevatedButton.icon(
             onPressed: enabled
                 ? () => _handleReviewRequest(
-                      context,
-                      ref,
-                      reviewService,
-                      googleReviewLink,
-                      instagramHandle,
-                      websiteUrl,
-                    )
+                    context,
+                    ref,
+                    reviewService,
+                    googleReviewLink,
+                    instagramHandle,
+                    websiteUrl,
+                  )
                 : null,
             icon: const Icon(Icons.star_rate_rounded),
             label: const Text('Request Review'),
@@ -62,9 +58,7 @@ class ReviewRequestButton extends ConsumerWidget {
               backgroundColor: Colors.amber.shade600,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
         );
@@ -134,23 +128,16 @@ class ReviewRequestButton extends ConsumerWidget {
 
         case ContactLaunchStatus.failed:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open WhatsApp'),
-              backgroundColor: Colors.red,
-            ),
+            const SnackBar(content: Text('Could not open WhatsApp'), backgroundColor: Colors.red),
           );
           break;
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending review request: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error sending review request: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 }
-

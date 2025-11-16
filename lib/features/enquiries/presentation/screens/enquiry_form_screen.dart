@@ -132,10 +132,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   .where((url) => url.isNotEmpty)
                   .toList();
               _existingImageUrls.addAll(imageUrls);
-              Log.d('EnquiryFormScreen loaded images', data: {
-                'count': imageUrls.length,
-                'urls': imageUrls,
-              });
+              Log.d(
+                'EnquiryFormScreen loaded images',
+                data: {'count': imageUrls.length, 'urls': imageUrls},
+              );
             } else {
               Log.d('EnquiryFormScreen images field is empty or null');
             }
@@ -309,9 +309,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       } catch (e) {
         Log.e('Error uploading images', error: e);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error uploading images: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error uploading images: $e')));
         }
       }
     }
@@ -404,11 +404,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       try {
         final urls = await _uploadImages(widget.enquiryId!);
         if (urls.isNotEmpty) {
-          Log.d('EnquiryFormScreen updating images', data: {
-            'enquiryId': widget.enquiryId,
-            'urlCount': urls.length,
-            'urls': urls,
-          });
+          Log.d(
+            'EnquiryFormScreen updating images',
+            data: {'enquiryId': widget.enquiryId, 'urlCount': urls.length, 'urls': urls},
+          );
           await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
             'images': FieldValue.arrayUnion(urls),
             'updatedAt': FieldValue.serverTimestamp(),
@@ -424,9 +423,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       } catch (e) {
         Log.e('Error uploading images', error: e);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error uploading images: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error uploading images: $e')));
         }
       }
     }
@@ -468,51 +467,49 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           // For web, read bytes from XFile
           final bytes = await xfile.readAsBytes();
           final fileName = xfile.name;
-          final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
-          
+          final ref = storage
+              .ref()
+              .child('enquiries')
+              .child(enquiryId)
+              .child('images')
+              .child(fileName);
+
           // Set content type based on file extension
           final contentType = _getContentType(fileName);
-          
+
           // Upload with metadata
-          final metadata = SettableMetadata(
-            contentType: contentType,
-            cacheControl: 'max-age=3600',
-          );
-          
-          final task = await ref.putData(
-            bytes,
-            metadata,
-          );
+          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
+
+          final task = await ref.putData(bytes, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {
-            'fileName': fileName,
-            'url': url,
-          });
+          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
         } else {
           // For mobile, use File
           final file = File(xfile.path);
           final fileName = xfile.name;
-          final ref = storage.ref().child('enquiries').child(enquiryId).child('images').child(fileName);
-          
+          final ref = storage
+              .ref()
+              .child('enquiries')
+              .child(enquiryId)
+              .child('images')
+              .child(fileName);
+
           // Set content type
           final contentType = _getContentType(fileName);
           final metadata = SettableMetadata(contentType: contentType);
-          
+
           final task = await ref.putFile(file, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {
-            'fileName': fileName,
-            'url': url,
-          });
+          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
         }
       } catch (e) {
         Log.e('Error uploading image ${xfile.name}', error: e);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error uploading ${xfile.name}: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error uploading ${xfile.name}: $e')));
         }
         // Continue with other images
       }
@@ -718,12 +715,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   if (role != UserRole.admin) {
                     return const SizedBox.shrink();
                   }
-                  
+
                   // User is admin, use Consumer to watch activeUsersProvider
                   return Consumer(
                     builder: (context, ref, child) {
                       final activeUsers = ref.watch(activeUsersProvider);
-                      
+
                       return activeUsers.when(
                         data: (users) {
                           return DropdownButtonFormField<String>(
@@ -735,13 +732,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                             ),
                             hint: const Text('Select user to assign'),
                             items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
+                              const DropdownMenuItem<String>(
+                                value: null,
+                                child: Text('Unassigned'),
+                              ),
                               ...users.docs.map((doc) {
                                 final user = doc.data() as Map<String, dynamic>;
                                 return DropdownMenuItem<String>(
                                   value: doc.id,
                                   child: Text(
-                                    (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
+                                    (user['name'] as String?) ??
+                                        (user['email'] as String?) ??
+                                        'Unknown',
                                   ),
                                 );
                               }),
@@ -957,10 +959,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                                             return const Center(child: CircularProgressIndicator());
                                           }
                                           if (snapshot.hasData) {
-                                            return Image.memory(
-                                              snapshot.data!,
-                                              fit: BoxFit.cover,
-                                            );
+                                            return Image.memory(snapshot.data!, fit: BoxFit.cover);
                                           }
                                           return const Icon(Icons.error);
                                         },

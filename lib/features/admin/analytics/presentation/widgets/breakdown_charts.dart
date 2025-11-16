@@ -135,8 +135,7 @@ class EventTypePieChart extends StatelessWidget {
     );
   }
 
-  String _labelFor(CategoryCount item) =>
-      item.label ?? DropdownLookup.titleCase(item.key);
+  String _labelFor(CategoryCount item) => item.label ?? DropdownLookup.titleCase(item.key);
 }
 
 /// Horizontal bar chart for source breakdown
@@ -294,8 +293,7 @@ class SourceBarChart extends StatelessWidget {
   }
 }
 
-  String _labelFor(CategoryCount item) =>
-      item.label ?? DropdownLookup.titleCase(item.key);
+String _labelFor(CategoryCount item) => item.label ?? DropdownLookup.titleCase(item.key);
 
 /// Stacked bar chart for status breakdown
 class StatusStackedBarChart extends StatelessWidget {
@@ -442,8 +440,7 @@ class StatusStackedBarChart extends StatelessWidget {
     }
   }
 
-  String _statusLabel(CategoryCount item) =>
-      item.label ?? _formatStatusName(item.key);
+  String _statusLabel(CategoryCount item) => item.label ?? _formatStatusName(item.key);
 
   String _formatStatusName(String status) {
     return status

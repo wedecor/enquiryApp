@@ -166,7 +166,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       : 'N/A';
 
                   final paymentStatusValueRaw =
-                      (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus']) as String?;
+                      (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus'])
+                          as String?;
                   final paymentStatusValue = (paymentStatusValueRaw?.trim().isNotEmpty ?? false)
                       ? paymentStatusValueRaw!.trim()
                       : null;
@@ -215,7 +216,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                             Text(
                               'You can only view enquiries assigned to you.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -232,54 +235,58 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         _buildHeader(enquiryData, userRole, user.uid, statusValue, statusLabel),
                         const SizedBox(height: 24),
 
-                    // Basic Information (Visible to all)
-                    _buildSection(
-                      title: 'Basic Information',
-                      children: [
-                        _buildInfoRow(
-                          'Customer Name',
-                          (enquiryData['customerName'] as String?) ?? 'N/A',
+                        // Basic Information (Visible to all)
+                        _buildSection(
+                          title: 'Basic Information',
+                          children: [
+                            _buildInfoRow(
+                              'Customer Name',
+                              (enquiryData['customerName'] as String?) ?? 'N/A',
+                            ),
+                            _buildInfoRow(
+                              'Phone',
+                              (enquiryData['customerPhone'] as String?) ?? 'N/A',
+                            ),
+                            // Contact shortcuts - Call and WhatsApp buttons
+                            ContactButtons(
+                              customerPhone: enquiryData['customerPhone'] as String?,
+                              customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+                              enquiryId: widget.enquiryId,
+                            ),
+                            // Review request button for completed enquiries
+                            if (statusValue == 'completed')
+                              ReviewRequestButton(
+                                customerPhone: enquiryData['customerPhone'] as String?,
+                                customerName:
+                                    (enquiryData['customerName'] as String?) ?? 'Customer',
+                                enquiryId: widget.enquiryId,
+                              ),
+                            _buildInfoRow(
+                              'Location',
+                              (enquiryData['eventLocation'] as String?) ??
+                                  (enquiryData['location'] as String? ?? 'N/A'),
+                            ),
+                          ],
                         ),
-                        _buildInfoRow('Phone', (enquiryData['customerPhone'] as String?) ?? 'N/A'),
-                        // Contact shortcuts - Call and WhatsApp buttons
-                        ContactButtons(
-                          customerPhone: enquiryData['customerPhone'] as String?,
-                          customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-                          enquiryId: widget.enquiryId,
-                        ),
-                        // Review request button for completed enquiries
-                        if (statusValue == 'completed')
-                          ReviewRequestButton(
-                            customerPhone: enquiryData['customerPhone'] as String?,
-                            customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-                            enquiryId: widget.enquiryId,
-                          ),
-                        _buildInfoRow(
-                          'Location',
-                          (enquiryData['eventLocation'] as String?) ??
-                              (enquiryData['location'] as String? ?? 'N/A'),
-                        ),
-                      ],
-                    ),
 
-                    // Event Details (Visible to all)
-                    _buildSection(
-                      title: 'Event Details',
-                      children: [
-                        _buildInfoRow('Event Type', eventTypeLabel),
-                        _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
-                        _buildInfoRow(
-                          'Guest Count',
-                          '${enquiryData['guestCount'] ?? 'N/A'} guests',
+                        // Event Details (Visible to all)
+                        _buildSection(
+                          title: 'Event Details',
+                          children: [
+                            _buildInfoRow('Event Type', eventTypeLabel),
+                            _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
+                            _buildInfoRow(
+                              'Guest Count',
+                              '${enquiryData['guestCount'] ?? 'N/A'} guests',
+                            ),
+                            _buildInfoRow(
+                              'Budget Range',
+                              (enquiryData['budgetRange'] as String?) ?? 'N/A',
+                            ),
+                            _buildInfoRow('Priority', priorityLabel),
+                            _buildInfoRow('Source', sourceLabel),
+                          ],
                         ),
-                        _buildInfoRow(
-                          'Budget Range',
-                          (enquiryData['budgetRange'] as String?) ?? 'N/A',
-                        ),
-                        _buildInfoRow('Priority', priorityLabel),
-                        _buildInfoRow('Source', sourceLabel),
-                      ],
-                    ),
 
                         // Reference Images (Admins and Assignee)
                         if (_canViewImages(userRole, enquiryData, user.uid))
@@ -287,79 +294,85 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
                         // Assignment Information (Admin Only)
                         if (userRole == UserRole.admin) ...[
-                      _buildSection(
-                        title: 'Assignment',
-                        children: [
-                          _buildAsyncUserRow(
-                            label: 'Assigned To',
-                            userId: enquiryData['assignedTo'] as String?,
-                            currentUserId: currentUser.value?.uid,
+                          _buildSection(
+                            title: 'Assignment',
+                            children: [
+                              _buildAsyncUserRow(
+                                label: 'Assigned To',
+                                userId: enquiryData['assignedTo'] as String?,
+                                currentUserId: currentUser.value?.uid,
+                              ),
+                              _buildAsyncUserRow(
+                                label: 'Created By',
+                                userId: enquiryData['createdBy'] as String?,
+                              ),
+                            ],
                           ),
-                          _buildAsyncUserRow(
-                            label: 'Created By',
-                            userId: enquiryData['createdBy'] as String?,
-                          ),
-                        ],
-                      ),
                         ] else if (userRole == UserRole.staff) ...[
-                      // Staff can see their own assignment status
-                      _buildSection(
-                        title: 'Assignment',
-                        children: [
-                          _buildAsyncUserRow(
-                            label: 'Assigned To',
-                            userId: enquiryData['assignedTo'] as String?,
-                            currentUserId: user.uid,
+                          // Staff can see their own assignment status
+                          _buildSection(
+                            title: 'Assignment',
+                            children: [
+                              _buildAsyncUserRow(
+                                label: 'Assigned To',
+                                userId: enquiryData['assignedTo'] as String?,
+                                currentUserId: user.uid,
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
 
-                    // Financial Information (Admin Only)
-                    if (userRole == UserRole.admin) ...[
-                      _buildSection(
-                        title: 'Financial Information',
-                        children: [
-                          _buildInfoRow('Total Cost', _formatCurrency(enquiryData['totalCost'])),
-                          _buildInfoRow(
-                            'Advance Paid',
-                            _formatCurrency(enquiryData['advancePaid']),
+                        // Financial Information (Admin Only)
+                        if (userRole == UserRole.admin) ...[
+                          _buildSection(
+                            title: 'Financial Information',
+                            children: [
+                              _buildInfoRow(
+                                'Total Cost',
+                                _formatCurrency(enquiryData['totalCost']),
+                              ),
+                              _buildInfoRow(
+                                'Advance Paid',
+                                _formatCurrency(enquiryData['advancePaid']),
+                              ),
+                              _buildInfoRow('Payment Status', paymentStatusLabel),
+                            ],
                           ),
-                          _buildInfoRow('Payment Status', paymentStatusLabel),
                         ],
-                      ),
-                    ],
 
-                    // Description (Visible to all)
-                    _buildSection(
-                      title: 'Description',
-                      children: [
-                        _buildInfoRow(
-                          'Notes',
-                          (enquiryData['description'] as String?) ?? 'No description provided',
+                        // Description (Visible to all)
+                        _buildSection(
+                          title: 'Description',
+                          children: [
+                            _buildInfoRow(
+                              'Notes',
+                              (enquiryData['description'] as String?) ?? 'No description provided',
+                            ),
+                          ],
                         ),
+
+                        // Timestamps (Visible to all)
+                        _buildSection(
+                          title: 'Timestamps',
+                          children: [
+                            _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
+                            _buildInfoRow(
+                              'Last Updated',
+                              _formatTimestamp(enquiryData['updatedAt']),
+                            ),
+                          ],
+                        ),
+
+                        // Change History (Visible to all)
+                        _buildSection(
+                          title: 'Change History',
+                          children: [EnquiryHistoryWidget(enquiryId: widget.enquiryId)],
+                        ),
+
+                        const SizedBox(height: 32),
                       ],
                     ),
-
-                    // Timestamps (Visible to all)
-                    _buildSection(
-                      title: 'Timestamps',
-                      children: [
-                        _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
-                        _buildInfoRow('Last Updated', _formatTimestamp(enquiryData['updatedAt'])),
-                      ],
-                    ),
-
-                    // Change History (Visible to all)
-                    _buildSection(
-                      title: 'Change History',
-                      children: [EnquiryHistoryWidget(enquiryId: widget.enquiryId)],
-                    ),
-
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              );
+                  );
                 },
               );
             },

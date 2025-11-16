@@ -12,7 +12,8 @@ part of 'app_notification.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 AppNotification _$AppNotificationFromJson(Map<String, dynamic> json) {
   return _AppNotification.fromJson(json);
@@ -33,27 +34,26 @@ mixin _$AppNotification {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AppNotificationCopyWith<AppNotification> get copyWith =>
-      throw _privateConstructorUsedError;
+  $AppNotificationCopyWith<AppNotification> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AppNotificationCopyWith<$Res> {
-  factory $AppNotificationCopyWith(
-          AppNotification value, $Res Function(AppNotification) then) =
+  factory $AppNotificationCopyWith(AppNotification value, $Res Function(AppNotification) then) =
       _$AppNotificationCopyWithImpl<$Res, AppNotification>;
   @useResult
-  $Res call(
-      {String id,
-      NotificationType type,
-      String title,
-      String body,
-      String? enquiryId,
-      String? userId,
-      DateTime createdAt,
-      bool read,
-      bool archived,
-      Map<String, dynamic>? metadata});
+  $Res call({
+    String id,
+    NotificationType type,
+    String title,
+    String body,
+    String? enquiryId,
+    String? userId,
+    DateTime createdAt,
+    bool read,
+    bool archived,
+    Map<String, dynamic>? metadata,
+  });
 }
 
 /// @nodoc
@@ -80,70 +80,74 @@ class _$AppNotificationCopyWithImpl<$Res, $Val extends AppNotification>
     Object? archived = null,
     Object? metadata = freezed,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as NotificationType,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
-              as String,
-      body: null == body
-          ? _value.body
-          : body // ignore: cast_nullable_to_non_nullable
-              as String,
-      enquiryId: freezed == enquiryId
-          ? _value.enquiryId
-          : enquiryId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      userId: freezed == userId
-          ? _value.userId
-          : userId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      read: null == read
-          ? _value.read
-          : read // ignore: cast_nullable_to_non_nullable
-              as bool,
-      archived: null == archived
-          ? _value.archived
-          : archived // ignore: cast_nullable_to_non_nullable
-              as bool,
-      metadata: freezed == metadata
-          ? _value.metadata
-          : metadata // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            type: null == type
+                ? _value.type
+                : type // ignore: cast_nullable_to_non_nullable
+                      as NotificationType,
+            title: null == title
+                ? _value.title
+                : title // ignore: cast_nullable_to_non_nullable
+                      as String,
+            body: null == body
+                ? _value.body
+                : body // ignore: cast_nullable_to_non_nullable
+                      as String,
+            enquiryId: freezed == enquiryId
+                ? _value.enquiryId
+                : enquiryId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            userId: freezed == userId
+                ? _value.userId
+                : userId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            createdAt: null == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            read: null == read
+                ? _value.read
+                : read // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            archived: null == archived
+                ? _value.archived
+                : archived // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            metadata: freezed == metadata
+                ? _value.metadata
+                : metadata // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>?,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
-abstract class _$$AppNotificationImplCopyWith<$Res>
-    implements $AppNotificationCopyWith<$Res> {
-  factory _$$AppNotificationImplCopyWith(_$AppNotificationImpl value,
-          $Res Function(_$AppNotificationImpl) then) =
-      __$$AppNotificationImplCopyWithImpl<$Res>;
+abstract class _$$AppNotificationImplCopyWith<$Res> implements $AppNotificationCopyWith<$Res> {
+  factory _$$AppNotificationImplCopyWith(
+    _$AppNotificationImpl value,
+    $Res Function(_$AppNotificationImpl) then,
+  ) = __$$AppNotificationImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      NotificationType type,
-      String title,
-      String body,
-      String? enquiryId,
-      String? userId,
-      DateTime createdAt,
-      bool read,
-      bool archived,
-      Map<String, dynamic>? metadata});
+  $Res call({
+    String id,
+    NotificationType type,
+    String title,
+    String body,
+    String? enquiryId,
+    String? userId,
+    DateTime createdAt,
+    bool read,
+    bool archived,
+    Map<String, dynamic>? metadata,
+  });
 }
 
 /// @nodoc
@@ -151,8 +155,9 @@ class __$$AppNotificationImplCopyWithImpl<$Res>
     extends _$AppNotificationCopyWithImpl<$Res, _$AppNotificationImpl>
     implements _$$AppNotificationImplCopyWith<$Res> {
   __$$AppNotificationImplCopyWithImpl(
-      _$AppNotificationImpl _value, $Res Function(_$AppNotificationImpl) _then)
-      : super(_value, _then);
+    _$AppNotificationImpl _value,
+    $Res Function(_$AppNotificationImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -168,66 +173,68 @@ class __$$AppNotificationImplCopyWithImpl<$Res>
     Object? archived = null,
     Object? metadata = freezed,
   }) {
-    return _then(_$AppNotificationImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as NotificationType,
-      title: null == title
-          ? _value.title
-          : title // ignore: cast_nullable_to_non_nullable
-              as String,
-      body: null == body
-          ? _value.body
-          : body // ignore: cast_nullable_to_non_nullable
-              as String,
-      enquiryId: freezed == enquiryId
-          ? _value.enquiryId
-          : enquiryId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      userId: freezed == userId
-          ? _value.userId
-          : userId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      read: null == read
-          ? _value.read
-          : read // ignore: cast_nullable_to_non_nullable
-              as bool,
-      archived: null == archived
-          ? _value.archived
-          : archived // ignore: cast_nullable_to_non_nullable
-              as bool,
-      metadata: freezed == metadata
-          ? _value._metadata
-          : metadata // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>?,
-    ));
+    return _then(
+      _$AppNotificationImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        type: null == type
+            ? _value.type
+            : type // ignore: cast_nullable_to_non_nullable
+                  as NotificationType,
+        title: null == title
+            ? _value.title
+            : title // ignore: cast_nullable_to_non_nullable
+                  as String,
+        body: null == body
+            ? _value.body
+            : body // ignore: cast_nullable_to_non_nullable
+                  as String,
+        enquiryId: freezed == enquiryId
+            ? _value.enquiryId
+            : enquiryId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        userId: freezed == userId
+            ? _value.userId
+            : userId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        createdAt: null == createdAt
+            ? _value.createdAt
+            : createdAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        read: null == read
+            ? _value.read
+            : read // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        archived: null == archived
+            ? _value.archived
+            : archived // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        metadata: freezed == metadata
+            ? _value._metadata
+            : metadata // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$AppNotificationImpl implements _AppNotification {
-  const _$AppNotificationImpl(
-      {required this.id,
-      required this.type,
-      required this.title,
-      required this.body,
-      this.enquiryId,
-      this.userId,
-      required this.createdAt,
-      this.read = false,
-      this.archived = false,
-      final Map<String, dynamic>? metadata})
-      : _metadata = metadata;
+  const _$AppNotificationImpl({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.body,
+    this.enquiryId,
+    this.userId,
+    required this.createdAt,
+    this.read = false,
+    this.archived = false,
+    final Map<String, dynamic>? metadata,
+  }) : _metadata = metadata;
 
   factory _$AppNotificationImpl.fromJson(Map<String, dynamic> json) =>
       _$$AppNotificationImplFromJson(json);
@@ -276,62 +283,57 @@ class _$AppNotificationImpl implements _AppNotification {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.body, body) || other.body == body) &&
-            (identical(other.enquiryId, enquiryId) ||
-                other.enquiryId == enquiryId) &&
+            (identical(other.enquiryId, enquiryId) || other.enquiryId == enquiryId) &&
             (identical(other.userId, userId) || other.userId == userId) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.read, read) || other.read == read) &&
-            (identical(other.archived, archived) ||
-                other.archived == archived) &&
+            (identical(other.archived, archived) || other.archived == archived) &&
             const DeepCollectionEquality().equals(other._metadata, _metadata));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      type,
-      title,
-      body,
-      enquiryId,
-      userId,
-      createdAt,
-      read,
-      archived,
-      const DeepCollectionEquality().hash(_metadata));
+    runtimeType,
+    id,
+    type,
+    title,
+    body,
+    enquiryId,
+    userId,
+    createdAt,
+    read,
+    archived,
+    const DeepCollectionEquality().hash(_metadata),
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AppNotificationImplCopyWith<_$AppNotificationImpl> get copyWith =>
-      __$$AppNotificationImplCopyWithImpl<_$AppNotificationImpl>(
-          this, _$identity);
+      __$$AppNotificationImplCopyWithImpl<_$AppNotificationImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$AppNotificationImplToJson(
-      this,
-    );
+    return _$$AppNotificationImplToJson(this);
   }
 }
 
 abstract class _AppNotification implements AppNotification {
-  const factory _AppNotification(
-      {required final String id,
-      required final NotificationType type,
-      required final String title,
-      required final String body,
-      final String? enquiryId,
-      final String? userId,
-      required final DateTime createdAt,
-      final bool read,
-      final bool archived,
-      final Map<String, dynamic>? metadata}) = _$AppNotificationImpl;
+  const factory _AppNotification({
+    required final String id,
+    required final NotificationType type,
+    required final String title,
+    required final String body,
+    final String? enquiryId,
+    final String? userId,
+    required final DateTime createdAt,
+    final bool read,
+    final bool archived,
+    final Map<String, dynamic>? metadata,
+  }) = _$AppNotificationImpl;
 
-  factory _AppNotification.fromJson(Map<String, dynamic> json) =
-      _$AppNotificationImpl.fromJson;
+  factory _AppNotification.fromJson(Map<String, dynamic> json) = _$AppNotificationImpl.fromJson;
 
   @override
   String get id;

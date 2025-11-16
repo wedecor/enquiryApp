@@ -16,10 +16,9 @@ class EnquiryHistoryWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final historyAsync = ref.watch(enquiryHistoryProvider(enquiryId));
 
-    final dropdownLookup = ref.watch(dropdownLookupProvider).maybeWhen(
-          data: (value) => value,
-          orElse: () => null,
-        );
+    final dropdownLookup = ref
+        .watch(dropdownLookupProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
 
     return historyAsync.when(
       data: (history) {
@@ -59,12 +58,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           itemCount: history.length,
           itemBuilder: (context, index) {
             final change = history[index];
-            return _buildHistoryItem(
-              context,
-              change,
-              ref,
-              dropdownLookup,
-            );
+            return _buildHistoryItem(context, change, ref, dropdownLookup);
           },
         );
       },
@@ -395,9 +389,7 @@ class _ValueText extends ConsumerWidget {
 
     switch (fieldKey) {
       case 'assignedto':
-        final asyncName = ref.watch(
-          users_providers.userDisplayNameProvider(stringValue),
-        );
+        final asyncName = ref.watch(users_providers.userDisplayNameProvider(stringValue));
         return asyncName.when(
           data: (name) => Text(name, style: style),
           loading: () => Text('Loading...', style: style),
@@ -405,24 +397,25 @@ class _ValueText extends ConsumerWidget {
         );
       case 'status':
       case 'eventstatus':
-        final label = dropdownLookup?.labelForStatus(stringValue) ??
-            DropdownLookup.titleCase(stringValue);
+        final label =
+            dropdownLookup?.labelForStatus(stringValue) ?? DropdownLookup.titleCase(stringValue);
         return Text(label, style: style);
       case 'eventtype':
-        final label = dropdownLookup?.labelForEventType(stringValue) ??
-            DropdownLookup.titleCase(stringValue);
+        final label =
+            dropdownLookup?.labelForEventType(stringValue) ?? DropdownLookup.titleCase(stringValue);
         return Text(label, style: style);
       case 'priority':
-        final label = dropdownLookup?.labelForPriority(stringValue) ??
-            DropdownLookup.titleCase(stringValue);
+        final label =
+            dropdownLookup?.labelForPriority(stringValue) ?? DropdownLookup.titleCase(stringValue);
         return Text(label, style: style);
       case 'paymentstatus':
-        final label = dropdownLookup?.labelForPaymentStatus(stringValue) ??
+        final label =
+            dropdownLookup?.labelForPaymentStatus(stringValue) ??
             DropdownLookup.titleCase(stringValue);
         return Text(label, style: style);
       case 'source':
-        final label = dropdownLookup?.labelForSource(stringValue) ??
-            DropdownLookup.titleCase(stringValue);
+        final label =
+            dropdownLookup?.labelForSource(stringValue) ?? DropdownLookup.titleCase(stringValue);
         return Text(label, style: style);
       default:
         return Text(stringValue.isEmpty ? 'Not Set' : stringValue, style: style);

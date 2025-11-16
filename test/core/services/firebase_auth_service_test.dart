@@ -44,10 +44,8 @@ void main() {
         if (!firebaseAvailable) return;
         final authService = FirebaseAuthService();
         await expectLater(
-          () => authService.signInWithEmailAndPassword(
-            email: 'invalid-email',
-            password: 'password',
-          ),
+          () =>
+              authService.signInWithEmailAndPassword(email: 'invalid-email', password: 'password'),
           throwsA(isA<AuthException>()),
         );
       });
@@ -56,10 +54,7 @@ void main() {
         if (!firebaseAvailable) return;
         final authService = FirebaseAuthService();
         await expectLater(
-          () => authService.signInWithEmailAndPassword(
-            email: 'test@example.com',
-            password: '',
-          ),
+          () => authService.signInWithEmailAndPassword(email: 'test@example.com', password: ''),
           throwsA(isA<AuthException>()),
         );
       });
@@ -81,10 +76,7 @@ void main() {
       });
 
       test('can be thrown and caught', () {
-        expect(
-          () => throw const AuthException('Error'),
-          throwsA(isA<AuthException>()),
-        );
+        expect(() => throw const AuthException('Error'), throwsA(isA<AuthException>()));
       });
     });
   });

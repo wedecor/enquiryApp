@@ -129,10 +129,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             if (role != UserRole.admin) {
               return const SizedBox.shrink();
             }
-            return FilledButton(
-              onPressed: _submit,
-              child: Text(isEdit ? 'Update' : 'Create'),
-            );
+            return FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create'));
           },
           loading: () => const SizedBox.shrink(),
           error: (_, __) => const SizedBox.shrink(),

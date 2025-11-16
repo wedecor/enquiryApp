@@ -128,26 +128,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     try {
       final roleAsync = ref.read(roleProvider);
       final role = roleAsync.valueOrNull;
-      
+
       // Only run for admins
       if (role != UserRole.admin) {
         return;
       }
-      
+
       final currentUserAsync = ref.read(currentUserWithFirestoreProvider);
       final currentUser = currentUserAsync.valueOrNull;
       final userId = currentUser?.uid ?? 'system';
-      
+
       // Run cleanup in background (non-blocking)
       final cleanupService = ref.read(pastEnquiryCleanupServiceProvider);
-      cleanupService.runAutomaticCleanup(userId: userId).then((updatedCount) {
-        if (updatedCount != null && updatedCount > 0 && mounted) {
-          // Optionally show a subtle notification
-          Log.i('Automatic cleanup completed', data: {'updatedCount': updatedCount});
-        }
-      }).catchError((Object error, StackTrace stack) {
-        Log.e('Automatic cleanup error', error: error, stackTrace: stack);
-      });
+      cleanupService
+          .runAutomaticCleanup(userId: userId)
+          .then((updatedCount) {
+            if (updatedCount != null && updatedCount > 0 && mounted) {
+              // Optionally show a subtle notification
+              Log.i('Automatic cleanup completed', data: {'updatedCount': updatedCount});
+            }
+          })
+          .catchError((Object error, StackTrace stack) {
+            Log.e('Automatic cleanup error', error: error, stackTrace: stack);
+          });
     } catch (e) {
       Log.e('Error initiating automatic cleanup', error: e);
     }
@@ -351,9 +354,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       },
                     )
                   : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
             ),
@@ -364,9 +365,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 'Filtering results for "$_searchQuery"',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
               ),
             ),
         ],
@@ -477,8 +478,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final filteredEnquiries = _searchQuery.isEmpty
             ? rawEnquiries
             : rawEnquiries
-                .where((doc) => _matchesSearchQuery(doc.data() as Map<String, dynamic>))
-                .toList(growable: false);
+                  .where((doc) => _matchesSearchQuery(doc.data() as Map<String, dynamic>))
+                  .toList(growable: false);
 
         if (_searchQuery.isNotEmpty && filteredEnquiries.isEmpty) {
           return SearchEmptyState(
@@ -550,7 +551,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
             final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
             final statusColorHex =
-                (enquiryData['statusColorHex'] as String?) ?? (enquiryData['statusColor'] as String?);
+                (enquiryData['statusColorHex'] as String?) ??
+                (enquiryData['statusColor'] as String?);
             final eventColorHex =
                 (enquiryData['eventColorHex'] as String?) ?? (enquiryData['eventColor'] as String?);
             final statusColorOverride =
@@ -729,15 +731,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         return;
       }
 
-      final googleReviewLink = appConfig.googleReviewLink.isNotEmpty 
-          ? appConfig.googleReviewLink 
+      final googleReviewLink = appConfig.googleReviewLink.isNotEmpty
+          ? appConfig.googleReviewLink
           : null;
-      final instagramHandle = appConfig.instagramHandle.isNotEmpty 
-          ? appConfig.instagramHandle 
+      final instagramHandle = appConfig.instagramHandle.isNotEmpty
+          ? appConfig.instagramHandle
           : null;
-      final websiteUrl = appConfig.websiteUrl.isNotEmpty 
-          ? appConfig.websiteUrl 
-          : null;
+      final websiteUrl = appConfig.websiteUrl.isNotEmpty ? appConfig.websiteUrl : null;
 
       final status = await reviewService.sendReviewRequest(
         customerPhone: phone,
@@ -806,7 +806,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ..writeln('Event date: ${_formatDateLabel(enquiry.eventDate)}')
       ..writeln('Assigned to: ${enquiry.assigneeName ?? 'Unassigned'}')
       ..writeln('Phone: ${enquiry.customerPhone ?? 'N/A'}')
-      ..writeln('Notes: ${enquiry.notes?.trim().isNotEmpty == true ? enquiry.notes!.trim() : 'N/A'}');
+      ..writeln(
+        'Notes: ${enquiry.notes?.trim().isNotEmpty == true ? enquiry.notes!.trim() : 'N/A'}',
+      );
 
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
     if (mounted) {

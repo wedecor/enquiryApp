@@ -12,7 +12,8 @@ part of 'filters_state.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 EnquiryFilters _$EnquiryFiltersFromJson(Map<String, dynamic> json) {
   return _EnquiryFilters.fromJson(json);
@@ -30,24 +31,23 @@ mixin _$EnquiryFilters {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $EnquiryFiltersCopyWith<EnquiryFilters> get copyWith =>
-      throw _privateConstructorUsedError;
+  $EnquiryFiltersCopyWith<EnquiryFilters> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $EnquiryFiltersCopyWith<$Res> {
-  factory $EnquiryFiltersCopyWith(
-          EnquiryFilters value, $Res Function(EnquiryFilters) then) =
+  factory $EnquiryFiltersCopyWith(EnquiryFilters value, $Res Function(EnquiryFilters) then) =
       _$EnquiryFiltersCopyWithImpl<$Res, EnquiryFilters>;
   @useResult
-  $Res call(
-      {List<String> statuses,
-      List<String> eventTypes,
-      String? assigneeId,
-      FilterDateRange? dateRange,
-      String? searchQuery,
-      EnquirySortBy sortBy,
-      SortOrder sortOrder});
+  $Res call({
+    List<String> statuses,
+    List<String> eventTypes,
+    String? assigneeId,
+    FilterDateRange? dateRange,
+    String? searchQuery,
+    EnquirySortBy sortBy,
+    SortOrder sortOrder,
+  });
 
   $FilterDateRangeCopyWith<$Res>? get dateRange;
 }
@@ -73,36 +73,39 @@ class _$EnquiryFiltersCopyWithImpl<$Res, $Val extends EnquiryFilters>
     Object? sortBy = null,
     Object? sortOrder = null,
   }) {
-    return _then(_value.copyWith(
-      statuses: null == statuses
-          ? _value.statuses
-          : statuses // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      eventTypes: null == eventTypes
-          ? _value.eventTypes
-          : eventTypes // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      assigneeId: freezed == assigneeId
-          ? _value.assigneeId
-          : assigneeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      dateRange: freezed == dateRange
-          ? _value.dateRange
-          : dateRange // ignore: cast_nullable_to_non_nullable
-              as FilterDateRange?,
-      searchQuery: freezed == searchQuery
-          ? _value.searchQuery
-          : searchQuery // ignore: cast_nullable_to_non_nullable
-              as String?,
-      sortBy: null == sortBy
-          ? _value.sortBy
-          : sortBy // ignore: cast_nullable_to_non_nullable
-              as EnquirySortBy,
-      sortOrder: null == sortOrder
-          ? _value.sortOrder
-          : sortOrder // ignore: cast_nullable_to_non_nullable
-              as SortOrder,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            statuses: null == statuses
+                ? _value.statuses
+                : statuses // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            eventTypes: null == eventTypes
+                ? _value.eventTypes
+                : eventTypes // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            assigneeId: freezed == assigneeId
+                ? _value.assigneeId
+                : assigneeId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            dateRange: freezed == dateRange
+                ? _value.dateRange
+                : dateRange // ignore: cast_nullable_to_non_nullable
+                      as FilterDateRange?,
+            searchQuery: freezed == searchQuery
+                ? _value.searchQuery
+                : searchQuery // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            sortBy: null == sortBy
+                ? _value.sortBy
+                : sortBy // ignore: cast_nullable_to_non_nullable
+                      as EnquirySortBy,
+            sortOrder: null == sortOrder
+                ? _value.sortOrder
+                : sortOrder // ignore: cast_nullable_to_non_nullable
+                      as SortOrder,
+          )
+          as $Val,
+    );
   }
 
   @override
@@ -119,21 +122,22 @@ class _$EnquiryFiltersCopyWithImpl<$Res, $Val extends EnquiryFilters>
 }
 
 /// @nodoc
-abstract class _$$EnquiryFiltersImplCopyWith<$Res>
-    implements $EnquiryFiltersCopyWith<$Res> {
-  factory _$$EnquiryFiltersImplCopyWith(_$EnquiryFiltersImpl value,
-          $Res Function(_$EnquiryFiltersImpl) then) =
-      __$$EnquiryFiltersImplCopyWithImpl<$Res>;
+abstract class _$$EnquiryFiltersImplCopyWith<$Res> implements $EnquiryFiltersCopyWith<$Res> {
+  factory _$$EnquiryFiltersImplCopyWith(
+    _$EnquiryFiltersImpl value,
+    $Res Function(_$EnquiryFiltersImpl) then,
+  ) = __$$EnquiryFiltersImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {List<String> statuses,
-      List<String> eventTypes,
-      String? assigneeId,
-      FilterDateRange? dateRange,
-      String? searchQuery,
-      EnquirySortBy sortBy,
-      SortOrder sortOrder});
+  $Res call({
+    List<String> statuses,
+    List<String> eventTypes,
+    String? assigneeId,
+    FilterDateRange? dateRange,
+    String? searchQuery,
+    EnquirySortBy sortBy,
+    SortOrder sortOrder,
+  });
 
   @override
   $FilterDateRangeCopyWith<$Res>? get dateRange;
@@ -144,8 +148,9 @@ class __$$EnquiryFiltersImplCopyWithImpl<$Res>
     extends _$EnquiryFiltersCopyWithImpl<$Res, _$EnquiryFiltersImpl>
     implements _$$EnquiryFiltersImplCopyWith<$Res> {
   __$$EnquiryFiltersImplCopyWithImpl(
-      _$EnquiryFiltersImpl _value, $Res Function(_$EnquiryFiltersImpl) _then)
-      : super(_value, _then);
+    _$EnquiryFiltersImpl _value,
+    $Res Function(_$EnquiryFiltersImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -158,52 +163,54 @@ class __$$EnquiryFiltersImplCopyWithImpl<$Res>
     Object? sortBy = null,
     Object? sortOrder = null,
   }) {
-    return _then(_$EnquiryFiltersImpl(
-      statuses: null == statuses
-          ? _value._statuses
-          : statuses // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      eventTypes: null == eventTypes
-          ? _value._eventTypes
-          : eventTypes // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      assigneeId: freezed == assigneeId
-          ? _value.assigneeId
-          : assigneeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      dateRange: freezed == dateRange
-          ? _value.dateRange
-          : dateRange // ignore: cast_nullable_to_non_nullable
-              as FilterDateRange?,
-      searchQuery: freezed == searchQuery
-          ? _value.searchQuery
-          : searchQuery // ignore: cast_nullable_to_non_nullable
-              as String?,
-      sortBy: null == sortBy
-          ? _value.sortBy
-          : sortBy // ignore: cast_nullable_to_non_nullable
-              as EnquirySortBy,
-      sortOrder: null == sortOrder
-          ? _value.sortOrder
-          : sortOrder // ignore: cast_nullable_to_non_nullable
-              as SortOrder,
-    ));
+    return _then(
+      _$EnquiryFiltersImpl(
+        statuses: null == statuses
+            ? _value._statuses
+            : statuses // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        eventTypes: null == eventTypes
+            ? _value._eventTypes
+            : eventTypes // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        assigneeId: freezed == assigneeId
+            ? _value.assigneeId
+            : assigneeId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        dateRange: freezed == dateRange
+            ? _value.dateRange
+            : dateRange // ignore: cast_nullable_to_non_nullable
+                  as FilterDateRange?,
+        searchQuery: freezed == searchQuery
+            ? _value.searchQuery
+            : searchQuery // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        sortBy: null == sortBy
+            ? _value.sortBy
+            : sortBy // ignore: cast_nullable_to_non_nullable
+                  as EnquirySortBy,
+        sortOrder: null == sortOrder
+            ? _value.sortOrder
+            : sortOrder // ignore: cast_nullable_to_non_nullable
+                  as SortOrder,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$EnquiryFiltersImpl implements _EnquiryFilters {
-  const _$EnquiryFiltersImpl(
-      {final List<String> statuses = const [],
-      final List<String> eventTypes = const [],
-      this.assigneeId,
-      this.dateRange,
-      this.searchQuery,
-      this.sortBy = EnquirySortBy.createdAt,
-      this.sortOrder = SortOrder.descending})
-      : _statuses = statuses,
-        _eventTypes = eventTypes;
+  const _$EnquiryFiltersImpl({
+    final List<String> statuses = const [],
+    final List<String> eventTypes = const [],
+    this.assigneeId,
+    this.dateRange,
+    this.searchQuery,
+    this.sortBy = EnquirySortBy.createdAt,
+    this.sortOrder = SortOrder.descending,
+  }) : _statuses = statuses,
+       _eventTypes = eventTypes;
 
   factory _$EnquiryFiltersImpl.fromJson(Map<String, dynamic> json) =>
       _$$EnquiryFiltersImplFromJson(json);
@@ -250,58 +257,51 @@ class _$EnquiryFiltersImpl implements _EnquiryFilters {
         (other.runtimeType == runtimeType &&
             other is _$EnquiryFiltersImpl &&
             const DeepCollectionEquality().equals(other._statuses, _statuses) &&
-            const DeepCollectionEquality()
-                .equals(other._eventTypes, _eventTypes) &&
-            (identical(other.assigneeId, assigneeId) ||
-                other.assigneeId == assigneeId) &&
-            (identical(other.dateRange, dateRange) ||
-                other.dateRange == dateRange) &&
-            (identical(other.searchQuery, searchQuery) ||
-                other.searchQuery == searchQuery) &&
+            const DeepCollectionEquality().equals(other._eventTypes, _eventTypes) &&
+            (identical(other.assigneeId, assigneeId) || other.assigneeId == assigneeId) &&
+            (identical(other.dateRange, dateRange) || other.dateRange == dateRange) &&
+            (identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery) &&
             (identical(other.sortBy, sortBy) || other.sortBy == sortBy) &&
-            (identical(other.sortOrder, sortOrder) ||
-                other.sortOrder == sortOrder));
+            (identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      const DeepCollectionEquality().hash(_statuses),
-      const DeepCollectionEquality().hash(_eventTypes),
-      assigneeId,
-      dateRange,
-      searchQuery,
-      sortBy,
-      sortOrder);
+    runtimeType,
+    const DeepCollectionEquality().hash(_statuses),
+    const DeepCollectionEquality().hash(_eventTypes),
+    assigneeId,
+    dateRange,
+    searchQuery,
+    sortBy,
+    sortOrder,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$EnquiryFiltersImplCopyWith<_$EnquiryFiltersImpl> get copyWith =>
-      __$$EnquiryFiltersImplCopyWithImpl<_$EnquiryFiltersImpl>(
-          this, _$identity);
+      __$$EnquiryFiltersImplCopyWithImpl<_$EnquiryFiltersImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$EnquiryFiltersImplToJson(
-      this,
-    );
+    return _$$EnquiryFiltersImplToJson(this);
   }
 }
 
 abstract class _EnquiryFilters implements EnquiryFilters {
-  const factory _EnquiryFilters(
-      {final List<String> statuses,
-      final List<String> eventTypes,
-      final String? assigneeId,
-      final FilterDateRange? dateRange,
-      final String? searchQuery,
-      final EnquirySortBy sortBy,
-      final SortOrder sortOrder}) = _$EnquiryFiltersImpl;
+  const factory _EnquiryFilters({
+    final List<String> statuses,
+    final List<String> eventTypes,
+    final String? assigneeId,
+    final FilterDateRange? dateRange,
+    final String? searchQuery,
+    final EnquirySortBy sortBy,
+    final SortOrder sortOrder,
+  }) = _$EnquiryFiltersImpl;
 
-  factory _EnquiryFilters.fromJson(Map<String, dynamic> json) =
-      _$EnquiryFiltersImpl.fromJson;
+  factory _EnquiryFilters.fromJson(Map<String, dynamic> json) = _$EnquiryFiltersImpl.fromJson;
 
   @override
   List<String> get statuses;
@@ -334,14 +334,12 @@ mixin _$FilterDateRange {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $FilterDateRangeCopyWith<FilterDateRange> get copyWith =>
-      throw _privateConstructorUsedError;
+  $FilterDateRangeCopyWith<FilterDateRange> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $FilterDateRangeCopyWith<$Res> {
-  factory $FilterDateRangeCopyWith(
-          FilterDateRange value, $Res Function(FilterDateRange) then) =
+  factory $FilterDateRangeCopyWith(FilterDateRange value, $Res Function(FilterDateRange) then) =
       _$FilterDateRangeCopyWithImpl<$Res, FilterDateRange>;
   @useResult
   $Res call({DateTime start, DateTime end});
@@ -359,29 +357,29 @@ class _$FilterDateRangeCopyWithImpl<$Res, $Val extends FilterDateRange>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? start = null,
-    Object? end = null,
-  }) {
-    return _then(_value.copyWith(
-      start: null == start
-          ? _value.start
-          : start // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      end: null == end
-          ? _value.end
-          : end // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ) as $Val);
+  $Res call({Object? start = null, Object? end = null}) {
+    return _then(
+      _value.copyWith(
+            start: null == start
+                ? _value.start
+                : start // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            end: null == end
+                ? _value.end
+                : end // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
-abstract class _$$FilterDateRangeImplCopyWith<$Res>
-    implements $FilterDateRangeCopyWith<$Res> {
-  factory _$$FilterDateRangeImplCopyWith(_$FilterDateRangeImpl value,
-          $Res Function(_$FilterDateRangeImpl) then) =
-      __$$FilterDateRangeImplCopyWithImpl<$Res>;
+abstract class _$$FilterDateRangeImplCopyWith<$Res> implements $FilterDateRangeCopyWith<$Res> {
+  factory _$$FilterDateRangeImplCopyWith(
+    _$FilterDateRangeImpl value,
+    $Res Function(_$FilterDateRangeImpl) then,
+  ) = __$$FilterDateRangeImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({DateTime start, DateTime end});
@@ -392,25 +390,25 @@ class __$$FilterDateRangeImplCopyWithImpl<$Res>
     extends _$FilterDateRangeCopyWithImpl<$Res, _$FilterDateRangeImpl>
     implements _$$FilterDateRangeImplCopyWith<$Res> {
   __$$FilterDateRangeImplCopyWithImpl(
-      _$FilterDateRangeImpl _value, $Res Function(_$FilterDateRangeImpl) _then)
-      : super(_value, _then);
+    _$FilterDateRangeImpl _value,
+    $Res Function(_$FilterDateRangeImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? start = null,
-    Object? end = null,
-  }) {
-    return _then(_$FilterDateRangeImpl(
-      start: null == start
-          ? _value.start
-          : start // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      end: null == end
-          ? _value.end
-          : end // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ));
+  $Res call({Object? start = null, Object? end = null}) {
+    return _then(
+      _$FilterDateRangeImpl(
+        start: null == start
+            ? _value.start
+            : start // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        end: null == end
+            ? _value.end
+            : end // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
   }
 }
 
@@ -449,24 +447,19 @@ class _$FilterDateRangeImpl implements _FilterDateRange {
   @override
   @pragma('vm:prefer-inline')
   _$$FilterDateRangeImplCopyWith<_$FilterDateRangeImpl> get copyWith =>
-      __$$FilterDateRangeImplCopyWithImpl<_$FilterDateRangeImpl>(
-          this, _$identity);
+      __$$FilterDateRangeImplCopyWithImpl<_$FilterDateRangeImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$FilterDateRangeImplToJson(
-      this,
-    );
+    return _$$FilterDateRangeImplToJson(this);
   }
 }
 
 abstract class _FilterDateRange implements FilterDateRange {
-  const factory _FilterDateRange(
-      {required final DateTime start,
-      required final DateTime end}) = _$FilterDateRangeImpl;
+  const factory _FilterDateRange({required final DateTime start, required final DateTime end}) =
+      _$FilterDateRangeImpl;
 
-  factory _FilterDateRange.fromJson(Map<String, dynamic> json) =
-      _$FilterDateRangeImpl.fromJson;
+  factory _FilterDateRange.fromJson(Map<String, dynamic> json) = _$FilterDateRangeImpl.fromJson;
 
   @override
   DateTime get start;
@@ -493,8 +486,7 @@ mixin _$SavedView {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $SavedViewCopyWith<SavedView> get copyWith =>
-      throw _privateConstructorUsedError;
+  $SavedViewCopyWith<SavedView> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -502,20 +494,20 @@ abstract class $SavedViewCopyWith<$Res> {
   factory $SavedViewCopyWith(SavedView value, $Res Function(SavedView) then) =
       _$SavedViewCopyWithImpl<$Res, SavedView>;
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      EnquiryFilters filters,
-      bool isDefault,
-      DateTime createdAt,
-      DateTime updatedAt});
+  $Res call({
+    String id,
+    String name,
+    EnquiryFilters filters,
+    bool isDefault,
+    DateTime createdAt,
+    DateTime updatedAt,
+  });
 
   $EnquiryFiltersCopyWith<$Res> get filters;
 }
 
 /// @nodoc
-class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView>
-    implements $SavedViewCopyWith<$Res> {
+class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView> implements $SavedViewCopyWith<$Res> {
   _$SavedViewCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -533,32 +525,35 @@ class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      filters: null == filters
-          ? _value.filters
-          : filters // ignore: cast_nullable_to_non_nullable
-              as EnquiryFilters,
-      isDefault: null == isDefault
-          ? _value.isDefault
-          : isDefault // ignore: cast_nullable_to_non_nullable
-              as bool,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            filters: null == filters
+                ? _value.filters
+                : filters // ignore: cast_nullable_to_non_nullable
+                      as EnquiryFilters,
+            isDefault: null == isDefault
+                ? _value.isDefault
+                : isDefault // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            createdAt: null == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            updatedAt: null == updatedAt
+                ? _value.updatedAt
+                : updatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+          )
+          as $Val,
+    );
   }
 
   @override
@@ -571,32 +566,29 @@ class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView>
 }
 
 /// @nodoc
-abstract class _$$SavedViewImplCopyWith<$Res>
-    implements $SavedViewCopyWith<$Res> {
-  factory _$$SavedViewImplCopyWith(
-          _$SavedViewImpl value, $Res Function(_$SavedViewImpl) then) =
+abstract class _$$SavedViewImplCopyWith<$Res> implements $SavedViewCopyWith<$Res> {
+  factory _$$SavedViewImplCopyWith(_$SavedViewImpl value, $Res Function(_$SavedViewImpl) then) =
       __$$SavedViewImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      EnquiryFilters filters,
-      bool isDefault,
-      DateTime createdAt,
-      DateTime updatedAt});
+  $Res call({
+    String id,
+    String name,
+    EnquiryFilters filters,
+    bool isDefault,
+    DateTime createdAt,
+    DateTime updatedAt,
+  });
 
   @override
   $EnquiryFiltersCopyWith<$Res> get filters;
 }
 
 /// @nodoc
-class __$$SavedViewImplCopyWithImpl<$Res>
-    extends _$SavedViewCopyWithImpl<$Res, _$SavedViewImpl>
+class __$$SavedViewImplCopyWithImpl<$Res> extends _$SavedViewCopyWithImpl<$Res, _$SavedViewImpl>
     implements _$$SavedViewImplCopyWith<$Res> {
-  __$$SavedViewImplCopyWithImpl(
-      _$SavedViewImpl _value, $Res Function(_$SavedViewImpl) _then)
-      : super(_value, _then);
+  __$$SavedViewImplCopyWithImpl(_$SavedViewImpl _value, $Res Function(_$SavedViewImpl) _then)
+    : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -608,48 +600,50 @@ class __$$SavedViewImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
-    return _then(_$SavedViewImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      filters: null == filters
-          ? _value.filters
-          : filters // ignore: cast_nullable_to_non_nullable
-              as EnquiryFilters,
-      isDefault: null == isDefault
-          ? _value.isDefault
-          : isDefault // ignore: cast_nullable_to_non_nullable
-              as bool,
-      createdAt: null == createdAt
-          ? _value.createdAt
-          : createdAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      updatedAt: null == updatedAt
-          ? _value.updatedAt
-          : updatedAt // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-    ));
+    return _then(
+      _$SavedViewImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        filters: null == filters
+            ? _value.filters
+            : filters // ignore: cast_nullable_to_non_nullable
+                  as EnquiryFilters,
+        isDefault: null == isDefault
+            ? _value.isDefault
+            : isDefault // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        createdAt: null == createdAt
+            ? _value.createdAt
+            : createdAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        updatedAt: null == updatedAt
+            ? _value.updatedAt
+            : updatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$SavedViewImpl implements _SavedView {
-  const _$SavedViewImpl(
-      {required this.id,
-      required this.name,
-      required this.filters,
-      this.isDefault = false,
-      required this.createdAt,
-      required this.updatedAt});
+  const _$SavedViewImpl({
+    required this.id,
+    required this.name,
+    required this.filters,
+    this.isDefault = false,
+    required this.createdAt,
+    required this.updatedAt,
+  });
 
-  factory _$SavedViewImpl.fromJson(Map<String, dynamic> json) =>
-      _$$SavedViewImplFromJson(json);
+  factory _$SavedViewImpl.fromJson(Map<String, dynamic> json) => _$$SavedViewImplFromJson(json);
 
   @override
   final String id;
@@ -678,18 +672,14 @@ class _$SavedViewImpl implements _SavedView {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.filters, filters) || other.filters == filters) &&
-            (identical(other.isDefault, isDefault) ||
-                other.isDefault == isDefault) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+            (identical(other.isDefault, isDefault) || other.isDefault == isDefault) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, id, name, filters, isDefault, createdAt, updatedAt);
+  int get hashCode => Object.hash(runtimeType, id, name, filters, isDefault, createdAt, updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -699,23 +689,21 @@ class _$SavedViewImpl implements _SavedView {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SavedViewImplToJson(
-      this,
-    );
+    return _$$SavedViewImplToJson(this);
   }
 }
 
 abstract class _SavedView implements SavedView {
-  const factory _SavedView(
-      {required final String id,
-      required final String name,
-      required final EnquiryFilters filters,
-      final bool isDefault,
-      required final DateTime createdAt,
-      required final DateTime updatedAt}) = _$SavedViewImpl;
+  const factory _SavedView({
+    required final String id,
+    required final String name,
+    required final EnquiryFilters filters,
+    final bool isDefault,
+    required final DateTime createdAt,
+    required final DateTime updatedAt,
+  }) = _$SavedViewImpl;
 
-  factory _SavedView.fromJson(Map<String, dynamic> json) =
-      _$SavedViewImpl.fromJson;
+  factory _SavedView.fromJson(Map<String, dynamic> json) = _$SavedViewImpl.fromJson;
 
   @override
   String get id;
@@ -731,8 +719,7 @@ abstract class _SavedView implements SavedView {
   DateTime get updatedAt;
   @override
   @JsonKey(ignore: true)
-  _$$SavedViewImplCopyWith<_$SavedViewImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$SavedViewImplCopyWith<_$SavedViewImpl> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -742,14 +729,12 @@ mixin _$SavedViewsState {
   String? get error => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $SavedViewsStateCopyWith<SavedViewsState> get copyWith =>
-      throw _privateConstructorUsedError;
+  $SavedViewsStateCopyWith<SavedViewsState> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $SavedViewsStateCopyWith<$Res> {
-  factory $SavedViewsStateCopyWith(
-          SavedViewsState value, $Res Function(SavedViewsState) then) =
+  factory $SavedViewsStateCopyWith(SavedViewsState value, $Res Function(SavedViewsState) then) =
       _$SavedViewsStateCopyWithImpl<$Res, SavedViewsState>;
   @useResult
   $Res call({List<SavedView> views, bool isLoading, String? error});
@@ -767,34 +752,33 @@ class _$SavedViewsStateCopyWithImpl<$Res, $Val extends SavedViewsState>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? views = null,
-    Object? isLoading = null,
-    Object? error = freezed,
-  }) {
-    return _then(_value.copyWith(
-      views: null == views
-          ? _value.views
-          : views // ignore: cast_nullable_to_non_nullable
-              as List<SavedView>,
-      isLoading: null == isLoading
-          ? _value.isLoading
-          : isLoading // ignore: cast_nullable_to_non_nullable
-              as bool,
-      error: freezed == error
-          ? _value.error
-          : error // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ) as $Val);
+  $Res call({Object? views = null, Object? isLoading = null, Object? error = freezed}) {
+    return _then(
+      _value.copyWith(
+            views: null == views
+                ? _value.views
+                : views // ignore: cast_nullable_to_non_nullable
+                      as List<SavedView>,
+            isLoading: null == isLoading
+                ? _value.isLoading
+                : isLoading // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            error: freezed == error
+                ? _value.error
+                : error // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
-abstract class _$$SavedViewsStateImplCopyWith<$Res>
-    implements $SavedViewsStateCopyWith<$Res> {
-  factory _$$SavedViewsStateImplCopyWith(_$SavedViewsStateImpl value,
-          $Res Function(_$SavedViewsStateImpl) then) =
-      __$$SavedViewsStateImplCopyWithImpl<$Res>;
+abstract class _$$SavedViewsStateImplCopyWith<$Res> implements $SavedViewsStateCopyWith<$Res> {
+  factory _$$SavedViewsStateImplCopyWith(
+    _$SavedViewsStateImpl value,
+    $Res Function(_$SavedViewsStateImpl) then,
+  ) = __$$SavedViewsStateImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({List<SavedView> views, bool isLoading, String? error});
@@ -805,41 +789,40 @@ class __$$SavedViewsStateImplCopyWithImpl<$Res>
     extends _$SavedViewsStateCopyWithImpl<$Res, _$SavedViewsStateImpl>
     implements _$$SavedViewsStateImplCopyWith<$Res> {
   __$$SavedViewsStateImplCopyWithImpl(
-      _$SavedViewsStateImpl _value, $Res Function(_$SavedViewsStateImpl) _then)
-      : super(_value, _then);
+    _$SavedViewsStateImpl _value,
+    $Res Function(_$SavedViewsStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? views = null,
-    Object? isLoading = null,
-    Object? error = freezed,
-  }) {
-    return _then(_$SavedViewsStateImpl(
-      views: null == views
-          ? _value._views
-          : views // ignore: cast_nullable_to_non_nullable
-              as List<SavedView>,
-      isLoading: null == isLoading
-          ? _value.isLoading
-          : isLoading // ignore: cast_nullable_to_non_nullable
-              as bool,
-      error: freezed == error
-          ? _value.error
-          : error // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
+  $Res call({Object? views = null, Object? isLoading = null, Object? error = freezed}) {
+    return _then(
+      _$SavedViewsStateImpl(
+        views: null == views
+            ? _value._views
+            : views // ignore: cast_nullable_to_non_nullable
+                  as List<SavedView>,
+        isLoading: null == isLoading
+            ? _value.isLoading
+            : isLoading // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        error: freezed == error
+            ? _value.error
+            : error // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 
 class _$SavedViewsStateImpl implements _SavedViewsState {
-  const _$SavedViewsStateImpl(
-      {final List<SavedView> views = const [],
-      this.isLoading = false,
-      this.error})
-      : _views = views;
+  const _$SavedViewsStateImpl({
+    final List<SavedView> views = const [],
+    this.isLoading = false,
+    this.error,
+  }) : _views = views;
 
   final List<SavedView> _views;
   @override
@@ -867,28 +850,27 @@ class _$SavedViewsStateImpl implements _SavedViewsState {
         (other.runtimeType == runtimeType &&
             other is _$SavedViewsStateImpl &&
             const DeepCollectionEquality().equals(other._views, _views) &&
-            (identical(other.isLoading, isLoading) ||
-                other.isLoading == isLoading) &&
+            (identical(other.isLoading, isLoading) || other.isLoading == isLoading) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(_views), isLoading, error);
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(_views), isLoading, error);
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SavedViewsStateImplCopyWith<_$SavedViewsStateImpl> get copyWith =>
-      __$$SavedViewsStateImplCopyWithImpl<_$SavedViewsStateImpl>(
-          this, _$identity);
+      __$$SavedViewsStateImplCopyWithImpl<_$SavedViewsStateImpl>(this, _$identity);
 }
 
 abstract class _SavedViewsState implements SavedViewsState {
-  const factory _SavedViewsState(
-      {final List<SavedView> views,
-      final bool isLoading,
-      final String? error}) = _$SavedViewsStateImpl;
+  const factory _SavedViewsState({
+    final List<SavedView> views,
+    final bool isLoading,
+    final String? error,
+  }) = _$SavedViewsStateImpl;
 
   @override
   List<SavedView> get views;

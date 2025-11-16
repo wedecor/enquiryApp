@@ -108,10 +108,7 @@ void main() {
         };
 
         await expectLater(
-          service.recordMultipleChanges(
-            enquiryId: 'test-enquiry-id',
-            changes: changes,
-          ),
+          service.recordMultipleChanges(enquiryId: 'test-enquiry-id', changes: changes),
           completes,
         );
       });
@@ -120,10 +117,7 @@ void main() {
         if (!firebaseAvailable) return;
         final service = AuditService();
         await expectLater(
-          service.recordMultipleChanges(
-            enquiryId: 'test-enquiry-id',
-            changes: {},
-          ),
+          service.recordMultipleChanges(enquiryId: 'test-enquiry-id', changes: {}),
           completes,
         );
       });

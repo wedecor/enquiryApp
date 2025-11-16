@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_contacts/flutter_contacts.dart' show Contact, Name, Phone, PhoneLabel, FlutterContacts;
+import 'package:flutter_contacts/flutter_contacts.dart'
+    show Contact, Name, Phone, PhoneLabel, FlutterContacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../utils/logger.dart';
@@ -64,47 +65,33 @@ class ContactService {
 
     final existing = await _findByPhone(digitsOnly);
     if (existing) {
-      Log.d(
-        'contact_save_skipped_exists',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.d('contact_save_skipped_exists', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.alreadyExists;
     }
 
     // Build display name with event information
     String displayNameWithEvent = sanitizedName;
     final eventParts = <String>[];
-    
+
     if (request.eventType != null && request.eventType!.isNotEmpty) {
       eventParts.add(request.eventType!);
     }
     if (request.eventDate != null && request.eventDate!.isNotEmpty) {
       eventParts.add(request.eventDate!);
     }
-    
+
     if (eventParts.isNotEmpty) {
       displayNameWithEvent = '$sanitizedName - ${eventParts.join(' - ')}';
     }
 
     final nameParts = _splitName(displayNameWithEvent);
     final contact = Contact()
-      ..name = Name(
-        first: nameParts.firstName,
-        last: nameParts.lastName,
-      )
-      ..phones = [
-        Phone(
-          formattedPhone,
-          label: PhoneLabel.mobile,
-        ),
-      ];
+      ..name = Name(first: nameParts.firstName, last: nameParts.lastName)
+      ..phones = [Phone(formattedPhone, label: PhoneLabel.mobile)];
 
     try {
       await FlutterContacts.insertContact(contact);
-      Log.i(
-        'contact_save_success',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.i('contact_save_success', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.saved;
     } catch (error, stack) {
       Log.e(
@@ -127,14 +114,14 @@ class ContactService {
       // Build display name with event information
       String displayNameWithEvent = sanitizedName;
       final eventParts = <String>[];
-      
+
       if (request.eventType != null && request.eventType!.isNotEmpty) {
         eventParts.add(request.eventType!);
       }
       if (request.eventDate != null && request.eventDate!.isNotEmpty) {
         eventParts.add(request.eventDate!);
       }
-      
+
       if (eventParts.isNotEmpty) {
         displayNameWithEvent = '$sanitizedName - ${eventParts.join(' - ')}';
       }
@@ -156,10 +143,7 @@ class ContactService {
       // Copy to clipboard
       await Clipboard.setData(ClipboardData(text: vCard.toString()));
 
-      Log.i(
-        'contact_save_web_clipboard',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.i('contact_save_web_clipboard', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.copiedToClipboard;
     } catch (error, stack) {
       Log.e(
@@ -177,16 +161,12 @@ class ContactService {
       // On web, we can't check existing contacts
       return false;
     }
-    
-    final candidates = await FlutterContacts.getContacts(
-      withProperties: true,
-      withPhoto: false,
-    );
+
+    final candidates = await FlutterContacts.getContacts(withProperties: true, withPhoto: false);
 
     return candidates.any(
-      (contact) => contact.phones.any(
-        (phoneEntry) => _digitsOnly(phoneEntry.number) == phoneDigits,
-      ),
+      (contact) =>
+          contact.phones.any((phoneEntry) => _digitsOnly(phoneEntry.number) == phoneDigits),
     );
   }
 
@@ -206,12 +186,15 @@ class ContactService {
     // Split by ' - ' first to separate customer name from event info
     final parts = trimmed.split(' - ');
     final customerName = parts.first.trim();
-    
+
     // If there's event info, put it in the last name
     if (parts.length > 1) {
       final eventInfo = parts.sublist(1).join(' - ');
       // Split customer name into first and last
-      final nameSegments = customerName.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+      final nameSegments = customerName
+          .split(RegExp(r'\s+'))
+          .where((part) => part.isNotEmpty)
+          .toList();
       if (nameSegments.isEmpty) {
         return const _NameParts(firstName: 'Customer', lastName: '');
       } else if (nameSegments.length == 1) {
@@ -242,4 +225,3 @@ class _NameParts {
   final String firstName;
   final String lastName;
 }
-

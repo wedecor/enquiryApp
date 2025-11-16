@@ -242,9 +242,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 ),
               ),
             ),
-            error: (error, stack) => Expanded(
-              child: Center(child: Text('Error checking permissions: $error')),
-            ),
+            error: (error, stack) =>
+                Expanded(child: Center(child: Text('Error checking permissions: $error'))),
           ),
         ],
       ),
@@ -321,7 +320,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildTableLayout(List<domain.UserModel> users, bool isAdmin, PaginationState paginationState) {
+  Widget _buildTableLayout(
+    List<domain.UserModel> users,
+    bool isAdmin,
+    PaginationState paginationState,
+  ) {
     return Column(
       children: [
         Expanded(
@@ -374,7 +377,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _buildCardLayout(List<domain.UserModel> users, bool isAdmin, PaginationState paginationState) {
+  Widget _buildCardLayout(
+    List<domain.UserModel> users,
+    bool isAdmin,
+    PaginationState paginationState,
+  ) {
     return Column(
       children: [
         Expanded(

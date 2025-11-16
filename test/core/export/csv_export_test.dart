@@ -14,11 +14,7 @@ void main() {
 
       test('processes enquiries list structure', () {
         final enquiries = [
-          {
-            'id': 'test-1',
-            'customerName': 'Test User',
-            'customerPhone': '1234567890',
-          },
+          {'id': 'test-1', 'customerName': 'Test User', 'customerPhone': '1234567890'},
         ];
         expect(enquiries, isNotEmpty);
         expect(enquiries.length, 1);

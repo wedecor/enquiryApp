@@ -28,17 +28,17 @@
   </style>
 </head>
 <body>
-        <h1>We Decor Enquiries <span class="status rc3">RC3 - Final</span></h1>
+        <h1>We Decor Enquiries <span class="status rc3">Production</span></h1>
         <div id="version" class="version">Loading version…</div>
   
-  <p>Download RC3 v2.0.0 with refreshed We Decor branding, responsive KPI tiles, and dashboard layout fixes tailored for Android and Web.</p>
+  <p>Download the latest version with enhanced features, improved notifications, and web compatibility improvements.</p>
 
   <div class="card qr">
     <div class="qr-code">
       <div id="qrcode"></div>
     </div>
     <div>
-      <a id="apkLink" class="btn" href="#" download>📱 Download RC3 APK</a>
+      <a id="apkLink" class="btn" href="#" download>📱 Download APK</a>
       <a id="shaLink" class="btn secondary" href="#" target="_blank">🔒 Verify Checksum</a>
       <p><strong>SHA256:</strong><br><code id="sha256">loading…</code></p>
     </div>
@@ -51,18 +51,22 @@
   </div>
 
         <div class="card" style="background:#dcfce7;border:1px solid #16a34a;color:#166534">
-            <h3>🎨 RC3 v2.0.0 - We Decor Branding & KPI Fixes (<span id="headingVersion">v2.0.0+..</span>)</h3>
-            <ul>
-                <li><strong>🌈 Teal/Blue Brand Palette:</strong> Dashboard and analytics now match We Decor's latest visual identity.</li>
-                <li><strong>📊 KPI Tiles:</strong> Four metrics visible at once on phones with no overflow or scrolling.</li>
-                <li><strong>🧭 Tab Layout Polish:</strong> Pinned tabs with smooth scrolling for enquiries on Android & Web.</li>
-                <li><strong>✅ Stability:</strong> General UI clean-up and responsiveness fixes.</li>
-            </ul>
-            <p><strong>🚀 Status:</strong> Production ready with refreshed visuals and layout improvements!</p>
+            <h3>🎉 Latest Release (<span id="headingVersion">v2.0.5+29</span>)</h3>
+            <div id="releaseNotes" style="margin-top: 12px;">
+                <p><strong>Loading release notes...</strong></p>
+            </div>
+            <div id="featuresList" style="margin-top: 12px; display: none;">
+                <h4 style="margin-top: 16px; margin-bottom: 8px;">✨ New Features:</h4>
+                <ul id="features"></ul>
+            </div>
+            <div id="bugFixesList" style="margin-top: 12px; display: none;">
+                <h4 style="margin-top: 16px; margin-bottom: 8px;">🐛 Bug Fixes:</h4>
+                <ul id="bugFixes"></ul>
+            </div>
         </div>
 
   <div class="card improvements">
-    <h3>🚀 RC3 Enhanced Features</h3>
+    <h3>🚀 Key Features</h3>
     <ul>
       <li><strong>📞 Contact Shortcuts:</strong> Call/WhatsApp buttons in enquiry details</li>
       <li><strong>🎨 Instant Theme Switching:</strong> Settings → Preferences → Appearance</li>
@@ -70,10 +74,9 @@
       <li><strong>🔍 Advanced Filters:</strong> Faceted search with saved views</li>
       <li><strong>🔄 Manual Update Check:</strong> Settings → Account → Check for Updates</li>
       <li><strong>💬 In-App Feedback:</strong> Settings → Privacy → Send Feedback</li>
-      <li><strong>♿ Accessibility:</strong> Screen reader support and proper tap targets</li>
+      <li><strong>📱 Review Requests:</strong> Request Google reviews and Instagram follows for completed events</li>
       <li><strong>📊 Performance Monitoring:</strong> Real-time health dashboards</li>
     </ul>
-    <p><a class="btn secondary" href="./RELEASE_NOTES_1.0.1+4.md" target="_blank">📋 View RC3 Release Notes</a></p>
   </div>
 
   <div class="card install">
@@ -85,19 +88,9 @@
       <li>Open the downloaded APK file and tap "Install"</li>
       <li>Launch "We Decor Enquiries" from your app drawer</li>
     </ol>
-    <p><strong>Note:</strong> RC3 includes enhanced feedback collection for pilot testing.</p>
+    <p><strong>Note:</strong> Always download from the official source to ensure security.</p>
   </div>
 
-  <div class="card">
-    <h3>🧪 Pilot Testing Focus</h3>
-    <ul>
-      <li><strong>Core Workflows:</strong> Login, enquiry management, offline sync</li>
-      <li><strong>Performance:</strong> App startup time, operation responsiveness</li>
-      <li><strong>Feedback System:</strong> Test the new in-app feedback feature</li>
-      <li><strong>Monitoring:</strong> Privacy controls and data collection</li>
-    </ul>
-    <p><strong>Report Issues:</strong> Use in-app feedback or #wedecor-app Slack</p>
-  </div>
 
   <div class="card">
     <h3>🌐 Web Version Available</h3>
@@ -107,9 +100,9 @@
   </div>
 
   <div class="footer">
-    <p><strong>🧪 Pilot Program</strong> - Enhanced feedback collection for internal testing</p>
-    <p><strong>Feedback:</strong> In-app form or #wedecor-app Slack | <strong>Health:</strong> Firebase Console</p>
-    <p><strong>Previous:</strong> RC2 build available on request | <strong>Next:</strong> RC4 (based on pilot feedback)</p>
+    <p><strong>📱 Production Release</strong> - Latest stable version</p>
+    <p><strong>Feedback:</strong> In-app form or contact support | <strong>Health:</strong> Firebase Console</p>
+    <p><strong>Version Info:</strong> Automatically loaded from version.json</p>
   </div>
 
   <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -124,11 +117,40 @@
         document.getElementById('apkLink').href = v.downloadUrl;
         document.getElementById('shaLink').href = v.downloadUrl.replace(/\.apk$/, '.apk.sha256.txt');
         document.getElementById('sha256').textContent = v.sha256 || 'unknown';
-        document.getElementById('shaCmd').textContent = `shasum -a 256 ${v.downloadUrl.split('/').pop()}`;
+        const apkFileName = v.downloadUrl.split('/').pop();
+        document.getElementById('shaCmd').textContent = `shasum -a 256 ${apkFileName}`;
 
-        // QR code for APK URL
+        // Display release notes
+        if (v.releaseNotes) {
+          document.getElementById('releaseNotes').innerHTML = `<p>${v.releaseNotes.replace(/\n/g, '<br>')}</p>`;
+        }
+
+        // Display features
+        if (v.features && v.features.length > 0) {
+          document.getElementById('featuresList').style.display = 'block';
+          const featuresList = document.getElementById('features');
+          v.features.forEach(feature => {
+            const li = document.createElement('li');
+            li.textContent = feature;
+            featuresList.appendChild(li);
+          });
+        }
+
+        // Display bug fixes
+        if (v.bugFixes && v.bugFixes.length > 0) {
+          document.getElementById('bugFixesList').style.display = 'block';
+          const bugFixesList = document.getElementById('bugFixes');
+          v.bugFixes.forEach(fix => {
+            const li = document.createElement('li');
+            li.textContent = fix;
+            bugFixesList.appendChild(li);
+          });
+        }
+
+        // QR code for APK URL (use full URL if relative)
+        const qrUrl = v.downloadUrl.startsWith('http') ? v.downloadUrl : window.location.origin + window.location.pathname.replace(/\/$/, '') + '/' + v.downloadUrl;
         new QRCode(document.getElementById('qrcode'), {
-          text: v.downloadUrl,
+          text: qrUrl,
           width: 160,
           height: 160,
           colorDark: '#2563eb',

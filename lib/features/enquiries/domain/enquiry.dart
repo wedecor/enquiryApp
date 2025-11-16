@@ -82,7 +82,8 @@ class Enquiry with _$Enquiry {
       source: (data['sourceValue'] ?? data['source']) as String?,
       sourceLabel: data['sourceLabel'] as String?,
       notes: data['notes'] as String?,
-      images: (data['images'] as List<dynamic>?)
+      images:
+          (data['images'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .where((url) => url.isNotEmpty)
               .toList() ??
