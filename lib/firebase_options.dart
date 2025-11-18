@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '747327664982',
     projectId: 'wedecorenquries',
     authDomain: 'wedecorenquries.firebaseapp.com',
-    storageBucket: 'wedecorenquries.appspot.com',
+    storageBucket: 'wedecorenquries.firebasestorage.app', // Updated to use new Firebase Storage bucket
   );
 
   static FirebaseOptions get android => FirebaseOptions(
