@@ -386,7 +386,56 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final newTotalCost = _parseDouble(_totalCostController.text);
     final newAdvancePaid = _parseDouble(_advancePaidController.text);
 
-    // Update the enquiry document directly
+    // Upload reference images if any and get URLs
+    List<String> newImageUrls = [];
+    if (_selectedImages.isNotEmpty) {
+      try {
+        final urls = await _uploadImages(widget.enquiryId!);
+        if (urls.isNotEmpty) {
+          Log.d(
+            'EnquiryFormScreen uploaded new images',
+            data: {'enquiryId': widget.enquiryId, 'urlCount': urls.length, 'urls': urls},
+          );
+          newImageUrls = urls;
+          // Clear selected images after successful upload
+          setState(() {
+            _selectedImages.clear();
+          });
+        }
+      } catch (e) {
+        Log.e('Error uploading images', error: e);
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error uploading images: $e')));
+        }
+        // Continue with update even if image upload fails
+      }
+    }
+
+    // Combine existing images (which may have been modified/removed) with newly uploaded ones
+    // _existingImageUrls contains the current state (may have removed some)
+    final allImageUrls = <String>[..._existingImageUrls, ...newImageUrls];
+    
+    // Update UI state to include new images for immediate display
+    if (newImageUrls.isNotEmpty) {
+      setState(() {
+        _existingImageUrls.addAll(newImageUrls);
+      });
+    }
+    
+    Log.d(
+      'EnquiryFormScreen updating images field',
+      data: {
+        'enquiryId': widget.enquiryId,
+        'existingCount': _existingImageUrls.length,
+        'newCount': newImageUrls.length,
+        'totalCount': allImageUrls.length,
+        'allUrls': allImageUrls,
+      },
+    );
+
+    // Update the enquiry document directly - include images field with complete list
     await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
@@ -409,40 +458,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'assignedTo': _selectedAssignedTo,
       'totalCost': newTotalCost,
       'advancePaid': newAdvancePaid,
+      'images': allImageUrls, // Always update with complete list (existing + new, excluding removed)
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': currentUser.uid,
     });
-
-    // Upload reference images if any and save URLs
-    if (_selectedImages.isNotEmpty) {
-      try {
-        final urls = await _uploadImages(widget.enquiryId!);
-        if (urls.isNotEmpty) {
-          Log.d(
-            'EnquiryFormScreen updating images',
-            data: {'enquiryId': widget.enquiryId, 'urlCount': urls.length, 'urls': urls},
-          );
-          await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
-            'images': FieldValue.arrayUnion(urls),
-            'updatedAt': FieldValue.serverTimestamp(),
-            'updatedBy': currentUser.uid,
-          });
-          Log.d('EnquiryFormScreen images updated successfully');
-          // Add to existing images list for display
-          setState(() {
-            _existingImageUrls.addAll(urls);
-            _selectedImages.clear(); // Clear after upload
-          });
-        }
-      } catch (e) {
-        Log.e('Error uploading images', error: e);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error uploading images: $e')));
-        }
-      }
-    }
+    
+    Log.d('EnquiryFormScreen enquiry updated successfully with images');
 
     // Record audit trail for individual field changes
     final auditService = AuditService();
@@ -554,7 +575,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     for (final xfile in _selectedImages) {
       try {
         if (kIsWeb) {
-          // For web, read bytes from XFile
+          // For web, use Uint8List for putData
           final bytes = await xfile.readAsBytes();
           final fileName = xfile.name;
           final ref = storage
@@ -567,10 +588,16 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           // Set content type based on file extension
           final contentType = _getContentType(fileName);
 
-          // Upload with metadata
-          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
+          // Upload with metadata - ensure bytes are Uint8List
+          final metadata = SettableMetadata(
+            contentType: contentType,
+            cacheControl: 'max-age=3600',
+          );
 
-          final task = await ref.putData(bytes, metadata);
+          // Convert to Uint8List if needed
+          final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+          
+          final task = await ref.putData(uint8List, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
           Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
