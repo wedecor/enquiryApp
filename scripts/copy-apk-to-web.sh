@@ -9,20 +9,19 @@ echo "📱 Copying APK to web build directory..."
 # Create android directory in build/web if it doesn't exist
 mkdir -p build/web/android
 
-# Copy APK from android directory
-if [ -f "android/app-release.apk" ]; then
-    cp android/app-release.apk build/web/android/app-release.apk
+# Copy APK from build directory
+if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+    cp build/app/outputs/flutter-apk/app-release.apk build/web/android/app-release.apk
     echo "✅ APK copied successfully"
     
     # Get APK size
-    APK_SIZE=$(ls -lh android/app-release.apk | awk '{print $5}')
+    APK_SIZE=$(ls -lh build/app/outputs/flutter-apk/app-release.apk | awk '{print $5}')
     echo "   Size: $APK_SIZE"
 else
-    echo "⚠️  Warning: android/app-release.apk not found"
+    echo "⚠️  Warning: APK not found in build directory"
     echo "   Building APK first..."
     flutter build apk --release
-    cp build/app/outputs/flutter-apk/app-release.apk android/app-release.apk
-    cp android/app-release.apk build/web/android/app-release.apk
+    cp build/app/outputs/flutter-apk/app-release.apk build/web/android/app-release.apk
     echo "✅ APK built and copied successfully"
 fi
 

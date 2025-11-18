@@ -4,7 +4,7 @@
   "releaseDate": "2025-01-17",
   "releaseNotes": "🔧 Fixed change history tracking - status changes now properly recorded\n📱 Fixed contact saving crashes on OnePlus phones - added comprehensive error handling\n🔔 Fixed push notifications - Cloud Functions now send FCM notifications correctly\n📊 Improved audit logging - all field changes tracked when editing enquiries\n⏱️ Added timeouts and error handling for better reliability on custom Android skins",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "",
+  "sha256": "eb8677bff73ba1745919f16aaf779327bcae78f359ca93fd524894da82d2a1b3",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [

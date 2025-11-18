@@ -449,12 +449,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final changes = <String, Map<String, dynamic>>{};
 
     // Track status change (store VALUES, not labels)
-    final oldStatusValue = (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status']) as String? ?? 'new';
+    final oldStatusValue =
+        (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status'])
+            as String? ??
+        'new';
     if (oldStatusValue != statusValue) {
-      changes['eventStatus'] = {
-        'old_value': oldStatusValue,
-        'new_value': statusValue,
-      };
+      changes['eventStatus'] = {'old_value': oldStatusValue, 'new_value': statusValue};
     }
 
     // Track assignment change
@@ -476,7 +476,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     // Track payment status change
-    final oldPaymentStatusValue = oldEnquiryData['paymentStatusValue'] ?? oldEnquiryData['paymentStatus'];
+    final oldPaymentStatusValue =
+        oldEnquiryData['paymentStatusValue'] ?? oldEnquiryData['paymentStatus'];
     if (oldPaymentStatusValue != paymentStatusValue) {
       changes['paymentStatus'] = {
         'old_value': oldPaymentStatusValue ?? 'Not Set',
@@ -514,27 +515,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Track total cost change
     final oldTotalCost = oldEnquiryData['totalCost'];
     if (oldTotalCost != newTotalCost) {
-      changes['totalCost'] = {
-        'old_value': oldTotalCost ?? 0,
-        'new_value': newTotalCost ?? 0,
-      };
+      changes['totalCost'] = {'old_value': oldTotalCost ?? 0, 'new_value': newTotalCost ?? 0};
     }
 
     // Track advance paid change
     final oldAdvancePaid = oldEnquiryData['advancePaid'];
     if (oldAdvancePaid != newAdvancePaid) {
-      changes['advancePaid'] = {
-        'old_value': oldAdvancePaid ?? 0,
-        'new_value': newAdvancePaid ?? 0,
-      };
+      changes['advancePaid'] = {'old_value': oldAdvancePaid ?? 0, 'new_value': newAdvancePaid ?? 0};
     }
 
     // Record all changes at once
     if (changes.isNotEmpty) {
-      await auditService.recordMultipleChanges(
-        enquiryId: widget.enquiryId!,
-        changes: changes,
-      );
+      await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
     // Send notification for enquiry update
