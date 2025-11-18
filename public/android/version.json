@@ -2,9 +2,9 @@
   "version": "2.0.5",
   "buildNumber": 31,
   "releaseDate": "2025-01-17",
-  "releaseNotes": "🔧 Fixed change history tracking - status changes now properly recorded\n📱 Fixed contact saving crashes on OnePlus phones - added comprehensive error handling\n🔔 Fixed push notifications - Cloud Functions now send FCM notifications correctly\n📊 Improved audit logging - all field changes tracked when editing enquiries\n⏱️ Added timeouts and error handling for better reliability on custom Android skins",
+  "releaseNotes": "🔧 Fixed change history tracking - status changes now properly recorded\n📱 Fixed contact saving crashes on OnePlus phones - added comprehensive error handling\n🔔 Fixed push notifications - Cloud Functions now send FCM notifications correctly\n📊 Improved audit logging - all field changes tracked when editing enquiries\n⏱️ Added timeouts and error handling for better reliability on custom Android skins\n🖼️ Fixed image upload issues - Firebase Storage bucket configuration and CORS fixed\n💾 Fixed image persistence - images now properly saved and visible to all users",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "eb8677bff73ba1745919f16aaf779327bcae78f359ca93fd524894da82d2a1b3",
+  "sha256": "5617d315d3d6b08d9baf50ce59164ab1aebf595bb67181e8b161fbcda423675c",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
@@ -12,13 +12,18 @@
     "Fixed push notifications - Cloud Functions send FCM notifications when notifications are created",
     "Improved contact saving - added timeouts and error handling for OnePlus and custom Android skins",
     "Enhanced audit logging - individual field changes tracked when editing enquiries",
-    "Better error handling - graceful fallbacks prevent crashes on problematic devices"
+    "Better error handling - graceful fallbacks prevent crashes on problematic devices",
+    "Fixed image uploads - Firebase Storage properly configured with correct bucket and CORS",
+    "Image persistence - reference images now properly saved and visible to all users"
   ],
   "bugFixes": [
     "Fixed change history not showing status changes - now stores status values instead of labels",
     "Fixed contact saving crashes on OnePlus phones - added comprehensive error handling and timeouts",
     "Fixed push notifications not working - added Cloud Functions to send FCM notifications",
     "Fixed audit logging missing for enquiry edits - now tracks all individual field changes",
-    "Fixed repository status updates not recording audit logs - added audit trail support"
+    "Fixed repository status updates not recording audit logs - added audit trail support",
+    "Fixed image upload CORS errors - configured Firebase Storage CORS for web uploads",
+    "Fixed image storage - images field now properly updated when editing enquiries",
+    "Fixed Firebase Storage bucket configuration - using correct bucket name for web"
   ]
 }
