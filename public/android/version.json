@@ -1,23 +1,24 @@
 {
   "version": "2.0.5",
-  "buildNumber": 30,
-  "releaseDate": "2025-11-17",
-  "releaseNotes": "✨ Review request feature for completed events\n🔔 Fixed admin notifications - all admins notified except the person making changes\n📱 Improved contact saving - works on web with vCard clipboard support\n🔧 Fixed version display in About tab - shows dynamic version info\n🌐 Restored detailed Android download page with changelog and features",
+  "buildNumber": 31,
+  "releaseDate": "2025-01-17",
+  "releaseNotes": "🔧 Fixed change history tracking - status changes now properly recorded\n📱 Fixed contact saving crashes on OnePlus phones - added comprehensive error handling\n🔔 Fixed push notifications - Cloud Functions now send FCM notifications correctly\n📊 Improved audit logging - all field changes tracked when editing enquiries\n⏱️ Added timeouts and error handling for better reliability on custom Android skins",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "7a1b1734d40e7412ffb918fd533f9ceb18e91656f04511505d9db5c58d055dda",
+  "sha256": "",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
-    "Review request feature - request Google reviews and Instagram follows for completed events",
-    "Fixed admin notifications - all admins and assigned users notified except the person making changes",
-    "Improved contact saving - works on web by copying vCard to clipboard, includes event type and date",
-    "Dynamic version display - About tab now shows actual version and platform info",
-    "Detailed Android download page - restored changelog, features, and version details"
+    "Fixed change history - status changes and all field updates now properly tracked",
+    "Fixed push notifications - Cloud Functions send FCM notifications when notifications are created",
+    "Improved contact saving - added timeouts and error handling for OnePlus and custom Android skins",
+    "Enhanced audit logging - individual field changes tracked when editing enquiries",
+    "Better error handling - graceful fallbacks prevent crashes on problematic devices"
   ],
   "bugFixes": [
-    "Fixed update notification - download URL now uses absolute path",
-    "Fixed version display - About tab shows dynamic version instead of hardcoded values",
-    "Fixed contact saving on web - gracefully handles platform differences",
-    "Fixed admin feature loading delay - improved role check performance"
+    "Fixed change history not showing status changes - now stores status values instead of labels",
+    "Fixed contact saving crashes on OnePlus phones - added comprehensive error handling and timeouts",
+    "Fixed push notifications not working - added Cloud Functions to send FCM notifications",
+    "Fixed audit logging missing for enquiry edits - now tracks all individual field changes",
+    "Fixed repository status updates not recording audit logs - added audit trail support"
   ]
 }

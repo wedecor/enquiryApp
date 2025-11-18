@@ -85,7 +85,7 @@ class AuditService {
           .doc(enquiryId)
           .collection('history')
           .snapshots()
-          .timeout(const Duration(seconds: 10))
+          .timeout(const Duration(seconds: 30))
           .map((snapshot) {
             Log.d(
               'AuditService: history snapshot received',
@@ -103,20 +103,38 @@ class AuditService {
               return {'id': doc.id, ...data};
             }).toList();
 
-            // Sort by timestamp if available
+            // Sort by timestamp if available (most recent first)
             docs.sort((a, b) {
               final aTime = a['timestamp'];
               final bTime = b['timestamp'];
 
+              // Handle null timestamps - put them at the end
               if (aTime == null && bTime == null) return 0;
               if (aTime == null) return 1;
               if (bTime == null) return -1;
 
-              if (aTime is Timestamp && bTime is Timestamp) {
-                return bTime.compareTo(aTime); // Descending order
+              // Handle different timestamp formats
+              DateTime? aDateTime;
+              DateTime? bDateTime;
+
+              if (aTime is Timestamp) {
+                aDateTime = aTime.toDate();
+              } else if (aTime is DateTime) {
+                aDateTime = aTime;
               }
 
-              return 0;
+              if (bTime is Timestamp) {
+                bDateTime = bTime.toDate();
+              } else if (bTime is DateTime) {
+                bDateTime = bTime;
+              }
+
+              if (aDateTime != null && bDateTime != null) {
+                return bDateTime.compareTo(aDateTime); // Descending order (newest first)
+              }
+
+              // Fallback: compare by document ID if timestamps are invalid
+              return (a['id'] as String? ?? '').compareTo(b['id'] as String? ?? '');
             });
 
             Log.d(
@@ -131,7 +149,16 @@ class AuditService {
               error: error,
               data: {'enquiryId': enquiryId},
             );
-            // Return empty list on error instead of propagating
+            // Try one-time fetch as fallback on error
+            return getEnquiryHistory(enquiryId).asStream();
+          })
+          .handleError((error) {
+            Log.e(
+              'AuditService: fallback fetch also failed',
+              error: error,
+              data: {'enquiryId': enquiryId},
+            );
+            // Return empty list as last resort
             return <Map<String, dynamic>>[];
           });
     } catch (e, st) {
@@ -141,8 +168,15 @@ class AuditService {
         stackTrace: st,
         data: {'enquiryId': enquiryId},
       );
-      // Return a stream with empty list if setup fails
-      return Stream.value(<Map<String, dynamic>>[]);
+      // Try one-time fetch as fallback
+      return getEnquiryHistory(enquiryId).asStream().handleError((error) {
+        Log.e(
+          'AuditService: fallback fetch failed in catch',
+          error: error,
+          data: {'enquiryId': enquiryId},
+        );
+        return <Map<String, dynamic>>[];
+      });
     }
   }
 
