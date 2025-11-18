@@ -223,11 +223,14 @@ class ContactService {
       return candidates.any((contact) {
         try {
           return contact.phones.any((phoneEntry) => _digitsOnly(phoneEntry.number) == phoneDigits);
-          } catch (e) {
-            // Skip contacts with invalid phone data
-            Log.w('contact_check_phone_parse_error', data: {'contactId': contact.id, 'error': e.toString()});
-            return false;
-          }
+        } catch (e) {
+          // Skip contacts with invalid phone data
+          Log.w(
+            'contact_check_phone_parse_error',
+            data: {'contactId': contact.id, 'error': e.toString()},
+          );
+          return false;
+        }
       });
     } on TimeoutException catch (error, stack) {
       // Handle timeout specifically (common on OnePlus devices)

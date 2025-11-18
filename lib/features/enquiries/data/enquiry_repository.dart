@@ -68,25 +68,23 @@ class EnquiryRepository {
     required String userId,
   }) async {
     // Fetch old enquiry data to get old status value
-    final oldEnquiryDoc = await FirebaseFirestore.instance
-        .collection('enquiries')
-        .doc(id)
-        .get();
-    
+    final oldEnquiryDoc = await FirebaseFirestore.instance.collection('enquiries').doc(id).get();
+
     if (!oldEnquiryDoc.exists) {
       throw Exception('Enquiry not found: $id');
     }
-    
+
     final oldEnquiryData = oldEnquiryDoc.data() as Map<String, dynamic>;
-    final oldStatusValue = (oldEnquiryData['statusValue'] ?? 
-                           oldEnquiryData['eventStatus'] ?? 
-                           oldEnquiryData['status']) as String? ?? 'new';
-    
+    final oldStatusValue =
+        (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status'])
+            as String? ??
+        'new';
+
     // Only update if status actually changed
     if (oldStatusValue == nextStatus) {
       return; // No change needed
     }
-    
+
     final lookup = await _dropdownLookupFuture;
     final statusLabel = lookup.labelForStatus(nextStatus);
 
@@ -99,7 +97,7 @@ class EnquiryRepository {
       'statusUpdatedBy': userId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    
+
     // Record audit trail for status change (store VALUES, not labels)
     final auditService = AuditService();
     await auditService.recordChange(
