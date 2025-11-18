@@ -552,9 +552,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       });
 
                       try {
-                        final oldStatus = currentStatusLabel;
+                        final oldStatusValue = currentStatusValue;
                         final lookup = await ref.read(dropdownLookupProvider.future);
                         final nextLabel = lookup.labelForStatus(value);
+                        final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
                         await FirebaseFirestore.instance
                             .collection('enquiries')
@@ -574,22 +575,22 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                                   'unknown',
                             });
 
-                        // Record audit trail for status change
+                        // Record audit trail for status change (store VALUES, not labels)
                         final auditService = AuditService();
                         await auditService.recordChange(
                           enquiryId: widget.enquiryId,
                           fieldChanged: 'eventStatus',
-                          oldValue: oldStatus,
-                          newValue: nextLabel,
+                          oldValue: oldStatusValue,
+                          newValue: value,
                         );
 
-                        // Send notification for status update
+                        // Send notification for status update (use labels for notifications)
                         final notificationService = notification_service.NotificationService();
                         await notificationService.notifyStatusUpdated(
                           enquiryId: widget.enquiryId,
                           customerName:
                               enquiryData['customerName'] as String? ?? 'Unknown Customer',
-                          oldStatus: oldStatus,
+                          oldStatus: oldStatusLabel,
                           newStatus: nextLabel,
                           updatedBy:
                               ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',

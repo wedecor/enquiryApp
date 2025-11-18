@@ -414,5 +414,130 @@ export const notifyOnEnquiryChange = onDocumentWritten(
   }
 );
 
+// Cloud Function to send FCM notifications when a notification is written to users/{userId}/notifications
+export const sendNotificationToUser = onDocumentWritten(
+  "users/{userId}/notifications/{notificationId}",
+  async (event) => {
+    const after = event.data?.after?.data();
+    const before = event.data?.before?.data();
+
+    // Only process new notifications (not updates or deletes)
+    if (!after || before) {
+      return;
+    }
+
+    const userId = event.params.userId;
+    const title = after.title as string | undefined;
+    const body = after.body as string | undefined;
+    const data = (after.data as Record<string, string> | undefined) || {};
+
+    if (!title || !body) {
+      logger.warn("Notification missing title or body", { userId, notificationId: event.params.notificationId });
+      return;
+    }
+
+    try {
+      const db = getFirestore();
+      
+      // Get user's FCM tokens
+      const tokensSnap = await db.collection("users").doc(userId)
+        .collection("private").doc("notifications")
+        .collection("tokens").limit(500).get();
+
+      const tokens = Array.from(new Set(
+        tokensSnap.docs.map(d => (d.get("token") as string | undefined) || d.id).filter(Boolean) as string[]
+      ));
+
+      if (tokens.length === 0) {
+        logger.info("No FCM tokens found for user", { userId, notificationId: event.params.notificationId });
+        return;
+      }
+
+      // Convert data to strings (FCM requires string values)
+      const fcmData: Record<string, string> = {};
+      for (const [key, value] of Object.entries(data)) {
+        fcmData[key] = String(value);
+      }
+      fcmData.notificationId = event.params.notificationId;
+
+      // Send FCM notification
+      const res = await getMessaging().sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+        data: fcmData,
+      });
+
+      logger.info("FCM notification sent to user", {
+        userId,
+        notificationId: event.params.notificationId,
+        deviceCount: tokens.length,
+        successCount: res.successCount,
+        failureCount: res.failureCount,
+      });
+    } catch (error: any) {
+      logger.error("Error sending FCM notification to user", {
+        userId,
+        notificationId: event.params.notificationId,
+        error: error.message,
+      });
+    }
+  }
+);
+
+// Cloud Function to send FCM notifications when a notification is written to notifications/{topic}/messages
+export const sendNotificationToTopic = onDocumentWritten(
+  "notifications/{topic}/messages/{messageId}",
+  async (event) => {
+    const after = event.data?.after?.data();
+    const before = event.data?.before?.data();
+
+    // Only process new notifications (not updates or deletes)
+    if (!after || before) {
+      return;
+    }
+
+    const topic = event.params.topic;
+    const title = after.title as string | undefined;
+    const body = after.body as string | undefined;
+    const data = (after.data as Record<string, string> | undefined) || {};
+
+    if (!title || !body) {
+      logger.warn("Topic notification missing title or body", { topic, messageId: event.params.messageId });
+      return;
+    }
+
+    try {
+      // Convert data to strings (FCM requires string values)
+      const fcmData: Record<string, string> = {};
+      for (const [key, value] of Object.entries(data)) {
+        fcmData[key] = String(value);
+      }
+      fcmData.messageId = event.params.messageId;
+      fcmData.topic = topic;
+
+      // Send FCM notification to topic
+      const message = {
+        notification: { title, body },
+        data: fcmData,
+        topic,
+      };
+
+      const response = await getMessaging().send(message);
+
+      logger.info("FCM notification sent to topic", {
+        topic,
+        messageId: event.params.messageId,
+        fcmMessageId: response,
+      });
+    } catch (error: any) {
+      logger.error("Error sending FCM notification to topic", {
+        topic,
+        messageId: event.params.messageId,
+        error: error.message,
+      });
+    }
+  }
+);
+
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { notifyOverdueInTalks } from "./notifyOverdueInTalks";

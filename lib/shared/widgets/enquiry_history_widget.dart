@@ -52,14 +52,31 @@ class EnquiryHistoryWidget extends ConsumerWidget {
           );
         }
 
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: history.length,
-          itemBuilder: (context, index) {
-            final change = history[index];
-            return _buildHistoryItem(context, change, ref, dropdownLookup);
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (history.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  '${history.length} change${history.length == 1 ? '' : 's'} recorded',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: history.length,
+              itemBuilder: (context, index) {
+                final change = history[index];
+                return _buildHistoryItem(context, change, ref, dropdownLookup);
+              },
+            ),
+          ],
         );
       },
       loading: () {

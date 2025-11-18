@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
@@ -66,6 +67,26 @@ class EnquiryRepository {
     required String nextStatus,
     required String userId,
   }) async {
+    // Fetch old enquiry data to get old status value
+    final oldEnquiryDoc = await FirebaseFirestore.instance
+        .collection('enquiries')
+        .doc(id)
+        .get();
+    
+    if (!oldEnquiryDoc.exists) {
+      throw Exception('Enquiry not found: $id');
+    }
+    
+    final oldEnquiryData = oldEnquiryDoc.data() as Map<String, dynamic>;
+    final oldStatusValue = (oldEnquiryData['statusValue'] ?? 
+                           oldEnquiryData['eventStatus'] ?? 
+                           oldEnquiryData['status']) as String? ?? 'new';
+    
+    // Only update if status actually changed
+    if (oldStatusValue == nextStatus) {
+      return; // No change needed
+    }
+    
     final lookup = await _dropdownLookupFuture;
     final statusLabel = lookup.labelForStatus(nextStatus);
 
@@ -78,6 +99,16 @@ class EnquiryRepository {
       'statusUpdatedBy': userId,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    
+    // Record audit trail for status change (store VALUES, not labels)
+    final auditService = AuditService();
+    await auditService.recordChange(
+      enquiryId: id,
+      fieldChanged: 'eventStatus',
+      oldValue: oldStatusValue,
+      newValue: nextStatus,
+      userId: userId,
+    );
   }
 
   /// Create enquiry (admin): normalizes denormalized/search fields

@@ -356,6 +356,13 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _updateEnquiry(UserModel currentUser) async {
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
+    // Fetch old enquiry data to compare changes
+    final oldEnquiryDoc = await FirebaseFirestore.instance
+        .collection('enquiries')
+        .doc(widget.enquiryId!)
+        .get();
+    final oldEnquiryData = oldEnquiryDoc.data() as Map<String, dynamic>? ?? {};
+
     final statusValue = _selectedStatus ?? 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
 
@@ -372,12 +379,19 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         ? dropdownLookup.labelForPaymentStatus(paymentStatusValue)
         : null;
 
+    final newCustomerName = _nameController.text.trim();
+    final newCustomerPhone = _phoneController.text.trim();
+    final newEventLocation = _locationController.text.trim();
+    final newDescription = _notesController.text.trim();
+    final newTotalCost = _parseDouble(_totalCostController.text);
+    final newAdvancePaid = _parseDouble(_advancePaidController.text);
+
     // Update the enquiry document directly
     await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
-      'customerName': _nameController.text.trim(),
-      'customerPhone': _phoneController.text.trim(),
-      'eventLocation': _locationController.text.trim(),
-      'description': _notesController.text.trim(),
+      'customerName': newCustomerName,
+      'customerPhone': newCustomerPhone,
+      'eventLocation': newEventLocation,
+      'description': newDescription,
       'eventType': eventTypeValue,
       'eventTypeValue': eventTypeValue,
       'eventTypeLabel': eventTypeLabel,
@@ -393,8 +407,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'paymentStatusValue': paymentStatusValue,
       'paymentStatusLabel': paymentStatusLabel,
       'assignedTo': _selectedAssignedTo,
-      'totalCost': _parseDouble(_totalCostController.text),
-      'advancePaid': _parseDouble(_advancePaidController.text),
+      'totalCost': newTotalCost,
+      'advancePaid': newAdvancePaid,
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': currentUser.uid,
     });
@@ -430,14 +444,98 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       }
     }
 
-    // Record audit trail for the update
+    // Record audit trail for individual field changes
     final auditService = AuditService();
-    await auditService.recordChange(
-      enquiryId: widget.enquiryId!,
-      fieldChanged: 'general_update',
-      oldValue: 'Previous values',
-      newValue: 'Updated enquiry data',
-    );
+    final changes = <String, Map<String, dynamic>>{};
+
+    // Track status change (store VALUES, not labels)
+    final oldStatusValue = (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status']) as String? ?? 'new';
+    if (oldStatusValue != statusValue) {
+      changes['eventStatus'] = {
+        'old_value': oldStatusValue,
+        'new_value': statusValue,
+      };
+    }
+
+    // Track assignment change
+    final oldAssignedTo = oldEnquiryData['assignedTo'] as String?;
+    if (oldAssignedTo != _selectedAssignedTo) {
+      changes['assignedTo'] = {
+        'old_value': oldAssignedTo ?? 'Unassigned',
+        'new_value': _selectedAssignedTo ?? 'Unassigned',
+      };
+    }
+
+    // Track priority change
+    final oldPriorityValue = oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
+    if (oldPriorityValue != priorityValue) {
+      changes['priority'] = {
+        'old_value': oldPriorityValue ?? 'Not Set',
+        'new_value': priorityValue ?? 'Not Set',
+      };
+    }
+
+    // Track payment status change
+    final oldPaymentStatusValue = oldEnquiryData['paymentStatusValue'] ?? oldEnquiryData['paymentStatus'];
+    if (oldPaymentStatusValue != paymentStatusValue) {
+      changes['paymentStatus'] = {
+        'old_value': oldPaymentStatusValue ?? 'Not Set',
+        'new_value': paymentStatusValue ?? 'Not Set',
+      };
+    }
+
+    // Track customer name change
+    final oldCustomerName = oldEnquiryData['customerName'] as String? ?? '';
+    if (oldCustomerName != newCustomerName) {
+      changes['customerName'] = {
+        'old_value': oldCustomerName.isEmpty ? 'Not Set' : oldCustomerName,
+        'new_value': newCustomerName.isEmpty ? 'Not Set' : newCustomerName,
+      };
+    }
+
+    // Track customer phone change
+    final oldCustomerPhone = oldEnquiryData['customerPhone'] as String? ?? '';
+    if (oldCustomerPhone != newCustomerPhone) {
+      changes['customerPhone'] = {
+        'old_value': oldCustomerPhone.isEmpty ? 'Not Set' : oldCustomerPhone,
+        'new_value': newCustomerPhone.isEmpty ? 'Not Set' : newCustomerPhone,
+      };
+    }
+
+    // Track event location change
+    final oldEventLocation = oldEnquiryData['eventLocation'] as String? ?? '';
+    if (oldEventLocation != newEventLocation) {
+      changes['eventLocation'] = {
+        'old_value': oldEventLocation.isEmpty ? 'Not Set' : oldEventLocation,
+        'new_value': newEventLocation.isEmpty ? 'Not Set' : newEventLocation,
+      };
+    }
+
+    // Track total cost change
+    final oldTotalCost = oldEnquiryData['totalCost'];
+    if (oldTotalCost != newTotalCost) {
+      changes['totalCost'] = {
+        'old_value': oldTotalCost ?? 0,
+        'new_value': newTotalCost ?? 0,
+      };
+    }
+
+    // Track advance paid change
+    final oldAdvancePaid = oldEnquiryData['advancePaid'];
+    if (oldAdvancePaid != newAdvancePaid) {
+      changes['advancePaid'] = {
+        'old_value': oldAdvancePaid ?? 0,
+        'new_value': newAdvancePaid ?? 0,
+      };
+    }
+
+    // Record all changes at once
+    if (changes.isNotEmpty) {
+      await auditService.recordMultipleChanges(
+        enquiryId: widget.enquiryId!,
+        changes: changes,
+      );
+    }
 
     // Send notification for enquiry update
     final notificationService = NotificationService();
