@@ -20,6 +20,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // User notifications - allow creation by any authenticated user (for notification service)
+    // Users can read their own notifications, admins can read any
+    match /users/{uid}/notifications/{notificationId} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn(); // Allow any authenticated user to create (notification service runs as the app user)
+      allow update, delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Enquiries - Admins see all, Staff only see assigned enquiries
     match /enquiries/{id} {
       allow read: if isAdmin()
