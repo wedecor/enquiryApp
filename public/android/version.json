@@ -1,10 +1,10 @@
 {
   "version": "2.0.5",
-  "buildNumber": 32,
-  "releaseDate": "2025-11-23",
-  "releaseNotes": "🔔 Fixed admin notifications for status changes - improved admin user query and added comprehensive logging\n🔧 Fixed admin user query - no longer requires isActive field, works with all admin users\n📊 Added detailed logging to track notification flow for debugging\n🔔 Fixed change history tracking - status changes now properly recorded\n📱 Fixed contact saving crashes on OnePlus phones - added comprehensive error handling\n⏱️ Added timeouts and error handling for better reliability on custom Android skins\n🖼️ Fixed image upload issues - Firebase Storage bucket configuration and CORS fixed\n💾 Fixed image persistence - images now properly saved and visible to all users",
+  "buildNumber": 33,
+  "releaseDate": "2025-01-17",
+  "releaseNotes": "🔍 Added comprehensive debug logging for notifications - visible in browser console\n📊 Enhanced notification debugging - shows admin user queries, token counts, and notification storage\n🐛 Improved notification troubleshooting - detailed logs help identify notification issues\n🔔 Fixed admin notifications - improved admin user query and comprehensive error handling",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "82db657396a3b05274b410a9ab6add13647153eb7e345464c413755791131ef4",
+  "sha256": "6e072b4a75365a5801635309ebdcf215407c7abe30e824d76a8289ecd02493e5",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
