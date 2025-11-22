@@ -512,8 +512,9 @@ class NotificationService {
       // Store notification in Firestore for the user
       // This will trigger the Cloud Function sendNotificationToUser
       // We store it even if there are no tokens - the Cloud Function will handle it
+      DocumentReference? notificationRef;
       try {
-        final notificationRef = await _firestore
+        notificationRef = await _firestore
             .collection('users')
             .doc(userId)
             .collection('notifications')
@@ -524,7 +525,7 @@ class NotificationService {
               'read': false,
               'createdAt': FieldValue.serverTimestamp(),
             });
-        
+
         if (kDebugMode) {
           print('✅ NOTIFICATION STORED: ${notificationRef.id}');
           debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
@@ -542,41 +543,43 @@ class NotificationService {
         rethrow; // Re-throw so we know it failed
       }
 
-      if (kDebugMode) {
-        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
-        debugPrint('   UserId: $userId');
-        debugPrint('   NotificationId: ${notificationRef.id}');
-        debugPrint('   Title: $title');
-        debugPrint('   Body: $body');
-        debugPrint('   HasTokens: ${tokens.isNotEmpty}');
-        debugPrint('   TokenCount: ${tokens.length}');
-        if (tokens.isEmpty) {
-          debugPrint('   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!');
+      if (notificationRef != null) {
+        if (kDebugMode) {
+          debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
+          debugPrint('   UserId: $userId');
+          debugPrint('   NotificationId: ${notificationRef.id}');
+          debugPrint('   Title: $title');
+          debugPrint('   Body: $body');
+          debugPrint('   HasTokens: ${tokens.isNotEmpty}');
+          debugPrint('   TokenCount: ${tokens.length}');
+          if (tokens.isEmpty) {
+            debugPrint('   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!');
+          }
         }
-      }
 
-      Log.i(
-        'NotificationService: notification stored in Firestore',
-        data: {
-          'userId': userId,
-          'notificationId': notificationRef.id,
-          'title': title,
-          'body': body,
-          'hasTokens': tokens.isNotEmpty,
-          'tokenCount': tokens.length,
-          'data': data,
-        },
-      );
-
-      if (tokens.isEmpty) {
-        Log.w(
-          'NotificationService: notification stored but user has no FCM tokens',
+        Log.i(
+          'NotificationService: notification stored in Firestore',
           data: {
             'userId': userId,
             'notificationId': notificationRef.id,
-            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
+            'title': title,
+            'body': body,
+            'hasTokens': tokens.isNotEmpty,
+            'tokenCount': tokens.length,
+            'data': data,
           },
         );
+
+        if (tokens.isEmpty) {
+          Log.w(
+            'NotificationService: notification stored but user has no FCM tokens',
+            data: {
+              'userId': userId,
+              'notificationId': notificationRef.id,
+              'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
+            },
+          );
+        }
       }
     } catch (e, st) {
       Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
