@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../shared/models/user_model.dart';
 import '../../utils/logger.dart';
@@ -147,6 +148,15 @@ class NotificationService {
     String? assignedTo,
   }) async {
     try {
+      // Always log to console for debugging (especially on web)
+      if (kDebugMode) {
+        debugPrint('🔔 NOTIFICATION DEBUG: notifyStatusUpdated called');
+        debugPrint('   EnquiryId: $enquiryId');
+        debugPrint('   Customer: $customerName');
+        debugPrint('   Status: $oldStatus → $newStatus');
+        debugPrint('   UpdatedBy: $updatedBy');
+      }
+
       Log.i(
         'NotificationService: notifyStatusUpdated called',
         data: {
@@ -163,11 +173,23 @@ class NotificationService {
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
 
       if (adminUsers.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
+          debugPrint('   UpdatedBy: $updatedBy');
+          debugPrint('   This means no admins will receive notifications!');
+        }
         Log.w(
           'NotificationService: no admin users found to notify',
           data: {'updatedBy': updatedBy},
         );
         return;
+      }
+
+      if (kDebugMode) {
+        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
+        for (var admin in adminUsers) {
+          debugPrint('   - Admin: ${admin.email} (${admin.uid})');
+        }
       }
 
       Log.i(
@@ -351,21 +373,36 @@ class NotificationService {
   /// Get all admin users, optionally excluding a specific user
   Future<List<UserModel>> _getAdminUsers({String? excludeUserId}) async {
     try {
+      if (kDebugMode) {
+        debugPrint('🔍 NOTIFICATION DEBUG: Querying for admin users...');
+        debugPrint('   Excluding userId: $excludeUserId');
+      }
+
       // Query for admin users - don't filter by isActive as it might not exist on all users
       final query = _firestore.collection('users').where('role', isEqualTo: 'admin');
 
       final snapshot = await query.get();
 
+      if (kDebugMode) {
+        debugPrint('   Found ${snapshot.docs.length} total admin documents in Firestore');
+      }
+
       final adminUsers = snapshot.docs
           .where((doc) {
             // Exclude the specified user if provided
             if (excludeUserId != null && doc.id == excludeUserId) {
+              if (kDebugMode) {
+                debugPrint('   ⏭️ Excluding admin: ${doc.id} (matches updatedBy)');
+              }
               return false;
             }
             // Filter out inactive users if isActive field exists and is false
             final data = doc.data();
             final isActive = data['isActive'];
             if (isActive != null && isActive == false) {
+              if (kDebugMode) {
+                debugPrint('   ⏭️ Excluding admin: ${doc.id} (isActive = false)');
+              }
               return false;
             }
             return true;
@@ -382,6 +419,13 @@ class NotificationService {
           })
           .toList();
 
+      if (kDebugMode) {
+        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users to notify');
+        for (var admin in adminUsers) {
+          debugPrint('   - ${admin.email} (${admin.uid})');
+        }
+      }
+
       Log.i(
         'NotificationService: found admin users',
         data: {
@@ -393,6 +437,9 @@ class NotificationService {
 
       return adminUsers;
     } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('❌ NOTIFICATION DEBUG: ERROR getting admin users: $e');
+      }
       Log.e('NotificationService: error getting admin users', error: e, stackTrace: st);
       return [];
     }
@@ -470,6 +517,19 @@ class NotificationService {
             'read': false,
             'createdAt': FieldValue.serverTimestamp(),
           });
+
+      if (kDebugMode) {
+        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
+        debugPrint('   UserId: $userId');
+        debugPrint('   NotificationId: ${notificationRef.id}');
+        debugPrint('   Title: $title');
+        debugPrint('   Body: $body');
+        debugPrint('   HasTokens: ${tokens.isNotEmpty}');
+        debugPrint('   TokenCount: ${tokens.length}');
+        if (tokens.isEmpty) {
+          debugPrint('   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!');
+        }
+      }
 
       Log.i(
         'NotificationService: notification stored in Firestore',
