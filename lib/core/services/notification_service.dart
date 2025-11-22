@@ -172,10 +172,7 @@ class NotificationService {
 
       Log.i(
         'NotificationService: sending status update notifications to admins',
-        data: {
-          'adminCount': adminUsers.length,
-          'adminIds': adminUsers.map((u) => u.uid).toList(),
-        },
+        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
       );
 
       // Send notification to all admins (excluding the updater)
@@ -342,9 +339,7 @@ class NotificationService {
   Future<List<UserModel>> _getAdminUsers({String? excludeUserId}) async {
     try {
       // Query for admin users - don't filter by isActive as it might not exist on all users
-      final query = _firestore
-          .collection('users')
-          .where('role', isEqualTo: 'admin');
+      final query = _firestore.collection('users').where('role', isEqualTo: 'admin');
 
       final snapshot = await query.get();
 
@@ -422,7 +417,7 @@ class NotificationService {
       final userDoc = await _firestore.collection('users').doc(userId).get();
       if (!userDoc.exists) return;
 
-      // Read tokens from private subcollection
+      // Read tokens from private subcollection to check if user has tokens
       final tokensSnapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -432,32 +427,36 @@ class NotificationService {
           .limit(10)
           .get();
 
-      if (tokensSnapshot.docs.isEmpty) {
-        // TODO: Replace with safeLog - Log.i('NotificationService: No FCM tokens for user $userId');
-        return;
-      }
-
-      // Get all valid tokens
+      final tokenCount = tokensSnapshot.docs.length;
       final tokens = tokensSnapshot.docs
           .map((doc) => doc.get('token') as String?)
           .where((token) => token != null && token.isNotEmpty)
           .cast<String>()
           .toList();
 
-      if (tokens.isEmpty) {
-        // TODO: Replace with safeLog - Log.i('NotificationService: No valid FCM tokens for user $userId');
-        return;
-      }
+      Log.i(
+        'NotificationService: checking tokens for user',
+        data: {
+          'userId': userId,
+          'tokenDocumentCount': tokenCount,
+          'validTokenCount': tokens.length,
+        },
+      );
 
       // Store notification in Firestore for the user
       // This will trigger the Cloud Function sendNotificationToUser
-      final notificationRef = await _firestore.collection('users').doc(userId).collection('notifications').add({
-        'title': title,
-        'body': body,
-        'data': data,
-        'read': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // We store it even if there are no tokens - the Cloud Function will handle it
+      final notificationRef = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .add({
+            'title': title,
+            'body': body,
+            'data': data,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       Log.i(
         'NotificationService: notification stored in Firestore',
@@ -466,9 +465,22 @@ class NotificationService {
           'notificationId': notificationRef.id,
           'title': title,
           'body': body,
+          'hasTokens': tokens.isNotEmpty,
+          'tokenCount': tokens.length,
           'data': data,
         },
       );
+
+      if (tokens.isEmpty) {
+        Log.w(
+          'NotificationService: notification stored but user has no FCM tokens',
+          data: {
+            'userId': userId,
+            'notificationId': notificationRef.id,
+            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
+          },
+        );
+      }
     } catch (e, st) {
       Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
     }
