@@ -155,6 +155,12 @@ class NotificationService {
         debugPrint('   Customer: $customerName');
         debugPrint('   Status: $oldStatus → $newStatus');
         debugPrint('   UpdatedBy: $updatedBy');
+        // Also use print for web console visibility
+        print('🔔 NOTIFICATION DEBUG: notifyStatusUpdated called');
+        print('   EnquiryId: $enquiryId');
+        print('   Customer: $customerName');
+        print('   Status: $oldStatus → $newStatus');
+        print('   UpdatedBy: $updatedBy');
       }
 
       Log.i(

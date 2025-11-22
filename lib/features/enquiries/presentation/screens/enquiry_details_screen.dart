@@ -586,6 +586,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
                         // Send notification for status update (use labels for notifications)
                         try {
+                          print('📢 STATUS UPDATE: About to call notifyStatusUpdated');
+                          print('   EnquiryId: ${widget.enquiryId}');
+                          print('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
+                          print('   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}');
+                          
                           final notificationService = notification_service.NotificationService();
                           await notificationService.notifyStatusUpdated(
                             enquiryId: widget.enquiryId,
@@ -597,8 +602,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                                 ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                             assignedTo: enquiryData['assignedTo'] as String?,
                           );
-                        } catch (notificationError) {
+                          
+                          print('✅ STATUS UPDATE: notifyStatusUpdated completed');
+                        } catch (notificationError, stackTrace) {
                           // Log notification error but don't fail the status update
+                          print('❌ ERROR sending notifications: $notificationError');
+                          print('Stack trace: $stackTrace');
                           debugPrint('Error sending notifications: $notificationError');
                           // Status update already succeeded, so we continue
                         }
