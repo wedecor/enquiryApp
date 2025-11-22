@@ -115,15 +115,21 @@ class EnquiryRepository {
     );
 
     // Send notification to all admins about status change
-    final notificationService = notification_service.NotificationService();
-    await notificationService.notifyStatusUpdated(
-      enquiryId: id,
-      customerName: customerName,
-      oldStatus: oldStatusLabel,
-      newStatus: statusLabel,
-      updatedBy: userId,
-      assignedTo: assignedTo,
-    );
+    try {
+      final notificationService = notification_service.NotificationService();
+      await notificationService.notifyStatusUpdated(
+        enquiryId: id,
+        customerName: customerName,
+        oldStatus: oldStatusLabel,
+        newStatus: statusLabel,
+        updatedBy: userId,
+        assignedTo: assignedTo,
+      );
+    } catch (notificationError) {
+      // Log notification error but don't fail the status update
+      // Status update already succeeded, so we continue
+      // Errors are already logged in NotificationService
+    }
   }
 
   /// Create enquiry (admin): normalizes denormalized/search fields
