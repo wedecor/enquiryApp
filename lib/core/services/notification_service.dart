@@ -147,24 +147,65 @@ class NotificationService {
     String? assignedTo,
   }) async {
     try {
+      Log.i(
+        'NotificationService: notifyStatusUpdated called',
+        data: {
+          'enquiryId': enquiryId,
+          'customerName': customerName,
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'updatedBy': updatedBy,
+          'assignedTo': assignedTo,
+        },
+      );
+
       // Get all admin users EXCEPT the updater
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
 
+      if (adminUsers.isEmpty) {
+        Log.w(
+          'NotificationService: no admin users found to notify',
+          data: {'updatedBy': updatedBy},
+        );
+        return;
+      }
+
+      Log.i(
+        'NotificationService: sending status update notifications to admins',
+        data: {
+          'adminCount': adminUsers.length,
+          'adminIds': adminUsers.map((u) => u.uid).toList(),
+        },
+      );
+
       // Send notification to all admins (excluding the updater)
       for (final admin in adminUsers) {
-        await _sendNotificationToUser(
-          userId: admin.uid,
-          title: 'Enquiry Status Updated',
-          body: 'Status changed from $oldStatus to $newStatus for $customerName',
-          data: {
-            'type': 'status_update',
-            'enquiryId': enquiryId,
-            'customerName': customerName,
-            'oldStatus': oldStatus,
-            'newStatus': newStatus,
-            'updatedBy': updatedBy,
-          },
-        );
+        try {
+          await _sendNotificationToUser(
+            userId: admin.uid,
+            title: 'Enquiry Status Updated',
+            body: 'Status changed from $oldStatus to $newStatus for $customerName',
+            data: {
+              'type': 'status_update',
+              'enquiryId': enquiryId,
+              'customerName': customerName,
+              'oldStatus': oldStatus,
+              'newStatus': newStatus,
+              'updatedBy': updatedBy,
+            },
+          );
+          Log.d(
+            'NotificationService: notification sent to admin',
+            data: {'adminId': admin.uid, 'adminEmail': admin.email},
+          );
+        } catch (e, st) {
+          Log.e(
+            'NotificationService: error sending notification to admin',
+            error: e,
+            stackTrace: st,
+            data: {'adminId': admin.uid},
+          );
+        }
       }
 
       // Also send notification to assigned user if they exist and are different from updater
@@ -300,15 +341,27 @@ class NotificationService {
   /// Get all admin users, optionally excluding a specific user
   Future<List<UserModel>> _getAdminUsers({String? excludeUserId}) async {
     try {
+      // Query for admin users - don't filter by isActive as it might not exist on all users
       final query = _firestore
           .collection('users')
-          .where('role', isEqualTo: 'admin')
-          .where('isActive', isEqualTo: true);
+          .where('role', isEqualTo: 'admin');
 
       final snapshot = await query.get();
 
       final adminUsers = snapshot.docs
-          .where((doc) => excludeUserId == null || doc.id != excludeUserId)
+          .where((doc) {
+            // Exclude the specified user if provided
+            if (excludeUserId != null && doc.id == excludeUserId) {
+              return false;
+            }
+            // Filter out inactive users if isActive field exists and is false
+            final data = doc.data();
+            final isActive = data['isActive'];
+            if (isActive != null && isActive == false) {
+              return false;
+            }
+            return true;
+          })
           .map((doc) {
             final data = doc.data();
             return UserModel(
@@ -320,6 +373,15 @@ class NotificationService {
             );
           })
           .toList();
+
+      Log.i(
+        'NotificationService: found admin users',
+        data: {
+          'totalAdmins': adminUsers.length,
+          'excludedUserId': excludeUserId,
+          'adminIds': adminUsers.map((u) => u.uid).toList(),
+        },
+      );
 
       return adminUsers;
     } catch (e, st) {
@@ -388,7 +450,8 @@ class NotificationService {
       }
 
       // Store notification in Firestore for the user
-      await _firestore.collection('users').doc(userId).collection('notifications').add({
+      // This will trigger the Cloud Function sendNotificationToUser
+      final notificationRef = await _firestore.collection('users').doc(userId).collection('notifications').add({
         'title': title,
         'body': body,
         'data': data,
@@ -396,10 +459,15 @@ class NotificationService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // TODO: Send actual FCM notification via Cloud Function or server
-      Log.d(
-        'NotificationService: stubbed FCM send to user',
-        data: {'userId': userId, 'title': title, 'body': body, 'data': data},
+      Log.i(
+        'NotificationService: notification stored in Firestore',
+        data: {
+          'userId': userId,
+          'notificationId': notificationRef.id,
+          'title': title,
+          'body': body,
+          'data': data,
+        },
       );
     } catch (e, st) {
       Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
