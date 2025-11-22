@@ -528,7 +528,16 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
                   : (value) async {
-                      if (value == null || value == currentStatusValue) return;
+                      // Log immediately when status change is triggered
+                      print('🚀 STATUS CHANGE TRIGGERED');
+                      print('   New value: $value');
+                      print('   Current value: $currentStatusValue');
+                      print('   Is Admin: $isAdmin');
+                      
+                      if (value == null || value == currentStatusValue) {
+                        print('⚠️ STATUS CHANGE: No change needed, returning early');
+                        return;
+                      }
 
                       // Staff transition guard
                       if (!isAdmin) {
@@ -589,8 +598,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           print('📢 STATUS UPDATE: About to call notifyStatusUpdated');
                           print('   EnquiryId: ${widget.enquiryId}');
                           print('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
-                          print('   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}');
-                          
+                          print(
+                            '   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}',
+                          );
+
                           final notificationService = notification_service.NotificationService();
                           await notificationService.notifyStatusUpdated(
                             enquiryId: widget.enquiryId,
@@ -602,7 +613,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                                 ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
                             assignedTo: enquiryData['assignedTo'] as String?,
                           );
-                          
+
                           print('✅ STATUS UPDATE: notifyStatusUpdated completed');
                         } catch (notificationError, stackTrace) {
                           // Log notification error but don't fail the status update
