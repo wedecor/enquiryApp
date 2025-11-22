@@ -512,17 +512,35 @@ class NotificationService {
       // Store notification in Firestore for the user
       // This will trigger the Cloud Function sendNotificationToUser
       // We store it even if there are no tokens - the Cloud Function will handle it
-      final notificationRef = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('notifications')
-          .add({
-            'title': title,
-            'body': body,
-            'data': data,
-            'read': false,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+      try {
+        final notificationRef = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .add({
+              'title': title,
+              'body': body,
+              'data': data,
+              'read': false,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+        
+        if (kDebugMode) {
+          print('✅ NOTIFICATION STORED: ${notificationRef.id}');
+          debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
+        }
+      } catch (firestoreError, stackTrace) {
+        // Log Firestore error explicitly
+        print('❌ ERROR storing notification in Firestore: $firestoreError');
+        debugPrint('❌ ERROR storing notification: $firestoreError');
+        Log.e(
+          'NotificationService: CRITICAL ERROR storing notification in Firestore',
+          error: firestoreError,
+          stackTrace: stackTrace,
+          data: {'userId': userId, 'title': title},
+        );
+        rethrow; // Re-throw so we know it failed
+      }
 
       if (kDebugMode) {
         debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
