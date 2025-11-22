@@ -416,14 +416,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Combine existing images (which may have been modified/removed) with newly uploaded ones
     // _existingImageUrls contains the current state (may have removed some)
     final allImageUrls = <String>[..._existingImageUrls, ...newImageUrls];
-    
+
     // Update UI state to include new images for immediate display
     if (newImageUrls.isNotEmpty) {
       setState(() {
         _existingImageUrls.addAll(newImageUrls);
       });
     }
-    
+
     Log.d(
       'EnquiryFormScreen updating images field',
       data: {
@@ -458,11 +458,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'assignedTo': _selectedAssignedTo,
       'totalCost': newTotalCost,
       'advancePaid': newAdvancePaid,
-      'images': allImageUrls, // Always update with complete list (existing + new, excluding removed)
+      'images':
+          allImageUrls, // Always update with complete list (existing + new, excluding removed)
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedBy': currentUser.uid,
     });
-    
+
     Log.d('EnquiryFormScreen enquiry updated successfully with images');
 
     // Record audit trail for individual field changes
@@ -550,8 +551,24 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
-    // Send notification for enquiry update
+    // Send notifications
     final notificationService = NotificationService();
+    
+    // If status changed, send specific status update notification to admins
+    if (oldStatusValue != statusValue) {
+      final lookup = await ref.read(dropdownLookupProvider.future);
+      final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
+      await notificationService.notifyStatusUpdated(
+        enquiryId: widget.enquiryId!,
+        customerName: _nameController.text.trim(),
+        oldStatus: oldStatusLabel,
+        newStatus: statusLabel,
+        updatedBy: currentUser.uid,
+        assignedTo: _selectedAssignedTo,
+      );
+    }
+    
+    // Send generic notification for enquiry update
     await notificationService.notifyEnquiryUpdated(
       enquiryId: widget.enquiryId!,
       customerName: _nameController.text.trim(),
@@ -589,14 +606,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final contentType = _getContentType(fileName);
 
           // Upload with metadata - ensure bytes are Uint8List
-          final metadata = SettableMetadata(
-            contentType: contentType,
-            cacheControl: 'max-age=3600',
-          );
+          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
 
           // Convert to Uint8List if needed
           final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-          
+
           final task = await ref.putData(uint8List, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);

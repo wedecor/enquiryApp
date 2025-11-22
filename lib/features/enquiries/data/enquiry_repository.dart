@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
 import '../filters/filters_state.dart';
@@ -87,6 +88,11 @@ class EnquiryRepository {
 
     final lookup = await _dropdownLookupFuture;
     final statusLabel = lookup.labelForStatus(nextStatus);
+    final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
+
+    // Get enquiry data for notifications
+    final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
+    final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
     await FirebaseFirestore.instance.collection('enquiries').doc(id).update({
       'status': nextStatus,
@@ -106,6 +112,17 @@ class EnquiryRepository {
       oldValue: oldStatusValue,
       newValue: nextStatus,
       userId: userId,
+    );
+
+    // Send notification to all admins about status change
+    final notificationService = notification_service.NotificationService();
+    await notificationService.notifyStatusUpdated(
+      enquiryId: id,
+      customerName: customerName,
+      oldStatus: oldStatusLabel,
+      newStatus: statusLabel,
+      updatedBy: userId,
+      assignedTo: assignedTo,
     );
   }
 
