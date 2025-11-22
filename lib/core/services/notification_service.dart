@@ -147,6 +147,14 @@ class NotificationService {
     required String updatedBy,
     String? assignedTo,
   }) async {
+    // ALWAYS log - even in release mode for debugging
+    print('🔔🔔🔔 NOTIFY STATUS UPDATED CALLED 🔔🔔🔔');
+    print('   EnquiryId: $enquiryId');
+    print('   Customer: $customerName');
+    print('   Status: $oldStatus → $newStatus');
+    print('   UpdatedBy: $updatedBy');
+    print('   AssignedTo: $assignedTo');
+    
     try {
       // Always log to console for debugging (especially on web)
       if (kDebugMode) {
@@ -155,12 +163,6 @@ class NotificationService {
         debugPrint('   Customer: $customerName');
         debugPrint('   Status: $oldStatus → $newStatus');
         debugPrint('   UpdatedBy: $updatedBy');
-        // Also use print for web console visibility
-        print('🔔 NOTIFICATION DEBUG: notifyStatusUpdated called');
-        print('   EnquiryId: $enquiryId');
-        print('   Customer: $customerName');
-        print('   Status: $oldStatus → $newStatus');
-        print('   UpdatedBy: $updatedBy');
       }
 
       Log.i(
@@ -176,9 +178,14 @@ class NotificationService {
       );
 
       // Get all admin users EXCEPT the updater
+      print('🔍 Getting admin users (excluding: $updatedBy)...');
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
+      print('🔍 Found ${adminUsers.length} admin users');
 
       if (adminUsers.isEmpty) {
+        print('⚠️⚠️⚠️ NO ADMIN USERS FOUND! ⚠️⚠️⚠️');
+        print('   UpdatedBy: $updatedBy');
+        print('   This means no admins will receive notifications!');
         if (kDebugMode) {
           debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
           debugPrint('   UpdatedBy: $updatedBy');
@@ -204,8 +211,10 @@ class NotificationService {
       );
 
       // Send notification to all admins (excluding the updater)
+      print('📤 Sending notifications to ${adminUsers.length} admins...');
       for (final admin in adminUsers) {
         try {
+          print('   📤 Sending to admin: ${admin.email} (${admin.uid})');
           await _sendNotificationToUser(
             userId: admin.uid,
             title: 'Enquiry Status Updated',
@@ -219,11 +228,14 @@ class NotificationService {
               'updatedBy': updatedBy,
             },
           );
+          print('   ✅ Sent to admin: ${admin.email}');
           Log.d(
             'NotificationService: notification sent to admin',
             data: {'adminId': admin.uid, 'adminEmail': admin.email},
           );
         } catch (e, st) {
+          print('   ❌ ERROR sending to admin ${admin.email}: $e');
+          print('   Stack: $st');
           Log.e(
             'NotificationService: error sending notification to admin',
             error: e,
@@ -232,6 +244,7 @@ class NotificationService {
           );
         }
       }
+      print('✅✅✅ Finished sending notifications ✅✅✅');
 
       // Also send notification to assigned user if they exist and are different from updater
       if (assignedTo != null && assignedTo != updatedBy) {
@@ -553,7 +566,9 @@ class NotificationService {
           debugPrint('   HasTokens: ${tokens.isNotEmpty}');
           debugPrint('   TokenCount: ${tokens.length}');
           if (tokens.isEmpty) {
-            debugPrint('   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!');
+            debugPrint(
+              '   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!',
+            );
           }
         }
 
