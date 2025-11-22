@@ -585,17 +585,23 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         );
 
                         // Send notification for status update (use labels for notifications)
-                        final notificationService = notification_service.NotificationService();
-                        await notificationService.notifyStatusUpdated(
-                          enquiryId: widget.enquiryId,
-                          customerName:
-                              enquiryData['customerName'] as String? ?? 'Unknown Customer',
-                          oldStatus: oldStatusLabel,
-                          newStatus: nextLabel,
-                          updatedBy:
-                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                          assignedTo: enquiryData['assignedTo'] as String?,
-                        );
+                        try {
+                          final notificationService = notification_service.NotificationService();
+                          await notificationService.notifyStatusUpdated(
+                            enquiryId: widget.enquiryId,
+                            customerName:
+                                enquiryData['customerName'] as String? ?? 'Unknown Customer',
+                            oldStatus: oldStatusLabel,
+                            newStatus: nextLabel,
+                            updatedBy:
+                                ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                            assignedTo: enquiryData['assignedTo'] as String?,
+                          );
+                        } catch (notificationError) {
+                          // Log notification error but don't fail the status update
+                          debugPrint('Error sending notifications: $notificationError');
+                          // Status update already succeeded, so we continue
+                        }
 
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

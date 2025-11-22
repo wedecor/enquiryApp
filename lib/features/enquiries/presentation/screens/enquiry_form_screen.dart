@@ -553,7 +553,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Send notifications
     final notificationService = NotificationService();
-    
+
     // If status changed, send specific status update notification to admins
     if (oldStatusValue != statusValue) {
       final lookup = await ref.read(dropdownLookupProvider.future);
@@ -567,7 +567,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         assignedTo: _selectedAssignedTo,
       );
     }
-    
+
     // Send generic notification for enquiry update
     await notificationService.notifyEnquiryUpdated(
       enquiryId: widget.enquiryId!,

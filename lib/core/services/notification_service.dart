@@ -246,14 +246,27 @@ class NotificationService {
 
       Log.i(
         'NotificationService: sent status change notifications',
-        data: {'adminCount': adminUsers.length, 'assignedTo': assignedTo},
+        data: {
+          'adminCount': adminUsers.length,
+          'assignedTo': assignedTo,
+          'enquiryId': enquiryId,
+          'updatedBy': updatedBy,
+        },
       );
     } catch (e, st) {
+      // Log error but don't fail the status update
       Log.e(
-        'NotificationService: error sending status change notifications',
+        'NotificationService: CRITICAL ERROR sending status change notifications',
         error: e,
         stackTrace: st,
+        data: {
+          'enquiryId': enquiryId,
+          'updatedBy': updatedBy,
+          'assignedTo': assignedTo,
+          'note': 'Status update succeeded but notifications failed',
+        },
       );
+      // Don't rethrow - allow status update to succeed even if notifications fail
     }
   }
 
