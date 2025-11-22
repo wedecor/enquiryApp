@@ -1,10 +1,10 @@
 {
   "version": "2.0.5",
-  "buildNumber": 33,
+  "buildNumber": 34,
   "releaseDate": "2025-01-17",
-  "releaseNotes": "🔍 Added comprehensive debug logging for notifications - visible in browser console\n📊 Enhanced notification debugging - shows admin user queries, token counts, and notification storage\n🐛 Improved notification troubleshooting - detailed logs help identify notification issues\n🔔 Fixed admin notifications - improved admin user query and comprehensive error handling",
+  "releaseNotes": "🔍 Added aggressive console logging for notifications - ALWAYS prints (even in release mode)\n📊 Enhanced notification debugging - shows admin user queries, token counts, and notification storage\n🐛 Improved notification troubleshooting - detailed logs help identify notification issues\n🔔 Fixed admin notifications - improved admin user query and comprehensive error handling\n✅ Fixed Firestore rules - added missing rule for users/{uid}/notifications collection",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "6e072b4a75365a5801635309ebdcf215407c7abe30e824d76a8289ecd02493e5",
+  "sha256": "efe9ab7a34a2333bf21be274bd6bbed12c241f38fb0dd2044d2b3f43c0f6f814",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
