@@ -7,6 +7,7 @@ import '../../../core/services/notification_service.dart' as notification_servic
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
 import '../filters/filters_state.dart';
+import 'pagination_state.dart';
 
 /// Provider for enquiry repository
 final enquiryRepositoryProvider = Provider<EnquiryRepository>((ref) {
@@ -29,6 +30,61 @@ class EnquiryRepository {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
+  }
+
+  /// Get paginated enquiries (cursor-based pagination)
+  ///
+  /// [isAdmin]: If true, returns all enquiries. If false, filters by assignedTo.
+  /// [assignedTo]: User ID to filter by (required if isAdmin is false).
+  /// [status]: Optional status filter.
+  /// [lastDocument]: Cursor for pagination (null for first page).
+  /// [pageSize]: Number of documents per page (default: 20).
+  Future<PaginationState> getPaginatedEnquiries({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+    QueryDocumentSnapshot<Map<String, dynamic>>? lastDocument,
+    int pageSize = 20,
+  }) async {
+    try {
+      Query<Map<String, dynamic>> query = FirebaseFirestore.instance
+          .collection('enquiries')
+          .orderBy('createdAt', descending: true);
+
+      // Apply filters
+      if (!isAdmin && assignedTo != null) {
+        query = query.where('assignedTo', isEqualTo: assignedTo);
+      }
+
+      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
+        query = query.where('statusValue', isEqualTo: status);
+      }
+
+      // Apply cursor for pagination
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      // Apply limit
+      query = query.limit(pageSize + 1); // Fetch one extra to check if more pages exist
+
+      final snapshot = await query.get();
+      final docs = snapshot.docs;
+
+      // Check if more pages exist
+      final hasMore = docs.length > pageSize;
+      final documents = hasMore ? docs.sublist(0, pageSize) : docs;
+      final newLastDocument = documents.isNotEmpty ? documents.last : null;
+
+      return PaginationState(
+        documents: documents,
+        lastDocument: newLastDocument,
+        hasMore: hasMore,
+        isLoading: false,
+      );
+    } catch (e) {
+      return PaginationState(error: e.toString(), isLoading: false);
+    }
   }
 
   /// Get filtered enquiries
@@ -76,10 +132,8 @@ class EnquiryRepository {
     }
 
     final oldEnquiryData = oldEnquiryDoc.data() as Map<String, dynamic>;
-    final oldStatusValue =
-        (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status'])
-            as String? ??
-        'new';
+    // Only use statusValue - standard field
+    final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
 
     // Only update if status actually changed
     if (oldStatusValue == nextStatus) {
@@ -95,20 +149,22 @@ class EnquiryRepository {
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
     await FirebaseFirestore.instance.collection('enquiries').doc(id).update({
-      'status': nextStatus,
-      'eventStatus': nextStatus,
-      'statusValue': nextStatus,
+      'statusValue': nextStatus, // Standardized field - only write to this
       'statusLabel': statusLabel,
       'statusUpdatedAt': FieldValue.serverTimestamp(),
       'statusUpdatedBy': userId,
       'updatedAt': FieldValue.serverTimestamp(),
+      // Remove old fields if they exist
+      'eventStatus': FieldValue.delete(),
+      'status': FieldValue.delete(),
+      'status_slug': FieldValue.delete(),
     });
 
     // Record audit trail for status change (store VALUES, not labels)
     final auditService = AuditService();
     await auditService.recordChange(
       enquiryId: id,
-      fieldChanged: 'eventStatus',
+      fieldChanged: 'statusValue', // Use standardized field name
       oldValue: oldStatusValue,
       newValue: nextStatus,
       userId: userId,

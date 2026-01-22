@@ -12,7 +12,7 @@ class UserModel with _$UserModel {
     required String email,
     String? phone,
     required String role, // 'admin' or 'staff'
-    @Default(true) bool active,
+    @Default(true) bool isActive,
     // fcmToken removed for security - now stored in private subcollection
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -32,7 +32,8 @@ class UserModel with _$UserModel {
     final email = data['email'] as String? ?? '';
     final phone = data['phone'] as String?;
     final role = data['role'] as String? ?? 'staff';
-    final active = data['active'] as bool? ?? true;
+    // Backward compatibility: read both 'active' and 'isActive', prefer 'isActive'
+    final isActive = data['isActive'] as bool? ?? data['active'] as bool? ?? true;
 
     // Handle timestamp fields safely
     DateTime createdAt;
@@ -66,7 +67,7 @@ class UserModel with _$UserModel {
       email: email,
       phone: phone,
       role: role,
-      active: active,
+      isActive: isActive,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -80,7 +81,7 @@ class UserModel with _$UserModel {
       email: email,
       phone: null,
       role: 'staff',
-      active: true,
+      isActive: true,
       // fcmToken removed for security
       createdAt: now,
       updatedAt: now,
@@ -96,7 +97,7 @@ extension UserModelX on UserModel {
       'email': email,
       'phone': phone,
       'role': role,
-      'active': active,
+      'isActive': isActive,
       // fcmToken removed for security - stored in private subcollection
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),

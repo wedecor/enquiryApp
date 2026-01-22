@@ -348,7 +348,7 @@ class SchemaVerificationService {
       'location',
       'eventDate',
       'eventType',
-      'eventStatus',
+      'statusValue', // Use statusValue instead of eventStatus
       'notes',
       'referenceImages',
       'createdBy',
@@ -376,8 +376,8 @@ class SchemaVerificationService {
     if (data.containsKey('eventType') && data['eventType'] is! String) {
       errors.add('eventType must be a string');
     }
-    if (data.containsKey('eventStatus') && data['eventStatus'] is! String) {
-      errors.add('eventStatus must be a string');
+    if (data.containsKey('statusValue') && data['statusValue'] is! String) {
+      errors.add('statusValue must be a string');
     }
     if (data.containsKey('notes') && data['notes'] is! String) {
       errors.add('notes must be a string');
@@ -413,10 +413,10 @@ class SchemaVerificationService {
         (data['eventType'] as String).isEmpty) {
       errors.add('eventType cannot be empty');
     }
-    if (data.containsKey('eventStatus') &&
-        data['eventStatus'] is String &&
-        (data['eventStatus'] as String).isEmpty) {
-      errors.add('eventStatus cannot be empty');
+    if (data.containsKey('statusValue') &&
+        data['statusValue'] is String &&
+        (data['statusValue'] as String).isEmpty) {
+      errors.add('statusValue cannot be empty');
     }
     if (data.containsKey('createdBy') &&
         data['createdBy'] is String &&

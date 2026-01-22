@@ -12,7 +12,7 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) => _$UserMod
   email: json['email'] as String,
   phone: json['phone'] as String?,
   role: json['role'] as String,
-  active: json['active'] as bool? ?? true,
+  isActive: json['isActive'] as bool? ?? true,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
@@ -23,7 +23,7 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) => <String
   'email': instance.email,
   'phone': instance.phone,
   'role': instance.role,
-  'active': instance.active,
+  'isActive': instance.isActive,
   'createdAt': instance.createdAt.toIso8601String(),
   'updatedAt': instance.updatedAt.toIso8601String(),
 };

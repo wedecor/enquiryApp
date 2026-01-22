@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Notifications</title>
+</head>
+<body>
+    <h1>Notification Debugging</h1>
+    <p>Open Chrome DevTools Console (F12) and run these commands:</p>
+    
+    <h2>1. Check if you have FCM token:</h2>
+    <pre>
+// In Chrome Console, run:
+firebase.messaging().getToken().then(token => {
+    console.log('FCM Token:', token);
+    if (!token) {
+        console.error('❌ NO FCM TOKEN - Request permission first!');
+    } else {
+        console.log('✅ FCM Token found:', token);
+    }
+});
+    </pre>
+    
+    <h2>2. Request notification permission:</h2>
+    <pre>
+// In Chrome Console, run:
+Notification.requestPermission().then(permission => {
+    console.log('Notification permission:', permission);
+    if (permission === 'granted') {
+        console.log('✅ Permission granted!');
+    } else {
+        console.error('❌ Permission denied:', permission);
+    }
+});
+    </pre>
+    
+    <h2>3. Check Firestore for your notifications:</h2>
+    <p>Go to Firebase Console → Firestore → users/{yourUserId}/notifications</p>
+    <p>You should see notification documents if they're being created.</p>
+    
+    <h2>4. Check Firestore for your FCM tokens:</h2>
+    <p>Go to Firebase Console → Firestore → users/{yourUserId}/private/notifications/tokens</p>
+    <p>You should see at least one token document.</p>
+</body>
+</html>
+

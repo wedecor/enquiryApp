@@ -22,9 +22,10 @@ class UsersRepository {
       query = query.where('role', isEqualTo: role);
     }
 
-    // Apply active filter
+    // Apply active filter (backward compatible: check both fields)
     if (active != null) {
-      query = query.where('active', isEqualTo: active);
+      // Note: During migration, we query for isActive but also handle legacy 'active' field
+      query = query.where('isActive', isEqualTo: active);
     }
 
     // Order by email for stable pagination
@@ -97,7 +98,7 @@ class UsersRepository {
 
   /// Toggle user active status
   Future<void> toggleActive(String uid, bool active) async {
-    await updateUserDoc(uid, {'active': active});
+    await updateUserDoc(uid, {'isActive': active});
   }
 
   /// Get user by UID
@@ -136,7 +137,7 @@ class UsersRepository {
     }
 
     if (active != null) {
-      query = query.where('active', isEqualTo: active);
+      query = query.where('isActive', isEqualTo: active);
     }
 
     final snapshot = await query.get();

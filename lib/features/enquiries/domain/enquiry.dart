@@ -64,10 +64,7 @@ class Enquiry with _$Enquiry {
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
       description: data['description'] as String?,
-      status:
-          (data['statusValue'] ?? data['eventStatus'] ?? data['status'] ?? data['status_slug'])
-              as String? ??
-          'new',
+      status: (data['statusValue'] as String?) ?? 'new', // Only use statusValue
       statusLabel: data['statusLabel'] as String?,
       paymentStatus: (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
       paymentStatusLabel: data['paymentStatusLabel'] as String?,

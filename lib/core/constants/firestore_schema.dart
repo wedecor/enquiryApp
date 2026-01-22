@@ -84,7 +84,8 @@ class EnquiryDocument {
   /// Event type
   final String eventType;
 
-  /// Event status - default: "Enquired"
+  /// Event status - default: "Enquired" (deprecated, use statusValue)
+  @Deprecated('Use statusValue instead')
   final String eventStatus;
 
   /// Detailed notes
@@ -123,7 +124,7 @@ class EnquiryDocument {
       'location': location,
       'eventDate': eventDate,
       'eventType': eventType,
-      'eventStatus': eventStatus,
+      'statusValue': eventStatus, // Map to statusValue
       'notes': notes,
       'referenceImages': referenceImages,
       'createdBy': createdBy,

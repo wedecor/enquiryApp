@@ -1,11 +1,11 @@
 {
-    "name": "we_decor_enquiries",
-    "short_name": "we_decor_enquiries",
+    "name": "We Decor Enquiries",
+    "short_name": "We Decor",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#2563EB",
     "theme_color": "#2563EB",
-    "description": "A new Flutter project.",
+    "description": "Event decoration enquiry management system",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

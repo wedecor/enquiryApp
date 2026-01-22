@@ -36,7 +36,9 @@ class PastEnquiryCleanupService {
   Future<int> markPastEnquiriesAsNotInterested({String? userId}) async {
     try {
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      // Use start of today for date comparison (so events on today are not marked until tomorrow)
+      // This ensures events on the 23rd are marked completed/not_interested on the 24th
+      final todayStart = DateTime(now.year, now.month, now.day);
 
       // Statuses that should be marked as "not_interested"
       final statusesToMarkNotInterested = ['new', 'in_talks', 'quote_sent'];
@@ -45,75 +47,87 @@ class PastEnquiryCleanupService {
 
       int updatedCount = 0;
 
+      // Query all enquiries once and process both status types
+      final allEnquiriesQuery = FirebaseFirestore.instance.collection('enquiries');
+      final allSnapshot = await allEnquiriesQuery.get();
+
       // Process enquiries to mark as "not_interested"
-      for (final status in statusesToMarkNotInterested) {
-        final query = FirebaseFirestore.instance
-            .collection('enquiries')
-            .where('statusValue', isEqualTo: status);
+      for (final doc in allSnapshot.docs) {
+        final data = doc.data();
 
-        final snapshot = await query.get();
+        // Only use statusValue - standard field
+        final statusValue = data['statusValue'] as String?;
+        final status = (statusValue ?? '').toLowerCase().trim();
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final eventDate = data['eventDate'];
+        // Skip if not in the list of statuses to mark as not_interested
+        if (!statusesToMarkNotInterested.contains(status)) {
+          continue;
+        }
 
-          if (eventDate == null) continue;
+        final eventDate = data['eventDate'];
+        if (eventDate == null) continue;
 
-          DateTime? eventDateTime;
-          if (eventDate is Timestamp) {
-            eventDateTime = eventDate.toDate();
-          } else if (eventDate is DateTime) {
-            eventDateTime = eventDate;
-          } else {
-            continue;
-          }
+        DateTime? eventDateTime;
+        if (eventDate is Timestamp) {
+          eventDateTime = eventDate.toDate();
+        } else if (eventDate is DateTime) {
+          eventDateTime = eventDate;
+        } else {
+          continue;
+        }
 
-          final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
+        // Normalize event date to start of day (ignore time)
+        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
 
-          if (eventDay.isBefore(today)) {
-            await _enquiryRepository.updateStatus(
-              id: doc.id,
-              nextStatus: 'not_interested',
-              userId: userId ?? 'system',
-            );
-            updatedCount++;
-          }
+        // Mark as not_interested if event date day has passed (event date < today)
+        // This ensures events on the 23rd are marked not_interested on the 24th
+        if (eventDay.isBefore(todayStart)) {
+          await _enquiryRepository.updateStatus(
+            id: doc.id,
+            nextStatus: 'not_interested',
+            userId: userId ?? 'system',
+          );
+          updatedCount++;
         }
       }
 
       // Process enquiries to mark as "completed"
-      for (final status in statusesToMarkCompleted) {
-        final query = FirebaseFirestore.instance
-            .collection('enquiries')
-            .where('statusValue', isEqualTo: status);
+      for (final doc in allSnapshot.docs) {
+        final data = doc.data();
 
-        final snapshot = await query.get();
+        // Only use statusValue - standard field
+        final statusValue = data['statusValue'] as String?;
+        final status = (statusValue ?? '').toLowerCase().trim();
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final eventDate = data['eventDate'];
+        // Skip if not confirmed status
+        if (!statusesToMarkCompleted.contains(status)) {
+          continue;
+        }
 
-          if (eventDate == null) continue;
+        final eventDate = data['eventDate'];
+        if (eventDate == null) continue;
 
-          DateTime? eventDateTime;
-          if (eventDate is Timestamp) {
-            eventDateTime = eventDate.toDate();
-          } else if (eventDate is DateTime) {
-            eventDateTime = eventDate;
-          } else {
-            continue;
-          }
+        DateTime? eventDateTime;
+        if (eventDate is Timestamp) {
+          eventDateTime = eventDate.toDate();
+        } else if (eventDate is DateTime) {
+          eventDateTime = eventDate;
+        } else {
+          continue;
+        }
 
-          final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
+        // Normalize event date to start of day (ignore time)
+        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
 
-          if (eventDay.isBefore(today)) {
-            await _enquiryRepository.updateStatus(
-              id: doc.id,
-              nextStatus: 'completed',
-              userId: userId ?? 'system',
-            );
-            updatedCount++;
-          }
+        // Mark as completed if event date day has passed (event date < today)
+        // This ensures events on the 23rd are marked completed on the 24th
+        if (eventDay.isBefore(todayStart)) {
+          await _enquiryRepository.updateStatus(
+            id: doc.id,
+            nextStatus: 'completed',
+            userId: userId ?? 'system',
+          );
+          updatedCount++;
         }
       }
 
@@ -176,38 +190,44 @@ class PastEnquiryCleanupService {
   Future<int> countPastEnquiriesToUpdate() async {
     try {
       final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+      // Use start of today for date comparison
+      final todayStart = DateTime(now.year, now.month, now.day);
 
       final statusesToCheck = ['new', 'in_talks', 'quote_sent', 'confirmed'];
       int count = 0;
 
-      for (final status in statusesToCheck) {
-        final query = FirebaseFirestore.instance
-            .collection('enquiries')
-            .where('statusValue', isEqualTo: status);
+      // Query all enquiries and filter client-side using statusValue only
+      final allSnapshot = await FirebaseFirestore.instance.collection('enquiries').get();
 
-        final snapshot = await query.get();
+      for (final doc in allSnapshot.docs) {
+        final data = doc.data();
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          final eventDate = data['eventDate'];
+        // Only use statusValue - standard field
+        final statusValue = data['statusValue'] as String?;
+        final status = (statusValue ?? '').toLowerCase().trim();
 
-          if (eventDate == null) continue;
+        // Skip if not in the list of statuses to check
+        if (!statusesToCheck.contains(status)) {
+          continue;
+        }
 
-          DateTime? eventDateTime;
-          if (eventDate is Timestamp) {
-            eventDateTime = eventDate.toDate();
-          } else if (eventDate is DateTime) {
-            eventDateTime = eventDate;
-          } else {
-            continue;
-          }
+        final eventDate = data['eventDate'];
+        if (eventDate == null) continue;
 
-          final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
+        DateTime? eventDateTime;
+        if (eventDate is Timestamp) {
+          eventDateTime = eventDate.toDate();
+        } else if (eventDate is DateTime) {
+          eventDateTime = eventDate;
+        } else {
+          continue;
+        }
 
-          if (eventDay.isBefore(today)) {
-            count++;
-          }
+        // Normalize event date to start of day (ignore time)
+        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
+
+        if (eventDay.isBefore(todayStart)) {
+          count++;
         }
       }
 

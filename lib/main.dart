@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_config.dart';
@@ -38,6 +40,31 @@ Future<void> _bootstrap() async {
   if (Firebase.apps.isEmpty) {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     Log.i('Firebase initialized');
+  }
+
+  // Configure Firestore offline persistence
+  // Web: Persistence is automatic via IndexedDB, cache size can be configured
+  // Mobile: Explicitly enable persistence with cache size limit
+  try {
+    final firestore = FirebaseFirestore.instance;
+    const cacheSizeBytes = 100 * 1024 * 1024; // 100MB cache limit
+
+    if (kIsWeb) {
+      // Web: Persistence is automatic, just set cache size for better offline support
+      firestore.settings = const Settings(cacheSizeBytes: cacheSizeBytes);
+      Log.i('Firestore web persistence configured (100MB cache)');
+    } else {
+      // Mobile: Enable persistence with 100MB cache limit
+      firestore.settings = const Settings(persistenceEnabled: true, cacheSizeBytes: cacheSizeBytes);
+      Log.i('Firestore mobile persistence enabled (100MB cache)');
+    }
+  } catch (e, st) {
+    // Persistence may fail if already initialized or on unsupported platforms
+    // Log but don't crash - app will work without offline persistence
+    Log.w('Firestore persistence configuration failed', data: {'error': e.toString()});
+    if (kDebugMode) {
+      Log.d('Firestore persistence error details', data: st.toString());
+    }
   }
 
   // Configure Crashlytics (gated by environment)
@@ -94,6 +121,36 @@ void main() {
   );
 }
 
+/// Custom scroll behavior that disables interactive scrollbars on web
+/// to prevent ScrollController conflicts with nested scrollable widgets
+class NoScrollbarScrollBehavior extends ScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.trackpad,
+  };
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+    // Disable scrollbars on web to prevent conflicts with nested scrollables
+    if (kIsWeb) {
+      return child;
+    }
+    return super.buildScrollbar(context, child, details);
+  }
+
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {
+    // Use glow effect instead of stretch on web
+    if (kIsWeb) {
+      return child;
+    }
+    return super.buildOverscrollIndicator(context, child, details);
+  }
+}
+
 /// Main application widget that handles authentication-based navigation.
 ///
 /// This widget is the root of the application's widget tree and manages
@@ -109,8 +166,19 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'We Decor Enquiries',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme.copyWith(
+        scrollbarTheme: ScrollbarThemeData(
+          // Disable interactive scrollbars on web to prevent conflicts
+          interactive: !kIsWeb,
+        ),
+      ),
+      darkTheme: AppTheme.darkTheme.copyWith(
+        scrollbarTheme: ScrollbarThemeData(
+          // Disable interactive scrollbars on web to prevent conflicts
+          interactive: !kIsWeb,
+        ),
+      ),
+      scrollBehavior: NoScrollbarScrollBehavior(),
       themeMode: themeMode,
       home: const AuthGate().withUpdateChecker(),
       debugShowCheckedModeBanner: false,

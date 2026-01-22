@@ -26,6 +26,7 @@ import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
+import 'calendar_view_screen.dart';
 import '../../../enquiries/presentation/widgets/status_inline_control.dart';
 import '../../../settings/presentation/settings_screen.dart';
 
@@ -395,15 +396,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final totalEnquiries = enquiries.length;
         final newEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'new';
+          return (data['statusValue'] as String?)?.toLowerCase() == 'new'; // Use statusValue only
         }).length;
         final inProgressEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'in_talks';
+          return (data['statusValue'] as String?)?.toLowerCase() ==
+              'in_talks'; // Use statusValue only
+        }).length;
+        final confirmedEnquiries = enquiries.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return (data['statusValue'] as String?)?.toLowerCase() ==
+              'confirmed'; // Use statusValue only
         }).length;
         final completedEnquiries = enquiries.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return (data['eventStatus'] as String?)?.toLowerCase() == 'completed';
+          return (data['statusValue'] as String?)?.toLowerCase() ==
+              'completed'; // Use statusValue only
         }).length;
 
         final cards = [
@@ -417,6 +425,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             icon: Icons.handshake_outlined,
             value: inProgressEnquiries.toString(),
             label: 'In talks',
+          ),
+          StatsCard(
+            icon: Icons.check_circle_outline,
+            value: confirmedEnquiries.toString(),
+            label: 'Confirmed',
           ),
           StatsCard(
             icon: Icons.verified_outlined,
@@ -437,7 +450,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         _runAutomaticCleanup();
       });
     }
-    
+
     return StreamBuilder<QuerySnapshot>(
       stream: _getEnquiriesStream(isAdmin, userId, status == 'All' ? null : status),
       builder: (context, snapshot) {
@@ -472,8 +485,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   status == 'All'
                       ? 'No enquiries found'
                       : status == 'reminders'
-                          ? 'No enquiries need reminders'
-                          : 'No $status enquiries',
+                      ? 'No enquiries need reminders'
+                      : 'No $status enquiries',
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -487,7 +500,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
 
         final now = DateTime.now();
-        
+
         // Apply filters based on tab type
         List<QueryDocumentSnapshot<Object?>> preFilteredEnquiries = rawEnquiries;
         if (status == 'reminders') {
@@ -501,7 +514,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               .where((doc) => _shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
               .toList(growable: false);
         }
-        
+
         // Sort based on tab type
         if (status == 'reminders') {
           // Reminders tab: sort by event date (latest event date first)
@@ -567,8 +580,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final notes =
                 (enquiryData['description'] as String?) ?? (enquiryData['notes'] as String?);
 
-            final statusValueRaw =
-                (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+            final statusValueRaw = enquiryData['statusValue'] as String?; // Only use statusValue
             final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
                 ? statusValueRaw!.trim()
                 : 'new';
@@ -655,7 +667,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onWhatsApp: whatsappContact == null
                   ? null
                   : (isReminderTab
-                      ? () => _handleReminderWhatsApp(
+                        ? () => _handleReminderWhatsApp(
                             whatsappContact,
                             customerName,
                             enquiryId,
@@ -663,7 +675,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             createdAt,
                             eventDate,
                           )
-                      : () => _handleWhatsApp(whatsappContact, customerName, enquiryId)),
+                        : () => _handleWhatsApp(whatsappContact, customerName, enquiryId)),
               onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
               onShare: () => _shareEnquiry(enquiryModel),
               onAddNote: () => _showNotesSheet(enquiryModel),
@@ -837,12 +849,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Future<void> _markAsNotInterested(String enquiryId, String userId) async {
     try {
       final repository = ref.read(enquiryRepositoryProvider);
-      
+
       // Show confirmation dialog
       final confirmed = await ConfirmationDialog.show(
         context: context,
         title: 'Mark as Not Interested',
-        message: 'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
+        message:
+            'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
         confirmText: 'Mark as Not Interested',
         cancelText: 'Cancel',
         isDestructive: false,
@@ -851,11 +864,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
       if (!confirmed || !mounted) return;
 
-      await repository.updateStatus(
-        id: enquiryId,
-        nextStatus: 'not_interested',
-        userId: userId,
-      );
+      await repository.updateStatus(id: enquiryId, nextStatus: 'not_interested', userId: userId);
 
       if (mounted) {
         _showSnack('Enquiry marked as Not Interested');
@@ -1000,25 +1009,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   /// Compare by created date (oldest first for In Talks tab)
-  int _compareByCreatedDate(
-    QueryDocumentSnapshot<Object?> a,
-    QueryDocumentSnapshot<Object?> b,
-  ) {
+  int _compareByCreatedDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
     final aData = a.data() as Map<String, dynamic>;
     final bData = b.data() as Map<String, dynamic>;
 
     final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
     final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    
+
     // Sort oldest first (ascending)
     return aCreated.compareTo(bCreated);
   }
 
   /// Compare by event date for Reminders tab (used in reverse order for latest first)
-  int _compareByEventDate(
-    QueryDocumentSnapshot<Object?> a,
-    QueryDocumentSnapshot<Object?> b,
-  ) {
+  int _compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
     final aData = a.data() as Map<String, dynamic>;
     final bData = b.data() as Map<String, dynamic>;
 
@@ -1141,11 +1144,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // For reminders tab, we filter by status 'in_talks' and then filter client-side
     // For other status tabs, filter by status
+    // Use statusValue as the standard field
     if (_searchQuery.isEmpty && status != null && status != 'All' && status != 'reminders') {
-      query = query.where('eventStatus', isEqualTo: status);
+      query = query.where('statusValue', isEqualTo: status);
     } else if (status == 'reminders') {
       // Filter for 'in_talks' status enquiries (client-side filtering will handle date criteria)
-      query = query.where('eventStatus', isEqualTo: 'in_talks');
+      query = query.where('statusValue', isEqualTo: 'in_talks');
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();
@@ -1153,8 +1157,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   /// Check if an enquiry should be shown in the reminders tab
   bool _shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
-    final statusValueRaw =
-        (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+    final statusValueRaw = enquiryData['statusValue'] as String?; // Only use statusValue
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
         ? statusValueRaw!.trim().toLowerCase()
         : 'new';
@@ -1196,8 +1199,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   bool _shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
     final eventDate = _parseDateTime(enquiryData['eventDate']);
 
-    // If no event date, show it
+    // If no event date, show it (but only if enquiry is recent - within last 30 days)
     if (eventDate == null) {
+      final createdAt = _parseDateTime(enquiryData['createdAt']);
+      if (createdAt != null) {
+        final daysSinceCreation = now.difference(createdAt).inDays;
+        // Only show enquiries without event dates if they were created recently
+        return daysSinceCreation <= 30;
+      }
       return true;
     }
 
@@ -1205,8 +1214,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final todayStart = DateTime(now.year, now.month, now.day);
     final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
 
-    // Exclude past events - if event date is before today, don't show in In Talks
-    return !eventDateStart.isBefore(todayStart);
+    // Exclude past events - only show if event date is today or in the future
+    // Compare dates explicitly: event date should be >= today
+    return eventDateStart.compareTo(todayStart) >= 0;
   }
 
   /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
@@ -1224,7 +1234,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     final day = date.day.toString().padLeft(2, '0');
     final month = months[date.month - 1];
@@ -1374,6 +1384,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       Navigator.of(
                         context,
                       ).push(MaterialPageRoute(builder: (context) => const EnquiriesListScreen()));
+                    },
+                  ),
+                  _buildDrawerTile(
+                    icon: Icons.calendar_today,
+                    label: 'Calendar View',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: (context) => const CalendarViewScreen()));
                     },
                   ),
                   _buildDrawerTile(

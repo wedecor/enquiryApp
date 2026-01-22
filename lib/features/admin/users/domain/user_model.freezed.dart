@@ -26,7 +26,7 @@ mixin _$UserModel {
   String get email => throw _privateConstructorUsedError;
   String? get phone => throw _privateConstructorUsedError;
   String get role => throw _privateConstructorUsedError; // 'admin' or 'staff'
-  bool get active =>
+  bool get isActive =>
       throw _privateConstructorUsedError; // fcmToken removed for security - now stored in private subcollection
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
@@ -47,7 +47,7 @@ abstract class $UserModelCopyWith<$Res> {
     String email,
     String? phone,
     String role,
-    bool active,
+    bool isActive,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -70,7 +70,7 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel> implements $UserMode
     Object? email = null,
     Object? phone = freezed,
     Object? role = null,
-    Object? active = null,
+    Object? isActive = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -96,9 +96,9 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel> implements $UserMode
                 ? _value.role
                 : role // ignore: cast_nullable_to_non_nullable
                       as String,
-            active: null == active
-                ? _value.active
-                : active // ignore: cast_nullable_to_non_nullable
+            isActive: null == isActive
+                ? _value.isActive
+                : isActive // ignore: cast_nullable_to_non_nullable
                       as bool,
             createdAt: null == createdAt
                 ? _value.createdAt
@@ -126,7 +126,7 @@ abstract class _$$UserModelImplCopyWith<$Res> implements $UserModelCopyWith<$Res
     String email,
     String? phone,
     String role,
-    bool active,
+    bool isActive,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -146,7 +146,7 @@ class __$$UserModelImplCopyWithImpl<$Res> extends _$UserModelCopyWithImpl<$Res, 
     Object? email = null,
     Object? phone = freezed,
     Object? role = null,
-    Object? active = null,
+    Object? isActive = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -172,9 +172,9 @@ class __$$UserModelImplCopyWithImpl<$Res> extends _$UserModelCopyWithImpl<$Res, 
             ? _value.role
             : role // ignore: cast_nullable_to_non_nullable
                   as String,
-        active: null == active
-            ? _value.active
-            : active // ignore: cast_nullable_to_non_nullable
+        isActive: null == isActive
+            ? _value.isActive
+            : isActive // ignore: cast_nullable_to_non_nullable
                   as bool,
         createdAt: null == createdAt
             ? _value.createdAt
@@ -198,7 +198,7 @@ class _$UserModelImpl implements _UserModel {
     required this.email,
     this.phone,
     required this.role,
-    this.active = true,
+    this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -218,7 +218,7 @@ class _$UserModelImpl implements _UserModel {
   // 'admin' or 'staff'
   @override
   @JsonKey()
-  final bool active;
+  final bool isActive;
   // fcmToken removed for security - now stored in private subcollection
   @override
   final DateTime createdAt;
@@ -227,7 +227,7 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, name: $name, email: $email, phone: $phone, role: $role, active: $active, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'UserModel(uid: $uid, name: $name, email: $email, phone: $phone, role: $role, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -240,7 +240,7 @@ class _$UserModelImpl implements _UserModel {
             (identical(other.email, email) || other.email == email) &&
             (identical(other.phone, phone) || other.phone == phone) &&
             (identical(other.role, role) || other.role == role) &&
-            (identical(other.active, active) || other.active == active) &&
+            (identical(other.isActive, isActive) || other.isActive == isActive) &&
             (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
   }
@@ -248,7 +248,7 @@ class _$UserModelImpl implements _UserModel {
   @JsonKey(ignore: true)
   @override
   int get hashCode =>
-      Object.hash(runtimeType, uid, name, email, phone, role, active, createdAt, updatedAt);
+      Object.hash(runtimeType, uid, name, email, phone, role, isActive, createdAt, updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -269,7 +269,7 @@ abstract class _UserModel implements UserModel {
     required final String email,
     final String? phone,
     required final String role,
-    final bool active,
+    final bool isActive,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$UserModelImpl;
@@ -287,7 +287,7 @@ abstract class _UserModel implements UserModel {
   @override
   String get role;
   @override // 'admin' or 'staff'
-  bool get active;
+  bool get isActive;
   @override // fcmToken removed for security - now stored in private subcollection
   DateTime get createdAt;
   @override

@@ -43,7 +43,7 @@ enum DropdownGroup {
   String get enquiryFieldName {
     switch (this) {
       case DropdownGroup.statuses:
-        return 'eventStatus';
+        return 'statusValue'; // Use statusValue instead of eventStatus
       case DropdownGroup.eventTypes:
         return 'eventType';
       case DropdownGroup.priorities:

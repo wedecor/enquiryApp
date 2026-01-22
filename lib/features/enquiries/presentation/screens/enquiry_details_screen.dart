@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import '../../../../core/services/notification_service.dart' as notification_ser
 import '../../../../services/dropdown_lookup.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../utils/logger.dart';
 import '../widgets/contact_buttons.dart';
@@ -130,8 +132,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         : DropdownLookup.titleCase(value);
                   }
 
-                  final statusValueRaw =
-                      (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+                  // Only use statusValue - standard field
+                  final statusValueRaw = enquiryData['statusValue'] as String?;
                   final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
                       ? statusValueRaw!.trim()
                       : 'new';
@@ -252,6 +254,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               customerPhone: enquiryData['customerPhone'] as String?,
                               customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
                               enquiryId: widget.enquiryId,
+                              eventType: eventTypeLabel,
+                              eventDate: (enquiryData['eventDate'] as Timestamp?)?.toDate(),
                             ),
                             // Review request button for completed enquiries
                             if (statusValue == 'completed')
@@ -528,14 +532,18 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
                   : (value) async {
-                      // Log immediately when status change is triggered
-                      print('🚀 STATUS CHANGE TRIGGERED');
-                      print('   New value: $value');
-                      print('   Current value: $currentStatusValue');
-                      print('   Is Admin: $isAdmin');
-                      
+                      if (kDebugMode) {
+                        debugPrint('🚀 STATUS CHANGE TRIGGERED');
+                        debugPrint('   New value: $value');
+                        debugPrint('   Current value: $currentStatusValue');
+                        debugPrint('   Is Admin: $isAdmin');
+                        debugPrint('   EnquiryId: ${widget.enquiryId}');
+                      }
+
                       if (value == null || value == currentStatusValue) {
-                        print('⚠️ STATUS CHANGE: No change needed, returning early');
+                        if (kDebugMode) {
+                          debugPrint('⚠️ STATUS CHANGE: No change needed, returning early');
+                        }
                         return;
                       }
 
@@ -555,6 +563,30 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         }
                       }
 
+                      // Show confirmation dialog before status change
+                      final lookup = await ref.read(dropdownLookupProvider.future);
+                      final nextLabel = lookup.labelForStatus(value);
+                      final oldStatusLabel = lookup.labelForStatus(currentStatusValue);
+
+                      final confirmed = await ConfirmationDialog.show(
+                        context: context,
+                        title: 'Change Status',
+                        message:
+                            'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
+                        confirmText: 'Change Status',
+                        cancelText: 'Cancel',
+                        isDestructive: false,
+                        icon: Icons.info_outline,
+                      );
+
+                      if (!confirmed || !mounted) {
+                        // Reset dropdown to previous value if cancelled
+                        setState(() {
+                          _selectedStatus = currentStatusValue;
+                        });
+                        return;
+                      }
+
                       setState(() {
                         _isUpdatingStatus = true;
                         _selectedStatus = value; // optimistic
@@ -562,7 +594,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
                       try {
                         final oldStatusValue = currentStatusValue;
-                        final lookup = await ref.read(dropdownLookupProvider.future);
+                        // Lookup already done above, reuse it
                         final nextLabel = lookup.labelForStatus(value);
                         final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
@@ -570,9 +602,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                             .collection('enquiries')
                             .doc(widget.enquiryId)
                             .update({
-                              'eventStatus': value,
-                              'status': value,
-                              'statusValue': value,
+                              'statusValue': value, // Standardized field - only write to this
                               'statusLabel': nextLabel,
                               'statusUpdatedAt': FieldValue.serverTimestamp(),
                               'statusUpdatedBy':
@@ -582,44 +612,66 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               'updatedBy':
                                   ref.read(currentUserWithFirestoreProvider).value?.uid ??
                                   'unknown',
+                              // Remove old fields if they exist
+                              'eventStatus': FieldValue.delete(),
+                              'status': FieldValue.delete(),
+                              'status_slug': FieldValue.delete(),
                             });
 
                         // Record audit trail for status change (store VALUES, not labels)
                         final auditService = AuditService();
                         await auditService.recordChange(
                           enquiryId: widget.enquiryId,
-                          fieldChanged: 'eventStatus',
+                          fieldChanged: 'statusValue',
                           oldValue: oldStatusValue,
                           newValue: value,
                         );
 
                         // Send notification for status update (use labels for notifications)
                         try {
-                          print('📢 STATUS UPDATE: About to call notifyStatusUpdated');
-                          print('   EnquiryId: ${widget.enquiryId}');
-                          print('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
-                          print(
-                            '   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}',
-                          );
+                          if (kDebugMode) {
+                            debugPrint('📢 STATUS UPDATE: About to call notifyStatusUpdated');
+                            debugPrint('   EnquiryId: ${widget.enquiryId}');
+                            debugPrint('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
+                            debugPrint(
+                              '   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}',
+                            );
+                          }
+
+                          // Fetch current enquiry data for notification
+                          final enquiryDoc = await FirebaseFirestore.instance
+                              .collection('enquiries')
+                              .doc(widget.enquiryId)
+                              .get();
+                          final currentEnquiryData =
+                              enquiryDoc.data() as Map<String, dynamic>? ?? {};
 
                           final notificationService = notification_service.NotificationService();
                           await notificationService.notifyStatusUpdated(
                             enquiryId: widget.enquiryId,
                             customerName:
-                                enquiryData['customerName'] as String? ?? 'Unknown Customer',
+                                currentEnquiryData['customerName'] as String? ?? 'Unknown Customer',
                             oldStatus: oldStatusLabel,
                             newStatus: nextLabel,
                             updatedBy:
                                 ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                            assignedTo: enquiryData['assignedTo'] as String?,
+                            assignedTo: currentEnquiryData['assignedTo'] as String?,
                           );
 
-                          print('✅ STATUS UPDATE: notifyStatusUpdated completed');
+                          if (kDebugMode) {
+                            debugPrint('✅ STATUS UPDATE: notifyStatusUpdated completed');
+                          }
                         } catch (notificationError, stackTrace) {
                           // Log notification error but don't fail the status update
-                          print('❌ ERROR sending notifications: $notificationError');
-                          print('Stack trace: $stackTrace');
-                          debugPrint('Error sending notifications: $notificationError');
+                          if (kDebugMode) {
+                            debugPrint('❌ ERROR sending notifications: $notificationError');
+                            debugPrint('Stack trace: $stackTrace');
+                          }
+                          Log.e(
+                            'EnquiryDetailsScreen: error sending notifications',
+                            error: notificationError,
+                            stackTrace: stackTrace,
+                          );
                           // Status update already succeeded, so we continue
                         }
 
@@ -727,6 +779,17 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
   // Note: edit-mode helpers removed as part of revert
 
+  DateTime? _parseDateTime(dynamic date) {
+    if (date == null) return null;
+    if (date is Timestamp) {
+      return date.toDate();
+    }
+    if (date is DateTime) {
+      return date;
+    }
+    return null;
+  }
+
   String _formatDate(dynamic date) {
     if (date == null) return 'N/A';
     if (date is Timestamp) {
@@ -811,28 +874,18 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   }
 
   Future<void> _confirmAndDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await ConfirmationDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Enquiry'),
-        content: const Text(
-          'Are you sure you want to delete this enquiry? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete Enquiry',
+      message:
+          'Are you sure you want to delete this enquiry?\n\nThis action cannot be undone and all enquiry data will be permanently removed.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDestructive: true,
+      icon: Icons.warning_amber_rounded,
     );
 
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       setState(() {

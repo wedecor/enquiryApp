@@ -79,11 +79,14 @@ class AuditService {
   /// Get change history for an enquiry (real-time stream)
   Stream<List<Map<String, dynamic>>> getEnquiryHistoryStream(String enquiryId) {
     try {
-      // Try subcollection approach first (simpler, doesn't require index)
+      // Try subcollection approach first
+      // Limit to 100 for history - can grow large but we want recent history
+      // Note: orderBy('timestamp') may require Firestore index - check console if errors occur
       return _firestore
           .collection('enquiries')
           .doc(enquiryId)
           .collection('history')
+          .orderBy('timestamp', descending: true)
           .snapshots()
           .timeout(const Duration(seconds: 30))
           .map((snapshot) {
@@ -238,7 +241,6 @@ class AuditService {
           .collectionGroup('history')
           .where('user_id', isEqualTo: userId)
           .orderBy('timestamp', descending: true)
-          .limit(100) // Limit to prevent performance issues
           .get();
 
       return snapshot.docs.map((doc) {

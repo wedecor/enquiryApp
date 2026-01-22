@@ -87,7 +87,10 @@ async function isAdmin(uid: string): Promise<boolean> {
     }
     
     const userData = userDoc.data();
-    return userData?.role === 'admin' && userData?.active === true;
+    // Backward compatible: check both 'isActive' and 'active' fields
+    // Default to true (active) if field is not set
+    const isActive = userData?.isActive ?? userData?.active ?? true;
+    return userData?.role === 'admin' && isActive !== false;
   } catch (error) {
     logger.error('Error checking admin status', { uid, error });
     return false;
@@ -163,7 +166,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         email,
         phone: '', // UserModel expects string, not null
         role,
-        // Remove 'active' field as UserModel doesn't have it
+        isActive: true, // Standardized field name
         createdAt: isExistingUser ? undefined : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -540,4 +543,5 @@ export const sendNotificationToTopic = onDocumentWritten(
 );
 
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
-export { notifyOverdueInTalks } from "./notifyOverdueInTalks";
+// Removed: migrateStatusFields - Migration complete, no longer needed
+// Removed: notifyOverdueInTalks - 4-hour scheduled reminders disabled

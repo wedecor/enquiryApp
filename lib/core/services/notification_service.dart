@@ -147,16 +147,7 @@ class NotificationService {
     required String updatedBy,
     String? assignedTo,
   }) async {
-    // ALWAYS log - even in release mode for debugging
-    print('🔔🔔🔔 NOTIFY STATUS UPDATED CALLED 🔔🔔🔔');
-    print('   EnquiryId: $enquiryId');
-    print('   Customer: $customerName');
-    print('   Status: $oldStatus → $newStatus');
-    print('   UpdatedBy: $updatedBy');
-    print('   AssignedTo: $assignedTo');
-    
     try {
-      // Always log to console for debugging (especially on web)
       if (kDebugMode) {
         debugPrint('🔔 NOTIFICATION DEBUG: notifyStatusUpdated called');
         debugPrint('   EnquiryId: $enquiryId');
@@ -178,14 +169,9 @@ class NotificationService {
       );
 
       // Get all admin users EXCEPT the updater
-      print('🔍 Getting admin users (excluding: $updatedBy)...');
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
-      print('🔍 Found ${adminUsers.length} admin users');
 
       if (adminUsers.isEmpty) {
-        print('⚠️⚠️⚠️ NO ADMIN USERS FOUND! ⚠️⚠️⚠️');
-        print('   UpdatedBy: $updatedBy');
-        print('   This means no admins will receive notifications!');
         if (kDebugMode) {
           debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
           debugPrint('   UpdatedBy: $updatedBy');
@@ -211,10 +197,8 @@ class NotificationService {
       );
 
       // Send notification to all admins (excluding the updater)
-      print('📤 Sending notifications to ${adminUsers.length} admins...');
       for (final admin in adminUsers) {
         try {
-          print('   📤 Sending to admin: ${admin.email} (${admin.uid})');
           await _sendNotificationToUser(
             userId: admin.uid,
             title: 'Enquiry Status Updated',
@@ -228,14 +212,11 @@ class NotificationService {
               'updatedBy': updatedBy,
             },
           );
-          print('   ✅ Sent to admin: ${admin.email}');
           Log.d(
             'NotificationService: notification sent to admin',
             data: {'adminId': admin.uid, 'adminEmail': admin.email},
           );
         } catch (e, st) {
-          print('   ❌ ERROR sending to admin ${admin.email}: $e');
-          print('   Stack: $st');
           Log.e(
             'NotificationService: error sending notification to admin',
             error: e,
@@ -244,7 +225,6 @@ class NotificationService {
           );
         }
       }
-      print('✅✅✅ Finished sending notifications ✅✅✅');
 
       // Also send notification to assigned user if they exist and are different from updater
       if (assignedTo != null && assignedTo != updatedBy) {
@@ -319,24 +299,82 @@ class NotificationService {
     required String updatedBy,
     String? assignedTo,
   }) async {
+    // ALWAYS log - even in release mode for debugging
     try {
+      if (kDebugMode) {
+        debugPrint('🔔 NOTIFICATION DEBUG: notifyEnquiryUpdated called');
+        debugPrint('   EnquiryId: $enquiryId');
+        debugPrint('   Customer: $customerName');
+        debugPrint('   EventType: $eventType');
+        debugPrint('   UpdatedBy: $updatedBy');
+      }
+
+      Log.i(
+        'NotificationService: notifyEnquiryUpdated called',
+        data: {
+          'enquiryId': enquiryId,
+          'customerName': customerName,
+          'eventType': eventType,
+          'updatedBy': updatedBy,
+          'assignedTo': assignedTo,
+        },
+      );
+
       // Get all admin users EXCEPT the updater
       final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
 
+      if (adminUsers.isEmpty) {
+        if (kDebugMode) {
+          debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
+          debugPrint('   UpdatedBy: $updatedBy');
+          debugPrint('   This means no admins will receive notifications!');
+        }
+        Log.w(
+          'NotificationService: no admin users found to notify for enquiry update',
+          data: {'updatedBy': updatedBy},
+        );
+        return;
+      }
+
+      if (kDebugMode) {
+        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
+        for (var admin in adminUsers) {
+          debugPrint('   - Admin: ${admin.email} (${admin.uid})');
+        }
+      }
+
+      Log.i(
+        'NotificationService: sending enquiry update notifications to admins',
+        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
+      );
+
       // Send notification to all admins (excluding the updater)
       for (final admin in adminUsers) {
-        await _sendNotificationToUser(
-          userId: admin.uid,
-          title: 'Enquiry Updated',
-          body: 'Enquiry from $customerName for $eventType has been updated',
-          data: {
-            'type': 'enquiry_updated',
-            'enquiryId': enquiryId,
-            'customerName': customerName,
-            'eventType': eventType,
-            'updatedBy': updatedBy,
-          },
-        );
+        try {
+          await _sendNotificationToUser(
+            userId: admin.uid,
+            title: 'Enquiry Updated',
+            body: 'Enquiry from $customerName for $eventType has been updated',
+            data: {
+              'type': 'enquiry_updated',
+              'enquiryId': enquiryId,
+              'customerName': customerName,
+              'eventType': eventType,
+              'updatedBy': updatedBy,
+            },
+          );
+          Log.d(
+            'NotificationService: notification sent to admin',
+            data: {'adminId': admin.uid, 'adminEmail': admin.email},
+          );
+        } catch (e, st) {
+          Log.e(
+            'NotificationService: error sending notification to admin',
+            error: e,
+            stackTrace: st,
+            data: {'adminId': admin.uid},
+          );
+        }
       }
 
       // Also send notification to assigned user if they exist and are different from updater
@@ -397,13 +435,33 @@ class NotificationService {
         debugPrint('   Excluding userId: $excludeUserId');
       }
 
-      // Query for admin users - don't filter by isActive as it might not exist on all users
+      // Query for admin users - filter by isActive (backward compatible during migration)
       final query = _firestore.collection('users').where('role', isEqualTo: 'admin');
 
       final snapshot = await query.get();
 
       if (kDebugMode) {
         debugPrint('   Found ${snapshot.docs.length} total admin documents in Firestore');
+        for (var doc in snapshot.docs) {
+          final data = doc.data();
+          final isActive = data['isActive'] ?? data['active'] ?? true;
+          final willInclude =
+              !(excludeUserId != null && doc.id == excludeUserId) && isActive != false;
+          debugPrint('   - Admin doc: ${doc.id}');
+          debugPrint('     Email: ${data['email']}');
+          debugPrint('     Role: ${data['role']}');
+          debugPrint(
+            '     isActive: ${data['isActive'] ?? data['active'] ?? 'not set (defaulting to true)'}',
+          );
+          debugPrint('     Will include: $willInclude');
+          if (!willInclude) {
+            if (excludeUserId != null && doc.id == excludeUserId) {
+              debugPrint('       Reason: Matches excluded userId');
+            } else if (isActive == false) {
+              debugPrint('       Reason: isActive = false');
+            }
+          }
+        }
       }
 
       final adminUsers = snapshot.docs
@@ -415,10 +473,11 @@ class NotificationService {
               }
               return false;
             }
-            // Filter out inactive users if isActive field exists and is false
+            // Filter out inactive users - backward compatible: check both fields
+            // Default to true (active) if field is not set
             final data = doc.data();
-            final isActive = data['isActive'];
-            if (isActive != null && isActive == false) {
+            final isActive = data['isActive'] ?? data['active'] ?? true;
+            if (isActive == false) {
               if (kDebugMode) {
                 debugPrint('   ⏭️ Excluding admin: ${doc.id} (isActive = false)');
               }
@@ -540,13 +599,12 @@ class NotificationService {
             });
 
         if (kDebugMode) {
-          print('✅ NOTIFICATION STORED: ${notificationRef.id}');
           debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
         }
       } catch (firestoreError, stackTrace) {
-        // Log Firestore error explicitly
-        print('❌ ERROR storing notification in Firestore: $firestoreError');
-        debugPrint('❌ ERROR storing notification: $firestoreError');
+        if (kDebugMode) {
+          debugPrint('❌ ERROR storing notification: $firestoreError');
+        }
         Log.e(
           'NotificationService: CRITICAL ERROR storing notification in Firestore',
           error: firestoreError,

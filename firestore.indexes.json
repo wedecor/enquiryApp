@@ -12,7 +12,7 @@
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
@@ -20,7 +20,7 @@
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
@@ -45,7 +45,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "assignedTo", "order": "ASCENDING" },
-        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     },
@@ -54,7 +54,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "assignedTo", "order": "ASCENDING" },
-        { "fieldPath": "eventStatus", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
