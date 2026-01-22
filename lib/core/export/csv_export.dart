@@ -94,7 +94,7 @@ class CsvExport {
           enquiry['guestCount']?.toString() ?? '',
           enquiry['budgetRange']?.toString() ?? '',
           enquiry['description']?.toString() ?? '',
-          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['statusValue']?.toString() ?? '', // Use statusValue only
           enquiry['paymentStatus']?.toString() ?? '',
           enquiry['totalCost']?.toString() ?? '',
           enquiry['advancePaid']?.toString() ?? '',
@@ -117,7 +117,7 @@ class CsvExport {
           enquiry['eventLocation']?.toString() ?? '',
           enquiry['guestCount']?.toString() ?? '',
           enquiry['description']?.toString() ?? '',
-          enquiry['eventStatus']?.toString() ?? '',
+          enquiry['statusValue']?.toString() ?? '', // Use statusValue only
           enquiry['priority']?.toString() ?? '',
           enquiry['source']?.toString() ?? '',
           enquiry['staffNotes']?.toString() ?? '',

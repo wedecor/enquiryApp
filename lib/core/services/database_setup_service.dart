@@ -238,7 +238,7 @@ class DatabaseSetupService {
           .collection('history')
           .add(
             HistoryDocument(
-              fieldChanged: 'eventStatus',
+              fieldChanged: 'statusValue', // Use standardized field name
               oldValue: '',
               newValue: 'Enquired',
               changedBy: currentUser.uid,

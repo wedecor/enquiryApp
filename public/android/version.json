@@ -1,13 +1,14 @@
 {
-  "version": "2.0.9",
-  "buildNumber": 40,
+  "version": "2.0.10",
+  "buildNumber": 41,
   "releaseDate": "2025-01-14",
-  "releaseNotes": "🔔 Fixed Notification System - All admin users now receive notifications\n📅 Fixed In Talks Tab - Past events filtered out automatically, sorted by newest first\n📅 Fixed Reminders Tab - Now sorted by event date (latest first) for better visibility\n🔄 Auto Status Updates - Past events auto-marked as 'not_interested' or 'completed'\n🐛 Fixed Admin User Query - Defaults isActive to true for missing fields\n✨ Improved: Reminders tab now shows latest events first for better prioritization",
+  "releaseNotes": "📊 NEW: Confirmed Orders Count - Dashboard now shows confirmed orders statistics\n🧹 Code Cleanup - Removed obsolete migration functionality and cleaned up codebase\n📅 Calendar View - Fixed past events filtering, past 'In Talks' events automatically marked as 'not_interested'\n⏰ Auto Status Updates - Past events marked correctly (events on date X marked completed on date X+1)\n🔄 Status Field Standardization - All status fields now use 'statusValue' only (migration complete)",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "a6e867b44b0c16ef8a551221b8560994679a939a6a95714d6453262e384f8277",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
+    "NEW: Confirmed Orders Count - Dashboard statistics now show confirmed orders",
     "NEW: Reminders Tab - Smart follow-up system for enquiries in 'In Talks' status",
     "NEW: WhatsApp Reminders - Send emotional reminder messages with event countdown",
     "NEW: Reminder Tracking - Track reminder count displayed as chip",

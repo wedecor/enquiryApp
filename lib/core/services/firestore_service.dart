@@ -94,7 +94,7 @@ class FirestoreService {
       'role': role,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-      'isActive': true,
+      'isActive': true, // Standardized field name
     };
 
     await _usersCollection.doc(uid).set(userData);
@@ -231,9 +231,7 @@ class FirestoreService {
       'guestCount': guestCount,
       'budgetRange': budgetRange,
       'description': description,
-      // Defaults follow dropdown values (snake_case)
-      'eventStatus': statusValue,
-      'status': statusValue,
+      // Only use statusValue - standard field
       'statusValue': statusValue,
       if (statusLabel != null) 'statusLabel': statusLabel,
       'eventType': eventType,
@@ -304,7 +302,7 @@ class FirestoreService {
   /// ```
   Stream<QuerySnapshot> getEnquiriesByStatus(String status) {
     return _enquiriesCollection
-        .where('eventStatus', isEqualTo: status)
+        .where('statusValue', isEqualTo: status)
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
@@ -555,7 +553,7 @@ class FirestoreService {
     final stats = <String, int>{};
     for (final doc in enquiries) {
       final data = doc.data() as Map<String, dynamic>;
-      final status = data['eventStatus'] as String? ?? 'Unknown';
+      final status = data['statusValue'] as String? ?? 'Unknown'; // Use statusValue only
       stats[status] = (stats[status] ?? 0) + 1;
     }
 

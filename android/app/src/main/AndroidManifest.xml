@@ -17,7 +17,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
-        android:label="we_decor_enquiries"
+        android:label="We Decor Enquiries"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

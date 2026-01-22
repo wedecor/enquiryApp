@@ -177,7 +177,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     // Status filter
                     Expanded(
                       child: DropdownButtonFormField<bool?>(
-                        initialValue: filter['active'] as bool?,
+                        initialValue: filter['isActive'] as bool?,
                         decoration: const InputDecoration(
                           labelText: 'Status',
                           border: OutlineInputBorder(),
@@ -348,7 +348,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         DataCell(Text(user.email, style: const TextStyle(fontFamily: 'monospace'))),
                         DataCell(Text(user.phone ?? '')),
                         DataCell(_buildRoleChip(user.role)),
-                        DataCell(_buildStatusChip(user.active)),
+                        DataCell(_buildStatusChip(user.isActive)),
                         DataCell(Text(_formatDate(user.createdAt))),
                         DataCell(Text(_formatDate(user.updatedAt))),
                         DataCell(_buildActionButtons(user, isAdmin)),
@@ -404,7 +404,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         children: [
                           _buildRoleChip(user.role),
                           const SizedBox(width: 8),
-                          _buildStatusChip(user.active),
+                          _buildStatusChip(user.isActive),
                         ],
                       ),
                     ],
@@ -424,14 +424,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         ),
                       ),
                       PopupMenuItem(
-                        value: user.active ? 'deactivate' : 'activate',
+                        value: user.isActive ? 'deactivate' : 'activate',
                         enabled: isAdmin,
                         child: Row(
                           children: [
-                            Icon(user.active ? Icons.block : Icons.check_circle),
+                            Icon(user.isActive ? Icons.block : Icons.check_circle),
                             const SizedBox(width: 8),
                             Text(
-                              isAdmin ? (user.active ? 'Deactivate' : 'Activate') : 'Admin only',
+                              isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
                             ),
                           ],
                         ),
@@ -494,9 +494,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           tooltip: isAdmin ? 'Edit' : 'Edit (admin only)',
         ),
         IconButton(
-          icon: Icon(user.active ? Icons.block : Icons.check_circle),
+          icon: Icon(user.isActive ? Icons.block : Icons.check_circle),
           onPressed: isAdmin ? () => _toggleUserStatus(user) : null,
-          tooltip: isAdmin ? (user.active ? 'Deactivate' : 'Activate') : 'Admin only',
+          tooltip: isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
         ),
       ],
     );
@@ -598,13 +598,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   void _toggleUserStatus(domain.UserModel user) {
     try {
       requireAdmin(ref);
-      final action = user.active ? 'deactivate' : 'activate';
+      final action = user.isActive ? 'deactivate' : 'activate';
 
       logAdminAction(ref, 'user_status_toggle_initiated', {
         'targetUserId': user.uid,
         'targetUserEmail': user.email,
         'action': action,
-        'currentActive': user.active,
+        'currentActive': user.isActive,
       });
 
       showDialog<void>(
@@ -620,7 +620,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             });
             ref
                 .read(userFormControllerProvider.notifier)
-                .toggleActive(user.uid, !user.active)
+                .toggleActive(user.uid, !user.isActive)
                 .then((_) {
                   _showSnackBar('User ${action}d successfully', isError: false);
                 })

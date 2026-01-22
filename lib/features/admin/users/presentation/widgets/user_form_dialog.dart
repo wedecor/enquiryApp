@@ -31,7 +31,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       _emailController.text = widget.user!.email;
       _phoneController.text = widget.user!.phone ?? '';
       _selectedRole = widget.user!.role;
-      _isActive = widget.user!.active;
+      _isActive = widget.user!.isActive;
     }
   }
 
@@ -147,7 +147,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       role: _selectedRole,
-      active: _isActive,
+      isActive: _isActive,
       // fcmToken removed for security - stored in private subcollection
       createdAt: widget.user?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),

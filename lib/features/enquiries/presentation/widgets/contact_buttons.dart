@@ -17,12 +17,16 @@ class ContactButtons extends ConsumerWidget {
     required this.customerName,
     this.enquiryId,
     this.enabled = true,
+    this.eventType,
+    this.eventDate,
   });
 
   final String? customerPhone;
   final String customerName;
   final String? enquiryId;
   final bool enabled;
+  final String? eventType;
+  final DateTime? eventDate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -222,6 +226,29 @@ class ContactButtons extends ConsumerWidget {
     }
   }
 
+  /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final day = date.day.toString().padLeft(2, '0');
+    final month = months[date.month - 1];
+    final year = date.year.toString();
+    return '$day $month $year';
+  }
+
   /// Handle WhatsApp button tap
   Future<void> _handleWhatsApp(
     BuildContext context,
@@ -229,8 +256,19 @@ class ContactButtons extends ConsumerWidget {
     ContactLauncher contactLauncher,
   ) async {
     try {
-      final prefillText =
-          'Hi $customerName, I\'m following up on your enquiry with We Decor. How can I help you today?';
+      // Build message with event type and date if available
+      String prefillText;
+      if (eventType != null && eventDate != null) {
+        final formattedDate = _formatDate(eventDate);
+        prefillText =
+            'Hi $customerName, I\'m following up on your $eventType enquiry for $formattedDate with We Decor. We\'re excited to help make your special day memorable! How can I help you today?';
+      } else if (eventType != null) {
+        prefillText =
+            'Hi $customerName, I\'m following up on your $eventType enquiry with We Decor. We\'re excited to help make your special day memorable! How can I help you today?';
+      } else {
+        prefillText =
+            'Hi $customerName, I\'m following up on your enquiry with We Decor. How can I help you today?';
+      }
 
       final status = await contactLauncher.openWhatsAppWithAudit(
         customerPhone!,

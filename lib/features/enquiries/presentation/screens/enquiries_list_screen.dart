@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,11 +10,16 @@ import '../../../../shared/models/user_model.dart';
 import 'enquiry_details_screen.dart';
 import 'enquiry_form_screen.dart';
 
-class EnquiriesListScreen extends ConsumerWidget {
+class EnquiriesListScreen extends ConsumerStatefulWidget {
   const EnquiriesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EnquiriesListScreen> createState() => _EnquiriesListScreenState();
+}
+
+class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
+  @override
+  Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final userRole = currentUser.value?.role;
 
@@ -91,6 +97,11 @@ class EnquiriesListScreen extends ConsumerWidget {
 
               final enquiries = snapshot.data!.docs;
 
+              // Debug: Log the count
+              if (kDebugMode) {
+                print('Enquiries count: ${enquiries.length}');
+              }
+
               return ListView.builder(
                 padding: const EdgeInsets.all(8),
                 itemCount: enquiries.length,
@@ -100,7 +111,7 @@ class EnquiriesListScreen extends ConsumerWidget {
                   final enquiryId = enquiry.id;
 
                   final statusValueRaw =
-                      (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+                      enquiryData['statusValue'] as String?; // Only use statusValue
                   final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
                       ? statusValueRaw!.trim()
                       : 'new';

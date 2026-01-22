@@ -14,6 +14,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
 import '../../../../utils/logger.dart';
 
@@ -106,8 +107,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           Log.d('EnquiryFormScreen loaded event type', data: {'eventType': _selectedEventType});
 
           // Safely set dropdown values - ensure they exist in valid options
-          final eventStatus = (data['statusValue'] ?? data['eventStatus']) as String?;
-          _selectedStatus = eventStatus;
+          // Only use statusValue - standard field
+          final statusValue = data['statusValue'] as String?;
+          _selectedStatus = statusValue;
 
           final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
@@ -386,6 +388,57 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final newTotalCost = _parseDouble(_totalCostController.text);
     final newAdvancePaid = _parseDouble(_advancePaidController.text);
 
+    // Check if financial fields are being changed (admin only)
+    final oldTotalCost = oldEnquiryData['totalCost'] as num?;
+    final oldAdvancePaid = oldEnquiryData['advancePaid'] as num?;
+    final isFinancialChange = (oldTotalCost != newTotalCost) || (oldAdvancePaid != newAdvancePaid);
+
+    // Show confirmation for financial changes (admin only)
+    if (isFinancialChange) {
+      final roleAsync = ref.read(roleProvider);
+      final isAdmin = roleAsync.valueOrNull == UserRole.admin;
+
+      if (isAdmin) {
+        final costChanged = oldTotalCost != newTotalCost;
+        final advanceChanged = oldAdvancePaid != newAdvancePaid;
+
+        String message = 'You are about to update financial information:\n\n';
+        if (costChanged) {
+          final oldCostStr = oldTotalCost != null
+              ? '₹${oldTotalCost.toStringAsFixed(0)}'
+              : 'Not set';
+          final newCostStr = newTotalCost != null
+              ? '₹${newTotalCost.toStringAsFixed(0)}'
+              : 'Not set';
+          message += '• Total Cost: $oldCostStr → $newCostStr\n';
+        }
+        if (advanceChanged) {
+          final oldAdvanceStr = oldAdvancePaid != null
+              ? '₹${oldAdvancePaid.toStringAsFixed(0)}'
+              : 'Not set';
+          final newAdvanceStr = newAdvancePaid != null
+              ? '₹${newAdvancePaid.toStringAsFixed(0)}'
+              : 'Not set';
+          message += '• Advance Paid: $oldAdvanceStr → $newAdvanceStr\n';
+        }
+        message += '\nContinue with this change?';
+
+        final confirmed = await ConfirmationDialog.show(
+          context: context,
+          title: 'Update Financial Information',
+          message: message,
+          confirmText: 'Update',
+          cancelText: 'Cancel',
+          isDestructive: false,
+          icon: Icons.attach_money,
+        );
+
+        if (!confirmed || !mounted) {
+          return; // User cancelled, don't save
+        }
+      }
+    }
+
     // Upload reference images if any and get URLs
     List<String> newImageUrls = [];
     if (_selectedImages.isNotEmpty) {
@@ -448,9 +501,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'priority': priorityValue,
       'priorityValue': priorityValue,
       'priorityLabel': priorityLabel,
-      'eventStatus': statusValue,
-      'status': statusValue,
-      'statusValue': statusValue,
+      'statusValue': statusValue, // Standardized field - only write to this
       'statusLabel': statusLabel,
       'paymentStatus': paymentStatusValue,
       'paymentStatusValue': paymentStatusValue,
@@ -471,12 +522,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final changes = <String, Map<String, dynamic>>{};
 
     // Track status change (store VALUES, not labels)
-    final oldStatusValue =
-        (oldEnquiryData['statusValue'] ?? oldEnquiryData['eventStatus'] ?? oldEnquiryData['status'])
-            as String? ??
-        'new';
+    // Only use statusValue - standard field
+    final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
     if (oldStatusValue != statusValue) {
-      changes['eventStatus'] = {'old_value': oldStatusValue, 'new_value': statusValue};
+      changes['statusValue'] = {'old_value': oldStatusValue, 'new_value': statusValue};
     }
 
     // Track assignment change
@@ -534,14 +583,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       };
     }
 
-    // Track total cost change
-    final oldTotalCost = oldEnquiryData['totalCost'];
+    // Track total cost change (oldTotalCost already declared above)
     if (oldTotalCost != newTotalCost) {
       changes['totalCost'] = {'old_value': oldTotalCost ?? 0, 'new_value': newTotalCost ?? 0};
     }
 
-    // Track advance paid change
-    final oldAdvancePaid = oldEnquiryData['advancePaid'];
+    // Track advance paid change (oldAdvancePaid already declared above)
     if (oldAdvancePaid != newAdvancePaid) {
       changes['advancePaid'] = {'old_value': oldAdvancePaid ?? 0, 'new_value': newAdvancePaid ?? 0};
     }
@@ -556,6 +603,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // If status changed, send specific status update notification to admins
     if (oldStatusValue != statusValue) {
+      if (kDebugMode) {
+        debugPrint('📝 EDIT FORM: Status changed via edit form');
+        debugPrint('   OldStatus: $oldStatusValue → NewStatus: $statusValue');
+        debugPrint('   EnquiryId: ${widget.enquiryId}');
+      }
+
       final lookup = await ref.read(dropdownLookupProvider.future);
       final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
       await notificationService.notifyStatusUpdated(
@@ -566,16 +619,23 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         updatedBy: currentUser.uid,
         assignedTo: _selectedAssignedTo,
       );
-    }
+    } else {
+      // Only send generic enquiry update notification if status didn't change
+      // (to avoid duplicate notifications when status changes)
+      if (kDebugMode) {
+        debugPrint('📝 EDIT FORM: Enquiry updated (status unchanged)');
+        debugPrint('   EnquiryId: ${widget.enquiryId}');
+        debugPrint('   UpdatedBy: ${currentUser.uid}');
+      }
 
-    // Send generic notification for enquiry update
-    await notificationService.notifyEnquiryUpdated(
-      enquiryId: widget.enquiryId!,
-      customerName: _nameController.text.trim(),
-      eventType: eventTypeValue,
-      updatedBy: currentUser.uid,
-      assignedTo: _selectedAssignedTo,
-    );
+      await notificationService.notifyEnquiryUpdated(
+        enquiryId: widget.enquiryId!,
+        customerName: _nameController.text.trim(),
+        eventType: eventTypeValue,
+        updatedBy: currentUser.uid,
+        assignedTo: _selectedAssignedTo,
+      );
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(

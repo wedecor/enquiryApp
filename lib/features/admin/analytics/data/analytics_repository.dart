@@ -38,7 +38,7 @@ class AnalyticsRepository {
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final status = (data['eventStatus'] as String?) ?? 'unknown';
+      final status = (data['statusValue'] as String?) ?? 'unknown'; // Use statusValue only
       statusCounts[status] = (statusCounts[status] ?? 0) + 1;
     }
 
@@ -178,7 +178,7 @@ class AnalyticsRepository {
         date: createdAt,
         customerName: (data['customerName'] as String?) ?? 'Unknown',
         eventType: (data['eventType'] as String?) ?? 'Unknown',
-        status: (data['eventStatus'] as String?) ?? 'Unknown',
+        status: (data['statusValue'] as String?) ?? 'Unknown', // Use statusValue only
         source: (data['source'] as String?) ?? 'Unknown',
         priority: (data['priority'] as String?) ?? 'medium',
         totalCost: (data['totalCost'] as num?)?.toDouble(),
@@ -216,7 +216,7 @@ class AnalyticsRepository {
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
-      return _getUniqueFieldValues('eventStatus');
+      return _getUniqueFieldValues('statusValue'); // Use statusValue only
     }
   }
 
@@ -245,7 +245,7 @@ class AnalyticsRepository {
         query = query.where('eventType', isEqualTo: filters.eventType);
       }
       if (filters.status != null && filters.status!.isNotEmpty) {
-        query = query.where('eventStatus', isEqualTo: filters.status);
+        query = query.where('statusValue', isEqualTo: filters.status);
       }
       if (filters.priority != null && filters.priority!.isNotEmpty) {
         query = query.where('priority', isEqualTo: filters.priority);

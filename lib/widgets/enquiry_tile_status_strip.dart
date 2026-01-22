@@ -38,6 +38,9 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
     this.onShare,
     this.onAddNote,
     this.onRequestReview,
+    this.reminderCount,
+    this.isPastEvent = false,
+    this.onMarkNotInterested,
   });
 
   final String name;
@@ -64,6 +67,9 @@ class EnquiryTileStatusStrip extends ConsumerStatefulWidget {
   final Future<void> Function()? onShare;
   final Future<void> Function()? onAddNote;
   final Future<void> Function()? onRequestReview;
+  final int? reminderCount;
+  final bool isPastEvent;
+  final Future<void> Function()? onMarkNotInterested;
 
   @override
   ConsumerState<EnquiryTileStatusStrip> createState() => _EnquiryTileStatusStripState();
@@ -198,6 +204,8 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
                               ageLabel: widget.ageLabel,
                               eventCountdownLabel: widget.eventCountdownLabel,
                               assignee: widget.assignee,
+                              reminderCount: widget.reminderCount,
+                              isPastEvent: widget.isPastEvent,
                               neutralBg: neutralBg,
                               neutralText: neutralText,
                             ),
@@ -219,6 +227,9 @@ class _EnquiryTileStatusStripState extends ConsumerState<EnquiryTileStatusStrip>
                               onWhatsApp: _buildWhatsAppHandler(context),
                               onCall: _buildCallHandler(context),
                               onView: widget.onView,
+                              reminderCount: widget.reminderCount,
+                              isPastEvent: widget.isPastEvent,
+                              onMarkNotInterested: widget.onMarkNotInterested,
                             ),
                           ],
                         ),
@@ -629,6 +640,8 @@ class _ChipWrap extends StatelessWidget {
     required this.eventColor,
     required this.ageLabel,
     required this.assignee,
+    this.reminderCount,
+    this.isPastEvent = false,
     required this.neutralBg,
     required this.neutralText,
   });
@@ -640,6 +653,8 @@ class _ChipWrap extends StatelessWidget {
   final Color eventColor;
   final String ageLabel;
   final String? assignee;
+  final int? reminderCount;
+  final bool isPastEvent;
   final Color neutralBg;
   final Color neutralText;
 
@@ -695,6 +710,16 @@ class _ChipWrap extends StatelessWidget {
             style: TextStyle(color: eventColor, fontWeight: FontWeight.w500),
           ),
         ),
+      if (isPastEvent)
+        Chip(
+          shape: StadiumBorder(side: BorderSide(color: Colors.red.withOpacity(0.3))),
+          backgroundColor: Colors.red.withOpacity(0.18),
+          avatar: Icon(Icons.warning_amber_rounded, size: 16, color: Colors.red),
+          label: Text(
+            'Past Event',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+          ),
+        ),
       Chip(
         shape: StadiumBorder(side: BorderSide(color: neutralText.withOpacity(0.2))),
         backgroundColor: neutralBackground(neutralBg),
@@ -714,6 +739,21 @@ class _ChipWrap extends StatelessWidget {
           label: Text(
             assignee!,
             style: TextStyle(color: neutralText, fontWeight: FontWeight.w500),
+          ),
+        ),
+      );
+    }
+
+    // Add reminder count chip if available
+    if (reminderCount != null && reminderCount! > 0) {
+      chips.add(
+        Chip(
+          shape: StadiumBorder(side: BorderSide(color: Colors.orange.withOpacity(0.3))),
+          backgroundColor: Colors.orange.withOpacity(0.18),
+          avatar: Icon(Icons.notifications_active, size: 16, color: Colors.orange),
+          label: Text(
+            '$reminderCount reminder${reminderCount == 1 ? '' : 's'}',
+            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500),
           ),
         ),
       );
@@ -810,15 +850,71 @@ class _ActionsRow extends StatelessWidget {
     required this.onWhatsApp,
     required this.onCall,
     required this.onView,
+    this.reminderCount,
+    this.isPastEvent = false,
+    this.onMarkNotInterested,
   });
 
   final bool isLaunching;
   final VoidCallback? onWhatsApp;
   final VoidCallback? onCall;
   final VoidCallback onView;
+  final int? reminderCount;
+  final bool isPastEvent;
+  final Future<void> Function()? onMarkNotInterested;
 
   @override
   Widget build(BuildContext context) {
+    // If it's a past event, show "Mark as Not Interested" button prominently
+    if (isPastEvent && onMarkNotInterested != null) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.chat_bubble,
+                  label: isLaunching ? 'Opening…' : 'WhatsApp',
+                  color: const Color(0xFF25D366),
+                  onTap: isLaunching ? null : onWhatsApp,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.call,
+                  label: isLaunching ? 'Opening…' : 'Call',
+                  color: const Color(0xFF1E88E5),
+                  onTap: isLaunching ? null : onCall,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.visibility,
+                  label: 'View',
+                  color: Theme.of(context).colorScheme.primary,
+                  onTap: onView,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: _ActionButton(
+              icon: Icons.block,
+              label: 'Mark as Not Interested',
+              color: Colors.red,
+              onTap: () async {
+                await onMarkNotInterested?.call();
+              },
+            ),
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Expanded(
