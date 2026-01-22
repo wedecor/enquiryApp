@@ -12,6 +12,7 @@ import '../../../../core/services/review_request_service.dart';
 import '../../../settings/providers/settings_providers.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../ui/components/stats_card.dart';
 import '../../../../utils/logger.dart';
@@ -20,6 +21,7 @@ import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
+import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
@@ -44,6 +46,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     {'label': 'All', 'value': 'All'},
     {'label': 'New', 'value': 'new'},
     {'label': 'In Talks', 'value': 'in_talks'},
+    {'label': 'Reminders', 'value': 'reminders'},
     {'label': 'Quote Sent', 'value': 'quote_sent'},
     {'label': 'Confirmed', 'value': 'confirmed'},
     {'label': 'Not Interested', 'value': 'not_interested'},
@@ -428,6 +431,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildEnquiriesTab(String status, bool isAdmin, String? userId) {
+    // Trigger automatic cleanup when viewing In Talks tab to mark past events
+    if (status == 'in_talks') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _runAutomaticCleanup();
+      });
+    }
+    
     return StreamBuilder<QuerySnapshot>(
       stream: _getEnquiriesStream(isAdmin, userId, status == 'All' ? null : status),
       builder: (context, snapshot) {
@@ -459,7 +469,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 const Icon(Icons.sentiment_dissatisfied, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
                 Text(
-                  status == 'All' ? 'No enquiries found' : 'No $status enquiries',
+                  status == 'All'
+                      ? 'No enquiries found'
+                      : status == 'reminders'
+                          ? 'No enquiries need reminders'
+                          : 'No $status enquiries',
                   style: const TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
@@ -473,11 +487,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
 
         final now = DateTime.now();
-        rawEnquiries.sort((a, b) => _compareByNearestEventDate(a, b, now));
+        
+        // Apply filters based on tab type
+        List<QueryDocumentSnapshot<Object?>> preFilteredEnquiries = rawEnquiries;
+        if (status == 'reminders') {
+          // Reminders tab: filter by reminder criteria
+          preFilteredEnquiries = rawEnquiries
+              .where((doc) => _shouldShowReminder(doc.data() as Map<String, dynamic>, now))
+              .toList(growable: false);
+        } else if (status == 'in_talks') {
+          // In Talks tab: exclude past events (event date before today)
+          preFilteredEnquiries = rawEnquiries
+              .where((doc) => _shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
+              .toList(growable: false);
+        }
+        
+        // Sort based on tab type
+        if (status == 'reminders') {
+          // Reminders tab: sort by event date (latest event date first)
+          preFilteredEnquiries.sort((a, b) => _compareByEventDate(b, a));
+        } else if (status == 'in_talks') {
+          // In Talks tab: sort by created date (newest first)
+          preFilteredEnquiries.sort((a, b) => _compareByCreatedDate(b, a));
+        } else {
+          // Other tabs: use existing comparison (nearest event date)
+          preFilteredEnquiries.sort((a, b) => _compareByNearestEventDate(a, b, now));
+        }
 
         final filteredEnquiries = _searchQuery.isEmpty
-            ? rawEnquiries
-            : rawEnquiries
+            ? preFilteredEnquiries
+            : preFilteredEnquiries
                   .where((doc) => _matchesSearchQuery(doc.data() as Map<String, dynamic>))
                   .toList(growable: false);
 
@@ -550,6 +589,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     : DropdownLookup.titleCase(eventTypeValue));
             final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
             final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
+            final reminderCount = (enquiryData['reminderClickCount'] as int?) ?? 0;
+            final isReminderTab = status == 'reminders';
             final statusColorHex =
                 (enquiryData['statusColorHex'] as String?) ??
                 (enquiryData['statusColor'] as String?);
@@ -580,6 +621,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               );
             }
 
+            // Build reminder message if in reminders tab
+            String? reminderPrefill;
+            if (isReminderTab && whatsappContact != null) {
+              reminderPrefill = _buildReminderMessage(
+                customerName,
+                eventTypeLabel,
+                createdAt,
+                eventDate,
+              );
+            }
+
             return EnquiryTileStatusStrip(
               name: customerName,
               status: statusLabel,
@@ -596,19 +648,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               eventColorHex: eventColorHex,
               statusColorOverride: statusColorOverride,
               eventColorOverride: eventColorOverride,
-              whatsappPrefill: 'Hi $customerName, this is from We Decor.',
+              whatsappPrefill: reminderPrefill ?? 'Hi $customerName, this is from We Decor.',
               onView: () => _openEnquiryDetails(enquiryId),
               enquiryId: enquiryId,
               onCall: phone == null ? null : () => _handleCall(phone, customerName, enquiryId),
               onWhatsApp: whatsappContact == null
                   ? null
-                  : () => _handleWhatsApp(whatsappContact, customerName, enquiryId),
+                  : (isReminderTab
+                      ? () => _handleReminderWhatsApp(
+                            whatsappContact,
+                            customerName,
+                            enquiryId,
+                            eventTypeLabel,
+                            createdAt,
+                            eventDate,
+                          )
+                      : () => _handleWhatsApp(whatsappContact, customerName, enquiryId)),
               onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
               onShare: () => _shareEnquiry(enquiryModel),
               onAddNote: () => _showNotesSheet(enquiryModel),
               onRequestReview: statusValue.toLowerCase() == 'completed' && phone != null
                   ? () => _handleReviewRequest(phone!, customerName, enquiryId)
                   : null,
+              reminderCount: isReminderTab ? reminderCount : null,
             );
           },
         );
@@ -771,6 +833,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
+  /// Mark enquiry as "not_interested" (for past events in In Talks tab)
+  Future<void> _markAsNotInterested(String enquiryId, String userId) async {
+    try {
+      final repository = ref.read(enquiryRepositoryProvider);
+      
+      // Show confirmation dialog
+      final confirmed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Mark as Not Interested',
+        message: 'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
+        confirmText: 'Mark as Not Interested',
+        cancelText: 'Cancel',
+        isDestructive: false,
+        icon: Icons.block,
+      );
+
+      if (!confirmed || !mounted) return;
+
+      await repository.updateStatus(
+        id: enquiryId,
+        nextStatus: 'not_interested',
+        userId: userId,
+      );
+
+      if (mounted) {
+        _showSnack('Enquiry marked as Not Interested');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnack('Failed to update status: $e');
+      }
+    }
+  }
+
   Future<void> _showUpdateStatusSheet(Enquiry enquiry) async {
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -903,6 +999,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return null;
   }
 
+  /// Compare by created date (oldest first for In Talks tab)
+  int _compareByCreatedDate(
+    QueryDocumentSnapshot<Object?> a,
+    QueryDocumentSnapshot<Object?> b,
+  ) {
+    final aData = a.data() as Map<String, dynamic>;
+    final bData = b.data() as Map<String, dynamic>;
+
+    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    
+    // Sort oldest first (ascending)
+    return aCreated.compareTo(bCreated);
+  }
+
+  /// Compare by event date for Reminders tab (used in reverse order for latest first)
+  int _compareByEventDate(
+    QueryDocumentSnapshot<Object?> a,
+    QueryDocumentSnapshot<Object?> b,
+  ) {
+    final aData = a.data() as Map<String, dynamic>;
+    final bData = b.data() as Map<String, dynamic>;
+
+    final aEvent = _parseDateTime(aData['eventDate']);
+    final bEvent = _parseDateTime(bData['eventDate']);
+
+    // If both have event dates, sort by event date (earliest first)
+    if (aEvent != null && bEvent != null) {
+      return aEvent.compareTo(bEvent);
+    }
+
+    // If only one has event date, prioritize it
+    if (aEvent != null && bEvent == null) {
+      return -1; // a comes first
+    }
+    if (aEvent == null && bEvent != null) {
+      return 1; // b comes first
+    }
+
+    // If neither has event date, fall back to createdAt (oldest first)
+    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return aCreated.compareTo(bCreated);
+  }
+
   int _compareByNearestEventDate(
     QueryDocumentSnapshot<Object?> a,
     QueryDocumentSnapshot<Object?> b,
@@ -998,11 +1139,179 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       query = query.where('assignedTo', isEqualTo: userId);
     }
 
-    if (_searchQuery.isEmpty && status != null && status != 'All') {
+    // For reminders tab, we filter by status 'in_talks' and then filter client-side
+    // For other status tabs, filter by status
+    if (_searchQuery.isEmpty && status != null && status != 'All' && status != 'reminders') {
       query = query.where('eventStatus', isEqualTo: status);
+    } else if (status == 'reminders') {
+      // Filter for 'in_talks' status enquiries (client-side filtering will handle date criteria)
+      query = query.where('eventStatus', isEqualTo: 'in_talks');
     }
 
     return query.orderBy('createdAt', descending: true).snapshots();
+  }
+
+  /// Check if an enquiry should be shown in the reminders tab
+  bool _shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
+    final statusValueRaw =
+        (enquiryData['statusValue'] ?? enquiryData['eventStatus']) as String?;
+    final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+        ? statusValueRaw!.trim().toLowerCase()
+        : 'new';
+
+    // Must be in_talks status
+    if (statusValue != 'in_talks') {
+      return false;
+    }
+
+    final eventDate = _parseDateTime(enquiryData['eventDate']);
+
+    // Must have an event date
+    if (eventDate == null) {
+      return false;
+    }
+
+    // Normalize dates to start of day for accurate comparison (ignore time)
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
+
+    // Exclude past events - if event date is before today, don't show reminder
+    if (eventDateStart.isBefore(todayStart)) {
+      return false;
+    }
+
+    // Calculate days until event (using normalized dates)
+    final daysUntilEvent = eventDateStart.difference(todayStart).inDays;
+
+    // Only show if event date is today or in the future, and less than 21 days away (3 weeks)
+    if (daysUntilEvent >= 0 && daysUntilEvent < 21) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Check if an enquiry should be shown in the In Talks tab
+  /// Excludes past events (event date before today)
+  bool _shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
+    final eventDate = _parseDateTime(enquiryData['eventDate']);
+
+    // If no event date, show it
+    if (eventDate == null) {
+      return true;
+    }
+
+    // Normalize dates to start of day for accurate comparison (ignore time)
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
+
+    // Exclude past events - if event date is before today, don't show in In Talks
+    return !eventDateStart.isBefore(todayStart);
+  }
+
+  /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
+  String _formatDateForMessage(DateTime? date) {
+    if (date == null) return '';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    final day = date.day.toString().padLeft(2, '0');
+    final month = months[date.month - 1];
+    final year = date.year.toString();
+    return '$day $month $year';
+  }
+
+  /// Build reminder message with days information
+  String _buildReminderMessage(
+    String customerName,
+    String eventType,
+    DateTime createdAt,
+    DateTime? eventDate,
+  ) {
+    final now = DateTime.now();
+    final daysUntilEvent = eventDate != null ? eventDate.difference(now).inDays : null;
+
+    // Only use event date for the message (not created date)
+    String urgencyMessage = '';
+    if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {
+      if (daysUntilEvent == 0) {
+        urgencyMessage = 'Your $eventType is TODAY!';
+      } else if (daysUntilEvent == 1) {
+        urgencyMessage = 'Your $eventType is TOMORROW!';
+      } else {
+        urgencyMessage = 'Your $eventType is in $daysUntilEvent days';
+      }
+    } else {
+      // Fallback if event date is not available or too far
+      urgencyMessage = 'Your upcoming $eventType needs attention';
+    }
+
+    // Build message with explicit date if available
+    final formattedDate = eventDate != null ? _formatDateForMessage(eventDate) : '';
+    final dateText = formattedDate.isNotEmpty ? ' on $formattedDate' : '';
+
+    return 'Hi $customerName!\n\n$urgencyMessage 🎉\n\nWe Decor is excited to be part of your $eventType$dateText and help make it absolutely magical.\n\nIf you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\nOtherwise, feel free to reply to this message - we\'re here to answer any questions and help bring your vision to life! ✨\n\nTeam We Decor - Bringing dreams to life 💫';
+  }
+
+  /// Handle reminder WhatsApp click - increments count and opens WhatsApp
+  Future<void> _handleReminderWhatsApp(
+    String phone,
+    String customerName,
+    String enquiryId,
+    String eventType,
+    DateTime createdAt,
+    DateTime? eventDate,
+  ) async {
+    if (phone.trim().isEmpty) {
+      _showSnack('No phone number available for WhatsApp');
+      return;
+    }
+
+    // Increment reminder count
+    try {
+      await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).update({
+        'reminderClickCount': FieldValue.increment(1),
+        'lastReminderSentAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      Log.e('Failed to increment reminder count', error: e);
+      // Continue even if count update fails
+    }
+
+    // Build and send reminder message
+    final launcher = ref.read(contactLauncherProvider);
+    final prefill = _buildReminderMessage(customerName, eventType, createdAt, eventDate);
+    final status = await launcher.openWhatsAppWithAudit(
+      phone,
+      prefillText: prefill,
+      enquiryId: enquiryId,
+    );
+
+    switch (status) {
+      case ContactLaunchStatus.opened:
+        _showSnack('Reminder sent to $customerName via WhatsApp');
+        break;
+      case ContactLaunchStatus.invalidNumber:
+        _showSnack('Invalid WhatsApp number');
+        break;
+      case ContactLaunchStatus.notInstalled:
+        _showSnack('WhatsApp is not installed on this device');
+        break;
+      case ContactLaunchStatus.failed:
+        _showSnack('Unable to launch WhatsApp');
+        break;
+    }
   }
 
   Widget _buildErrorWidget(BuildContext context, Object error) {
