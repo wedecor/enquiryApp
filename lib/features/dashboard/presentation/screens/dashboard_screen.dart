@@ -501,9 +501,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
         final now = DateTime.now();
 
-        // Apply filters based on tab type
+        // Apply filters based on tab type - always filter client-side for consistency
         List<QueryDocumentSnapshot<Object?>> preFilteredEnquiries = rawEnquiries;
-        if (status == 'reminders') {
+        if (status == 'All') {
+          // All tab: show all enquiries (no filtering)
+          preFilteredEnquiries = rawEnquiries;
+        } else if (status == 'reminders') {
           // Reminders tab: filter by reminder criteria
           preFilteredEnquiries = rawEnquiries
               .where((doc) => _shouldShowReminder(doc.data() as Map<String, dynamic>, now))
@@ -512,6 +515,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           // In Talks tab: exclude past events (event date before today)
           preFilteredEnquiries = rawEnquiries
               .where((doc) => _shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
+              .toList(growable: false);
+        } else {
+          // Other status tabs: filter by status value (case-insensitive client-side filtering)
+          preFilteredEnquiries = rawEnquiries
+              .where((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final statusValueRaw = data['statusValue'] as String?;
+                final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+                    ? statusValueRaw!.trim().toLowerCase()
+                    : 'new';
+                return statusValue == status.toLowerCase();
+              })
               .toList(growable: false);
         }
 
@@ -1142,16 +1157,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       query = query.where('assignedTo', isEqualTo: userId);
     }
 
-    // For reminders tab, we filter by status 'in_talks' and then filter client-side
-    // For other status tabs, filter by status
-    // Use statusValue as the standard field
-    if (_searchQuery.isEmpty && status != null && status != 'All' && status != 'reminders') {
-      query = query.where('statusValue', isEqualTo: status);
-    } else if (status == 'reminders') {
-      // Filter for 'in_talks' status enquiries (client-side filtering will handle date criteria)
-      query = query.where('statusValue', isEqualTo: 'in_talks');
-    }
-
+    // Always fetch all enquiries and filter client-side for consistency
+    // This ensures we catch all records regardless of case sensitivity or migration status
+    // Client-side filtering will handle status filtering in _buildEnquiriesTab
     return query.orderBy('createdAt', descending: true).snapshots();
   }
 
@@ -1197,6 +1205,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   /// Check if an enquiry should be shown in the In Talks tab
   /// Excludes past events (event date before today)
   bool _shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
+    // First check status - must be 'in_talks'
+    final statusValueRaw = enquiryData['statusValue'] as String?;
+    final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
+        ? statusValueRaw!.trim().toLowerCase()
+        : 'new';
+    
+    if (statusValue != 'in_talks') {
+      return false;
+    }
+
     final eventDate = _parseDateTime(enquiryData['eventDate']);
 
     // If no event date, show it (but only if enquiry is recent - within last 30 days)
