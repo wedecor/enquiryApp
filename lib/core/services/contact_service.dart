@@ -6,7 +6,7 @@ import 'package:flutter_contacts/flutter_contacts.dart'
     show Contact, Name, Phone, PhoneLabel, FlutterContacts;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
 
 final contactServiceProvider = Provider<ContactService>((ref) {
   return const ContactService();

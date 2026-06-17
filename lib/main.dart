@@ -17,7 +17,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
 import 'firebase_options.dart';
-import 'utils/logger.dart';
+import 'core/logging/logger.dart';
 
 /// Main entry point for the We Decor Enquiries application.
 ///

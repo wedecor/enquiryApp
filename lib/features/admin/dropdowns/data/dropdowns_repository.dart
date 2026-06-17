@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../domain/dropdown_item.dart';
 
 /// Repository for managing dropdown items in Firestore
@@ -158,7 +159,7 @@ class DropdownsRepository {
 
 /// Provider for the dropdowns repository
 final dropdownsRepositoryProvider = Provider<DropdownsRepository>((ref) {
-  return DropdownsRepository(FirebaseFirestore.instance);
+  return DropdownsRepository(ref.watch(firestoreServiceProvider).firestore);
 });
 
 /// Provider for dropdown items stream
@@ -182,9 +183,10 @@ final dropdownHasReferencesProvider = FutureProvider.family<bool, (DropdownGroup
   params,
 ) async {
   final (group, value) = params;
+  final firestore = ref.watch(firestoreServiceProvider).firestore;
 
   final enquiryField = group.enquiryFieldName;
-  final snapshot = await FirebaseFirestore.instance
+  final snapshot = await firestore
       .collection('enquiries')
       .where(enquiryField, isEqualTo: value)
       .limit(1)

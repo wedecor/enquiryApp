@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../domain/analytics_models.dart';
 
 /// Repository for analytics data from Firestore
@@ -303,5 +304,5 @@ class AnalyticsRepository {
 
 /// Riverpod provider for analytics repository
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepository();
+  return AnalyticsRepository(firestore: ref.watch(firestoreServiceProvider).firestore);
 });

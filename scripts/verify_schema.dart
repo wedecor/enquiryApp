@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
 import 'package:we_decor_enquiries/firebase_options.dart';
 
@@ -20,7 +21,7 @@ void main(List<String> args) async {
       print('📡 Connected to Firestore emulator');
     }
 
-    final schemaService = SchemaVerificationService();
+    final schemaService = SchemaVerificationService(FirestoreService());
 
     if (args.isEmpty) {
       await _runFullVerification(schemaService);

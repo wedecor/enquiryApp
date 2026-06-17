@@ -7,22 +7,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/models/user_model.dart';
 import '../auth/session_state.dart';
 import '../logging/safe_log.dart';
+import 'firestore_service.dart';
 
 class SessionService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirestoreService _firestoreService;
+
+  SessionService(this._firestoreService);
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   StreamController<SessionState>? _sessionController;
+  StreamSubscription<User?>? _authSubscription;
+  Stream<SessionState>? _sessionStream;
   Timer? _debounceTimer;
   User? _lastUser;
 
-  /// Stream of session states with debouncing and profile fetching
-  Stream<SessionState> get sessionStream {
-    _sessionController ??= StreamController<SessionState>.broadcast();
+  /// Stream of session states with debouncing and profile fetching.
+  Stream<SessionState> get sessionStream => _sessionStream ??= _bindSessionStream();
 
-    // Listen to auth state changes with debouncing
-    _auth.authStateChanges().listen(_handleAuthStateChange);
-
+  Stream<SessionState> _bindSessionStream() {
+    _sessionController = StreamController<SessionState>.broadcast();
+    _authSubscription = _auth.authStateChanges().listen(_handleAuthStateChange);
     return _sessionController!.stream;
   }
 
@@ -169,13 +175,19 @@ class SessionService {
 
   void dispose() {
     _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _authSubscription?.cancel();
+    _authSubscription = null;
     _sessionController?.close();
+    _sessionController = null;
+    _sessionStream = null;
+    _lastUser = null;
   }
 }
 
 /// Riverpod provider for session service
 final sessionServiceProvider = Provider<SessionService>((ref) {
-  final service = SessionService();
+  final service = SessionService(ref.watch(firestoreServiceProvider));
   ref.onDispose(() => service.dispose());
   return service;
 });

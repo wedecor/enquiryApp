@@ -3,13 +3,14 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/services/schema_verification_service.dart';
 import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Firebase Data Manager for export/import operations
 class FirebaseDataManager {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final SchemaVerificationService _schemaService = SchemaVerificationService();
+  final SchemaVerificationService _schemaService = SchemaVerificationService(FirestoreService());
 
   /// Export all data from Firebase to local files
   Future<void> exportAllData({String? outputDir}) async {

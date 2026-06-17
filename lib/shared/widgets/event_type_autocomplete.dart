@@ -1,10 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logging/logger.dart';
 import '../../core/providers/role_provider.dart';
+import '../../core/services/firestore_service.dart';
 import '../../shared/models/user_model.dart';
-import '../../utils/logger.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
@@ -26,17 +26,24 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
-  // Store both label (display) and value (id) for each option
   List<Map<String, String>> _eventTypes = [];
   List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
   bool _isInitialized = false;
 
+  static List<Map<String, String>> _defaultEventTypes() => [
+    {'label': 'Wedding', 'value': 'wedding'},
+    {'label': 'Birthday', 'value': 'birthday'},
+    {'label': 'Corporate Event', 'value': 'corporate_event'},
+    {'label': 'Haldi', 'value': 'haldi'},
+    {'label': 'Anniversary', 'value': 'anniversary'},
+    {'label': 'Others', 'value': 'others'},
+  ];
+
   @override
   void initState() {
     super.initState();
-    // Don't set initial value immediately - wait for event types to load
     _loadEventTypes();
   }
 
@@ -50,7 +57,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   @override
   void didUpdateWidget(EventTypeAutocomplete oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Update the controller when the initial value changes
     if (oldWidget.initialValue != widget.initialValue) {
       Log.d(
         'EventTypeAutocomplete initial value changed',
@@ -69,76 +75,36 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       _isLoading = true;
     });
 
-    // TEMPORARY: Always use fallback values for testing
-    Log.d('EventTypeAutocomplete using fallback values');
-    final defaultEventTypes = [
-      {'label': 'Wedding', 'value': 'wedding'},
-      {'label': 'Birthday', 'value': 'birthday'},
-      {'label': 'Corporate Event', 'value': 'corporate_event'},
-      {'label': 'Haldi', 'value': 'haldi'},
-      {'label': 'Anniversary', 'value': 'anniversary'},
-      {'label': 'Others', 'value': 'others'},
-    ];
-    setState(() {
-      _eventTypes = defaultEventTypes;
-      _filteredEventTypes = defaultEventTypes;
-      _isLoading = false;
-    });
-
-    // Set initial value after loading default event types
-    _setInitialValue();
-
-    // TODO: Re-enable Firestore loading after testing
-    /*
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('dropdowns')
-          .doc('event_types')
-          .collection('items')
-          .where('active', isEqualTo: true)
-          .orderBy('order')
-          .get();
+      final eventTypes = await ref
+          .read(firestoreServiceProvider)
+          .fetchActiveDropdownOptions('event_types');
 
-      final eventTypes = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final label = (data['label'] as String?)?.trim();
-        final value = (data['value'] as String?)?.trim();
-        return {
-          'label': label?.isNotEmpty == true ? label! : (value ?? ''),
-          'value': value ?? '',
-        };
-      }).where((e) => (e['value'] ?? '').isNotEmpty).toList();
+      if (eventTypes.isEmpty) {
+        throw StateError('No active event types in Firestore');
+      }
 
-      // TODO: Log.d('EventTypeAutocomplete: loaded ${eventTypes.length} event types from Firestore');
+      Log.d('EventTypeAutocomplete loaded from Firestore', data: {'count': eventTypes.length});
       setState(() {
         _eventTypes = eventTypes;
         _filteredEventTypes = eventTypes;
         _isLoading = false;
       });
-      
-      // Set initial value after loading event types
       _setInitialValue();
-    } catch (e) {
-      // Fallback to default values if Firestore is not available
-      // TODO: Log.w('EventTypeAutocomplete: using fallback values', data: {'error': e.toString()});
-      final defaultEventTypes = [
-        {'label': 'Wedding', 'value': 'wedding'},
-        {'label': 'Birthday', 'value': 'birthday'},
-        {'label': 'Corporate Event', 'value': 'corporate_event'},
-        {'label': 'Haldi', 'value': 'haldi'},
-        {'label': 'Anniversary', 'value': 'anniversary'},
-        {'label': 'Others', 'value': 'others'},
-      ];
+    } catch (e, st) {
+      Log.w(
+        'EventTypeAutocomplete using fallback values',
+        data: {'error': e.runtimeType.toString()},
+      );
+      Log.d('EventTypeAutocomplete fallback stack', data: st);
+      final defaults = _defaultEventTypes();
       setState(() {
-        _eventTypes = defaultEventTypes;
-        _filteredEventTypes = defaultEventTypes;
+        _eventTypes = defaults;
+        _filteredEventTypes = defaults;
         _isLoading = false;
       });
-      
-      // Set initial value after loading default event types
       _setInitialValue();
     }
-    */
   }
 
   void _setInitialValue() {
@@ -147,7 +113,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       data: {'value': widget.initialValue, 'eventCount': _eventTypes.length},
     );
     if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
-      // Find the matching event type by value
       final matchingEventType = _eventTypes.firstWhere(
         (eventType) => eventType['value'] == widget.initialValue,
         orElse: () => <String, String>{},
@@ -160,7 +125,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         });
         _isInitialized = true;
       } else {
-        // If no exact match found, try to find by label
         final matchingByLabel = _eventTypes.firstWhere(
           (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
           orElse: () => <String, String>{},
@@ -173,7 +137,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           });
           _isInitialized = true;
         } else {
-          // If still no match, just set the text as-is
           _controller.text = widget.initialValue!;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             widget.onChanged(widget.initialValue!);
@@ -200,7 +163,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
 
       setState(() {
         _filteredEventTypes = filtered;
-        // Show add button if no exact match found and admin
         final roleAsync = ref.read(roleProvider);
         final role = roleAsync.valueOrNull ?? UserRole.staff;
         _showAddButton = filtered.isEmpty && role == UserRole.admin;
@@ -224,7 +186,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     final trimmedType = newType.trim();
     if (trimmedType.isEmpty) return;
 
-    // Check for case-insensitive uniqueness
     final exists = _eventTypes.any(
       (type) =>
           (type['label'] ?? '').toLowerCase() == trimmedType.toLowerCase() ||
@@ -246,25 +207,21 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     });
 
     try {
-      await FirebaseFirestore.instance
-          .collection('dropdowns')
-          .doc('event_types')
-          .collection('items')
-          .add({
-            'label': trimmedType,
-            'value': trimmedType.toLowerCase().replaceAll(' ', '_'),
-            'active': true,
-            'order': (_eventTypes.length + 1),
-            'createdAt': FieldValue.serverTimestamp(),
-            'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-          });
+      final newValue = trimmedType.toLowerCase().replaceAll(' ', '_');
+      await ref
+          .read(firestoreServiceProvider)
+          .addDropdownItem(
+            kind: 'event_types',
+            label: trimmedType,
+            value: newValue,
+            order: _eventTypes.length + 1,
+            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+          );
 
-      // Refresh the list
       await _loadEventTypes();
 
-      // Set the new value
       _controller.text = trimmedType;
-      widget.onChanged(trimmedType);
+      widget.onChanged(newValue);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -313,7 +270,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
               validator: widget.validator,
               onChanged: (value) {
                 _filterEventTypes(value);
-                // Do not emit value on free-typing; emit on selection
               },
             );
           },

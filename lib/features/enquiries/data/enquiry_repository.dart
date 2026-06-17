@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/audit_provider.dart';
+import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
@@ -13,15 +15,27 @@ import 'pagination_state.dart';
 final enquiryRepositoryProvider = Provider<EnquiryRepository>((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   final dropdownLookupFuture = ref.watch(dropdownLookupProvider.future);
-  return EnquiryRepository(firestoreService, dropdownLookupFuture);
+  return EnquiryRepository(
+    firestoreService,
+    dropdownLookupFuture,
+    ref.watch(auditServiceProvider),
+    ref.watch(notificationServiceProvider),
+  );
 });
 
 /// Repository for enquiry data operations
 class EnquiryRepository {
   final FirestoreService _firestoreService;
   final Future<DropdownLookup> _dropdownLookupFuture;
+  final AuditService _auditService;
+  final notification_service.NotificationService _notificationService;
 
-  EnquiryRepository(this._firestoreService, this._dropdownLookupFuture);
+  EnquiryRepository(
+    this._firestoreService,
+    this._dropdownLookupFuture,
+    this._auditService,
+    this._notificationService,
+  );
 
   CollectionReference<Map<String, dynamic>> get _enquiries => _firestoreService.enquiriesCollection;
 
@@ -143,8 +157,7 @@ class EnquiryRepository {
       'status_slug': FieldValue.delete(),
     });
 
-    final auditService = AuditService();
-    await auditService.recordChange(
+    await _auditService.recordChange(
       enquiryId: id,
       fieldChanged: 'statusValue',
       oldValue: oldStatusValue,
@@ -153,8 +166,7 @@ class EnquiryRepository {
     );
 
     try {
-      final notificationService = notification_service.NotificationService();
-      await notificationService.notifyStatusUpdated(
+      await _notificationService.notifyStatusUpdated(
         enquiryId: id,
         customerName: customerName,
         oldStatus: oldStatusLabel,

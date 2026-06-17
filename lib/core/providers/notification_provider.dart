@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/firestore_service.dart';
 import '../services/notification_service.dart';
 
 /// Provider for NotificationService
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
+  return NotificationService(ref.watch(firestoreServiceProvider));
 });
 
 /// Provider for user notifications stream

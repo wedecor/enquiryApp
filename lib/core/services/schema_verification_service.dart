@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
+import 'firestore_service.dart';
 
 /// Schema validation result
 class SchemaValidationResult {
@@ -19,7 +20,11 @@ class SchemaValidationResult {
 
 /// Service for automated schema verification and validation
 class SchemaVerificationService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  SchemaVerificationService(this._firestoreService);
+
+  final FirestoreService _firestoreService;
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   /// Verify all collections and documents against schema
   Future<Map<String, SchemaValidationResult>> verifyAllSchemas() async {

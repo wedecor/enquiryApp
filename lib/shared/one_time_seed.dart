@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import '../firebase_options.dart';
-import '../utils/logger.dart';
+import '../core/logging/logger.dart';
 import 'seed_data.dart';
 
 void _info(String message, {Object? data}) => Log.i(message, data: data);

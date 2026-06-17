@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -6,6 +8,16 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
+fun localReleaseProp(name: String): String? {
+    return localProperties.getProperty(name) ?: (project.findProperty(name) as String?)
 }
 
 android {
@@ -35,11 +47,13 @@ android {
 
     signingConfigs {
         create("release") {
-            // Production signing - configure these in CI/CD or local.properties
-            // storeFile = file(project.findProperty("RELEASE_STORE_FILE") ?: "release-keystore.jks")
-            // storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String? ?: ""
-            // keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String? ?: ""
-            // keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String? ?: ""
+            val storeFilePath = localReleaseProp("RELEASE_STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = localReleaseProp("RELEASE_STORE_PASSWORD")
+                keyAlias = localReleaseProp("RELEASE_KEY_ALIAS")
+                keyPassword = localReleaseProp("RELEASE_KEY_PASSWORD")
+            }
         }
     }
 
@@ -49,9 +63,12 @@ android {
             isDebuggable = true
         }
         release {
-            // TODO: Uncomment when release keystore is configured
-            // signingConfig = signingConfigs.getByName("release")
-            signingConfig = signingConfigs.getByName("debug")
+            val releaseStore = localReleaseProp("RELEASE_STORE_FILE")
+            signingConfig = if (releaseStore != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             
             isMinifyEnabled = true
             isShrinkResources = true

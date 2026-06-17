@@ -8,15 +8,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/role_provider.dart';
-import '../../../../core/services/audit_service.dart';
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/services/notification_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/status_dropdown.dart';
-import '../../../../utils/logger.dart';
+import '../../../../core/logging/logger.dart';
 
 /// Screen for creating and editing enquiries
 class EnquiryFormScreen extends ConsumerStatefulWidget {
@@ -314,7 +314,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     // Send notification for new enquiry creation
-    final notificationService = NotificationService();
+    final notificationService = ref.read(notificationServiceProvider);
     await notificationService.notifyEnquiryCreated(
       enquiryId: enquiryId,
       customerName: _nameController.text.trim(),
@@ -324,7 +324,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Record audit trail for assignment if assigned
     if (_selectedAssignedTo != null) {
-      final auditService = AuditService();
+      final auditService = ref.read(auditServiceProvider);
       await auditService.recordChange(
         enquiryId: enquiryId,
         fieldChanged: 'assignedTo',
@@ -514,7 +514,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     Log.d('EnquiryFormScreen enquiry updated successfully with images');
 
     // Record audit trail for individual field changes
-    final auditService = AuditService();
+    final auditService = ref.read(auditServiceProvider);
     final changes = <String, Map<String, dynamic>>{};
 
     // Track status change (store VALUES, not labels)
@@ -595,7 +595,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     // Send notifications
-    final notificationService = NotificationService();
+    final notificationService = ref.read(notificationServiceProvider);
 
     // If status changed, send specific status update notification to admins
     if (oldStatusValue != statusValue) {

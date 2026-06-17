@@ -32,6 +32,9 @@ class FirestoreService {
   /// The underlying Firebase Firestore instance.
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Shared client for specialized repositories. Prefer typed helpers when available.
+  FirebaseFirestore get firestore => _firestore;
+
   // Collection references
   /// Reference to the users collection in Firestore.
   CollectionReference get _usersCollection => _firestore.collection(FirestoreCollections.users);
@@ -172,6 +175,45 @@ class FirestoreService {
   Future<Map<String, dynamic>?> getUser(String uid) async {
     final doc = await _usersCollection.doc(uid).get();
     return doc.data() as Map<String, dynamic>?;
+  }
+
+  /// Real-time stream for a single user profile document.
+  Stream<DocumentSnapshot<Map<String, dynamic>>> watchUser(String uid) {
+    return (_usersCollection.doc(uid) as DocumentReference<Map<String, dynamic>>).snapshots();
+  }
+
+  /// Per-user saved enquiry filter views (`users/{uid}/savedViews`).
+  CollectionReference<Map<String, dynamic>> savedViewsCollection(String userId) {
+    return _usersCollection.doc(userId).collection('savedViews')
+        as CollectionReference<Map<String, dynamic>>;
+  }
+
+  /// Starts a Firestore write batch (for multi-document updates).
+  WriteBatch startBatch() => _firestore.batch();
+
+  /// All enquiry documents (admin cleanup / export).
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchAllEnquiries() {
+    return enquiriesCollection.get();
+  }
+
+  /// FCM device tokens (`users/{uid}/private/notifications/tokens`).
+  CollectionReference<Map<String, dynamic>> fcmTokensCollection(String uid) {
+    return _usersCollection.doc(uid).collection('private').doc('notifications').collection('tokens')
+        as CollectionReference<Map<String, dynamic>>;
+  }
+
+  Future<void> saveFcmToken(String uid, String token, {bool refreshed = false}) async {
+    await fcmTokensCollection(uid).doc(token).set({
+      'token': token,
+      if (refreshed)
+        'updatedAt': FieldValue.serverTimestamp()
+      else
+        'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> deleteFcmToken(String uid, String token) async {
+    await fcmTokensCollection(uid).doc(token).delete();
   }
 
   /// Updates an existing user document.
@@ -381,6 +423,28 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Real-time enquiries stream scoped by role (admin: all, staff: assigned only).
+  Stream<QuerySnapshot> watchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+    if (isAdmin) {
+      return getEnquiries();
+    }
+    return _enquiriesCollection
+        .where('assignedTo', isEqualTo: assignedToUid)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
+  Future<QuerySnapshot> fetchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+    Query query = _enquiriesCollection.orderBy('createdAt', descending: true);
+    if (!isAdmin && assignedToUid != null) {
+      query = _enquiriesCollection
+          .where('assignedTo', isEqualTo: assignedToUid)
+          .orderBy('createdAt', descending: true);
+    }
+    return query.get();
+  }
+
   /// Retrieves a specific enquiry by its ID.
   ///
   /// This method fetches a single enquiry document from Firestore
@@ -406,6 +470,101 @@ class FirestoreService {
   Future<Map<String, dynamic>?> getEnquiry(String enquiryId) async {
     final doc = await _enquiriesCollection.doc(enquiryId).get();
     return doc.data() as Map<String, dynamic>?;
+  }
+
+  /// Real-time stream for a single enquiry document.
+  Stream<DocumentSnapshot> watchEnquiry(String enquiryId) {
+    return _enquiriesCollection.doc(enquiryId).snapshots();
+  }
+
+  /// Active dropdown items from `dropdowns/{kind}/items`.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(String kind) {
+    return _activeDropdownItemsQuery(kind).snapshots();
+  }
+
+  /// One-shot fetch of active dropdown items (e.g. dashboard color priming).
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(String kind) {
+    return _activeDropdownItemsQuery(kind).get();
+  }
+
+  /// Active dropdown options as label/value maps for form widgets.
+  Future<List<Map<String, String>>> fetchActiveDropdownOptions(String kind) async {
+    final snapshot = await fetchActiveDropdownItems(kind);
+    return parseDropdownOptions(snapshot.docs);
+  }
+
+  /// Parses active dropdown documents into label/value maps.
+  static List<Map<String, String>> parseDropdownOptions(
+    Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    return docs
+        .map((doc) {
+          final data = doc.data();
+          final label = (data['label'] as String?)?.trim();
+          final value = (data['value'] as String?)?.trim();
+          return {
+            'label': label?.isNotEmpty == true ? label! : (value ?? ''),
+            'value': value ?? '',
+          };
+        })
+        .where((entry) => entry['value']!.isNotEmpty)
+        .toList();
+  }
+
+  /// Adds a new item under `dropdowns/{kind}/items` (admin UI quick-add).
+  Future<void> addDropdownItem({
+    required String kind,
+    required String label,
+    required String value,
+    required int order,
+    required String createdBy,
+  }) async {
+    await _firestore.collection('dropdowns').doc(kind).collection('items').add({
+      'label': label,
+      'value': value,
+      'active': true,
+      'order': order,
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': createdBy,
+    });
+  }
+
+  /// Value→label map for a dropdown kind (includes inactive items for history display).
+  Future<Map<String, String>> fetchDropdownValueLabelMap(String kind) async {
+    final snapshot = await _firestore.collection('dropdowns').doc(kind).collection('items').get();
+    final map = <String, String>{};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final value = (data['value'] ?? doc.id).toString();
+      final label = (data['label'] ?? value).toString();
+      map[value] = label;
+    }
+    return map;
+  }
+
+  Query<Map<String, dynamic>> _activeDropdownItemsQuery(String kind) {
+    return _firestore
+        .collection('dropdowns')
+        .doc(kind)
+        .collection('items')
+        .where('active', isEqualTo: true)
+        .orderBy('order');
+  }
+
+  /// Active status options for enquiry status dropdowns.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveStatusDropdownItems() =>
+      watchActiveDropdownItems('statuses');
+
+  /// Calendar view: enquiries ordered by event date (role-scoped).
+  Stream<QuerySnapshot> watchEnquiriesForRoleByEventDate({
+    required bool isAdmin,
+    String? assignedToUid,
+  }) {
+    Query query = _enquiriesCollection;
+    if (!isAdmin && assignedToUid != null) {
+      query = query.where('assignedTo', isEqualTo: assignedToUid);
+    }
+    return query.orderBy('eventDate', descending: false).snapshots();
   }
 
   /// Updates an existing enquiry document.

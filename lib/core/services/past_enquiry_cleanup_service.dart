@@ -4,14 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/enquiries/data/enquiry_repository.dart';
 import '../../services/dropdown_lookup.dart';
-import '../../utils/logger.dart';
-import '../providers/role_provider.dart';
+import '../../core/logging/logger.dart';
+import '../services/firestore_service.dart';
 
 /// Provider for PastEnquiryCleanupService
 final pastEnquiryCleanupServiceProvider = Provider<PastEnquiryCleanupService>((ref) {
   final enquiryRepository = ref.watch(enquiryRepositoryProvider);
   final dropdownLookupFuture = ref.watch(dropdownLookupProvider.future);
-  return PastEnquiryCleanupService(enquiryRepository, dropdownLookupFuture);
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return PastEnquiryCleanupService(enquiryRepository, dropdownLookupFuture, firestoreService);
 });
 
 /// Service to automatically mark enquiries with passed event dates
@@ -22,8 +23,13 @@ final pastEnquiryCleanupServiceProvider = Provider<PastEnquiryCleanupService>((r
 class PastEnquiryCleanupService {
   final EnquiryRepository _enquiryRepository;
   final Future<DropdownLookup> _dropdownLookupFuture;
+  final FirestoreService _firestoreService;
 
-  PastEnquiryCleanupService(this._enquiryRepository, this._dropdownLookupFuture);
+  PastEnquiryCleanupService(
+    this._enquiryRepository,
+    this._dropdownLookupFuture,
+    this._firestoreService,
+  );
 
   /// Updates enquiries with passed event dates based on their current status
   ///
@@ -48,8 +54,7 @@ class PastEnquiryCleanupService {
       int updatedCount = 0;
 
       // Query all enquiries once and process both status types
-      final allEnquiriesQuery = FirebaseFirestore.instance.collection('enquiries');
-      final allSnapshot = await allEnquiriesQuery.get();
+      final allSnapshot = await _firestoreService.fetchAllEnquiries();
 
       // Process enquiries to mark as "not_interested"
       for (final doc in allSnapshot.docs) {
@@ -197,7 +202,7 @@ class PastEnquiryCleanupService {
       int count = 0;
 
       // Query all enquiries and filter client-side using statusValue only
-      final allSnapshot = await FirebaseFirestore.instance.collection('enquiries').get();
+      final allSnapshot = await _firestoreService.fetchAllEnquiries();
 
       for (final doc in allSnapshot.docs) {
         final data = doc.data();

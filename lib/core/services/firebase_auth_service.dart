@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'fcm_service.dart';
+import 'firestore_service.dart';
 
 /// Custom exception thrown when authentication operations fail.
 ///
@@ -126,7 +127,7 @@ class FirebaseAuthService {
   Future<void> signOut() async {
     try {
       // Clean up FCM subscriptions and token before signing out
-      final fcmService = FCMService();
+      final fcmService = FCMService(FirestoreService());
       await fcmService.unsubscribeFromAllTopics();
       await fcmService.deleteTokenFromProfile();
 

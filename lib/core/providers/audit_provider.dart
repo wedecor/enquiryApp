@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/audit_service.dart';
+import '../services/firestore_service.dart';
 
 /// Provider for AuditService
 final auditServiceProvider = Provider<AuditService>((ref) {
-  return AuditService();
+  return AuditService(ref.watch(firestoreServiceProvider));
 });
 
 /// Provider for enquiry history stream

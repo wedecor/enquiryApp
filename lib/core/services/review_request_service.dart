@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../contacts/contact_launcher.dart';
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
 
 /// Provider for ReviewRequestService
 final reviewRequestServiceProvider = Provider<ReviewRequestService>((ref) {

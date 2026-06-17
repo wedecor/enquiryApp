@@ -1,10 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class DropdownLookup {
-  DropdownLookup(this._db);
+import '../core/services/firestore_service.dart';
 
-  final FirebaseFirestore _db;
+class DropdownLookup {
+  DropdownLookup(this._firestoreService);
+
+  final FirestoreService _firestoreService;
 
   Map<String, String> statusMap = <String, String>{};
   Map<String, String> eventTypeMap = <String, String>{};
@@ -18,11 +19,11 @@ class DropdownLookup {
     if (_loaded) return;
 
     final results = await Future.wait<Map<String, String>>(<Future<Map<String, String>>>[
-      _loadMap('statuses'),
-      _loadMap('event_types'),
-      _loadMap('payment_statuses'),
-      _loadMap('priorities'),
-      _loadMap('sources'),
+      _firestoreService.fetchDropdownValueLabelMap('statuses'),
+      _firestoreService.fetchDropdownValueLabelMap('event_types'),
+      _firestoreService.fetchDropdownValueLabelMap('payment_statuses'),
+      _firestoreService.fetchDropdownValueLabelMap('priorities'),
+      _firestoreService.fetchDropdownValueLabelMap('sources'),
     ]);
 
     statusMap = results[0];
@@ -31,18 +32,6 @@ class DropdownLookup {
     priorityMap = results[3];
     sourceMap = results[4];
     _loaded = true;
-  }
-
-  Future<Map<String, String>> _loadMap(String kind) async {
-    final snapshot = await _db.collection('dropdowns').doc(kind).collection('items').get();
-    final map = <String, String>{};
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final value = (data['value'] ?? doc.id).toString();
-      final label = (data['label'] ?? value).toString();
-      map[value] = label;
-    }
-    return map;
   }
 
   String labelForStatus(String value) => statusMap[value] ?? DropdownLookup.titleCase(value);
@@ -81,7 +70,7 @@ class DropdownLookup {
 }
 
 final dropdownLookupProvider = FutureProvider<DropdownLookup>((ref) async {
-  final lookup = DropdownLookup(FirebaseFirestore.instance);
+  final lookup = DropdownLookup(ref.watch(firestoreServiceProvider));
   await lookup.ensureLoaded();
   ref.onDispose(lookup.reset);
   return lookup;

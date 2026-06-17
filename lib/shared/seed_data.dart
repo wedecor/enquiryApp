@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../utils/logger.dart';
+import '../core/logging/logger.dart';
 
 /// Seed data utilities for populating Firestore collections with initial data
 ///

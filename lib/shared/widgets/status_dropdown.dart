@@ -1,10 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/role_provider.dart';
+import '../../core/services/firestore_service.dart';
 import '../../shared/models/user_model.dart';
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
@@ -61,29 +61,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     });
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('dropdowns')
-          .doc(widget.collectionName)
-          .collection('items')
-          .where('active', isEqualTo: true)
-          .orderBy('order')
-          .get();
-
-      final statuses = snapshot.docs
-          .map((doc) {
-            final data = doc.data();
-            final label = (data['label'] as String?)?.trim();
-            final value = (data['value'] as String?)?.trim();
-            return {
-              'label': label?.isNotEmpty == true ? label! : (value ?? ''),
-              'value': value ?? '',
-            };
-          })
-          .where((e) => (e['value'] ?? '').isNotEmpty)
-          .toList();
+      final options = await ref
+          .read(firestoreServiceProvider)
+          .fetchActiveDropdownOptions(widget.collectionName);
 
       setState(() {
-        _statuses = statuses;
+        _statuses = options;
         _isLoading = false;
       });
     } catch (e, st) {
@@ -188,25 +171,23 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     });
 
     try {
-      await FirebaseFirestore.instance
-          .collection('dropdowns')
-          .doc(widget.collectionName)
-          .collection('items')
-          .add({
-            'label': newStatus,
-            'value': newStatus.toLowerCase().replaceAll(' ', '_'),
-            'active': true,
-            'order': (_statuses.length + 1),
-            'createdAt': FieldValue.serverTimestamp(),
-            'createdBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-          });
+      final newValue = newStatus.toLowerCase().replaceAll(' ', '_');
+      await ref
+          .read(firestoreServiceProvider)
+          .addDropdownItem(
+            kind: widget.collectionName,
+            label: newStatus,
+            value: newValue,
+            order: _statuses.length + 1,
+            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+          );
 
       // Refresh the list
       await _loadStatuses();
 
       // Set the new value
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onChanged(newStatus.toLowerCase().replaceAll(' ', '_'));
+        widget.onChanged(newValue);
       });
 
       if (mounted) {

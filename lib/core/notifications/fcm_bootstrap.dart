@@ -1,29 +1,40 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../services/firestore_service.dart';
 import 'fcm_token_manager.dart';
 
 /// Keeps FCM token in sync whenever auth state becomes non-null.
-class FcmBootstrap extends StatefulWidget {
-  final Widget child;
+class FcmBootstrap extends ConsumerStatefulWidget {
   const FcmBootstrap({super.key, required this.child});
 
+  final Widget child;
+
   @override
-  State<FcmBootstrap> createState() => _FcmBootstrapState();
+  ConsumerState<FcmBootstrap> createState() => _FcmBootstrapState();
 }
 
-class _FcmBootstrapState extends State<FcmBootstrap> {
-  late final Stream<User?> _sub;
+class _FcmBootstrapState extends ConsumerState<FcmBootstrap> {
+  StreamSubscription<User?>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _sub = FirebaseAuth.instance.authStateChanges();
-    _sub.listen((u) {
-      if (u != null) {
-        FcmTokenManager.ensureFcmRegistered();
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        FcmTokenManager.ensureFcmRegistered(ref.read(firestoreServiceProvider));
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    unawaited(FcmTokenManager.dispose());
+    super.dispose();
   }
 
   @override

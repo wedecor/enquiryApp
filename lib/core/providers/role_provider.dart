@@ -36,6 +36,7 @@ import '../services/firestore_service.dart';
 /// ```
 final roleProvider = StreamProvider<UserRole>((ref) {
   final currentUser = ref.watch(currentUserProvider);
+  final firestoreService = ref.watch(firestoreServiceProvider);
 
   return currentUser.when(
     data: (user) {
@@ -43,8 +44,7 @@ final roleProvider = StreamProvider<UserRole>((ref) {
         return Stream.value(UserRole.staff);
       }
 
-      final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-      return docRef.snapshots().map((snap) {
+      return firestoreService.watchUser(user.uid).map((snap) {
         final data = snap.data();
         final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
         return roleString == 'admin' ? UserRole.admin : UserRole.staff;
@@ -145,6 +145,7 @@ final currentUserIsAdminProvider = isAdminProvider;
 /// ```
 final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
   final authUserAsync = ref.watch(currentUserProvider);
+  final firestoreService = ref.watch(firestoreServiceProvider);
 
   return authUserAsync.when(
     data: (authUser) {
@@ -152,8 +153,7 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
         return Stream.value(null);
       }
 
-      final docRef = FirebaseFirestore.instance.collection('users').doc(authUser.uid);
-      return docRef.snapshots().map((snap) {
+      return firestoreService.watchUser(authUser.uid).map((snap) {
         final data = snap.data();
         if (data == null) {
           return UserModel(
@@ -178,6 +178,65 @@ final currentUserWithFirestoreProvider = StreamProvider<UserModel?>((ref) {
     loading: () => Stream.value(null),
     error: (error, stack) => Stream.value(null),
   );
+});
+
+/// Legacy alias — prefer [currentUserProvider].
+final firebaseAuthUserProvider = currentUserProvider;
+
+final currentUserUidProvider = Provider<String?>((ref) {
+  return ref.watch(currentUserProvider).valueOrNull?.uid;
+});
+
+final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
+  final authAsync = ref.watch(currentUserProvider);
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return authAsync.when(
+    data: (auth) {
+      if (auth == null) return const Stream.empty();
+      return firestoreService.watchUser(auth.uid);
+    },
+    loading: () => const Stream.empty(),
+    error: (_, __) => const Stream.empty(),
+  );
+});
+
+final currentUserRoleProvider = Provider<String?>((ref) {
+  return ref
+      .watch(roleProvider)
+      .when(
+        data: (role) => role == UserRole.admin ? 'admin' : 'staff',
+        loading: () => null,
+        error: (_, __) => null,
+      );
+});
+
+final currentUserDataProvider = Provider<Map<String, dynamic>?>((ref) {
+  return ref
+      .watch(currentUserDocProvider)
+      .when(
+        data: (snap) {
+          if (snap == null || !snap.exists) return null;
+          return snap.data();
+        },
+        loading: () => null,
+        error: (_, __) => null,
+      );
+});
+
+/// Legacy alias — prefer [currentUserWithFirestoreProvider].
+final currentUserAsyncProvider = currentUserWithFirestoreProvider;
+
+final currentUserNameProvider = Provider<String?>((ref) {
+  return ref.watch(currentUserDataProvider)?['name'] as String?;
+});
+
+final currentUserEmailProvider = Provider<String?>((ref) {
+  return ref.watch(currentUserDataProvider)?['email'] as String?;
+});
+
+final currentUserActiveProvider = Provider<bool?>((ref) {
+  final data = ref.watch(currentUserDataProvider);
+  return data?['active'] as bool? ?? data?['isActive'] as bool?;
 });
 
 // NOTE: firestoreServiceProvider is defined in lib/core/services/firestore_service.dart

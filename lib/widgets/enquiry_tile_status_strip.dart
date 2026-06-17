@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/contacts/contact_launcher.dart';
 import '../core/services/contact_service.dart';
-import '../utils/logger.dart';
+import '../core/logging/logger.dart';
 
 enum _TileAction { viewDetails, updateStatus, share, notes, saveContact, requestReview }
 

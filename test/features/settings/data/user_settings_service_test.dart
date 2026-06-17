@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/features/settings/data/user_settings_service.dart';
 import 'package:we_decor_enquiries/features/settings/domain/user_settings.dart';
 import '../../../test_helper.dart';
@@ -35,7 +36,7 @@ void main() {
       if (!firebaseAvailable) {
         return;
       }
-      service = UserSettingsService();
+      service = UserSettingsService(FirestoreService());
     });
 
     group('load', () {

@@ -17,7 +17,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "staff";
     }
     
-    // Check if only non-financial fields are being modified
+    // Financial fields: staff may READ assigned enquiries in full (including totals/payment).
+    // Write protection only — UI/export must hide financial data for staff (see csv_export_rbac).
     function isModifyingOnlyNonFinancialFields() {
       // List of financial fields
       let financialFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel'];
@@ -102,7 +103,12 @@ service cloud.firestore {
     function isOwner(uid) { return request.auth != null && request.auth.uid == uid; }
     
     match /users/{uid}/settings/{docId} {
-      allow read, write: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow read, write: if isSignedIn() && (isOwner(uid) || isAdmin());
+    }
+
+    // Per-user saved enquiry filter views (owner or admin)
+    match /users/{uid}/savedViews/{viewId} {
+      allow read, write: if isSignedIn() && (isOwner(uid) || isAdmin());
     }
 
     // App Config - read for all signed-in users, write for admins only

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/theme/tokens.dart';
 import '../filters_controller.dart';
 import '../filters_state.dart';
@@ -266,10 +267,9 @@ class QuickFilters extends ConsumerWidget {
                 onTap: () => _applyThisWeekFilter(ref),
               ),
               _QuickFilterButton(
-                label: 'Pending',
-                isActive: filters.statuses.contains('pending'),
-                onTap: () =>
-                    ref.read(enquiryFiltersProvider.notifier).toggleStatusFilter('pending'),
+                label: 'New',
+                isActive: filters.statuses.contains('new'),
+                onTap: () => ref.read(enquiryFiltersProvider.notifier).toggleStatusFilter('new'),
               ),
               _QuickFilterButton(
                 label: 'Assigned to Me',
@@ -330,8 +330,10 @@ class QuickFilters extends ConsumerWidget {
     if (currentFilters.assigneeId != null) {
       ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter(null);
     } else {
-      // TODO: Get current user ID
-      ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter('current_user_id');
+      final uid = ref.read(currentUserUidProvider);
+      if (uid != null) {
+        ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter(uid);
+      }
     }
   }
 }

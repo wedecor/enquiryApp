@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/current_user_role_provider.dart';
-import '../../../utils/logger.dart';
+import '../../../core/logging/logger.dart';
+import '../../../core/services/firestore_service.dart';
 import '../data/app_config_service.dart';
 import '../data/user_settings_service.dart';
 import '../domain/app_config.dart';
@@ -9,11 +10,11 @@ import '../domain/user_settings.dart';
 
 // Services
 final userSettingsServiceProvider = Provider<UserSettingsService>((ref) {
-  return UserSettingsService();
+  return UserSettingsService(ref.watch(firestoreServiceProvider));
 });
 
 final appConfigServiceProvider = Provider<AppConfigService>((ref) {
-  return AppConfigService();
+  return AppConfigService(ref.watch(firestoreServiceProvider));
 });
 
 // User Settings Providers

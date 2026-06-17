@@ -3,15 +3,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/role_provider.dart';
-import '../../../../core/services/audit_service.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/notification_service.dart' as notification_service;
 import '../../../../services/dropdown_lookup.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
-import '../../../../utils/logger.dart';
+import '../../../../core/logging/logger.dart';
 import '../widgets/contact_buttons.dart';
 import '../widgets/review_request_button.dart';
 import 'enquiry_form_screen.dart';
@@ -98,11 +100,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
           return roleAsync.when(
             data: (userRole) {
+              final firestoreService = ref.watch(firestoreServiceProvider);
               return StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('enquiries')
-                    .doc(widget.enquiryId)
-                    .snapshots(),
+                stream: firestoreService.watchEnquiry(widget.enquiryId),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(child: Text('Error: ${snapshot.error}'));
@@ -463,13 +463,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     bool isAssignee = true,
   }) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('dropdowns')
-          .doc('statuses')
-          .collection('items')
-          .where('active', isEqualTo: true)
-          .orderBy('order')
-          .snapshots(),
+      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
       builder: (context, snapshot) {
         // Show loading only briefly, then fallback to default statuses
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
@@ -598,28 +592,22 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         final nextLabel = lookup.labelForStatus(value);
                         final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
-                        await FirebaseFirestore.instance
-                            .collection('enquiries')
-                            .doc(widget.enquiryId)
-                            .update({
-                              'statusValue': value, // Standardized field - only write to this
-                              'statusLabel': nextLabel,
-                              'statusUpdatedAt': FieldValue.serverTimestamp(),
-                              'statusUpdatedBy':
-                                  ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                                  'unknown',
-                              'updatedAt': FieldValue.serverTimestamp(),
-                              'updatedBy':
-                                  ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                                  'unknown',
-                              // Remove old fields if they exist
-                              'eventStatus': FieldValue.delete(),
-                              'status': FieldValue.delete(),
-                              'status_slug': FieldValue.delete(),
-                            });
+                        final firestoreService = ref.read(firestoreServiceProvider);
+                        await firestoreService.updateEnquiry(widget.enquiryId, {
+                          'statusValue': value,
+                          'statusLabel': nextLabel,
+                          'statusUpdatedAt': FieldValue.serverTimestamp(),
+                          'statusUpdatedBy':
+                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                          'updatedBy':
+                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+                          'eventStatus': FieldValue.delete(),
+                          'status': FieldValue.delete(),
+                          'status_slug': FieldValue.delete(),
+                        });
 
                         // Record audit trail for status change (store VALUES, not labels)
-                        final auditService = AuditService();
+                        final auditService = ref.read(auditServiceProvider);
                         await auditService.recordChange(
                           enquiryId: widget.enquiryId,
                           fieldChanged: 'statusValue',
@@ -639,14 +627,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                           }
 
                           // Fetch current enquiry data for notification
-                          final enquiryDoc = await FirebaseFirestore.instance
-                              .collection('enquiries')
-                              .doc(widget.enquiryId)
-                              .get();
                           final currentEnquiryData =
-                              enquiryDoc.data() as Map<String, dynamic>? ?? {};
+                              await firestoreService.getEnquiry(widget.enquiryId) ?? {};
 
-                          final notificationService = notification_service.NotificationService();
+                          final notificationService = ref.read(notificationServiceProvider);
                           await notificationService.notifyStatusUpdated(
                             enquiryId: widget.enquiryId,
                             customerName:
@@ -893,7 +877,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       });
 
       // Record audit trail before deletion
-      final auditService = AuditService();
+      final auditService = ref.read(auditServiceProvider);
       await auditService.recordChange(
         enquiryId: widget.enquiryId,
         fieldChanged: 'deleted',
@@ -902,7 +886,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       );
 
       // Delete the enquiry document
-      await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId).delete();
+      await ref.read(firestoreServiceProvider).deleteEnquiry(widget.enquiryId);
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -1001,14 +985,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     if (cached != null) return cached;
 
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      if (!doc.exists) {
+      final data = await ref.read(firestoreServiceProvider).getUser(userId);
+      if (data == null) {
         _userDisplayCache[userId] = 'Unknown';
         return 'Unknown';
       }
-      final data = doc.data();
-      final name = (data?['name'] as String?)?.trim();
-      final phone = (data?['phone'] as String?)?.trim();
+      final name = (data['name'] as String?)?.trim();
+      final phone = (data['phone'] as String?)?.trim();
       final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
       final result = display.isNotEmpty ? display : 'Unknown';
       _userDisplayCache[userId] = result;

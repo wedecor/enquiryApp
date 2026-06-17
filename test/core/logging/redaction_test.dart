@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:we_decor_enquiries/core/logging/logger.dart';
 import 'package:we_decor_enquiries/core/logging/redaction.dart';
 
 void main() {
@@ -31,6 +32,15 @@ void main() {
       final output = redactMapEntry('note', 'callback on 8762385315');
 
       expect(output, isNot(contains('8762385315')));
+    });
+  });
+
+  group('formatLogData', () {
+    test('redacts phone values in map data by key', () {
+      final output = formatLogData({'phone': '8762385315'});
+
+      expect(output, isNot(contains('8762385315')));
+      expect(output, contains('***'));
     });
   });
 }

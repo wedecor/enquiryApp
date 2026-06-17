@@ -4,13 +4,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/user_model.dart';
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
+import 'firestore_service.dart';
 
 /// Service for handling Firebase Cloud Messaging (FCM)
 class FCMService {
+  FCMService(this._firestoreService);
+
+  final FirestoreService _firestoreService;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   /// Initialize FCM and request permissions
   Future<void> initialize() async {
@@ -261,7 +266,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// Riverpod providers for FCM service
 final fcmServiceProvider = Provider<FCMService>((ref) {
-  return FCMService();
+  return FCMService(ref.watch(firestoreServiceProvider));
 });
 
 /// Provider for FCM initialization

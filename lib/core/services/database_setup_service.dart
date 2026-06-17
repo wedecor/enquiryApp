@@ -1,13 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
 import '../constants/firestore_schema.dart';
+import 'firestore_service.dart';
 
 /// Service for setting up and managing Firestore database structure
 class DatabaseSetupService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  DatabaseSetupService(this._firestoreService);
+
+  final FirestoreService _firestoreService;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   /// Reset and initialize the database with the correct schema
   Future<void> resetAndInitializeDatabase() async {

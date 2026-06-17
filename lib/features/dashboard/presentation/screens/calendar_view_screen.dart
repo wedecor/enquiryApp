@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../utils/event_colors.dart' as event_colors;
@@ -630,14 +631,9 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   }
 
   Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String userId) {
-    Query query = FirebaseFirestore.instance.collection('enquiries');
-
-    if (!isAdmin) {
-      query = query.where('assignedTo', isEqualTo: userId);
-    }
-
-    // Order by eventDate to get all enquiries (we'll filter null dates client-side)
-    return query.orderBy('eventDate', descending: false).snapshots();
+    return ref
+        .read(firestoreServiceProvider)
+        .watchEnquiriesForRoleByEventDate(isAdmin: isAdmin, assignedToUid: userId);
   }
 }
 

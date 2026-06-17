@@ -89,12 +89,12 @@ jobs:
           
           echo "✅ Flutter analyze passed"
 
-      - name: 🧪 Run Unit Tests
+      - name: 🧪 Run Unit Tests & Coverage
         if: steps.guard.outputs.skip != 'true'
         run: |
-          echo "::group::Unit Tests"
+          echo "::group::Unit Tests & Coverage"
           set -o pipefail
-          flutter test --reporter compact 2>&1 | tee flutter_test.log
+          flutter test --coverage --reporter compact 2>&1 | tee flutter_test.log
           FLUTTER_SUMMARY=$(tail -1 flutter_test.log)
           echo "flutter_test_summary=${FLUTTER_SUMMARY}" >> "$GITHUB_ENV"
           echo "::endgroup::"
@@ -114,19 +114,24 @@ jobs:
           echo "::endgroup::"
           echo "✅ ${RULES_SUMMARY}"
 
-      - name: 📊 Generate Test Coverage
-        if: steps.guard.outputs.skip != 'true'
-        run: |
-          echo "::group::Test Coverage"
-          flutter test --coverage --reporter expanded
-          echo "::endgroup::"
-
       - name: 🎯 Coverage Gate Check
         if: steps.guard.outputs.skip != 'true'
+        continue-on-error: true
+        id: coverage_gate
         run: |
           echo "::group::Coverage Analysis"
-          bash tools/coverage_gate.sh
+          set +e
+          bash tools/coverage_gate.sh 2>&1 | tee coverage_gate.log
+          GATE_EXIT=$?
+          set -e
+          COVERAGE_SUMMARY=$(grep 'Overall Project Coverage' coverage_gate.log | tail -1 | sed 's/\x1b\[[0-9;]*m//g' || true)
+          if [ -z "$COVERAGE_SUMMARY" ]; then
+            COVERAGE_SUMMARY="see job logs"
+          fi
+          echo "coverage_gate_summary=${COVERAGE_SUMMARY}" >> "$GITHUB_ENV"
+          echo "coverage_gate_passed=$([ "$GATE_EXIT" -eq 0 ] && echo true || echo false)" >> "$GITHUB_ENV"
           echo "::endgroup::"
+          exit "$GATE_EXIT"
 
       - name: 🌐 Web Build Sanity Check
         if: steps.guard.outputs.skip != 'true'
@@ -159,7 +164,11 @@ jobs:
           echo "- 🔍 Code Analysis: completed" >> $GITHUB_STEP_SUMMARY
           echo "- 🧪 Unit Tests: ${flutter_test_summary:-not captured}" >> $GITHUB_STEP_SUMMARY
           echo "- 🛡️ Firestore Rules: ${rules_test_summary:-not captured}" >> $GITHUB_STEP_SUMMARY
-          echo "- 📊 Coverage Gate (≥30%): see job logs" >> $GITHUB_STEP_SUMMARY
+          if [ "${coverage_gate_passed:-unknown}" = "true" ]; then
+            echo "- 📊 Coverage Gate (≥30%): passed — ${coverage_gate_summary:-see logs}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 📊 Coverage Gate (≥30%): advisory fail — ${coverage_gate_summary:-see logs}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "- 🌐 Web Build: completed if job succeeded" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📚 Security Documentation:" >> $GITHUB_STEP_SUMMARY

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:we_decor_enquiries/core/services/audit_service.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import '../../test_helper.dart';
 
 void main() {
@@ -28,7 +29,7 @@ void main() {
           // To run this test, start Firebase emulators: firebase emulators:start --only auth,firestore
           return;
         }
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordChange(
             enquiryId: 'test-enquiry-id',
@@ -42,7 +43,7 @@ void main() {
 
       test('handles null old value', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordChange(
             enquiryId: 'test-enquiry-id',
@@ -56,7 +57,7 @@ void main() {
 
       test('handles null new value', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordChange(
             enquiryId: 'test-enquiry-id',
@@ -70,7 +71,7 @@ void main() {
 
       test('handles custom userId', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordChange(
             enquiryId: 'test-enquiry-id',
@@ -85,7 +86,7 @@ void main() {
 
       test('handles different field types', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordChange(
             enquiryId: 'test-enquiry-id',
@@ -101,7 +102,7 @@ void main() {
     group('recordMultipleChanges', () {
       test('records multiple changes in batch', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         final changes = {
           'status': {'old_value': 'new', 'new_value': 'contacted'},
           'priority': {'old_value': 'low', 'new_value': 'high'},
@@ -115,7 +116,7 @@ void main() {
 
       test('handles empty changes map', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         await expectLater(
           service.recordMultipleChanges(enquiryId: 'test-enquiry-id', changes: {}),
           completes,
@@ -124,7 +125,7 @@ void main() {
 
       test('handles custom userId for batch', () async {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         final changes = {
           'status': {'old_value': 'new', 'new_value': 'contacted'},
         };
@@ -143,14 +144,14 @@ void main() {
     group('getEnquiryHistoryStream', () {
       test('returns a stream', () {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         final stream = service.getEnquiryHistoryStream('test-enquiry-id');
         expect(stream, isA<Stream<List<Map<String, dynamic>>>>());
       });
 
       test('handles non-existent enquiry', () {
         if (!firebaseAvailable) return;
-        final service = AuditService();
+        final service = AuditService(FirestoreService());
         final stream = service.getEnquiryHistoryStream('non-existent-id');
         expect(stream, isA<Stream<List<Map<String, dynamic>>>>());
       });

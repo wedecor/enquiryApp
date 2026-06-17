@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../../utils/logger.dart';
+import '../../../../core/logging/logger.dart';
 import '../domain/user_model.dart';
 
 class UsersRepository {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  UsersRepository(this._firestore);
+
+  final FirebaseFirestore _firestore;
   static const String _collection = 'users';
 
   /// Stream of users with filtering, search, and pagination

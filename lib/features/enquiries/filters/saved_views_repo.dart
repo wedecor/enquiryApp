@@ -3,33 +3,36 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
+import '../../../../core/services/firestore_service.dart';
 import 'filters_state.dart';
 
 /// Provider for the saved views repository
 final savedViewsRepositoryProvider = Provider<SavedViewsRepository>((ref) {
-  return SavedViewsRepository();
+  return SavedViewsRepository(ref.watch(firestoreServiceProvider));
 });
 
 /// Repository for managing saved enquiry filter views
 class SavedViewsRepository {
-  SavedViewsRepository();
+  SavedViewsRepository(this._firestoreService);
+
+  final FirestoreService _firestoreService;
+
+  CollectionReference<Map<String, dynamic>>? _collectionForCurrentUser() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    return _firestoreService.savedViewsCollection(uid);
+  }
 
   /// Get the current user's saved views
   Future<List<SavedView>> getSavedViews() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         Logger.error('No authenticated user for saved views', tag: 'SavedViews');
         return [];
       }
 
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .orderBy('createdAt', descending: false)
-          .get();
-
+      final doc = await collection.orderBy('createdAt', descending: false).get();
       return doc.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
     } catch (e) {
       Logger.error('Failed to get saved views', error: e, tag: 'SavedViews');
@@ -40,19 +43,13 @@ class SavedViewsRepository {
   /// Get a specific saved view by ID
   Future<SavedView?> getSavedView(String id) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         Logger.error('No authenticated user for saved view', tag: 'SavedViews');
         return null;
       }
 
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(id)
-          .get();
-
+      final doc = await collection.doc(id).get();
       if (!doc.exists) {
         return null;
       }
@@ -67,8 +64,8 @@ class SavedViewsRepository {
   /// Save a new view or update an existing one
   Future<SavedView> saveView(SavedView view) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         throw Exception('No authenticated user');
       }
 
@@ -78,12 +75,7 @@ class SavedViewsRepository {
         createdAt: view.createdAt == view.updatedAt ? now : view.createdAt,
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(view.id)
-          .set(viewToSave.toJson());
+      await collection.doc(view.id).set(viewToSave.toJson());
 
       Logger.info('Saved view: ${view.name}', tag: 'SavedViews');
       return viewToSave;
@@ -100,18 +92,16 @@ class SavedViewsRepository {
     bool isDefault = false,
   }) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         throw Exception('No authenticated user');
       }
 
-      // Check if name already exists
       final existingViews = await getSavedViews();
       if (existingViews.any((view) => view.name.toLowerCase() == name.toLowerCase())) {
         throw Exception('A view with this name already exists');
       }
 
-      // If this is set as default, unset other defaults
       if (isDefault) {
         await _unsetDefaultViews();
       }
@@ -126,12 +116,7 @@ class SavedViewsRepository {
         updatedAt: now,
       );
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(newView.id)
-          .set(newView.toJson());
+      await collection.doc(newView.id).set(newView.toJson());
 
       Logger.info('Created view: ${newView.name}', tag: 'SavedViews');
       return newView;
@@ -144,12 +129,11 @@ class SavedViewsRepository {
   /// Update an existing saved view
   Future<SavedView> updateView(SavedView view) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         throw Exception('No authenticated user');
       }
 
-      // Check if name already exists (excluding current view)
       final existingViews = await getSavedViews();
       if (existingViews.any(
         (v) => v.id != view.id && v.name.toLowerCase() == view.name.toLowerCase(),
@@ -157,19 +141,12 @@ class SavedViewsRepository {
         throw Exception('A view with this name already exists');
       }
 
-      // If this is set as default, unset other defaults
       if (view.isDefault) {
         await _unsetDefaultViews(excludeId: view.id);
       }
 
       final updatedView = view.touch();
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(view.id)
-          .update(updatedView.toJson());
+      await collection.doc(view.id).update(updatedView.toJson());
 
       Logger.info('Updated view: ${view.name}', tag: 'SavedViews');
       return updatedView;
@@ -182,17 +159,12 @@ class SavedViewsRepository {
   /// Delete a saved view
   Future<void> deleteView(String id) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         throw Exception('No authenticated user');
       }
 
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(id)
-          .delete();
+      await collection.doc(id).delete();
 
       Logger.info('Deleted view: $id', tag: 'SavedViews');
     } catch (e) {
@@ -204,21 +176,16 @@ class SavedViewsRepository {
   /// Set a view as default (unsetting others)
   Future<void> setDefaultView(String id) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final collection = _collectionForCurrentUser();
+      if (collection == null) {
         throw Exception('No authenticated user');
       }
 
-      // Unset all defaults
       await _unsetDefaultViews();
-
-      // Set this one as default
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedViews')
-          .doc(id)
-          .update({'isDefault': true, 'updatedAt': FieldValue.serverTimestamp()});
+      await collection.doc(id).update({
+        'isDefault': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
 
       Logger.info('Set default view: $id', tag: 'SavedViews');
     } catch (e) {
@@ -227,18 +194,12 @@ class SavedViewsRepository {
     }
   }
 
-  /// Unset all default views (optionally excluding one)
   Future<void> _unsetDefaultViews({String? excludeId}) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    final collection = _collectionForCurrentUser();
+    if (collection == null) return;
 
-    final batch = FirebaseFirestore.instance.batch();
-    final defaultViews = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('savedViews')
-        .where('isDefault', isEqualTo: true)
-        .get();
+    final batch = _firestoreService.startBatch();
+    final defaultViews = await collection.where('isDefault', isEqualTo: true).get();
 
     for (final doc in defaultViews.docs) {
       if (excludeId == null || doc.id != excludeId) {
@@ -252,27 +213,19 @@ class SavedViewsRepository {
     await batch.commit();
   }
 
-  /// Generate a unique ID for a new view
-  String _generateViewId() {
-    return DateTime.now().millisecondsSinceEpoch.toString();
-  }
+  String _generateViewId() => DateTime.now().millisecondsSinceEpoch.toString();
 
   /// Stream of saved views for real-time updates
   Stream<List<SavedView>> watchSavedViews() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final collection = _collectionForCurrentUser();
+    if (collection == null) {
       return Stream.value([]);
     }
 
-    return FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('savedViews')
+    return collection
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
-        });
+        .map((snapshot) => snapshot.docs.map((doc) => SavedView.fromJson(doc.data())).toList());
   }
 }
 
@@ -297,7 +250,6 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
 
   final Ref ref;
 
-  /// Load saved views
   Future<void> _loadSavedViews() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
@@ -311,7 +263,6 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     }
   }
 
-  /// Create a new saved view
   Future<void> createView({
     required String name,
     required EnquiryFilters filters,
@@ -333,7 +284,6 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     }
   }
 
-  /// Update an existing saved view
   Future<void> updateView(SavedView view) async {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
@@ -347,7 +297,6 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     }
   }
 
-  /// Delete a saved view
   Future<void> deleteView(String id) async {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
@@ -361,13 +310,11 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     }
   }
 
-  /// Set a view as default
   Future<void> setDefaultView(String id) async {
     try {
       final repository = ref.read(savedViewsRepositoryProvider);
       await repository.setDefaultView(id);
 
-      // Update local state
       final updatedViews = state.views.map((v) {
         return v.id == id ? v.copyWith(isDefault: true) : v.copyWith(isDefault: false);
       }).toList();
@@ -378,12 +325,10 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
     }
   }
 
-  /// Refresh saved views
   Future<void> refresh() async {
     await _loadSavedViews();
   }
 
-  /// Clear error state
   void clearError() {
     state = state.copyWith(error: null);
   }

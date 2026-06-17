@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/firebase_auth_service.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../settings/providers/settings_providers.dart';
@@ -15,7 +16,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../ui/components/stats_card.dart';
-import '../../../../utils/logger.dart';
+import '../../../../core/logging/logger.dart';
 import '../../../../widgets/enquiry_tile_status_strip.dart';
 import '../../../admin/analytics/presentation/analytics_screen.dart';
 import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
@@ -73,14 +74,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Future<void> _primeDropdownColors() async {
-    final firestore = FirebaseFirestore.instance;
+    final firestoreService = ref.read(firestoreServiceProvider);
     try {
-      final statusSnapshot = await firestore
-          .collection('dropdowns')
-          .doc('statuses')
-          .collection('items')
-          .where('active', isEqualTo: true)
-          .get();
+      final statusSnapshot = await firestoreService.fetchActiveDropdownItems('statuses');
       for (final doc in statusSnapshot.docs) {
         final data = doc.data();
         final value = (data['value'] as String?)?.trim();
@@ -92,12 +88,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
       }
 
-      final eventSnapshot = await firestore
-          .collection('dropdowns')
-          .doc('event_types')
-          .collection('items')
-          .where('active', isEqualTo: true)
-          .get();
+      final eventSnapshot = await firestoreService.fetchActiveDropdownItems('event_types');
       for (final doc in eventSnapshot.docs) {
         final data = doc.data();
         final value = (data['value'] as String?)?.trim();
@@ -997,12 +988,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (!mounted || result == null) return;
 
     try {
-      final doc = FirebaseFirestore.instance.collection('enquiries').doc(enquiry.id);
+      final firestoreService = ref.read(firestoreServiceProvider);
       if (result.isEmpty) {
-        await doc.update({'notes': FieldValue.delete()});
+        await firestoreService.updateEnquiry(enquiry.id, {'notes': FieldValue.delete()});
         _showSnack('Notes cleared');
       } else {
-        await doc.update({'notes': result});
+        await firestoreService.updateEnquiry(enquiry.id, {'notes': result});
         _showSnack('Notes updated');
       }
     } catch (e) {
@@ -1151,16 +1142,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
-    Query query = FirebaseFirestore.instance.collection('enquiries');
-
-    if (!isAdmin && userId != null) {
-      query = query.where('assignedTo', isEqualTo: userId);
-    }
-
-    // Always fetch all enquiries and filter client-side for consistency
-    // This ensures we catch all records regardless of case sensitivity or migration status
-    // Client-side filtering will handle status filtering in _buildEnquiriesTab
-    return query.orderBy('createdAt', descending: true).snapshots();
+    // Status filtering is client-side in _buildEnquiriesTab for migration/case tolerance.
+    return ref
+        .read(firestoreServiceProvider)
+        .watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userId);
   }
 
   /// Check if an enquiry should be shown in the reminders tab
@@ -1308,7 +1293,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // Increment reminder count
     try {
-      await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).update({
+      await ref.read(firestoreServiceProvider).updateEnquiry(enquiryId, {
         'reminderClickCount': FieldValue.increment(1),
         'lastReminderSentAt': FieldValue.serverTimestamp(),
       });

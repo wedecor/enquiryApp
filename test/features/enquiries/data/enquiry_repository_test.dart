@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:we_decor_enquiries/core/services/audit_service.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
+import 'package:we_decor_enquiries/core/services/notification_service.dart' as notification_service;
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
 import 'package:we_decor_enquiries/features/enquiries/filters/filters_state.dart';
@@ -8,6 +10,10 @@ import 'package:we_decor_enquiries/services/dropdown_lookup.dart';
 import '../../../test_helper.dart';
 
 class MockDropdownLookup extends Mock implements DropdownLookup {}
+
+class MockAuditService extends Mock implements AuditService {}
+
+class MockNotificationService extends Mock implements notification_service.NotificationService {}
 
 void main() {
   late bool firebaseAvailable;
@@ -29,7 +35,12 @@ void main() {
       final mockLookup = MockDropdownLookup();
       when(() => mockLookup.labelForStatus(any())).thenReturn('Test Status');
       dropdownLookupFuture = Future.value(mockLookup);
-      repository = EnquiryRepository(FirestoreService(), dropdownLookupFuture);
+      repository = EnquiryRepository(
+        FirestoreService(),
+        dropdownLookupFuture,
+        MockAuditService(),
+        MockNotificationService(),
+      );
     });
 
     group('getEnquiries', () {

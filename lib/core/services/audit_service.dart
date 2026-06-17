@@ -1,12 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
+import 'firestore_service.dart';
 
 /// Service for tracking audit trail and change history
 class AuditService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  AuditService(this._firestoreService);
+
+  final FirestoreService _firestoreService;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   /// Record a change to an enquiry
   Future<void> recordChange({

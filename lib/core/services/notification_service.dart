@@ -2,11 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../shared/models/user_model.dart';
-import '../../utils/logger.dart';
+import '../../core/logging/logger.dart';
+import 'firestore_service.dart';
 
 /// Service for managing notification triggers and sending notifications
 class NotificationService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  NotificationService(this._firestoreService);
+
+  final FirestoreService _firestoreService;
+
+  FirebaseFirestore get _firestore => _firestoreService.firestore;
 
   /// Send notification when a new enquiry is created
   Future<void> notifyEnquiryCreated({

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:we_decor_enquiries/core/services/database_setup_service.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/firebase_options.dart';
 
 /// Standalone script to set up the Firestore database structure
@@ -21,7 +22,7 @@ void main() async {
     }
 
     // Initialize the database setup service
-    final setupService = DatabaseSetupService();
+    final setupService = DatabaseSetupService(FirestoreService());
 
     // Reset and initialize the database
     print('🔄 Resetting and initializing database...');

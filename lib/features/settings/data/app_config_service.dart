@@ -1,13 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/logging/safe_log.dart';
+import '../../../core/services/firestore_service.dart';
 import '../domain/app_config.dart';
 
 enum AppConfigKind { general, notifications, security }
 
 class AppConfigService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  AppConfigService(this._firestoreService);
 
-  CollectionReference get _appConfigCollection => _firestore.collection('app_config');
+  final FirestoreService _firestoreService;
+
+  CollectionReference get _appConfigCollection =>
+      _firestoreService.firestore.collection('app_config');
 
   DocumentReference _configDoc(AppConfigKind kind) => _appConfigCollection.doc(kind.name);
 

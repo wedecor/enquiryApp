@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/logging/safe_log.dart';
+import '../../../core/services/firestore_service.dart';
 import '../domain/user_settings.dart';
 
 class UserSettingsService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  UserSettingsService(this._firestoreService);
 
-  CollectionReference get _usersCollection => _firestore.collection('users');
+  final FirestoreService _firestoreService;
+
+  CollectionReference get _usersCollection => _firestoreService.firestore.collection('users');
 
   DocumentReference _settingsDoc(String uid) =>
       _usersCollection.doc(uid).collection('settings').doc('preferences');

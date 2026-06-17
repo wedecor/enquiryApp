@@ -287,6 +287,48 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
 
+    test('✅ Users can manage their own saved filter views', async () => {
+      const staffContext = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' });
+      const firestore = staffContext.firestore();
+      const now = new Date().toISOString();
+
+      await assertSucceeds(
+        firestore.collection('users')
+          .doc(STAFF_UID)
+          .collection('savedViews')
+          .doc('my-view')
+          .set({
+            id: 'my-view',
+            name: 'Active weddings',
+            filters: { statuses: ['new'], eventTypes: [] },
+            isDefault: false,
+            createdAt: now,
+            updatedAt: now,
+          })
+      );
+
+      await assertSucceeds(
+        firestore.collection('users')
+          .doc(STAFF_UID)
+          .collection('savedViews')
+          .doc('my-view')
+          .get()
+      );
+    });
+
+    test('❌ Users cannot access other users saved filter views', async () => {
+      const staffContext = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' });
+      const firestore = staffContext.firestore();
+
+      await assertFails(
+        firestore.collection('users')
+          .doc(OTHER_STAFF_UID)
+          .collection('savedViews')
+          .doc('private-view')
+          .get()
+      );
+    });
+
     test('✅ Admin can read app configuration', async () => {
       const adminContext = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' });
       const firestore = adminContext.firestore();
