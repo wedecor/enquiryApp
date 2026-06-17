@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
 import 'package:we_decor_enquiries/features/enquiries/filters/filters_state.dart';
@@ -24,10 +25,11 @@ void main() {
     late Future<DropdownLookup> dropdownLookupFuture;
 
     setUp(() {
+      if (!firebaseAvailable) return;
       final mockLookup = MockDropdownLookup();
       when(() => mockLookup.labelForStatus(any())).thenReturn('Test Status');
       dropdownLookupFuture = Future.value(mockLookup);
-      repository = EnquiryRepository(dropdownLookupFuture);
+      repository = EnquiryRepository(FirestoreService(), dropdownLookupFuture);
     });
 
     group('getEnquiries', () {

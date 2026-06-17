@@ -6,7 +6,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 // Removed deprecated config import for Firebase Functions v2
-import * as nodemailer from "nodemailer";
+import { createEmailTransporter, getSmtpFromAddress, SMTP_SECRET_NAMES } from "./smtp";
 
 setGlobalOptions({
   region: "asia-south1",
@@ -21,38 +21,6 @@ initializeApp();
 const ACTION_CODE_SETTINGS = {
   url: 'https://wedecorenquries.web.app/auth/completed',
   handleCodeInApp: false,
-};
-
-// SMTP Configuration using environment variables (Firebase Functions v2)
-const createEmailTransporter = () => {
-  // Try to get SMTP config from environment variables
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpPort = process.env.SMTP_PORT;
-  
-  if (smtpHost && smtpUser && smtpPass) {
-    logger.info('Using custom SMTP configuration from environment variables');
-    return nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(smtpPort || '587'),
-      secure: smtpPort === '465',
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      }
-    });
-  }
-
-  // Fallback to Gmail with app password
-  logger.info('Using Gmail SMTP configuration');
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: 'connect2wedecor@gmail.com',
-      pass: 'REDACTED_LEAKED_GMAIL_APP_PASSWORD' // App password
-    }
-  });
 };
 
 type Enquiry = {
@@ -104,6 +72,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
     memory: "256MiB", // Increased memory for this function
     timeoutSeconds: 60, // Increased timeout for email operations
     enforceAppCheck: false, // Disable AppCheck enforcement to avoid token issues
+    secrets: [...SMTP_SECRET_NAMES],
   },
   async (request) => {
     // Ensure user is authenticated
@@ -186,14 +155,16 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         resetLinkGenerated: !!resetLink,
       });
 
-      // Send invitation email via Gmail SMTP
+      // Send invitation email when SMTP is configured (SMTP_USER + SMTP_PASS secret)
       let emailSent = false;
       
       try {
         const transporter = createEmailTransporter();
-        
+        if (!transporter) {
+          logger.warn('Invitation email skipped — SMTP not configured', { emailProvided: true });
+        } else {
         const mailOptions = {
-          from: '"WeDecor Events" <connect2wedecor@gmail.com>',
+          from: getSmtpFromAddress(),
           to: email,
           subject: '🏠 Welcome to WeDecor Events - Set Your Password',
           html: `
@@ -293,6 +264,7 @@ If you didn't expect this invitation, please ignore this email.`
           hasResetLink: !!resetLink,
           emailDelivered: true
         });
+        }
         
       } catch (emailError: any) {
         logger.error('Failed to send invitation email', {

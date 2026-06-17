@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
+import 'package:we_decor_enquiries/core/providers/role_provider.dart' as role_providers;
 import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 // Mock classes
@@ -16,24 +17,26 @@ class MockUser extends Mock implements User {}
 
 class MockDocumentSnapshot extends Mock implements DocumentSnapshot<Map<String, dynamic>> {}
 
-/// Global test setup for Firebase initialization
-/// Call this in setUpAll() for any test that needs Firebase services
-Future<void> setupFirebaseForTesting() async {
+/// Global test setup for Firebase initialization.
+/// Returns true when Firebase is ready for tests that touch Firebase APIs.
+Future<bool> setupFirebaseForTesting() async {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with test configuration
   try {
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: 'test-api-key',
-        appId: 'test-app-id',
-        messagingSenderId: 'test-sender-id',
-        projectId: 'test-project-id',
-        storageBucket: 'test-storage-bucket',
-      ),
-    );
-  } catch (e) {
-    // Firebase already initialized, ignore
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: const FirebaseOptions(
+          apiKey: 'test-api-key',
+          appId: 'test-app-id',
+          messagingSenderId: 'test-sender-id',
+          projectId: 'test-project-id',
+          storageBucket: 'test-storage-bucket',
+        ),
+      );
+    }
+    return true;
+  } catch (_) {
+    return Firebase.apps.isNotEmpty;
   }
 }
 
@@ -63,8 +66,8 @@ List<Override> getCompleteFirebaseMockOverrides({bool isAdmin = false, UserModel
     // Mock current user document
     currentUserDocProvider.overrideWith((ref) => Stream.value(mockSnapshot)),
 
-    // Mock user role providers
-    isAdminProvider.overrideWith((ref) => isAdmin),
+    // Mock user role providers (role_provider.dart)
+    role_providers.isAdminProvider.overrideWithValue(isAdmin),
 
     // Mock current user role as string
     currentUserRoleProvider.overrideWith((ref) => isAdmin ? 'admin' : 'staff'),

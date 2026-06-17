@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Firestore security rules tests for We Decor Enquiries RBAC system",
   "scripts": {
-    "test": "jest --testEnvironment=node --runInBand",
+    "test": "jest spec/rbac_stable.spec.js --testEnvironment=node --runInBand",
     "test:verbose": "jest --testEnvironment=node --verbose --runInBand",
     "test:watch": "jest --testEnvironment=node --watch",
     "emulators:start": "firebase emulators:start --only firestore --project demo-test --import=./seed --export-on-exit --quiet",

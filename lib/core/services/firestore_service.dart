@@ -40,6 +40,55 @@ class FirestoreService {
   CollectionReference get _enquiriesCollection =>
       _firestore.collection(FirestoreCollections.enquiries);
 
+  /// Enquiries collection for feature repositories (single Firestore access path).
+  CollectionReference<Map<String, dynamic>> get enquiriesCollection =>
+      _enquiriesCollection as CollectionReference<Map<String, dynamic>>;
+
+  static String _normalizePhone(String? phone) =>
+      phone == null ? '' : phone.replaceAll(RegExp(r'[^0-9]'), '');
+
+  static String _makeTextIndex({
+    required String name,
+    String? phone,
+    String? email,
+    String? notes,
+  }) => [name, phone ?? '', email ?? '', notes ?? ''].join(' ').toLowerCase();
+
+  static Map<String, dynamic> searchIndexFieldsFor({
+    required String customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? description,
+    String? notes,
+  }) => _searchIndexFields(
+    customerName: customerName,
+    customerPhone: customerPhone,
+    customerEmail: customerEmail,
+    description: description,
+    notes: notes,
+  );
+
+  static Map<String, dynamic> _searchIndexFields({
+    required String customerName,
+    String? customerPhone,
+    String? customerEmail,
+    String? description,
+    String? notes,
+  }) {
+    final email = customerEmail?.toLowerCase();
+    return {
+      'customerNameLower': customerName.toLowerCase(),
+      'phoneNormalized': _normalizePhone(customerPhone),
+      if (email != null) 'customerEmail': email,
+      'textIndex': _makeTextIndex(
+        name: customerName,
+        phone: customerPhone,
+        email: email,
+        notes: notes ?? description,
+      ),
+    };
+  }
+
   /// Reference to the event types collection in Firestore.
   CollectionReference get _eventTypesCollection =>
       _firestore.collection(FirestoreCollections.eventTypes);
@@ -223,7 +272,7 @@ class FirestoreService {
   }) async {
     final enquiryData = {
       'customerName': customerName,
-      'customerEmail': customerEmail,
+      'customerEmail': customerEmail.toLowerCase(),
       'customerPhone': customerPhone,
       'eventType': eventType,
       'eventDate': eventDate,
@@ -234,7 +283,6 @@ class FirestoreService {
       // Only use statusValue - standard field
       'statusValue': statusValue,
       if (statusLabel != null) 'statusLabel': statusLabel,
-      'eventType': eventType,
       'eventTypeValue': eventType,
       if (eventTypeLabel != null) 'eventTypeLabel': eventTypeLabel,
       'paymentStatus': paymentStatus ?? 'unpaid',
@@ -252,9 +300,35 @@ class FirestoreService {
       'source': source,
       'sourceValue': source,
       if (sourceLabel != null) 'sourceLabel': sourceLabel,
+      ..._searchIndexFields(
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
+        description: description,
+      ),
     };
 
     final docRef = await _enquiriesCollection.add(enquiryData);
+    return docRef.id;
+  }
+
+  /// Creates an enquiry from a pre-built data map (used by tests/admin tooling).
+  Future<String> createEnquiryFromData(Map<String, dynamic> data) async {
+    final name = (data['customerName'] as String?) ?? '';
+    final payload = {
+      ...data,
+      ..._searchIndexFields(
+        customerName: name,
+        customerPhone: data['customerPhone'] as String?,
+        customerEmail: data['customerEmail'] as String?,
+        description: data['description'] as String?,
+        notes: data['notes'] as String?,
+      ),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    final docRef = await _enquiriesCollection.add(payload);
     return docRef.id;
   }
 

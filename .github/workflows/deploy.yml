@@ -43,7 +43,12 @@ jobs:
 
       - name: Build Web
         if: steps.guard.outputs.skip != 'true'
-        run: flutter build web --release
+        run: >
+          flutter build web --release
+          --dart-define=APP_ENV=prod
+          --dart-define=ENABLE_CRASHLYTICS=true
+          --dart-define=ENABLE_PERFORMANCE=true
+          --dart-define=ENABLE_ANALYTICS=true
 
       - name: Install Firebase CLI
         if: steps.guard.outputs.skip != 'true'
@@ -96,7 +101,12 @@ jobs:
         run: flutter pub get
 
       - name: Build App Bundle
-        run: flutter build appbundle --release
+        run: >
+          flutter build appbundle --release
+          --dart-define=APP_ENV=prod
+          --dart-define=ENABLE_CRASHLYTICS=true
+          --dart-define=ENABLE_PERFORMANCE=true
+          --dart-define=ENABLE_ANALYTICS=true
 
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
@@ -127,7 +137,12 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS
-        run: flutter build ios --release --no-codesign
+        run: >
+          flutter build ios --release --no-codesign
+          --dart-define=APP_ENV=prod
+          --dart-define=ENABLE_CRASHLYTICS=true
+          --dart-define=ENABLE_PERFORMANCE=true
+          --dart-define=ENABLE_ANALYTICS=true
 
       - name: Upload iOS build artifact
         uses: actions/upload-artifact@v4

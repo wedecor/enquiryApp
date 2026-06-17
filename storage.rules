@@ -1,22 +1,76 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow attachments
-    match /attachments/{enquiryId}/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.resource.size < 5 * 1024 * 1024
-        && (request.resource.contentType.matches('image/.*')
-            || request.resource.contentType == 'application/pdf');
+
+    function isSignedIn() {
+      return request.auth != null;
     }
-    
-    // Allow enquiry reference images
+
+    function _userDoc() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    // Ternary branches short-circuit — avoid firestore.get() when not needed.
+    function _userRole() {
+      return isSignedIn() && firestore.exists(_userDoc())
+        ? firestore.get(_userDoc()).data.role
+        : null;
+    }
+
+    function isAdmin() {
+      // Prefer Auth custom claims if configured; fall back to Firestore profile.
+      // (Some clients may rely on claims during token lifetime.)
+      return (request.auth.token.role == 'admin')
+        || (request.auth.token.admin == true)
+        // Be tolerant of legacy casing/variants.
+        || _userRole() == 'admin'
+        || _userRole() == 'Admin';
+    }
+
+    // Admins: full access. Staff: only when Firestore allows them to read the enquiry.
+    function canAccessEnquiry(enquiryId) {
+      return isAdmin()
+        ? true
+        : isAssignedToEnquiry(enquiryId);
+    }
+
+    function isAssignedToEnquiry(enquiryId) {
+      let enquiryPath = /databases/(default)/documents/enquiries/$(enquiryId);
+      return isSignedIn()
+        && firestore.exists(enquiryPath)
+        && (
+          firestore.get(enquiryPath).data.assignedTo == request.auth.uid
+          || firestore.get(enquiryPath).data.createdBy == request.auth.uid
+        );
+    }
+
+    function isValidAttachmentWrite() {
+      return request.resource.size < 5 * 1024 * 1024
+        && (
+          !('contentType' in request.resource)
+          || request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf'
+        );
+    }
+
+    function isValidImageWrite() {
+      return request.resource.size < 10 * 1024 * 1024
+        && (
+          !('contentType' in request.resource)
+          || request.resource.contentType.matches('image/.*')
+        );
+    }
+
+    match /attachments/{enquiryId}/{fileName} {
+      allow read: if canAccessEnquiry(enquiryId);
+      allow write: if canAccessEnquiry(enquiryId) && isValidAttachmentWrite();
+      allow delete: if canAccessEnquiry(enquiryId);
+    }
+
     match /enquiries/{enquiryId}/images/{fileName} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024  // 10MB max for images
-        && request.resource.contentType.matches('image/.*');
+      allow read: if canAccessEnquiry(enquiryId);
+      allow write: if canAccessEnquiry(enquiryId) && isValidImageWrite();
+      allow delete: if canAccessEnquiry(enquiryId);
     }
   }
 }
-

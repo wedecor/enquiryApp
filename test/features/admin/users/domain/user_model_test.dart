@@ -10,7 +10,7 @@ void main() {
         email: 'john@example.com',
         phone: '+1234567890',
         role: 'admin',
-        active: true,
+        isActive: true,
         createdAt: DateTime(2023, 1, 1),
         updatedAt: DateTime(2023, 1, 2),
       );
@@ -20,7 +20,7 @@ void main() {
       expect(user.email, 'john@example.com');
       expect(user.phone, '+1234567890');
       expect(user.role, 'admin');
-      expect(user.active, true);
+      expect(user.isActive, true);
       expect(user.createdAt, DateTime(2023, 1, 1));
       expect(user.updatedAt, DateTime(2023, 1, 2));
     });
@@ -35,7 +35,7 @@ void main() {
         updatedAt: DateTime(2023, 1, 2),
       );
 
-      expect(user.active, true); // default value
+      expect(user.isActive, true); // default value
       expect(user.phone, null);
     });
 
@@ -47,7 +47,7 @@ void main() {
       expect(user.email, 'new@example.com');
       expect(user.phone, null);
       expect(user.role, 'staff');
-      expect(user.active, true);
+      expect(user.isActive, true);
       expect(user.createdAt, isA<DateTime>());
       expect(user.updatedAt, isA<DateTime>());
     });
@@ -93,7 +93,7 @@ void main() {
       expect(firestoreData['name'], 'John Doe');
       expect(firestoreData['email'], 'john@example.com');
       expect(firestoreData['role'], 'admin');
-      expect(firestoreData['active'], true);
+      expect(firestoreData['isActive'], true);
       expect(firestoreData['createdAt'], isA<Object>()); // Timestamp
       expect(firestoreData['updatedAt'], isA<Object>()); // Timestamp
     });
@@ -108,13 +108,13 @@ void main() {
         updatedAt: DateTime(2023, 1, 2),
       );
 
-      final updated = original.copyWith(name: 'Jane Doe', role: 'admin', active: false);
+      final updated = original.copyWith(name: 'Jane Doe', role: 'admin', isActive: false);
 
       expect(updated.uid, 'test-uid'); // unchanged
       expect(updated.name, 'Jane Doe'); // changed
       expect(updated.email, 'john@example.com'); // unchanged
       expect(updated.role, 'admin'); // changed
-      expect(updated.active, false); // changed
+      expect(updated.isActive, false); // changed
       expect(updated.createdAt, DateTime(2023, 1, 1)); // unchanged
       expect(updated.updatedAt, DateTime(2023, 1, 2)); // unchanged
     });

@@ -1210,7 +1210,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
         ? statusValueRaw!.trim().toLowerCase()
         : 'new';
-    
+
     if (statusValue != 'in_talks') {
       return false;
     }

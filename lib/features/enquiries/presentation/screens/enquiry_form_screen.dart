@@ -81,14 +81,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _loadEnquiryData() async {
     Log.d('EnquiryFormScreen load start', data: {'enquiryId': widget.enquiryId?.substring(0, 6)});
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('enquiries')
-          .doc(widget.enquiryId!)
-          .get();
+      final firestoreService = ref.read(firestoreServiceProvider);
+      final data = await firestoreService.getEnquiry(widget.enquiryId!);
 
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-
+      if (data != null) {
         setState(() {
           _nameController.text = (data['customerName'] as String?) ?? '';
           _phoneController.text = (data['customerPhone'] as String?) ?? '';
@@ -298,9 +294,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       try {
         final urls = await _uploadImages(enquiryId);
         if (urls.isNotEmpty) {
-          await FirebaseFirestore.instance.collection('enquiries').doc(enquiryId).update({
+          await firestoreService.updateEnquiry(enquiryId, {
             'images': FieldValue.arrayUnion(urls),
-            'updatedAt': FieldValue.serverTimestamp(),
             'updatedBy': currentUser.uid,
           });
           // Clear selected images after successful upload
@@ -356,14 +351,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _updateEnquiry(UserModel currentUser) async {
+    final firestoreService = ref.read(firestoreServiceProvider);
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
     // Fetch old enquiry data to compare changes
-    final oldEnquiryDoc = await FirebaseFirestore.instance
-        .collection('enquiries')
-        .doc(widget.enquiryId!)
-        .get();
-    final oldEnquiryData = oldEnquiryDoc.data() as Map<String, dynamic>? ?? {};
+    final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
 
     final statusValue = _selectedStatus ?? 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
@@ -488,8 +480,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       },
     );
 
-    // Update the enquiry document directly - include images field with complete list
-    await FirebaseFirestore.instance.collection('enquiries').doc(widget.enquiryId!).update({
+    // Update the enquiry document — include images field with complete list
+    await firestoreService.updateEnquiry(widget.enquiryId!, {
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
       'eventLocation': newEventLocation,
@@ -501,7 +493,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'priority': priorityValue,
       'priorityValue': priorityValue,
       'priorityLabel': priorityLabel,
-      'statusValue': statusValue, // Standardized field - only write to this
+      'statusValue': statusValue,
       'statusLabel': statusLabel,
       'paymentStatus': paymentStatusValue,
       'paymentStatusValue': paymentStatusValue,
@@ -509,10 +501,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'assignedTo': _selectedAssignedTo,
       'totalCost': newTotalCost,
       'advancePaid': newAdvancePaid,
-      'images':
-          allImageUrls, // Always update with complete list (existing + new, excluding removed)
-      'updatedAt': FieldValue.serverTimestamp(),
+      'images': allImageUrls,
       'updatedBy': currentUser.uid,
+      ...FirestoreService.searchIndexFieldsFor(
+        customerName: newCustomerName,
+        customerPhone: newCustomerPhone,
+        customerEmail: oldEnquiryData['customerEmail'] as String?,
+        description: newDescription,
+      ),
     });
 
     Log.d('EnquiryFormScreen enquiry updated successfully with images');

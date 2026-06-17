@@ -111,10 +111,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Admin Audit Trail - admins can read, system can write
+    // Admin Audit Trail - admins only (append-only forensic record)
     match /admin_audit/{auditId} {
       allow read: if isAdmin();
-      allow create: if isSignedIn(); // Allow creation for audit logging
+      allow create: if isAdmin();
     }
   }
 }

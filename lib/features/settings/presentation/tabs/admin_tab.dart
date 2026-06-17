@@ -522,8 +522,9 @@ class NotificationConfigTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'SMTP configuration is managed in Cloud Functions environment. '
-                    'Email delivery is currently active using Gmail SMTP with app password.',
+                    'SMTP is configured in Cloud Functions via Secret Manager '
+                    '(SMTP_PASS) and environment variables (SMTP_USER, SMTP_HOST). '
+                    'Invite emails send only when those values are set on deploy.',
                   ),
                 ],
               ),

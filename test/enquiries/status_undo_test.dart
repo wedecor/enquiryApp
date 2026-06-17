@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:we_decor_enquiries/core/auth/current_user_role_provider.dart';
+import 'package:we_decor_enquiries/core/providers/role_provider.dart';
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/status_inline_control.dart'
     as wid;
+import 'package:we_decor_enquiries/shared/models/user_model.dart';
 
 class MockEnquiryRepository extends Mock implements EnquiryRepository {}
+
+UserModel _staffUser(String uid) =>
+    UserModel(uid: uid, name: 'Staff', email: '$uid@example.com', phone: '', role: UserRole.staff);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,8 +34,10 @@ void main() {
         ProviderScope(
           overrides: [
             enquiryRepositoryProvider.overrideWithValue(repo),
-            currentUserRoleProvider.overrideWithValue('staff'),
-            currentUserUidProvider.overrideWithValue('staff2'),
+            roleProvider.overrideWith((ref) => Stream.value(UserRole.staff)),
+            currentUserWithFirestoreProvider.overrideWith(
+              (ref) => Stream.value(_staffUser('staff2')),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry)),
@@ -69,18 +75,23 @@ void main() {
         ProviderScope(
           overrides: [
             enquiryRepositoryProvider.overrideWithValue(repo),
-            currentUserRoleProvider.overrideWithValue('staff'),
-            currentUserUidProvider.overrideWithValue('staff1'),
+            roleProvider.overrideWith((ref) => Stream.value(UserRole.staff)),
+            currentUserWithFirestoreProvider.overrideWith(
+              (ref) => Stream.value(_staffUser('staff1')),
+            ),
           ],
           child: MaterialApp(
             home: Scaffold(body: wid.StatusInlineControl(enquiry: enquiry)),
           ),
         ),
       );
-
-      await tester.tap(find.byKey(const Key('statusDropdown')));
       await tester.pumpAndSettle();
-      // pick 'quoted' from menu
+
+      final dd = find.byKey(const Key('statusDropdown'));
+      expect(tester.widget<DropdownButton<String>>(dd).onChanged, isNotNull);
+
+      await tester.tap(dd);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('quoted').last);
       await tester.pump();
 

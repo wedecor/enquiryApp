@@ -2,39 +2,16 @@ import 'dart:developer' as dev;
 
 import 'package:flutter/foundation.dart';
 
-/// Centralized logging utility with basic redaction for secrets/PII.
+import '../core/logging/redaction.dart';
+
+/// Centralized logging utility with PII redaction.
 class Log {
   Log._();
 
-  static final RegExp _secretLike = RegExp(
-    r'(bearer\s+[A-Za-z0-9._-]+|authorization|api[_-]?key|token|session|cookie|password|secret|access[_-]?token)',
-    caseSensitive: false,
-  );
-
-  static final RegExp _emailLike = RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}');
-
-  static final RegExp _phoneLike = RegExp(r'\b(?:\+?\d[\d -]{7,}\d)\b');
-
-  static String _redact(String value) {
-    var sanitized = value;
-    sanitized = sanitized.replaceAllMapped(_secretLike, (match) => _mask(match.group(0) ?? ''));
-    sanitized = sanitized.replaceAllMapped(_emailLike, (match) => _mask(match.group(0) ?? ''));
-    sanitized = sanitized.replaceAllMapped(_phoneLike, (match) => _mask(match.group(0) ?? ''));
-    return sanitized;
-  }
-
-  static String _mask(String value) {
-    if (value.length <= 6) {
-      return '***';
-    }
-    const keep = 3;
-    return '${value.substring(0, keep)}***${value.substring(value.length - keep)}';
-  }
-
   static String _formatMessage(String level, String message, Object? data) {
-    final msg = _redact(message);
+    final msg = redactSensitiveText(message);
     if (data == null) return '[$level] $msg';
-    return '[$level] $msg | ${_redact(data.toString())}';
+    return '[$level] $msg | ${redactSensitiveText(data.toString())}';
   }
 
   static void d(String message, {Object? data}) {

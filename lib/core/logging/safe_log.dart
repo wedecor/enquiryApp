@@ -1,111 +1,35 @@
-/// Safe logging utility to prevent accidental exposure of sensitive data
-///
-/// This utility automatically redacts sensitive fields from log output
-/// to prevent tokens, passwords, and other secrets from appearing in logs.
+/// Safe logging utility to prevent accidental exposure of sensitive data.
 library;
 
 import '../../utils/logger.dart';
+import 'redaction.dart';
 
-/// Redacts sensitive values based on key names
-String _redact(String key, Object? value) {
-  final keyLower = key.toLowerCase();
-
-  // List of sensitive key patterns
-  const sensitivePatterns = [
-    'token',
-    'authorization',
-    'cookie',
-    'secret',
-    'key',
-    'password',
-    'auth',
-    'bearer',
-    'jwt',
-    'session',
-    'credential',
-    'private',
-    'fcm',
-    'vapid',
-  ];
-
-  // Check if key contains any sensitive patterns
-  final isSensitive = sensitivePatterns.any((pattern) => keyLower.contains(pattern));
-
-  if (isSensitive) {
-    if (value == null) return 'null';
-
-    final valueStr = value.toString();
-    if (valueStr.isEmpty) return '(empty)';
-
-    // Show type and length instead of actual value
-    if (valueStr.length <= 4) {
-      return '***';
-    } else {
-      return '${valueStr.substring(0, 2)}***${valueStr.substring(valueStr.length - 2)} (${valueStr.length} chars)';
-    }
-  }
-
-  return (value ?? 'null').toString();
-}
-
-/// Safely logs a map by redacting sensitive fields
-///
-/// Example:
-/// ```dart
-/// safeLog('Push summary', {
-///   'uid': 'user123',
-///   'tokens': ['token1', 'token2'],  // Will be redacted
-///   'success': 2,
-/// });
-/// ```
-///
-/// Output: `Push summary {uid: user123, tokens: to***en (6 chars), success: 2}`
+/// Safely logs a map by redacting sensitive fields and embedded PII.
 void safeLog(String label, Map<String, Object?> data) {
-  final redacted = data.map((key, value) => MapEntry(key, _redact(key, value)));
-
+  final redacted = data.map((key, value) => MapEntry(key, redactMapEntry(key, value)));
   Log.i(label, data: redacted);
 }
 
-/// Safely logs any object by converting to string and checking for sensitive patterns
-///
-/// Example:
-/// ```dart
-/// safeLogObject('User data', userObject);
-/// ```
+/// Safely logs any object by converting to string and redacting PII.
 void safeLogObject(String label, Object? object) {
   if (object == null) {
     Log.i(label, data: 'null');
     return;
   }
 
-  final objectStr = object.toString();
-
-  // Check if the string representation contains sensitive patterns
-  const sensitivePatterns = ['token', 'authorization', 'secret', 'key', 'password'];
-
-  final containsSensitive = sensitivePatterns.any(
-    (pattern) => objectStr.toLowerCase().contains(pattern),
-  );
-
-  if (containsSensitive) {
-    Log.i('$label [REDACTED]', data: {'length': objectStr.length});
-  } else {
-    Log.i(label, data: objectStr);
-  }
+  Log.i(label, data: redactSensitiveText(object.toString()));
 }
 
-/// Creates a safe version of a map for logging
-///
-/// Returns a new map with sensitive values redacted
+/// Returns a copy of [data] with sensitive values redacted.
 Map<String, Object?> createSafeLogMap(Map<String, Object?> data) {
-  return data.map((key, value) => MapEntry(key, _redact(key, value)));
+  return data.map((key, value) => MapEntry(key, redactMapEntry(key, value)));
 }
 
-/// Extension on Map to add safe logging methods
+/// Extension on Map to add safe logging methods.
 extension SafeLogMap on Map<String, Object?> {
-  /// Returns a copy of this map with sensitive values redacted
+  /// Returns a copy of this map with sensitive values redacted.
   Map<String, Object?> get redacted => createSafeLogMap(this);
 
-  /// Safely logs this map
+  /// Safely logs this map.
   void logSafely(String label) => safeLog(label, this);
 }

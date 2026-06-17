@@ -1,15 +1,20 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-// Firebase configuration - replace with your actual config
+// Firebase configuration — set FIREBASE_API_KEY (and related vars) in the environment.
 const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || "REDACTED_UNKNOWN_FIREBASE_API_KEY",
+  apiKey: process.env.FIREBASE_API_KEY,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN || "wedecorenquries.firebaseapp.com",
   projectId: process.env.FIREBASE_PROJECT_ID || "wedecorenquries",
   storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "wedecorenquries.firebasestorage.app",
   messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "747327664982",
-  appId: process.env.FIREBASE_APP_ID || "1:747327664982:web:2e3f4a5b6c7d8e9f0a1b2c"
+  appId: process.env.FIREBASE_APP_ID || "1:747327664982:web:98e5e0d4bed9a1526edcf7",
 };
+
+if (!firebaseConfig.apiKey) {
+  console.error("FIREBASE_API_KEY is required. Use the Browser key from Firebase Console / GCP API credentials.");
+  process.exit(1);
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
