@@ -621,16 +621,18 @@ class NotificationService {
 
       if (notificationRef != null) {
         if (kDebugMode) {
+          final hasPushTargets = tokens.isNotEmpty;
+          final pushTargetCount = tokens.length;
           debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
           debugPrint('   UserId: $userId');
           debugPrint('   NotificationId: ${notificationRef.id}');
           debugPrint('   Title: $title');
           debugPrint('   Body: $body');
-          debugPrint('   HasTokens: ${tokens.isNotEmpty}');
-          debugPrint('   TokenCount: ${tokens.length}');
+          debugPrint('   HasPushTargets: $hasPushTargets');
+          debugPrint('   PushTargetCount: $pushTargetCount');
           if (tokens.isEmpty) {
             debugPrint(
-              '   ⚠️ WARNING: User has NO FCM tokens - notification may not be delivered!',
+              '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
             );
           }
         }

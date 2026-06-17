@@ -424,7 +424,10 @@ export const sendNotificationToUser = onDocumentWritten(
       ));
 
       if (tokens.length === 0) {
-        logger.info("No FCM tokens found for user", { userId, notificationId: event.params.notificationId });
+        logger.info("No FCM registrations found for user", {
+          userId,
+          notificationId: event.params.notificationId,
+        });
         return;
       }
 
