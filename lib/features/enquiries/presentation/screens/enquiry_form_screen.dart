@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -8,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/logging/logger.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/providers/audit_provider.dart';
 import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/role_provider.dart';
@@ -15,8 +16,11 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
-import '../../../../shared/widgets/status_dropdown.dart';
-import '../../../../core/logging/logger.dart';
+import '../widgets/enquiry_form_customer_fields.dart';
+import '../widgets/enquiry_form_event_fields.dart';
+import '../widgets/enquiry_form_financial_fields.dart';
+import '../widgets/enquiry_form_images_section.dart';
+import '../widgets/enquiry_form_section.dart';
 
 /// Screen for creating and editing enquiries
 class EnquiryFormScreen extends ConsumerStatefulWidget {
@@ -665,7 +669,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
 
           // Convert to Uint8List if needed
-          final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+          final uint8List = bytes;
 
           final task = await ref.putData(uint8List, metadata);
           final url = await task.ref.getDownloadURL();
@@ -732,7 +736,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   @override
   Widget build(BuildContext context) {
     // Watch role provider directly to handle loading state properly
-    final roleAsync = ref.watch(roleProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -742,534 +746,76 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.space4,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Customer Information Section
-              _buildSectionHeader('Customer Information'),
-              const SizedBox(height: 16),
-
-              // Name Field
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Name *',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter customer name';
-                  }
-                  return null;
-                },
+              EnquiryFormCustomerFields(
+                nameController: _nameController,
+                phoneController: _phoneController,
+                locationController: _locationController,
               ),
-              const SizedBox(height: 16),
 
-              // Phone Field
-              TextFormField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number *',
-                  prefixIcon: Icon(Icons.phone),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter phone number';
-                  }
-                  return null;
-                },
+              EnquiryFormEventFields(
+                selectedDate: _selectedDate,
+                onSelectDate: _selectDate,
+                selectedEventType: _selectedEventType,
+                onEventTypeChanged: (value) => setState(() => _selectedEventType = value),
+                selectedStatus: _selectedStatus,
+                onStatusChanged: (value) => setState(() => _selectedStatus = value),
+                selectedPriority: _selectedPriority,
+                onPriorityChanged: (value) => setState(() => _selectedPriority = value),
+                selectedAssignedTo: _selectedAssignedTo,
+                onAssignedToChanged: (value) => setState(() => _selectedAssignedTo = value),
               ),
-              const SizedBox(height: 16),
 
-              // Location Field
-              TextFormField(
-                controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Event Location *',
-                  prefixIcon: Icon(Icons.location_on),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter event location';
-                  }
-                  return null;
-                },
+              EnquiryFormFinancialFields(
+                totalCostController: _totalCostController,
+                advancePaidController: _advancePaidController,
+                selectedPaymentStatus: _selectedPaymentStatus,
+                onPaymentStatusChanged: (value) => setState(() => _selectedPaymentStatus = value),
+                parseDouble: _parseDouble,
               ),
-              const SizedBox(height: 24),
 
-              // Event Details Section
-              _buildSectionHeader('Event Details'),
-              const SizedBox(height: 16),
-
-              // Event Date
-              InkWell(
-                onTap: _selectDate,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(4),
+              EnquiryFormSection(
+                title: 'Additional Information',
+                children: [
+                  TextFormField(
+                    controller: _notesController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      prefixIcon: Icon(Icons.note),
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today),
-                      const SizedBox(width: 16),
-                      Text(
-                        _selectedDate == null
-                            ? 'Select Event Date *'
-                            : 'Event Date: ${_selectedDate!.toString().split(' ')[0]}',
-                        style: TextStyle(color: _selectedDate == null ? Colors.grey : null),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Event Type Field - Firestore-backed via StatusDropdown
-              StatusDropdown(
-                collectionName: 'event_types',
-                value: _selectedEventType,
-                label: 'Event Type',
-                required: true,
-                onChanged: (value) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _selectedEventType = value;
-                    });
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please select an event type';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Status Field
-              StatusDropdown(
-                collectionName: 'statuses',
-                value: _selectedStatus,
-                label: 'Status',
-                onChanged: (value) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _selectedStatus = value;
-                    });
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please select a status';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Priority Field
-              StatusDropdown(
-                collectionName: 'priorities',
-                value: _selectedPriority,
-                label: 'Priority',
-                onChanged: (value) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    setState(() {
-                      _selectedPriority = value;
-                    });
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please select a priority';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Assignment Field (Admin Only)
-              // Show loading state while checking admin status
-              roleAsync.when(
-                data: (role) {
-                  if (role != UserRole.admin) {
-                    return const SizedBox.shrink();
-                  }
-
-                  // User is admin, use Consumer to watch activeUsersProvider
-                  return Consumer(
-                    builder: (context, ref, child) {
-                      final activeUsers = ref.watch(activeUsersProvider);
-
-                      return activeUsers.when(
-                        data: (users) {
-                          return DropdownButtonFormField<String>(
-                            value: _selectedAssignedTo,
-                            decoration: const InputDecoration(
-                              labelText: 'Assign To',
-                              prefixIcon: Icon(Icons.person_add),
-                              border: OutlineInputBorder(),
-                            ),
-                            hint: const Text('Select user to assign'),
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Unassigned'),
-                              ),
-                              ...users.docs.map((doc) {
-                                final user = doc.data() as Map<String, dynamic>;
-                                return DropdownMenuItem<String>(
-                                  value: doc.id,
-                                  child: Text(
-                                    (user['name'] as String?) ??
-                                        (user['email'] as String?) ??
-                                        'Unknown',
-                                  ),
-                                );
-                              }),
-                            ],
-                            onChanged: (value) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                setState(() {
-                                  _selectedAssignedTo = value;
-                                });
-                              });
-                            },
-                          );
-                        },
-                        loading: () => TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Assign To',
-                            prefixIcon: Icon(Icons.person_add),
-                            border: OutlineInputBorder(),
-                            hintText: 'Loading users...',
-                          ),
-                          enabled: false,
-                        ),
-                        error: (error, stack) {
-                          Log.e('Error loading users for assignment', error: error);
-                          return TextFormField(
-                            initialValue: _selectedAssignedTo ?? '',
-                            decoration: const InputDecoration(
-                              labelText: 'Assign To (User ID)',
-                              prefixIcon: Icon(Icons.person_add),
-                              border: OutlineInputBorder(),
-                              hintText: 'Enter user ID or leave empty for unassigned',
-                            ),
-                            onChanged: (value) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                setState(() {
-                                  _selectedAssignedTo = value.isEmpty ? null : value;
-                                });
-                              });
-                            },
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-                loading: () => TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Assign To',
-                    prefixIcon: Icon(Icons.person_add),
-                    border: OutlineInputBorder(),
-                    hintText: 'Checking permissions...',
-                  ),
-                  enabled: false,
-                ),
-                error: (error, stack) {
-                  Log.e('Error checking admin status', error: error);
-                  return const SizedBox.shrink();
-                },
-              ),
-              const SizedBox(height: 16),
-              const SizedBox(height: 24),
-
-              // Financial Information Section (Admin Only)
-              roleAsync.when(
-                data: (role) {
-                  if (role != UserRole.admin) {
-                    return const SizedBox.shrink();
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildSectionHeader('Financial Information (Admin Only)'),
-                      const SizedBox(height: 16),
-
-                      // Total Cost Field
-                      TextFormField(
-                        controller: _totalCostController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Total Cost',
-                          prefixIcon: Icon(Icons.attach_money),
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter total cost',
-                        ),
-                        validator: (value) {
-                          if (value != null && value.trim().isNotEmpty) {
-                            final cost = _parseDouble(value);
-                            if (cost == null || cost < 0) {
-                              return 'Please enter a valid amount';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Advance Paid Field
-                      TextFormField(
-                        controller: _advancePaidController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Advance Paid',
-                          prefixIcon: Icon(Icons.payment),
-                          border: OutlineInputBorder(),
-                          hintText: 'Enter advance amount',
-                        ),
-                        validator: (value) {
-                          if (value != null && value.trim().isNotEmpty) {
-                            final advance = _parseDouble(value);
-                            if (advance == null || advance < 0) {
-                              return 'Please enter a valid amount';
-                            }
-
-                            // Check if advance is more than total cost
-                            final totalCost = _parseDouble(_totalCostController.text);
-                            if (totalCost != null && advance > totalCost) {
-                              return 'Advance cannot be more than total cost';
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Payment Status Field
-                      StatusDropdown(
-                        collectionName: 'payment_statuses',
-                        value: _selectedPaymentStatus,
-                        label: 'Payment Status',
-                        onChanged: (value) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            setState(() {
-                              _selectedPaymentStatus = value;
-                            });
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please select a payment status';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                ],
               ),
 
-              // Notes Section
-              _buildSectionHeader('Additional Information'),
-              const SizedBox(height: 16),
-
-              // Notes Field
-              TextFormField(
-                controller: _notesController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  prefixIcon: Icon(Icons.note),
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
+              EnquiryFormImagesSection(
+                selectedImages: _selectedImages,
+                existingImageUrls: _existingImageUrls,
+                onPickImages: _pickImages,
+                onRemoveImage: _removeImage,
+                onRemoveExistingImage: _removeExistingImage,
               ),
-              const SizedBox(height: 24),
 
-              // Images Section
-              _buildSectionHeader('Reference Images'),
-              const SizedBox(height: 16),
-
-              // Image Upload Button
-              ElevatedButton.icon(
-                onPressed: _pickImages,
-                icon: const Icon(Icons.upload),
-                label: const Text('Upload Images'),
-                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-              ),
-              const SizedBox(height: 16),
-
-              // Selected Images (new uploads)
-              if (_selectedImages.isNotEmpty) ...[
-                Text(
-                  'New Images (${_selectedImages.length})',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 100,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedImages.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: kIsWeb
-                                    ? FutureBuilder<Uint8List>(
-                                        future: _selectedImages[index].readAsBytes(),
-                                        builder: (context, snapshot) {
-                                          if (snapshot.connectionState == ConnectionState.waiting) {
-                                            return const Center(child: CircularProgressIndicator());
-                                          }
-                                          if (snapshot.hasData) {
-                                            return Image.memory(snapshot.data!, fit: BoxFit.cover);
-                                          }
-                                          return const Icon(Icons.error);
-                                        },
-                                      )
-                                    : Image.file(
-                                        File(_selectedImages[index].path),
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: GestureDetector(
-                                onTap: () => _removeImage(index),
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Existing Images (from Firestore)
-              // Debug: Always show section header to verify images are loaded
-              Text(
-                'Existing Images (${_existingImageUrls.length})',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              if (_existingImageUrls.isEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    'No existing images found',
-                    style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 100,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _existingImageUrls.length,
-                    itemBuilder: (context, index) {
-                      final url = _existingImageUrls[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  url,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(child: CircularProgressIndicator());
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.error);
-                                  },
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: GestureDetector(
-                                onTap: () => _removeExistingImage(index),
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Submit Button
-              const SizedBox(height: 32),
+              const SizedBox(height: AppTokens.space8),
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: AppSpacing.vertical(AppTokens.space4),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                         ),
                       )
                     : Text(
@@ -1280,27 +826,6 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-      ),
-      child: Builder(
-        builder: (context) {
-          return Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          );
-        },
       ),
     );
   }

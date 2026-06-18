@@ -11,22 +11,19 @@ import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/services/review_request_service.dart';
-import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
-import '../../../../shared/widgets/empty_state.dart';
-import '../../../../ui/components/enquiry_list_tile.dart';
-import '../../../../ui/components/stats_card.dart';
-import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../../enquiries/presentation/widgets/status_inline_control.dart';
 import '../../../settings/providers/settings_providers.dart';
-import '../widgets/dashboard_empty_enquiries.dart';
-import '../widgets/dashboard_kpi_row.dart';
+import '../widgets/dashboard_enquiries_tab.dart';
+import '../widgets/dashboard_enquiry_utils.dart';
 import '../widgets/dashboard_navigation_drawer.dart';
+import '../widgets/dashboard_statistics_section.dart';
+import '../widgets/dashboard_tab_bar_delegate.dart';
 import '../widgets/dashboard_welcome_panel.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
@@ -83,7 +80,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final value = (data['value'] as String?)?.trim();
         final colorHex = data['color'] as String?;
         if (value == null || value.isEmpty || colorHex == null) continue;
-        final color = _parseColor(colorHex);
+        final color = parseDashboardColor(colorHex);
         if (color != null) {
           _statusColorCache[value.toLowerCase()] = color;
         }
@@ -95,7 +92,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final value = (data['value'] as String?)?.trim();
         final colorHex = data['color'] as String?;
         if (value == null || value.isEmpty || colorHex == null) continue;
-        final color = _parseColor(colorHex);
+        final color = parseDashboardColor(colorHex);
         if (color != null) {
           _eventColorCache[value.toLowerCase()] = color;
         }
@@ -149,57 +146,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           });
     } catch (e) {
       Log.e('Error initiating automatic cleanup', error: e);
-    }
-  }
-
-  Color? _parseColor(String? input) {
-    if (input == null) return null;
-    var s = input.trim();
-    if (s.isEmpty) return null;
-
-    final rgbRe = RegExp(
-      r'^rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*([0-1]?\.?\d+))?\s*\)$',
-      caseSensitive: false,
-    );
-    final match = rgbRe.firstMatch(s);
-    if (match != null) {
-      int clampChannel(String v) => int.parse(v).clamp(0, 255);
-      final r = clampChannel(match.group(1)!);
-      final g = clampChannel(match.group(2)!);
-      final b = clampChannel(match.group(3)!);
-      final rawAlpha = match.group(4);
-      final alpha = rawAlpha != null ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0) : 1.0;
-      return Color.fromRGBO(r, g, b, alpha);
-    }
-
-    s = s.replaceAll('#', '').trim();
-    if (s.startsWith('0x')) {
-      try {
-        var value = int.parse(s);
-        if (value <= 0xFFFFFF) value = 0xFF000000 | value;
-        return Color(value);
-      } catch (_) {}
-    }
-
-    final hexRe = RegExp(r'^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$');
-    if (hexRe.hasMatch(s)) {
-      if (s.length == 6) {
-        return Color(int.parse('0xFF${s.toUpperCase()}'));
-      }
-      if (s.length == 8) {
-        final rr = s.substring(0, 2).toUpperCase();
-        final gg = s.substring(2, 4).toUpperCase();
-        final bb = s.substring(4, 6).toUpperCase();
-        final aa = s.substring(6, 8).toUpperCase();
-        return Color(int.parse('0x$aa$rr$gg$bb'));
-      }
-    }
-
-    try {
-      final value = int.parse(s);
-      return Color(value <= 0xFFFFFF ? (0xFF000000 | value) : value);
-    } catch (_) {
-      return null;
     }
   }
 
@@ -272,17 +218,44 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
     final tabBar = TabBar(controller: _tabController, tabs: _tabs, isScrollable: true);
+    final tabActions = DashboardEnquiryTabActions(
+      onView: _openEnquiryDetails,
+      onCall: _handleCall,
+      onWhatsApp: _handleWhatsApp,
+      onReminderWhatsApp: _handleReminderWhatsApp,
+      onUpdateStatus: _showUpdateStatusSheet,
+      onShare: _shareEnquiry,
+      onAddNote: _showNotesSheet,
+      onReviewRequest: _handleReviewRequest,
+      onMarkNotInterested: _markAsNotInterested,
+    );
 
     return SafeArea(
       child: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(child: _buildWelcomeAndStats(user, isAdmin)),
-          SliverPersistentHeader(pinned: true, delegate: _TabBarDelegate(tabBar)),
+          SliverPersistentHeader(pinned: true, delegate: DashboardTabBarDelegate(tabBar)),
         ],
         body: TabBarView(
           controller: _tabController,
           children: _statusTabs
-              .map((s) => _buildEnquiriesTab(s['value']!, isAdmin, user?.uid))
+              .map(
+                (s) => DashboardEnquiriesTab(
+                  status: s['value']!,
+                  isAdmin: isAdmin,
+                  userId: user?.uid,
+                  searchQuery: _searchQuery,
+                  onClearSearch: () {
+                    _searchController.clear();
+                    _handleSearchChanged();
+                  },
+                  statusColorCache: _statusColorCache,
+                  eventColorCache: _eventColorCache,
+                  actions: tabActions,
+                  errorBuilder: _buildErrorWidget,
+                  onTabVisible: s['value'] == 'in_talks' ? _runAutomaticCleanup : null,
+                ),
+              )
               .toList(),
         ),
       ),
@@ -299,370 +272,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         _searchController.clear();
         _handleSearchChanged();
       },
-      statsChild: _buildStatisticsCards(isAdmin, user?.uid),
+      statsChild: DashboardStatisticsSection(isAdmin: isAdmin, userId: user?.uid),
     );
-  }
-
-  Widget _buildStatisticsCards(bool isAdmin, String? userId) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(isAdmin, userId),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Text('Error loading statistics');
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final enquiries = snapshot.data?.docs ?? [];
-
-        final totalEnquiries = enquiries.length;
-        final newEnquiries = enquiries.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return (data['statusValue'] as String?)?.toLowerCase() == 'new'; // Use statusValue only
-        }).length;
-        final inProgressEnquiries = enquiries.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return (data['statusValue'] as String?)?.toLowerCase() ==
-              'in_talks'; // Use statusValue only
-        }).length;
-        final confirmedEnquiries = enquiries.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return (data['statusValue'] as String?)?.toLowerCase() ==
-              'confirmed'; // Use statusValue only
-        }).length;
-        final completedEnquiries = enquiries.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          return (data['statusValue'] as String?)?.toLowerCase() ==
-              'completed'; // Use statusValue only
-        }).length;
-
-        final cards = [
-          StatsCard(
-            icon: Icons.inbox_outlined,
-            value: totalEnquiries.toString(),
-            label: 'Total enquiries',
-          ),
-          StatsCard(icon: Icons.fiber_new, value: newEnquiries.toString(), label: 'New'),
-          StatsCard(
-            icon: Icons.handshake_outlined,
-            value: inProgressEnquiries.toString(),
-            label: 'In talks',
-          ),
-          StatsCard(
-            icon: Icons.check_circle_outline,
-            value: confirmedEnquiries.toString(),
-            label: 'Confirmed',
-          ),
-          StatsCard(
-            icon: Icons.verified_outlined,
-            value: completedEnquiries.toString(),
-            label: 'Completed',
-          ),
-        ];
-
-        return DashboardKpiRow(items: cards);
-      },
-    );
-  }
-
-  Widget _buildEnquiriesTab(String status, bool isAdmin, String? userId) {
-    // Trigger automatic cleanup when viewing In Talks tab to mark past events
-    if (status == 'in_talks') {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _runAutomaticCleanup();
-      });
-    }
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(isAdmin, userId, status == 'All' ? null : status),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return _buildErrorWidget(context, snapshot.error!);
-        }
-
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final rawEnquiries = snapshot.data!.docs.toList();
-
-        if (rawEnquiries.isEmpty) {
-          return DashboardEmptyEnquiries(
-            status: status,
-            searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-            onClearSearch: _searchQuery.isNotEmpty
-                ? () {
-                    _searchController.clear();
-                    _handleSearchChanged();
-                  }
-                : null,
-          );
-        }
-
-        final now = DateTime.now();
-
-        // Apply filters based on tab type - always filter client-side for consistency
-        List<QueryDocumentSnapshot<Object?>> preFilteredEnquiries = rawEnquiries;
-        if (status == 'All') {
-          // All tab: show all enquiries (no filtering)
-          preFilteredEnquiries = rawEnquiries;
-        } else if (status == 'reminders') {
-          // Reminders tab: filter by reminder criteria
-          preFilteredEnquiries = rawEnquiries
-              .where((doc) => _shouldShowReminder(doc.data() as Map<String, dynamic>, now))
-              .toList(growable: false);
-        } else if (status == 'in_talks') {
-          // In Talks tab: exclude past events (event date before today)
-          preFilteredEnquiries = rawEnquiries
-              .where((doc) => _shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
-              .toList(growable: false);
-        } else {
-          // Other status tabs: filter by status value (case-insensitive client-side filtering)
-          preFilteredEnquiries = rawEnquiries
-              .where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                final statusValueRaw = data['statusValue'] as String?;
-                final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                    ? statusValueRaw!.trim().toLowerCase()
-                    : 'new';
-                return statusValue == status.toLowerCase();
-              })
-              .toList(growable: false);
-        }
-
-        // Sort based on tab type
-        if (status == 'reminders') {
-          // Reminders tab: sort by event date (latest event date first)
-          preFilteredEnquiries.sort((a, b) => _compareByEventDate(b, a));
-        } else if (status == 'in_talks') {
-          // In Talks tab: sort by created date (newest first)
-          preFilteredEnquiries.sort((a, b) => _compareByCreatedDate(b, a));
-        } else {
-          // Other tabs: use existing comparison (nearest event date)
-          preFilteredEnquiries.sort((a, b) => _compareByNearestEventDate(a, b, now));
-        }
-
-        final filteredEnquiries = _searchQuery.isEmpty
-            ? preFilteredEnquiries
-            : preFilteredEnquiries
-                  .where((doc) => _matchesSearchQuery(doc.data() as Map<String, dynamic>))
-                  .toList(growable: false);
-
-        if (_searchQuery.isNotEmpty && filteredEnquiries.isEmpty) {
-          return SearchEmptyState(
-            query: _searchQuery,
-            onClearSearch: () {
-              _searchController.clear();
-              _handleSearchChanged();
-            },
-          );
-        }
-
-        final dropdownLookup = ref
-            .watch(dropdownLookupProvider)
-            .maybeWhen(data: (value) => value, orElse: () => null);
-
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: filteredEnquiries.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final enquiry = filteredEnquiries[index];
-            final enquiryData = enquiry.data() as Map<String, dynamic>;
-            final enquiryId = enquiry.id;
-            final enquiryModel = Enquiry.fromFirestore(enquiry);
-            final customerName = (enquiryData['customerName'] as String?) ?? 'Customer';
-            final phone = enquiryData['customerPhone'] as String?;
-            final assignedUserId = enquiryData['assignedTo'] as String?;
-
-            final assignedDisplayAsync = assignedUserId == null
-                ? const AsyncValue.data('Unassigned')
-                : ref.watch(users_providers.userDisplayNameProvider(assignedUserId));
-
-            final assignedDisplay = assignedUserId == null
-                ? 'Unassigned'
-                : assignedDisplayAsync.when(
-                    data: (value) => value,
-                    loading: () => 'Fetching assignee…',
-                    error: (_, __) => 'Unknown',
-                  );
-
-            final createdAt = _parseDateTime(enquiryData['createdAt']) ?? DateTime.now();
-            final eventDate = _parseDateTime(enquiryData['eventDate']);
-            final location =
-                (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?);
-            final notes =
-                (enquiryData['description'] as String?) ?? (enquiryData['notes'] as String?);
-
-            final statusValueRaw = enquiryData['statusValue'] as String?; // Only use statusValue
-            final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                ? statusValueRaw!.trim()
-                : 'new';
-            final statusLabel =
-                (enquiryData['statusLabel'] as String?) ??
-                (dropdownLookup != null
-                    ? dropdownLookup.labelForStatus(statusValue)
-                    : DropdownLookup.titleCase(statusValue));
-            final eventTypeValueRaw =
-                (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
-            final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
-                ? eventTypeValueRaw!.trim()
-                : 'event';
-            final eventTypeLabel =
-                (enquiryData['eventTypeLabel'] as String?) ??
-                (dropdownLookup != null
-                    ? dropdownLookup.labelForEventType(eventTypeValue)
-                    : DropdownLookup.titleCase(eventTypeValue));
-            final whatsappContact = enquiryData['whatsappNumber'] as String? ?? phone;
-            final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
-            final reminderCount = (enquiryData['reminderClickCount'] as int?) ?? 0;
-            final isReminderTab = status == 'reminders';
-            final todayStart = DateTime(now.year, now.month, now.day);
-            final isPastEvent = eventDate != null &&
-                DateTime(eventDate.year, eventDate.month, eventDate.day).isBefore(todayStart);
-            final canMarkNotInterested = isPastEvent &&
-                ['in_talks', 'new', 'quote_sent'].contains(statusValue.toLowerCase());
-            final statusColorHex =
-                (enquiryData['statusColorHex'] as String?) ??
-                (enquiryData['statusColor'] as String?);
-            final eventColorHex =
-                (enquiryData['eventColorHex'] as String?) ?? (enquiryData['eventColor'] as String?);
-            final statusColorOverride =
-                _colorFromDynamic(enquiryData['statusColorValue']) ??
-                _colorFromDynamic(enquiryData['statusColorInt']) ??
-                _colorFromDynamic(statusColorHex) ??
-                _colorFromDynamic(enquiryData['statusColor']) ??
-                _statusColorCache[statusValue.toLowerCase()];
-            final eventColorOverride =
-                _colorFromDynamic(enquiryData['eventColorValue']) ??
-                _colorFromDynamic(enquiryData['eventColorInt']) ??
-                _colorFromDynamic(eventColorHex) ??
-                _colorFromDynamic(enquiryData['eventColor']) ??
-                _eventColorCache[eventTypeValue.toLowerCase()];
-            if (kDebugMode) {
-              Log.d(
-                'Enquiry tile data snapshot',
-                data: {
-                  'enquiryId': enquiryId,
-                  'status': statusValue,
-                  'eventType': eventTypeValue,
-                  'hasStatusColor': statusColorHex != null || statusColorOverride != null,
-                  'hasEventColor': eventColorHex != null || eventColorOverride != null,
-                },
-              );
-            }
-
-            // Build reminder message if in reminders tab
-            String? reminderPrefill;
-            if (isReminderTab && whatsappContact != null) {
-              reminderPrefill = _buildReminderMessage(
-                customerName,
-                eventTypeLabel,
-                createdAt,
-                eventDate,
-              );
-            }
-
-            return EnquiryTileStatusStrip(
-              name: customerName,
-              status: statusLabel,
-              eventType: eventTypeLabel,
-              eventCountdownLabel: eventCountdownLabel,
-              ageLabel: _formatAgeLabel(createdAt),
-              assignee: assignedDisplay,
-              dateLabel: _formatDateLabel(eventDate),
-              location: location,
-              notes: notes,
-              phoneNumber: phone,
-              whatsappNumber: whatsappContact,
-              statusColorHex: statusColorHex,
-              eventColorHex: eventColorHex,
-              statusColorOverride: statusColorOverride,
-              eventColorOverride: eventColorOverride,
-              whatsappPrefill: reminderPrefill ?? 'Hi $customerName, this is from We Decor.',
-              onView: () => _openEnquiryDetails(enquiryId),
-              enquiryId: enquiryId,
-              onCall: phone == null ? null : () => _handleCall(phone, customerName, enquiryId),
-              onWhatsApp: whatsappContact == null
-                  ? null
-                  : (isReminderTab
-                        ? () => _handleReminderWhatsApp(
-                            whatsappContact,
-                            customerName,
-                            enquiryId,
-                            eventTypeLabel,
-                            createdAt,
-                            eventDate,
-                          )
-                        : () => _handleWhatsApp(whatsappContact, customerName, enquiryId)),
-              onUpdateStatus: () => _showUpdateStatusSheet(enquiryModel),
-              onShare: () => _shareEnquiry(enquiryModel),
-              onAddNote: () => _showNotesSheet(enquiryModel),
-              onRequestReview: statusValue.toLowerCase() == 'completed' && phone != null
-                  ? () => _handleReviewRequest(phone, customerName, enquiryId)
-                  : null,
-              reminderCount: isReminderTab ? reminderCount : null,
-              isPastEvent: canMarkNotInterested,
-              onMarkNotInterested: canMarkNotInterested && userId != null
-                  ? () => _markAsNotInterested(enquiryId, userId)
-                  : null,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  String _formatAgeLabel(DateTime createdAt) {
-    final age = DateTime.now().difference(createdAt);
-    if (age.inMinutes < 1) return 'Just now';
-    if (age.inMinutes < 60) return '${age.inMinutes}m old';
-    if (age.inHours < 24) return '${age.inHours}h old';
-    if (age.inDays < 7) return '${age.inDays}d old';
-    final weeks = age.inDays ~/ 7;
-    if (weeks < 5) return '${weeks}w old';
-    final months = age.inDays ~/ 30;
-    if (months < 12) return '${months}mo old';
-    final years = age.inDays ~/ 365;
-    return '${years}y old';
-  }
-
-  String _formatDateLabel(DateTime? date) {
-    if (date == null) return 'Date TBC';
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year.toString();
-    return '$day/$month/$year';
-  }
-
-  String? _formatEventCountdownLabel(DateTime? date) {
-    if (date == null) return null;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final eventDay = DateTime(date.year, date.month, date.day);
-    final days = eventDay.difference(today).inDays;
-
-    if (days > 1) return 'In $days days';
-    if (days == 1) return 'Tomorrow';
-    if (days == 0) return 'Today';
-    if (days == -1) return 'Yesterday';
-    return '${days.abs()} days ago';
-  }
-
-  Color? _colorFromDynamic(dynamic value) {
-    if (value == null) return null;
-    if (value is Color) return value;
-    if (value is int) {
-      final normalized = value <= 0xFFFFFF ? 0xFF000000 | value : value;
-      return Color(normalized);
-    }
-    if (value is String) {
-      return _parseColor(value);
-    }
-    return null;
   }
 
   Future<void> _handleCall(String? phone, String customerName, String enquiryId) async {
@@ -834,7 +445,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ..writeln('Enquiry: ${enquiry.customerName}')
       ..writeln('Event: ${enquiry.eventTypeDisplay}')
       ..writeln('Status: ${enquiry.statusDisplay}')
-      ..writeln('Event date: ${_formatDateLabel(enquiry.eventDate)}')
+      ..writeln('Event date: ${formatDateLabel(enquiry.eventDate)}')
       ..writeln('Assigned to: ${enquiry.assigneeName ?? 'Unassigned'}')
       ..writeln('Phone: ${enquiry.customerPhone ?? 'N/A'}')
       ..writeln(
@@ -927,274 +538,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    return null;
-  }
-
-  /// Compare by created date (oldest first for In Talks tab)
-  int _compareByCreatedDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
-    final aData = a.data() as Map<String, dynamic>;
-    final bData = b.data() as Map<String, dynamic>;
-
-    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-
-    // Sort oldest first (ascending)
-    return aCreated.compareTo(bCreated);
-  }
-
-  /// Compare by event date for Reminders tab (used in reverse order for latest first)
-  int _compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
-    final aData = a.data() as Map<String, dynamic>;
-    final bData = b.data() as Map<String, dynamic>;
-
-    final aEvent = _parseDateTime(aData['eventDate']);
-    final bEvent = _parseDateTime(bData['eventDate']);
-
-    // If both have event dates, sort by event date (earliest first)
-    if (aEvent != null && bEvent != null) {
-      return aEvent.compareTo(bEvent);
-    }
-
-    // If only one has event date, prioritize it
-    if (aEvent != null && bEvent == null) {
-      return -1; // a comes first
-    }
-    if (aEvent == null && bEvent != null) {
-      return 1; // b comes first
-    }
-
-    // If neither has event date, fall back to createdAt (oldest first)
-    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    return aCreated.compareTo(bCreated);
-  }
-
-  int _compareByNearestEventDate(
-    QueryDocumentSnapshot<Object?> a,
-    QueryDocumentSnapshot<Object?> b,
-    DateTime now,
-  ) {
-    const int maxDiffMagnitude = 1 << 62;
-
-    final aData = a.data() as Map<String, dynamic>;
-    final bData = b.data() as Map<String, dynamic>;
-
-    final aEvent = _parseDateTime(aData['eventDate']);
-    final bEvent = _parseDateTime(bData['eventDate']);
-
-    final aDiff = aEvent?.difference(now);
-    final bDiff = bEvent?.difference(now);
-
-    final aIsFuture = aDiff != null && !aDiff.isNegative;
-    final bIsFuture = bDiff != null && !bDiff.isNegative;
-
-    if (aIsFuture != bIsFuture) {
-      // Prioritise upcoming events over past ones.
-      return aIsFuture ? -1 : 1;
-    }
-
-    final aMagnitude = aDiff != null ? aDiff.inMilliseconds.abs() : maxDiffMagnitude;
-    final bMagnitude = bDiff != null ? bDiff.inMilliseconds.abs() : maxDiffMagnitude;
-
-    final magnitudeComparison = aMagnitude.compareTo(bMagnitude);
-    if (magnitudeComparison != 0) {
-      return magnitudeComparison;
-    }
-
-    if (aEvent != null && bEvent != null) {
-      final eventComparison = aEvent.compareTo(bEvent);
-      if (eventComparison != 0) {
-        return eventComparison;
-      }
-    } else if (aEvent == null && bEvent != null) {
-      return 1;
-    } else if (aEvent != null && bEvent == null) {
-      return -1;
-    }
-
-    final aCreated = _parseDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    final bCreated = _parseDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    return bCreated.compareTo(aCreated);
-  }
-
-  bool _matchesSearchQuery(Map<String, dynamic> data) {
-    if (_searchQuery.isEmpty) return true;
-
-    final query = _searchQuery.trim();
-    final queryLower = query.toLowerCase();
-
-    if (queryLower.isNotEmpty) {
-      final lowerFields = <String>[
-        (data['customerName'] as String? ?? '').toLowerCase(),
-        (data['customerNameLower'] as String? ?? '').toLowerCase(),
-        (data['textIndex'] as String? ?? '').toLowerCase(),
-      ];
-      if (lowerFields.any((field) => field.contains(queryLower))) {
-        return true;
-      }
-    }
-
-    final digitQuery = query.replaceAll(RegExp(r'\D'), '');
-    if (digitQuery.isEmpty) {
-      return false;
-    }
-
-    bool matchesDigits(String? input) {
-      if (input == null || input.isEmpty) return false;
-      final cleaned = input.replaceAll(RegExp(r'\D'), '');
-      return cleaned.contains(digitQuery);
-    }
-
-    return matchesDigits(data['customerPhone'] as String?) ||
-        matchesDigits(data['whatsappNumber'] as String?) ||
-        matchesDigits(data['phoneNormalized'] as String?);
-  }
-
   void _showSnack(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String? userId, [String? status]) {
-    // Status filtering is client-side in _buildEnquiriesTab for migration/case tolerance.
-    return ref
-        .read(firestoreServiceProvider)
-        .watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userId);
-  }
-
-  /// Check if an enquiry should be shown in the reminders tab
-  bool _shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
-    final statusValueRaw = enquiryData['statusValue'] as String?; // Only use statusValue
-    final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-        ? statusValueRaw!.trim().toLowerCase()
-        : 'new';
-
-    // Must be in_talks status
-    if (statusValue != 'in_talks') {
-      return false;
-    }
-
-    final eventDate = _parseDateTime(enquiryData['eventDate']);
-
-    // Must have an event date
-    if (eventDate == null) {
-      return false;
-    }
-
-    // Normalize dates to start of day for accurate comparison (ignore time)
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-    // Exclude past events - if event date is before today, don't show reminder
-    if (eventDateStart.isBefore(todayStart)) {
-      return false;
-    }
-
-    // Calculate days until event (using normalized dates)
-    final daysUntilEvent = eventDateStart.difference(todayStart).inDays;
-
-    // Only show if event date is today or in the future, and less than 21 days away (3 weeks)
-    if (daysUntilEvent >= 0 && daysUntilEvent < 21) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// Check if an enquiry should be shown in the In Talks tab
-  /// Excludes past events (event date before today)
-  bool _shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
-    // First check status - must be 'in_talks'
-    final statusValueRaw = enquiryData['statusValue'] as String?;
-    final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-        ? statusValueRaw!.trim().toLowerCase()
-        : 'new';
-
-    if (statusValue != 'in_talks') {
-      return false;
-    }
-
-    final eventDate = _parseDateTime(enquiryData['eventDate']);
-
-    // If no event date, show it (but only if enquiry is recent - within last 30 days)
-    if (eventDate == null) {
-      final createdAt = _parseDateTime(enquiryData['createdAt']);
-      if (createdAt != null) {
-        final daysSinceCreation = now.difference(createdAt).inDays;
-        // Only show enquiries without event dates if they were created recently
-        return daysSinceCreation <= 30;
-      }
-      return true;
-    }
-
-    // Normalize dates to start of day for accurate comparison (ignore time)
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-    // Exclude past events - only show if event date is today or in the future
-    // Compare dates explicitly: event date should be >= today
-    return eventDateStart.compareTo(todayStart) >= 0;
-  }
-
-  /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
-  String _formatDateForMessage(DateTime? date) {
-    if (date == null) return '';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final day = date.day.toString().padLeft(2, '0');
-    final month = months[date.month - 1];
-    final year = date.year.toString();
-    return '$day $month $year';
-  }
-
-  /// Build reminder message with days information
-  String _buildReminderMessage(
-    String customerName,
-    String eventType,
-    DateTime createdAt,
-    DateTime? eventDate,
-  ) {
-    final now = DateTime.now();
-    final daysUntilEvent = eventDate?.difference(now).inDays;
-
-    // Only use event date for the message (not created date)
-    String urgencyMessage = '';
-    if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {
-      if (daysUntilEvent == 0) {
-        urgencyMessage = 'Your $eventType is TODAY!';
-      } else if (daysUntilEvent == 1) {
-        urgencyMessage = 'Your $eventType is TOMORROW!';
-      } else {
-        urgencyMessage = 'Your $eventType is in $daysUntilEvent days';
-      }
-    } else {
-      // Fallback if event date is not available or too far
-      urgencyMessage = 'Your upcoming $eventType needs attention';
-    }
-
-    // Build message with explicit date if available
-    final formattedDate = eventDate != null ? _formatDateForMessage(eventDate) : '';
-    final dateText = formattedDate.isNotEmpty ? ' on $formattedDate' : '';
-
-    return 'Hi $customerName!\n\n$urgencyMessage 🎉\n\nWe Decor is excited to be part of your $eventType$dateText and help make it absolutely magical.\n\nIf you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\nOtherwise, feel free to reply to this message - we\'re here to answer any questions and help bring your vision to life! ✨\n\nTeam We Decor - Bringing dreams to life 💫';
   }
 
   /// Handle reminder WhatsApp click - increments count and opens WhatsApp
@@ -1224,7 +572,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // Build and send reminder message
     final launcher = ref.read(contactLauncherProvider);
-    final prefill = _buildReminderMessage(customerName, eventType, createdAt, eventDate);
+    final prefill = buildReminderMessage(customerName, eventType, createdAt, eventDate);
     final status = await launcher.openWhatsAppWithAudit(
       phone,
       prefillText: prefill,
@@ -1278,27 +626,5 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       // handled by auth service
     }
   }
-
 }
 
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  _TabBarDelegate(this._tabBar);
-
-  final TabBar _tabBar;
-
-  @override
-  double get minExtent => _tabBar.preferredSize.height;
-
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Material(elevation: overlapsContent ? 2 : 0, child: _tabBar);
-  }
-
-  @override
-  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) {
-    return oldDelegate._tabBar != _tabBar;
-  }
-}

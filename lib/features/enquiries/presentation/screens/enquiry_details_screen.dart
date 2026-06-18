@@ -1,21 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/audit_provider.dart';
-import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/services/notification_service.dart' as notification_service;
+import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
-import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
-import '../../../../core/logging/logger.dart';
-import '../widgets/contact_buttons.dart';
-import '../widgets/review_request_button.dart';
+import '../widgets/customer_info_section.dart';
+import '../widgets/enquiry_assignment_section.dart';
+import '../widgets/enquiry_detail_info_row.dart';
+import '../widgets/enquiry_detail_section.dart';
+import '../widgets/enquiry_details_header.dart';
+import '../widgets/enquiry_images_section.dart';
+import '../widgets/event_details_section.dart';
+import '../widgets/payment_section.dart';
 import 'enquiry_form_screen.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
@@ -28,23 +30,7 @@ class EnquiryDetailsScreen extends ConsumerStatefulWidget {
 }
 
 class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
-  String? _selectedStatus;
-  // Cache user display strings (name · phone) by uid to reduce lookups
-  final Map<String, String> _userDisplayCache = <String, String>{};
   bool _isUpdatingStatus = false;
-
-  // Allowed status transitions for staff users
-  static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_talks', 'cancelled', 'not_interested'],
-    'in_talks': ['quote_sent', 'cancelled', 'not_interested'],
-    'quote_sent': ['confirmed', 'closed_lost', 'not_interested'],
-    'confirmed': ['scheduled', 'cancelled'],
-    'scheduled': ['completed', 'cancelled'],
-    'completed': [],
-    'cancelled': [],
-    'closed_lost': [],
-    'not_interested': [],
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +107,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       .watch(dropdownLookupProvider)
                       .maybeWhen(data: (value) => value, orElse: () => null);
 
-                  String _labelOrLookup(
+                  String labelOrLookup(
                     String? label,
                     String value,
                     String Function(DropdownLookup, String) resolver,
@@ -132,12 +118,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         : DropdownLookup.titleCase(value);
                   }
 
-                  // Only use statusValue - standard field
                   final statusValueRaw = enquiryData['statusValue'] as String?;
                   final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
                       ? statusValueRaw!.trim()
                       : 'new';
-                  final statusLabel = _labelOrLookup(
+                  final statusLabel = labelOrLookup(
                     enquiryData['statusLabel'] as String?,
                     statusValue,
                     (l, v) => l.labelForStatus(v),
@@ -148,7 +133,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                   final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
                       ? eventTypeValueRaw!.trim()
                       : 'event';
-                  final eventTypeLabel = _labelOrLookup(
+                  final eventTypeLabel = labelOrLookup(
                     enquiryData['eventTypeLabel'] as String?,
                     eventTypeValue,
                     (l, v) => l.labelForEventType(v),
@@ -160,7 +145,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       ? priorityValueRaw!.trim()
                       : null;
                   final priorityLabel = priorityValue != null
-                      ? _labelOrLookup(
+                      ? labelOrLookup(
                           enquiryData['priorityLabel'] as String?,
                           priorityValue,
                           (l, v) => l.labelForPriority(v),
@@ -174,7 +159,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       ? paymentStatusValueRaw!.trim()
                       : null;
                   final paymentStatusLabel = paymentStatusValue != null
-                      ? _labelOrLookup(
+                      ? labelOrLookup(
                           enquiryData['paymentStatusLabel'] as String?,
                           paymentStatusValue,
                           (l, v) => l.labelForPaymentStatus(v),
@@ -187,14 +172,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       ? sourceValueRaw!.trim()
                       : null;
                   final sourceLabel = sourceValue != null
-                      ? _labelOrLookup(
+                      ? labelOrLookup(
                           enquiryData['sourceLabel'] as String?,
                           sourceValue,
                           (l, v) => l.labelForSource(v),
                         )
                       : 'N/A';
 
-                  // Check if staff user can access this enquiry
                   if (userRole != UserRole.admin) {
                     final assignedTo = enquiryData['assignedTo'] as String?;
                     final currentUserId = user.uid;
@@ -209,12 +193,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                               size: 64,
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppTokens.space4),
                             const Text(
                               'Access Denied',
                               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppTokens.space2),
                             Text(
                               'You can only view enquiries assigned to you.',
                               textAlign: TextAlign.center,
@@ -228,152 +212,92 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                     }
                   }
 
+                  final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
+
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppSpacing.space4,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header with status
-                        _buildHeader(enquiryData, userRole, user.uid, statusValue, statusLabel),
-                        const SizedBox(height: 24),
+                        EnquiryDetailsHeader(
+                          enquiryId: widget.enquiryId,
+                          enquiryData: enquiryData,
+                          userRole: userRole,
+                          currentUserId: user.uid,
+                          statusValue: statusValue,
+                          statusLabel: statusLabel,
+                        ),
+                        const SizedBox(height: AppTokens.space6),
 
-                        // Basic Information (Visible to all)
-                        _buildSection(
-                          title: 'Basic Information',
-                          children: [
-                            _buildInfoRow(
-                              'Customer Name',
-                              (enquiryData['customerName'] as String?) ?? 'N/A',
-                            ),
-                            _buildInfoRow(
-                              'Phone',
-                              (enquiryData['customerPhone'] as String?) ?? 'N/A',
-                            ),
-                            // Contact shortcuts - Call and WhatsApp buttons
-                            ContactButtons(
-                              customerPhone: enquiryData['customerPhone'] as String?,
-                              customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-                              enquiryId: widget.enquiryId,
-                              eventType: eventTypeLabel,
-                              eventDate: (enquiryData['eventDate'] as Timestamp?)?.toDate(),
-                            ),
-                            // Review request button for completed enquiries
-                            if (statusValue == 'completed')
-                              ReviewRequestButton(
-                                customerPhone: enquiryData['customerPhone'] as String?,
-                                customerName:
-                                    (enquiryData['customerName'] as String?) ?? 'Customer',
-                                enquiryId: widget.enquiryId,
-                              ),
-                            _buildInfoRow(
-                              'Location',
+                        CustomerInfoSection(
+                          enquiryId: widget.enquiryId,
+                          customerName: (enquiryData['customerName'] as String?) ?? 'N/A',
+                          customerPhone: enquiryData['customerPhone'] as String?,
+                          location:
                               (enquiryData['eventLocation'] as String?) ??
-                                  (enquiryData['location'] as String? ?? 'N/A'),
-                            ),
-                          ],
+                              (enquiryData['location'] as String? ?? 'N/A'),
+                          eventTypeLabel: eventTypeLabel,
+                          eventDate: (enquiryData['eventDate'] as Timestamp?)?.toDate(),
+                          statusValue: statusValue,
                         ),
 
-                        // Event Details (Visible to all)
-                        _buildSection(
-                          title: 'Event Details',
-                          children: [
-                            _buildInfoRow('Event Type', eventTypeLabel),
-                            _buildInfoRow('Event Date', _formatDate(enquiryData['eventDate'])),
-                            _buildInfoRow(
-                              'Guest Count',
-                              '${enquiryData['guestCount'] ?? 'N/A'} guests',
-                            ),
-                            _buildInfoRow(
-                              'Budget Range',
-                              (enquiryData['budgetRange'] as String?) ?? 'N/A',
-                            ),
-                            _buildInfoRow('Priority', priorityLabel),
-                            _buildInfoRow('Source', sourceLabel),
-                          ],
+                        EventDetailsSection(
+                          eventTypeLabel: eventTypeLabel,
+                          eventDate: enquiryData['eventDate'],
+                          guestCount: enquiryData['guestCount'],
+                          budgetRange: enquiryData['budgetRange'] as String?,
+                          priorityLabel: priorityLabel,
+                          sourceLabel: sourceLabel,
                         ),
 
-                        // Reference Images (Admins and Assignee)
                         if (_canViewImages(userRole, enquiryData, user.uid))
-                          _buildImagesSection(enquiryData),
+                          EnquiryImagesSection(images: images),
 
-                        // Assignment Information (Admin Only)
-                        if (userRole == UserRole.admin) ...[
-                          _buildSection(
-                            title: 'Assignment',
-                            children: [
-                              _buildAsyncUserRow(
-                                label: 'Assigned To',
-                                userId: enquiryData['assignedTo'] as String?,
-                                currentUserId: currentUser.value?.uid,
-                              ),
-                              _buildAsyncUserRow(
-                                label: 'Created By',
-                                userId: enquiryData['createdBy'] as String?,
-                              ),
-                            ],
-                          ),
-                        ] else if (userRole == UserRole.staff) ...[
-                          // Staff can see their own assignment status
-                          _buildSection(
-                            title: 'Assignment',
-                            children: [
-                              _buildAsyncUserRow(
-                                label: 'Assigned To',
-                                userId: enquiryData['assignedTo'] as String?,
-                                currentUserId: user.uid,
-                              ),
-                            ],
-                          ),
-                        ],
+                        EnquiryAssignmentSection(
+                          userRole: userRole,
+                          assignedTo: enquiryData['assignedTo'] as String?,
+                          createdBy: enquiryData['createdBy'] as String?,
+                          currentUserId: user.uid,
+                        ),
 
-                        // Financial Information (Admin Only)
-                        if (userRole == UserRole.admin) ...[
-                          _buildSection(
-                            title: 'Financial Information',
-                            children: [
-                              _buildInfoRow(
-                                'Total Cost',
-                                _formatCurrency(enquiryData['totalCost']),
-                              ),
-                              _buildInfoRow(
-                                'Advance Paid',
-                                _formatCurrency(enquiryData['advancePaid']),
-                              ),
-                              _buildInfoRow('Payment Status', paymentStatusLabel),
-                            ],
+                        if (userRole == UserRole.admin)
+                          PaymentSection(
+                            totalCost: enquiryData['totalCost'],
+                            advancePaid: enquiryData['advancePaid'],
+                            paymentStatusLabel: paymentStatusLabel,
                           ),
-                        ],
 
-                        // Description (Visible to all)
-                        _buildSection(
+                        EnquiryDetailSection(
                           title: 'Description',
                           children: [
-                            _buildInfoRow(
-                              'Notes',
-                              (enquiryData['description'] as String?) ?? 'No description provided',
+                            EnquiryDetailInfoRow(
+                              label: 'Notes',
+                              value:
+                                  (enquiryData['description'] as String?) ?? 'No description provided',
                             ),
                           ],
                         ),
 
-                        // Timestamps (Visible to all)
-                        _buildSection(
+                        EnquiryDetailSection(
                           title: 'Timestamps',
                           children: [
-                            _buildInfoRow('Created', _formatTimestamp(enquiryData['createdAt'])),
-                            _buildInfoRow(
-                              'Last Updated',
-                              _formatTimestamp(enquiryData['updatedAt']),
+                            EnquiryDetailInfoRow(
+                              label: 'Created',
+                              value: _formatTimestamp(enquiryData['createdAt']),
+                            ),
+                            EnquiryDetailInfoRow(
+                              label: 'Last Updated',
+                              value: _formatTimestamp(enquiryData['updatedAt']),
                             ),
                           ],
                         ),
 
-                        // Change History (Visible to all)
-                        _buildSection(
+                        EnquiryDetailSection(
                           title: 'Change History',
                           children: [EnquiryHistoryWidget(enquiryId: widget.enquiryId)],
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: AppTokens.space8),
                       ],
                     ),
                   );
@@ -390,406 +314,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     );
   }
 
-  Widget _buildHeader(
-    Map<String, dynamic> enquiryData,
-    UserRole? userRole,
-    String currentUserId,
-    String statusValue,
-    String statusLabel,
-  ) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Enquiry #${widget.enquiryId.substring(0, 8)}',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                if (userRole == UserRole.admin) ...[
-                  // Admin can edit status
-                  _buildStatusDropdown(enquiryData, statusValue, statusLabel, isAdmin: true),
-                ] else if (userRole == UserRole.staff) ...[
-                  // Staff can edit status (but only status) if assigned
-                  _buildStatusDropdown(
-                    enquiryData,
-                    statusValue,
-                    statusLabel,
-                    isAdmin: false,
-                    isAssignee: (enquiryData['assignedTo'] as String?) == currentUserId,
-                  ),
-                ] else ...[
-                  // Read-only status for other users
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(statusValue),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Customer: ${(enquiryData['customerName'] as String?) ?? 'N/A'}',
-              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusDropdown(
-    Map<String, dynamic> enquiryData,
-    String currentStatusValue,
-    String currentStatusLabel, {
-    required bool isAdmin,
-    bool isAssignee = true,
-  }) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
-      builder: (context, snapshot) {
-        // Show loading only briefly, then fallback to default statuses
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          );
-        }
-
-        // Use fallback statuses if Firestore collection is empty or has error
-        List<Map<String, dynamic>> statuses;
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          // Fallback to default statuses
-          statuses = [
-            {'value': 'new', 'label': 'New', 'order': 1},
-            {'value': 'in_talks', 'label': 'In Talks', 'order': 2},
-            {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3},
-            {'value': 'approved', 'label': 'Approved', 'order': 4},
-            {'value': 'scheduled', 'label': 'Scheduled', 'order': 5},
-            {'value': 'completed', 'label': 'Completed', 'order': 6},
-            {'value': 'cancelled', 'label': 'Cancelled', 'order': 7},
-            {'value': 'closed_lost', 'label': 'Closed Lost', 'order': 8},
-          ];
-        } else {
-          statuses = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-        }
-
-        final currentStatus = (_selectedStatus ?? currentStatusValue);
-        final values = statuses.map((s) => (s['value'] as String?) ?? '').toList();
-        final safeValue = values.contains(currentStatus)
-            ? currentStatus
-            : (values.isNotEmpty ? values.first : 'new');
-
-        // Limit staff to allowed transitions
-        final nextOptions = <Map<String, dynamic>>[...statuses];
-        if (!isAdmin) {
-          final allowed = _allowedTransitions[safeValue] ?? const <String>[];
-          // Keep current value plus allowed next states only
-          nextOptions.retainWhere((s) {
-            final v = (s['value'] as String?) ?? '';
-            return v == safeValue || allowed.contains(v);
-          });
-        }
-
-        final canChange = isAdmin || (!isAdmin && isAssignee);
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButton<String>(
-              key: const Key('statusDropdown'),
-              value: safeValue,
-              items: nextOptions.map((status) {
-                final value = (status['value'] as String?) ?? '';
-                final label = (status['label'] as String?) ?? value;
-                return DropdownMenuItem<String>(value: value, child: Text(label));
-              }).toList(),
-              onChanged: (!canChange || _isUpdatingStatus)
-                  ? null
-                  : (value) async {
-                      if (kDebugMode) {
-                        debugPrint('🚀 STATUS CHANGE TRIGGERED');
-                        debugPrint('   New value: $value');
-                        debugPrint('   Current value: $currentStatusValue');
-                        debugPrint('   Is Admin: $isAdmin');
-                        debugPrint('   EnquiryId: ${widget.enquiryId}');
-                      }
-
-                      if (value == null || value == currentStatusValue) {
-                        if (kDebugMode) {
-                          debugPrint('⚠️ STATUS CHANGE: No change needed, returning early');
-                        }
-                        return;
-                      }
-
-                      // Staff transition guard
-                      if (!isAdmin) {
-                        final allowed = _allowedTransitions[safeValue] ?? const <String>[];
-                        if (!allowed.contains(value)) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('This status change is not allowed'),
-                                backgroundColor: Theme.of(context).colorScheme.error,
-                              ),
-                            );
-                          }
-                          return;
-                        }
-                      }
-
-                      // Show confirmation dialog before status change
-                      final lookup = await ref.read(dropdownLookupProvider.future);
-                      final nextLabel = lookup.labelForStatus(value);
-                      final oldStatusLabel = lookup.labelForStatus(currentStatusValue);
-
-                      final confirmed = await ConfirmationDialog.show(
-                        context: context,
-                        title: 'Change Status',
-                        message:
-                            'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
-                        confirmText: 'Change Status',
-                        cancelText: 'Cancel',
-                        isDestructive: false,
-                        icon: Icons.info_outline,
-                      );
-
-                      if (!confirmed || !mounted) {
-                        // Reset dropdown to previous value if cancelled
-                        setState(() {
-                          _selectedStatus = currentStatusValue;
-                        });
-                        return;
-                      }
-
-                      setState(() {
-                        _isUpdatingStatus = true;
-                        _selectedStatus = value; // optimistic
-                      });
-
-                      try {
-                        final oldStatusValue = currentStatusValue;
-                        // Lookup already done above, reuse it
-                        final nextLabel = lookup.labelForStatus(value);
-                        final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
-
-                        final firestoreService = ref.read(firestoreServiceProvider);
-                        await firestoreService.updateEnquiry(widget.enquiryId, {
-                          'statusValue': value,
-                          'statusLabel': nextLabel,
-                          'statusUpdatedAt': FieldValue.serverTimestamp(),
-                          'statusUpdatedBy':
-                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                          'updatedBy':
-                              ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                          'eventStatus': FieldValue.delete(),
-                          'status': FieldValue.delete(),
-                          'status_slug': FieldValue.delete(),
-                        });
-
-                        // Record audit trail for status change (store VALUES, not labels)
-                        final auditService = ref.read(auditServiceProvider);
-                        await auditService.recordChange(
-                          enquiryId: widget.enquiryId,
-                          fieldChanged: 'statusValue',
-                          oldValue: oldStatusValue,
-                          newValue: value,
-                        );
-
-                        // Send notification for status update (use labels for notifications)
-                        try {
-                          if (kDebugMode) {
-                            debugPrint('📢 STATUS UPDATE: About to call notifyStatusUpdated');
-                            debugPrint('   EnquiryId: ${widget.enquiryId}');
-                            debugPrint('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
-                            debugPrint(
-                              '   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}',
-                            );
-                          }
-
-                          // Fetch current enquiry data for notification
-                          final currentEnquiryData =
-                              await firestoreService.getEnquiry(widget.enquiryId) ?? {};
-
-                          final notificationService = ref.read(notificationServiceProvider);
-                          await notificationService.notifyStatusUpdated(
-                            enquiryId: widget.enquiryId,
-                            customerName:
-                                currentEnquiryData['customerName'] as String? ?? 'Unknown Customer',
-                            oldStatus: oldStatusLabel,
-                            newStatus: nextLabel,
-                            updatedBy:
-                                ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-                            assignedTo: currentEnquiryData['assignedTo'] as String?,
-                          );
-
-                          if (kDebugMode) {
-                            debugPrint('✅ STATUS UPDATE: notifyStatusUpdated completed');
-                          }
-                        } catch (notificationError, stackTrace) {
-                          // Log notification error but don't fail the status update
-                          if (kDebugMode) {
-                            debugPrint('❌ ERROR sending notifications: $notificationError');
-                            debugPrint('Stack trace: $stackTrace');
-                          }
-                          Log.e(
-                            'EnquiryDetailsScreen: error sending notifications',
-                            error: notificationError,
-                            stackTrace: stackTrace,
-                          );
-                          // Status update already succeeded, so we continue
-                        }
-
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text('Status updated'),
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        // Rollback optimistic selection on error
-                        setState(() {
-                          _selectedStatus = currentStatusValue;
-                        });
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to update status: $e'),
-                              backgroundColor: Theme.of(context).colorScheme.error,
-                            ),
-                          );
-                        }
-                      } finally {
-                        if (mounted) {
-                          setState(() {
-                            _isUpdatingStatus = false;
-                          });
-                        }
-                      }
-                    },
-            ),
-            if (_isUpdatingStatus) ...[
-              const SizedBox(width: 8),
-              const SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ],
-            if (!isAdmin && !isAssignee) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Only the assigned user can change status',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildSection({required String title, required List<Widget> children}) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, dynamic value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value == null ? 'N/A' : value.toString(),
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Note: edit-mode helpers removed as part of revert
-
-  DateTime? _parseDateTime(dynamic date) {
-    if (date == null) return null;
-    if (date is Timestamp) {
-      return date.toDate();
-    }
-    if (date is DateTime) {
-      return date;
-    }
-    return null;
-  }
-
-  String _formatDate(dynamic date) {
-    if (date == null) return 'N/A';
-    if (date is Timestamp) {
-      return '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}';
-    }
-    return date.toString();
-  }
-
-  String _formatCurrency(dynamic amount) {
-    if (amount == null) return 'N/A';
-    if (amount is num) {
-      return '\$${amount.toStringAsFixed(2)}';
-    }
-    return amount.toString();
-  }
-
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
     if (timestamp is Timestamp) {
@@ -798,63 +322,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     return timestamp.toString();
   }
 
-  String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
-  }
-
   bool _canViewImages(UserRole? role, Map<String, dynamic> data, String meUid) {
     if (role == UserRole.admin) return true;
     final assignedTo = data['assignedTo'] as String?;
     return assignedTo != null && assignedTo == meUid;
-  }
-
-  Widget _buildImagesSection(Map<String, dynamic> enquiryData) {
-    final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
-    if (images.isEmpty) {
-      return _buildSection(title: 'Reference Images', children: const [Text('No images attached')]);
-    }
-
-    return _buildSection(
-      title: 'Reference Images',
-      children: [
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          itemCount: images.length,
-          itemBuilder: (context, index) {
-            final url = images[index] as String?;
-            if (url == null || url.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => Dialog(
-                    child: InteractiveViewer(
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Image.network(url, fit: BoxFit.contain),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(url, fit: BoxFit.cover),
-              ),
-            );
-          },
-        ),
-      ],
-    );
   }
 
   Future<void> _confirmAndDelete(BuildContext context) async {
@@ -876,7 +347,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         _isUpdatingStatus = true;
       });
 
-      // Record audit trail before deletion
       final auditService = ref.read(auditServiceProvider);
       await auditService.recordChange(
         enquiryId: widget.enquiryId,
@@ -885,7 +355,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         newValue: 'deleted',
       );
 
-      // Delete the enquiry document
       await ref.read(firestoreServiceProvider).deleteEnquiry(widget.enquiryId);
 
       if (mounted) {
@@ -906,98 +375,6 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
           _isUpdatingStatus = false;
         });
       }
-    }
-  }
-
-  Color _getStatusColor(String? status) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    switch (status) {
-      case 'new':
-        return const Color(0xFFFF9800); // Orange
-      case 'in_talks':
-        return colorScheme.primary;
-      case 'quote_sent':
-        return const Color(0xFF009688); // Teal
-      case 'approved':
-        return const Color(0xFF3F51B5); // Indigo
-      case 'scheduled':
-        return const Color(0xFF9C27B0); // Purple
-      case 'completed':
-        return const Color(0xFF4CAF50); // Green
-      case 'cancelled':
-      case 'closed_lost':
-        return colorScheme.error;
-      default:
-        return colorScheme.outline;
-    }
-  }
-
-  Widget _buildAsyncUserRow({
-    required String label,
-    required String? userId,
-    String? currentUserId,
-  }) {
-    // Layout mirrors _buildInfoRow styling
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(child: _buildUserDisplay(userId, currentUserId)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserDisplay(String? userId, String? currentUserId) {
-    if (userId == null || userId.isEmpty) {
-      return const Text('Unassigned', style: TextStyle(fontSize: 16));
-    }
-    if (currentUserId != null && userId == currentUserId) {
-      return const Text('You', style: TextStyle(fontSize: 16));
-    }
-
-    return FutureBuilder<String>(
-      future: _getUserDisplayName(userId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 12, child: LinearProgressIndicator(minHeight: 2));
-        }
-        final value = snapshot.data ?? 'Unknown';
-        return Text(value, style: const TextStyle(fontSize: 16));
-      },
-    );
-  }
-
-  Future<String> _getUserDisplayName(String userId) async {
-    final cached = _userDisplayCache[userId];
-    if (cached != null) return cached;
-
-    try {
-      final data = await ref.read(firestoreServiceProvider).getUser(userId);
-      if (data == null) {
-        _userDisplayCache[userId] = 'Unknown';
-        return 'Unknown';
-      }
-      final name = (data['name'] as String?)?.trim();
-      final phone = (data['phone'] as String?)?.trim();
-      final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
-      final result = display.isNotEmpty ? display : 'Unknown';
-      _userDisplayCache[userId] = result;
-      return result;
-    } catch (_) {
-      return 'Unknown';
     }
   }
 }
