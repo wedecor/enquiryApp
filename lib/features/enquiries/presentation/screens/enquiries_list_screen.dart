@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../filters/apply_enquiry_filters.dart';
@@ -13,11 +14,13 @@ import '../../filters/filters_controller.dart';
 import '../../filters/filters_state.dart';
 import '../../filters/widgets/filters_bar.dart';
 import '../../filters/widgets/saved_views_sheet.dart';
-import 'enquiry_details_screen.dart';
+import '../widgets/enquiry_list_item.dart';
 import 'enquiry_form_screen.dart';
 
 class EnquiriesListScreen extends ConsumerStatefulWidget {
-  const EnquiriesListScreen({super.key});
+  const EnquiriesListScreen({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   @override
   ConsumerState<EnquiriesListScreen> createState() => _EnquiriesListScreenState();
@@ -29,57 +32,55 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final userRole = currentUser.value?.role;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filters',
-            onPressed: () => _showFiltersSheet(context),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (action) =>
-                _handleAction(context, ref, action, userRole, currentUser.value?.uid),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'export',
-                child: ListTile(
-                  leading: Icon(Icons.download),
-                  title: Text('Export CSV'),
-                  contentPadding: EdgeInsets.zero,
+    final body = currentUser.when(
+      data: (user) {
+        if (user == null) {
+          return const Center(child: Text('Please log in to view enquiries'));
+        }
+
+        final dropdownLookup = ref
+            .watch(dropdownLookupProvider)
+            .maybeWhen(data: (value) => value, orElse: () => null);
+        final filters = ref.watch(enquiryFiltersProvider);
+        final firestoreService = ref.watch(firestoreServiceProvider);
+
+        return Column(
+          children: [
+            if (widget.embeddedInShell)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.filter_list),
+                      tooltip: 'Filters',
+                      onPressed: () => _showFiltersSheet(context),
+                    ),
+                    PopupMenuButton<String>(
+                      onSelected: (action) =>
+                          _handleAction(context, ref, action, userRole, user.uid),
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'export',
+                          child: ListTile(
+                            leading: Icon(Icons.download),
+                            title: Text('Export CSV'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const PopupMenuItem(
-                value: 'add',
-                child: ListTile(
-                  leading: Icon(Icons.add),
-                  title: Text('Add Enquiry'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: currentUser.when(
-        data: (user) {
-          if (user == null) {
-            return const Center(child: Text('Please log in to view enquiries'));
-          }
-
-          final dropdownLookup = ref
-              .watch(dropdownLookupProvider)
-              .maybeWhen(data: (value) => value, orElse: () => null);
-          final filters = ref.watch(enquiryFiltersProvider);
-          final firestoreService = ref.watch(firestoreServiceProvider);
-
-          return Column(
-            children: [
-              FiltersBar(
-                onClearFilters: () => ref.read(enquiryFiltersProvider.notifier).clearFilters(),
-              ),
+            FiltersBar(
+              onClearFilters: () => ref.read(enquiryFiltersProvider.notifier).clearFilters(),
+            ),
               if (filters.searchQuery?.isNotEmpty ?? false)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -108,6 +109,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     }
 
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -115,14 +117,14 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             Icon(
                               userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
                               size: 64,
-                              color: Colors.grey,
+                              color: mutedColor,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               userRole == UserRole.admin
                                   ? 'No enquiries found'
                                   : 'No enquiries assigned to you',
-                              style: const TextStyle(fontSize: 18, color: Colors.grey),
+                              style: TextStyle(fontSize: 18, color: mutedColor),
                             ),
                           ],
                         ),
@@ -135,6 +137,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                     }).toList();
 
                     if (enquiries.isEmpty) {
+                      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -142,7 +145,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                             Icon(
                               filters.hasActiveFilters ? Icons.filter_list_off : Icons.inbox,
                               size: 64,
-                              color: Colors.grey,
+                              color: mutedColor,
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -151,7 +154,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                                   : (userRole == UserRole.admin
                                         ? 'No enquiries found'
                                         : 'No enquiries assigned to you'),
-                              style: const TextStyle(fontSize: 18, color: Colors.grey),
+                              style: TextStyle(fontSize: 18, color: mutedColor),
                             ),
                             if (filters.hasActiveFilters) ...[
                               const SizedBox(height: 12),
@@ -178,125 +181,15 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                         final enquiry = enquiries[index];
                         final enquiryData = enquiry.data() as Map<String, dynamic>;
                         final enquiryId = enquiry.id;
+                        final assignedTo = enquiryData['assignedTo'] as String?;
 
-                        final statusValueRaw =
-                            enquiryData['statusValue'] as String?; // Only use statusValue
-                        final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                            ? statusValueRaw!.trim()
-                            : 'new';
-                        final statusLabel =
-                            (enquiryData['statusLabel'] as String?) ??
-                            (dropdownLookup != null
-                                ? dropdownLookup.labelForStatus(statusValue)
-                                : DropdownLookup.titleCase(statusValue));
-                        final eventTypeValueRaw =
-                            (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
-                        final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
-                            ? eventTypeValueRaw!.trim()
-                            : 'event';
-                        final eventTypeLabel =
-                            (enquiryData['eventTypeLabel'] as String?) ??
-                            (dropdownLookup != null
-                                ? dropdownLookup.labelForEventType(eventTypeValue)
-                                : DropdownLookup.titleCase(eventTypeValue));
-                        final priorityValueRaw =
-                            (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
-                        final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
-                            ? priorityValueRaw!.trim()
-                            : null;
-                        final priorityLabel =
-                            (enquiryData['priorityLabel'] as String?) ??
-                            (priorityValue != null
-                                ? (dropdownLookup != null
-                                      ? dropdownLookup.labelForPriority(priorityValue)
-                                      : DropdownLookup.titleCase(priorityValue))
-                                : 'N/A');
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: _getStatusColor(context, statusValue),
-                              child: Text(
-                                _getStatusInitial(statusLabel),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              (enquiryData['customerName'] as String?) ?? 'Unknown Customer',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(eventTypeLabel),
-                                Text(
-                                  'Date: ${_formatDate(enquiryData['eventDate'])}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                if (userRole == UserRole.admin &&
-                                    enquiryData['assignedTo'] != null) ...[
-                                  Text(
-                                    'Assigned: ${_getAssignedUserName(enquiryData['assignedTo'] as String)}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: _getPriorityColor(priorityValue),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    priorityLabel,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                // Edit button for admin users
-                                if (userRole == UserRole.admin) ...[
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, size: 20),
-                                    onPressed: () {
-                                      Navigator.of(context).push<void>(
-                                        MaterialPageRoute<void>(
-                                          builder: (context) =>
-                                              EnquiryFormScreen(enquiryId: enquiryId, mode: 'edit'),
-                                        ),
-                                      );
-                                    },
-                                    tooltip: 'Edit Enquiry',
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ],
-                                const Icon(Icons.chevron_right),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(context).push<void>(
-                                MaterialPageRoute<void>(
-                                  builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
-                                ),
-                              );
-                            },
-                          ),
+                        return EnquiryListItem(
+                          enquiryId: enquiryId,
+                          data: enquiryData,
+                          dropdownLookup: dropdownLookup,
+                          showAssignee:
+                              userRole == UserRole.admin && assignedTo != null,
+                          assigneeLabel: _getAssignedUserName(assignedTo),
                         );
                       },
                     );
@@ -308,7 +201,47 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error loading user data: $error')),
+      );
+
+    if (widget.embeddedInShell) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filters',
+            onPressed: () => _showFiltersSheet(context),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (action) =>
+                _handleAction(context, ref, action, userRole, currentUser.value?.uid),
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: Icon(Icons.download),
+                  title: Text('Export CSV'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'add',
+                child: ListTile(
+                  leading: Icon(Icons.add),
+                  title: Text('Add Enquiry'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
+      body: body,
     );
   }
 
@@ -343,52 +276,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  String _formatDate(dynamic date) {
-    if (date == null) return 'N/A';
-    if (date is Timestamp) {
-      return '${date.toDate().day}/${date.toDate().month}/${date.toDate().year}';
-    }
-    return date.toString();
-  }
-
-  String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
-  }
-
-  String _getStatusInitial(String? status) {
-    if (status == null) return '?';
-    return status[0].toUpperCase();
-  }
-
-  Color _getStatusColor(BuildContext context, String? status) {
-    switch (status?.toLowerCase()) {
-      case 'pending':
-        return Colors.orange;
-      case 'in progress':
-        return Theme.of(context).colorScheme.primary;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Color _getPriorityColor(String? priority) {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return Colors.red;
-      case 'medium':
-        return Colors.orange;
-      case 'low':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   String _getAssignedUserName(String? assignedTo) {
     if (assignedTo == null) return 'Unassigned';
     // TODO: Fetch user name from Firestore
@@ -409,7 +296,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       case 'add':
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (context) => const EnquiryFormScreen()));
+        ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
         break;
     }
   }
@@ -421,7 +308,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       final firestoreService = ref.read(firestoreServiceProvider);
 
       // Show loading indicator
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => const AlertDialog(
@@ -452,7 +339,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       if (enquiries.isEmpty) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No enquiries to export'), backgroundColor: Colors.orange),
+            const SnackBar(
+              content: Text('No enquiries to export'),
+              backgroundColor: AppColorScheme.snackWarning,
+            ),
           );
         }
         return;

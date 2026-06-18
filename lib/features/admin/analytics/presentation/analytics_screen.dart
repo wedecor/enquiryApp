@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/export/csv_export.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../domain/analytics_models.dart';
@@ -14,7 +15,9 @@ import 'widgets/top_list_table.dart';
 
 /// Analytics screen with admin-only access
 class AnalyticsScreen extends ConsumerStatefulWidget {
-  const AnalyticsScreen({super.key});
+  const AnalyticsScreen({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   @override
   ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
@@ -40,6 +43,34 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
   Widget build(BuildContext context) {
     final roleAsync = ref.watch(roleProvider);
 
+    final body = roleAsync.when(
+      data: (role) {
+        if (role != UserRole.admin) {
+          return _buildNoAccessContent();
+        }
+        return Consumer(
+          builder: (context, ref, child) {
+            return _buildAnalyticsContent(context);
+          },
+        );
+      },
+      loading: () => const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Checking permissions...'),
+          ],
+        ),
+      ),
+      error: (error, stack) => _buildNoAccessContent(),
+    );
+
+    if (widget.embeddedInShell) {
+      return body;
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -48,30 +79,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: roleAsync.when(
-        data: (role) {
-          if (role != UserRole.admin) {
-            return _buildNoAccessContent();
-          }
-          // User is admin, build analytics content with Consumer to watch providers
-          return Consumer(
-            builder: (context, ref, child) {
-              return _buildAnalyticsContent(context);
-            },
-          );
-        },
-        loading: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Checking permissions...'),
-            ],
-          ),
-        ),
-        error: (error, stack) => _buildNoAccessContent(),
-      ),
+      body: body,
     );
   }
 
@@ -162,7 +170,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -189,7 +197,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                             icon: const Icon(Icons.download, size: 18),
                             label: const Text('Export'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: AppColorScheme.snackSuccess,
                               foregroundColor: Colors.white,
                             ),
                           ),
@@ -223,7 +231,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                           icon: const Icon(Icons.download, size: 18),
                           label: const Text('Export'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColorScheme.snackSuccess,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -337,7 +345,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                   _formatDateRange(state.filters.dateRange),
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+                  ).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             );
@@ -816,7 +826,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.security, size: 64, color: Colors.orange.shade400),
+              Icon(Icons.security, size: 64, color: AppColorScheme.snackWarning),
               const SizedBox(height: 24),
               Text(
                 'Access Restricted',
@@ -835,7 +845,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 'Please contact your administrator if you need access to these features.',
                 style: Theme.of(
                   context,
-                ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                ).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -876,7 +888,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
+              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
               const SizedBox(height: 24),
               Text(
                 'Error Loading Data',
@@ -937,14 +949,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('No analytics data to export'),
-                backgroundColor: Colors.orange,
+                backgroundColor: AppColorScheme.snackWarning,
               ),
             );
             return;
           }
 
           // Show loading
-          showDialog(
+          showDialog<void>(
             context: context,
             barrierDismissible: false,
             builder: (context) => const AlertDialog(
@@ -983,13 +995,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Analytics data is still loading'),
-            backgroundColor: Colors.orange,
+            backgroundColor: AppColorScheme.snackWarning,
           ),
         );
       },
       error: (error, stack) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${error.toString()}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: ${error.toString()}'), backgroundColor: AppColorScheme.snackError),
         );
       },
     );

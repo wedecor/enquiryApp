@@ -7,16 +7,19 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
-import '../../../../utils/event_colors.dart' as event_colors;
-import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
+import '../../../enquiries/presentation/widgets/enquiry_list_item.dart';
 
 /// Calendar View Screen - Shows relevant enquiries on a calendar
 /// Filters out cancelled and not_interested events
 /// Shows: new, in_talks, quote_sent, confirmed, and recent completed events
 class CalendarViewScreen extends ConsumerStatefulWidget {
-  const CalendarViewScreen({super.key});
+  const CalendarViewScreen({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   @override
   ConsumerState<CalendarViewScreen> createState() => _CalendarViewScreenState();
@@ -63,6 +66,20 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final roleAsync = ref.watch(roleProvider);
 
+    final body = currentUser.when(
+      data: (user) => roleAsync.when(
+        data: (role) => _buildCalendarContent(context, user, role == UserRole.admin),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _buildCalendarContent(context, user, false),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (Object error, StackTrace stack) => Center(child: Text('Error: $error')),
+    );
+
+    if (widget.embeddedInShell) {
+      return body;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar View'),
@@ -79,15 +96,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           ),
         ],
       ),
-      body: currentUser.when(
-        data: (user) => roleAsync.when(
-          data: (role) => _buildCalendarContent(context, user, role == UserRole.admin),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => _buildCalendarContent(context, user, false),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, StackTrace stack) => Center(child: Text('Error: $error')),
-      ),
+      body: body,
     );
   }
 
@@ -120,11 +129,11 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildLegendItem('Confirmed', Colors.green),
-                  _buildLegendItem('In Talks', Colors.orange),
-                  _buildLegendItem('Quote Sent', Colors.purple),
-                  _buildLegendItem('New', Colors.blue),
-                  _buildLegendItem('Completed', Colors.teal),
+                  _buildLegendItem('Confirmed', AppColorScheme.statusConfirmed),
+                  _buildLegendItem('In Talks', AppColorScheme.statusInTalks),
+                  _buildLegendItem('Quote Sent', AppColorScheme.statusQuoteSent),
+                  _buildLegendItem('New', AppColorScheme.statusNew),
+                  _buildLegendItem('Completed', AppColorScheme.statusCompleted),
                 ],
               ),
             ),
@@ -202,27 +211,27 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                         // Show colored dots for each status type
                         if (statusCounts['confirmed'] != null && statusCounts['confirmed']! > 0)
                           _buildStatusIndicator(
-                            Colors.green,
+                            AppColorScheme.statusConfirmed,
                             statusCounts['confirmed']!,
                             hasConflict,
                           ),
                         if (statusCounts['in_talks'] != null && statusCounts['in_talks']! > 0)
                           _buildStatusIndicator(
-                            Colors.orange,
+                            AppColorScheme.statusInTalks,
                             statusCounts['in_talks']!,
                             hasConflict,
                           ),
                         if (statusCounts['quote_sent'] != null && statusCounts['quote_sent']! > 0)
                           _buildStatusIndicator(
-                            Colors.purple,
+                            AppColorScheme.statusQuoteSent,
                             statusCounts['quote_sent']!,
                             hasConflict,
                           ),
                         if (statusCounts['new'] != null && statusCounts['new']! > 0)
-                          _buildStatusIndicator(Colors.blue, statusCounts['new']!, hasConflict),
+                          _buildStatusIndicator(AppColorScheme.statusNew, statusCounts['new']!, hasConflict),
                         if (statusCounts['completed'] != null && statusCounts['completed']! > 0)
                           _buildStatusIndicator(
-                            Colors.teal,
+                            AppColorScheme.statusCompleted,
                             statusCounts['completed']!,
                             hasConflict,
                           ),
@@ -232,7 +241,9 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                             margin: const EdgeInsets.only(left: 2),
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
-                              color: hasConflict ? Colors.red : Colors.grey.shade700,
+                              color: hasConflict
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -311,43 +322,65 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                   runSpacing: 8,
                   children: [
                     if (statusCounts['confirmed'] != null)
-                      _buildStatusChip('Confirmed', Colors.green, statusCounts['confirmed']!),
+                      _buildStatusChip(
+                        'Confirmed',
+                        AppColorScheme.statusConfirmed,
+                        statusCounts['confirmed']!,
+                      ),
                     if (statusCounts['in_talks'] != null)
-                      _buildStatusChip('In Talks', Colors.orange, statusCounts['in_talks']!),
+                      _buildStatusChip(
+                        'In Talks',
+                        AppColorScheme.statusInTalks,
+                        statusCounts['in_talks']!,
+                      ),
                     if (statusCounts['quote_sent'] != null)
-                      _buildStatusChip('Quote Sent', Colors.purple, statusCounts['quote_sent']!),
+                      _buildStatusChip(
+                        'Quote Sent',
+                        AppColorScheme.statusQuoteSent,
+                        statusCounts['quote_sent']!,
+                      ),
                     if (statusCounts['new'] != null)
-                      _buildStatusChip('New', Colors.blue, statusCounts['new']!),
+                      _buildStatusChip('New', AppColorScheme.statusNew, statusCounts['new']!),
                     if (statusCounts['completed'] != null)
-                      _buildStatusChip('Completed', Colors.teal, statusCounts['completed']!),
+                      _buildStatusChip(
+                        'Completed',
+                        AppColorScheme.statusCompleted,
+                        statusCounts['completed']!,
+                      ),
                   ],
                 ),
               ],
             ),
           ),
         if (hasConflict)
-          Container(
+          Builder(
+            builder: (context) {
+              final error = Theme.of(context).colorScheme.error;
+              final errorContainer = Theme.of(context).colorScheme.errorContainer;
+              return Container(
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              border: Border.all(color: Colors.red.shade300),
+              color: errorContainer.withValues(alpha: 0.5),
+              border: Border.all(color: error.withValues(alpha: 0.5)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning, color: Colors.red.shade700),
+                Icon(Icons.warning, color: error),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Conflict: Multiple events on this date',
-                    style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: error, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
+          );
+            },
           ),
-        ...selectedDayEvents.map((event) => _buildEventCard(context, event)),
+        ...selectedDayEvents.map(_buildEventListItem),
       ],
     );
   }
@@ -362,7 +395,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text('$label: $count', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        Text('$label: $count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -377,124 +410,27 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
       ],
     );
   }
 
-  Widget _buildEventCard(BuildContext context, CalendarEvent event) {
-    final eventColor = event_colors.eventAccent(event.eventType);
+  Widget _buildEventListItem(CalendarEvent event) {
+    final dropdownLookup = ref
+        .read(dropdownLookupProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(
-              builder: (context) => EnquiryDetailsScreen(enquiryId: event.enquiryId),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Color indicator
-              Container(
-                width: 4,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: eventColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Event details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.customerName,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.event, size: 16, color: Theme.of(context).colorScheme.outline),
-                        const SizedBox(width: 4),
-                        Text(
-                          event.eventType,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (event.eventLocation != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              event.eventLocation!,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    // Status badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(event.status).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        event.status.toUpperCase(),
-                        style: TextStyle(
-                          color: _getStatusColor(event.status),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Time indicator
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Icon(Icons.access_time, size: 16, color: Theme.of(context).colorScheme.outline),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('HH:mm').format(event.eventDate),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.outline),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return EnquiryListItem(
+      enquiryId: event.enquiryId,
+      data: {
+        'customerName': event.customerName,
+        'statusLabel': event.status,
+        'eventTypeLabel': event.eventType,
+        'eventDate': Timestamp.fromDate(event.eventDate),
+        'eventLocation': event.eventLocation,
+        'createdAt': Timestamp.fromDate(event.eventDate),
+      },
+      dropdownLookup: dropdownLookup,
     );
   }
 
@@ -574,14 +510,17 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   }
 
   Widget _buildStatusIndicator(Color color, int count, bool hasConflict) {
+    final conflictColor = Theme.of(context).colorScheme.error;
     return Container(
       margin: const EdgeInsets.only(right: 2),
       width: hasConflict ? 8 : 6,
       height: hasConflict ? 8 : 6,
       decoration: BoxDecoration(
-        color: hasConflict ? Colors.red : color,
+        color: hasConflict ? conflictColor : color,
         shape: BoxShape.circle,
-        border: hasConflict ? Border.all(color: Colors.white, width: 1) : null,
+        border: hasConflict
+            ? Border.all(color: Theme.of(context).colorScheme.onError, width: 1)
+            : null,
       ),
       child: count > 1
           ? Center(
@@ -608,26 +547,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     if (value is DateTime) return value;
     if (value is Timestamp) return value.toDate();
     return null;
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'new':
-        return Colors.blue;
-      case 'in_talks':
-        return Colors.orange;
-      case 'quote_sent':
-        return Colors.purple;
-      case 'confirmed':
-        return Colors.green;
-      case 'completed':
-        return Colors.teal;
-      case 'cancelled':
-      case 'not_interested':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 
   Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String userId) {

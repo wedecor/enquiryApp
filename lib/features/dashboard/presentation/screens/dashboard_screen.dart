@@ -4,36 +4,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/providers/role_provider.dart';
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/logging/logger.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/services/review_request_service.dart';
-import '../../../settings/providers/settings_providers.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../ui/components/enquiry_list_tile.dart';
 import '../../../../ui/components/stats_card.dart';
-import '../../../../core/logging/logger.dart';
-import '../../../../widgets/enquiry_tile_status_strip.dart';
-import '../../../admin/analytics/presentation/analytics_screen.dart';
-import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
-import '../../../admin/users/presentation/user_management_screen.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
-import '../../../enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
-import 'calendar_view_screen.dart';
 import '../../../enquiries/presentation/widgets/status_inline_control.dart';
-import '../../../settings/presentation/settings_screen.dart';
+import '../../../settings/providers/settings_providers.dart';
+import '../widgets/dashboard_empty_enquiries.dart';
+import '../widgets/dashboard_kpi_row.dart';
+import '../widgets/dashboard_navigation_drawer.dart';
+import '../widgets/dashboard_welcome_panel.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.embeddedInShell = false});
+
+  /// When true, renders body only (no [Scaffold]); used inside [AppShell].
+  final bool embeddedInShell;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -223,6 +224,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final roleAsync = ref.watch(roleProvider);
 
+    final body = currentUser.when(
+      data: (user) => roleAsync.when(
+        data: (role) => _buildDashboardContent(context, user, role == UserRole.admin),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _buildDashboardContent(context, user, false),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (Object error, StackTrace stack) => _buildErrorWidget(context, error),
+    );
+
+    if (widget.embeddedInShell) {
+      return body;
+    }
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
@@ -238,19 +253,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ],
       ),
       drawer: roleAsync.when(
-        data: (role) => _buildNavigationDrawer(role == UserRole.admin),
-        loading: () => _buildNavigationDrawer(false), // Show non-admin drawer while loading
-        error: (_, __) => _buildNavigationDrawer(false),
+        data: (role) => DashboardNavigationDrawer(isAdmin: role == UserRole.admin),
+        loading: () => const DashboardNavigationDrawer(isAdmin: false),
+        error: (_, __) => const DashboardNavigationDrawer(isAdmin: false),
       ),
-      body: currentUser.when(
-        data: (user) => roleAsync.when(
-          data: (role) => _buildDashboardContent(context, user, role == UserRole.admin),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => _buildDashboardContent(context, user, false),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, StackTrace stack) => _buildErrorWidget(context, error),
-      ),
+      body: body,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.of(
@@ -283,90 +290,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildWelcomeAndStats(UserModel? user, bool isAdmin) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome back, ${user?.name ?? 'User'}!',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      isAdmin ? 'Administrator' : 'Staff Member',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _buildStatisticsCards(isAdmin, user?.uid),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search by name or phone number',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      tooltip: 'Clear search',
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        _handleSearchChanged();
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              filled: true,
-              fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.4),
-            ),
-            textInputAction: TextInputAction.search,
-          ),
-          if (_searchQuery.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Filtering results for "$_searchQuery"',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
-              ),
-            ),
-        ],
-      ),
+    return DashboardWelcomePanel(
+      user: user,
+      isAdmin: isAdmin,
+      searchController: _searchController,
+      searchQuery: _searchQuery,
+      onClearSearch: () {
+        _searchController.clear();
+        _handleSearchChanged();
+      },
+      statsChild: _buildStatisticsCards(isAdmin, user?.uid),
     );
   }
 
@@ -456,37 +389,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         final rawEnquiries = snapshot.data!.docs.toList();
 
         if (rawEnquiries.isEmpty) {
-          if (_searchQuery.isNotEmpty) {
-            return SearchEmptyState(
-              query: _searchQuery,
-              onClearSearch: () {
-                _searchController.clear();
-                _handleSearchChanged();
-              },
-            );
-          }
-
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.sentiment_dissatisfied, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  status == 'All'
-                      ? 'No enquiries found'
-                      : status == 'reminders'
-                      ? 'No enquiries need reminders'
-                      : 'No $status enquiries',
-                  style: const TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tap the + button to create a new enquiry',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
-            ),
+          return DashboardEmptyEnquiries(
+            status: status,
+            searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+            onClearSearch: _searchQuery.isNotEmpty
+                ? () {
+                    _searchController.clear();
+                    _handleSearchChanged();
+                  }
+                : null,
           );
         }
 
@@ -609,6 +520,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             final eventCountdownLabel = _formatEventCountdownLabel(eventDate);
             final reminderCount = (enquiryData['reminderClickCount'] as int?) ?? 0;
             final isReminderTab = status == 'reminders';
+            final todayStart = DateTime(now.year, now.month, now.day);
+            final isPastEvent = eventDate != null &&
+                DateTime(eventDate.year, eventDate.month, eventDate.day).isBefore(todayStart);
+            final canMarkNotInterested = isPastEvent &&
+                ['in_talks', 'new', 'quote_sent'].contains(statusValue.toLowerCase());
             final statusColorHex =
                 (enquiryData['statusColorHex'] as String?) ??
                 (enquiryData['statusColor'] as String?);
@@ -686,9 +602,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               onShare: () => _shareEnquiry(enquiryModel),
               onAddNote: () => _showNotesSheet(enquiryModel),
               onRequestReview: statusValue.toLowerCase() == 'completed' && phone != null
-                  ? () => _handleReviewRequest(phone!, customerName, enquiryId)
+                  ? () => _handleReviewRequest(phone, customerName, enquiryId)
                   : null,
               reminderCount: isReminderTab ? reminderCount : null,
+              isPastEvent: canMarkNotInterested,
+              onMarkNotInterested: canMarkNotInterested && userId != null
+                  ? () => _markAsNotInterested(enquiryId, userId)
+                  : null,
             );
           },
         );
@@ -1253,7 +1173,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     DateTime? eventDate,
   ) {
     final now = DateTime.now();
-    final daysUntilEvent = eventDate != null ? eventDate.difference(now).inDays : null;
+    final daysUntilEvent = eventDate?.difference(now).inDays;
 
     // Only use event date for the message (not created date)
     String urgencyMessage = '';
@@ -1328,11 +1248,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildErrorWidget(BuildContext context, Object error) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
           const Text(
             'Something went wrong',
@@ -1341,7 +1262,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: const TextStyle(color: Colors.grey),
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
         ],
@@ -1358,205 +1279,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Drawer _buildNavigationDrawer(bool isAdmin) {
-    final currentUser = ref.watch(currentUserWithFirestoreProvider);
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDrawerHeader(currentUser, isAdmin),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                children: [
-                  _buildDrawerSectionLabel('Overview'),
-                  _buildDrawerTile(
-                    icon: Icons.dashboard_outlined,
-                    label: 'Dashboard',
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.list_alt_outlined,
-                    label: 'All Enquiries',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (context) => const EnquiriesListScreen()));
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.calendar_today,
-                    label: 'Calendar View',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (context) => const CalendarViewScreen()));
-                    },
-                  ),
-                  _buildDrawerTile(
-                    icon: Icons.add_circle_outline,
-                    label: 'Add Enquiry',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (context) => const EnquiryFormScreen()));
-                    },
-                  ),
-                  if (isAdmin) ...[
-                    const SizedBox(height: 16),
-                    _buildDrawerSectionLabel('Admin Tools'),
-                    _buildDrawerTile(
-                      icon: Icons.people_outline,
-                      label: 'User Management',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
-                        );
-                      },
-                    ),
-                    _buildDrawerTile(
-                      icon: Icons.bar_chart_outlined,
-                      label: 'Analytics',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.of(
-                          context,
-                        ).push(MaterialPageRoute(builder: (context) => const AnalyticsScreen()));
-                      },
-                    ),
-                    _buildDrawerTile(
-                      icon: Icons.tune,
-                      label: 'Dropdowns',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => const DropdownManagementScreen()),
-                        );
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  _buildDrawerSectionLabel('Preferences'),
-                  _buildDrawerTile(
-                    icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (context) => const SettingsScreen()));
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 0),
-            _buildDrawerTile(
-              icon: Icons.logout,
-              label: 'Sign out',
-              danger: true,
-              onTap: () async {
-                Navigator.pop(context);
-                await _signOut(ref);
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerHeader(AsyncValue<UserModel?> currentUser, bool isAdmin) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: currentUser.when(
-        data: (user) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              child: Text(
-                (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              user?.name ?? 'User',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              isAdmin ? 'Administrator' : 'Team Member',
-              style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13),
-            ),
-          ],
-        ),
-        loading: () => const SizedBox(
-          height: 40,
-          child: Center(child: CircularProgressIndicator(color: Colors.white)),
-        ),
-        error: (error, stack) =>
-            const Text('Error loading user', style: TextStyle(color: Colors.white)),
-      ),
-    );
-  }
-
-  Widget _buildDrawerSectionLabel(String label) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelSmall?.copyWith(
-          letterSpacing: 1.1,
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerTile({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool danger = false,
-  }) {
-    final theme = Theme.of(context);
-    final color = danger ? theme.colorScheme.error : theme.colorScheme.onSurface.withOpacity(0.85);
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: color)),
-      onTap: onTap,
-    );
-  }
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
@@ -1578,41 +1300,5 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _TabBarDelegate oldDelegate) {
     return oldDelegate._tabBar != _tabBar;
-  }
-}
-
-class DashboardKpiRow extends StatelessWidget {
-  const DashboardKpiRow({super.key, required this.items});
-
-  final List<Widget> items;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-
-    int crossAxisCount;
-    double childAspectRatio;
-
-    if (width >= 1024) {
-      crossAxisCount = 4;
-      childAspectRatio = 3.2;
-    } else if (width >= 720) {
-      crossAxisCount = 3;
-      childAspectRatio = 2.8;
-    } else {
-      crossAxisCount = 2;
-      childAspectRatio = 2.2;
-    }
-
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: childAspectRatio,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: items,
-    );
   }
 }

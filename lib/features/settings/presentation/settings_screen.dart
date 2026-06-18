@@ -11,7 +11,9 @@ import 'tabs/preferences_tab.dart';
 import 'tabs/privacy_tab.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.embeddedInShell = false});
+
+  final bool embeddedInShell;
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -42,14 +44,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
         final isAdmin = role == UserRole.admin;
         return _buildSettingsScreen(context, isAdmin);
       },
-      loading: () => Scaffold(
-        appBar: AppBar(title: const Text('Settings'), centerTitle: true),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Settings'), centerTitle: true),
-        body: Center(child: Text('Error: $error')),
-      ),
+      loading: () => widget.embeddedInShell
+          ? const Center(child: CircularProgressIndicator())
+          : Scaffold(
+              appBar: AppBar(title: const Text('Settings'), centerTitle: true),
+              body: const Center(child: CircularProgressIndicator()),
+            ),
+      error: (error, stack) => widget.embeddedInShell
+          ? Center(child: Text('Error: $error'))
+          : Scaffold(
+              appBar: AppBar(title: const Text('Settings'), centerTitle: true),
+              body: Center(child: Text('Error: $error')),
+            ),
     );
   }
 
@@ -82,13 +88,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
       _tabController = TabController(length: tabs.length, vsync: this);
     }
 
+    final tabContent = TabBarView(controller: _tabController, children: tabViews);
+
+    if (widget.embeddedInShell) {
+      return Column(
+        children: [
+          TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
+          Expanded(child: tabContent),
+        ],
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
         bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
       ),
-      body: TabBarView(controller: _tabController, children: tabViews),
+      body: tabContent,
     );
   }
 }
