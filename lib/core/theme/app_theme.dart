@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'tokens.dart';
 
-const Color _weDecorPrimary = Color(0xFF00B4D8);
-const Color _weDecorPrimaryDark = Color(0xFF0077B6);
-const Color _weDecorSecondary = Color(0xFF90E0EF);
-const Color _weDecorBackgroundLight = Color(0xFFF8FAFC);
-const Color _weDecorBackgroundDark = Color(0xFF0F172A);
-const Color _weDecorSurfaceDark = Color(0xFF1E293B);
+// Cream & terracotta palette — event decoration / hospitality brand
+const Color _weDecorPrimary = Color(0xFFD4603A); // terracotta (brightened)
+const Color _weDecorSecondary = Color(0xFFB07355); // warm clay
+const Color _weDecorTertiary = Color(0xFF5B7553); // muted sage
+const Color _weDecorBackgroundLight = Color(0xFFFBF8F3); // cream
+const Color _weDecorBackgroundDark = Color(0xFF221C16); // warm dark brown
+const Color _weDecorSurfaceDark = Color(0xFF2C241D); // warm dark surface
 
 /// Light and dark color schemes following Material 3 design
 class AppColorScheme {
@@ -18,65 +19,65 @@ class AppColorScheme {
     brightness: Brightness.light,
     primary: _weDecorPrimary,
     onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFFBFEFFF),
-    onPrimaryContainer: Color(0xFF003547),
+    primaryContainer: Color(0xFFFFE0D3),
+    onPrimaryContainer: Color(0xFF5C1A00),
     secondary: _weDecorSecondary,
-    onSecondary: Color(0xFF002B3D),
-    secondaryContainer: Color(0xFFDFF6FB),
-    onSecondaryContainer: Color(0xFF003547),
-    tertiary: Color(0xFF0077B6),
+    onSecondary: Color(0xFFFFFFFF),
+    secondaryContainer: Color(0xFFF0DDD0),
+    onSecondaryContainer: Color(0xFF3D2A1F),
+    tertiary: _weDecorTertiary,
     onTertiary: Color(0xFFFFFFFF),
-    tertiaryContainer: Color(0xFFE0F4FF),
-    onTertiaryContainer: Color(0xFF002D44),
+    tertiaryContainer: Color(0xFFDCE8D6),
+    onTertiaryContainer: Color(0xFF1F2E1A),
     error: Color(0xFFDC2626),
     onError: Color(0xFFFFFFFF),
     errorContainer: Color(0xFFFEE2E2),
     onErrorContainer: Color(0xFF991B1B),
     surface: Color(0xFFFFFFFF),
-    onSurface: Color(0xFF0F172A),
-    surfaceContainerHighest: Color(0xFFF1F5F9),
-    onSurfaceVariant: Color(0xFF475569),
-    outline: Color(0xFFCBD5E1),
-    outlineVariant: Color(0xFFE2E8F0),
+    onSurface: Color(0xFF2C241D),
+    surfaceContainerHighest: Color(0xFFF0E6DA),
+    onSurfaceVariant: Color(0xFF6B5E52),
+    outline: Color(0xFFD4C4B0),
+    outlineVariant: Color(0xFFE8DDD0),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFF0F172A),
-    onInverseSurface: Color(0xFFF8FAFC),
-    inversePrimary: _weDecorPrimaryDark,
+    inverseSurface: Color(0xFF2C241D),
+    onInverseSurface: Color(0xFFFBF8F3),
+    inversePrimary: Color(0xFFFFB69C),
     surfaceTint: _weDecorPrimary,
   );
 
   /// Dark color scheme
   static const ColorScheme dark = ColorScheme(
     brightness: Brightness.dark,
-    primary: _weDecorPrimaryDark,
-    onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFF004A73),
-    onPrimaryContainer: Color(0xFFBFEFFF),
-    secondary: _weDecorSecondary,
-    onSecondary: Color(0xFF0F172A),
-    secondaryContainer: Color(0xFF1A5D76),
-    onSecondaryContainer: Color(0xFFE2F6FF),
-    tertiary: _weDecorPrimary,
-    onTertiary: Color(0xFF002D44),
-    tertiaryContainer: Color(0xFF134A62),
-    onTertiaryContainer: Color(0xFFE0F4FF),
+    primary: Color(0xFFE8835C),
+    onPrimary: Color(0xFF3D1400),
+    primaryContainer: Color(0xFF7A3018),
+    onPrimaryContainer: Color(0xFFFFD9C7),
+    secondary: Color(0xFFD9A98C),
+    onSecondary: Color(0xFF3D2A1F),
+    secondaryContainer: Color(0xFF5C4435),
+    onSecondaryContainer: Color(0xFFF0DDD0),
+    tertiary: Color(0xFF8FB07F),
+    onTertiary: Color(0xFF1F2E1A),
+    tertiaryContainer: Color(0xFF3A4A32),
+    onTertiaryContainer: Color(0xFFDCE8D6),
     error: Color(0xFFF87171),
     onError: Color(0xFF290000),
     errorContainer: Color(0xFFB91C1C),
     onErrorContainer: Color(0xFFFEE2E2),
     surface: _weDecorSurfaceDark,
-    onSurface: Color(0xFFE2E8F0),
-    surfaceContainerHighest: Color(0xFF243047),
-    onSurfaceVariant: Color(0xFFA0AEC0),
-    outline: Color(0xFF4B5563),
-    outlineVariant: Color(0xFF374151),
+    onSurface: Color(0xFFF5EDE3),
+    surfaceContainerHighest: Color(0xFF3D3530),
+    onSurfaceVariant: Color(0xFFC4B5A5),
+    outline: Color(0xFF6B5E52),
+    outlineVariant: Color(0xFF4A4038),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFFE2E8F0),
-    onInverseSurface: Color(0xFF0F172A),
+    inverseSurface: Color(0xFFF5EDE3),
+    onInverseSurface: Color(0xFF2C241D),
     inversePrimary: _weDecorPrimary,
-    surfaceTint: _weDecorPrimaryDark,
+    surfaceTint: Color(0xFFE8835C),
   );
 
   /// Additional semantic colors
@@ -107,6 +108,70 @@ class AppColorScheme {
   static const Color onWarningDark = Color(0xFF92400E);
   static const Color warningContainerDark = Color(0xFFB45309);
   static const Color onWarningContainerDark = Color(0xFFFEF3C7);
+
+  // Contact actions and data visualization (fixed brand-adjacent hues)
+  static const Color whatsApp = Color(0xFF25D366);
+  static const Color phoneCall = Color(0xFF1E88E5);
+  static const Color chartBlue = Color(0xFF2563EB);
+  static const Color chartGreen = Color(0xFF059669);
+  static const Color chartAmber = Color(0xFFF59E0B);
+  static const Color chartRed = Color(0xFFDC2626);
+  static const Color chartPurple = Color(0xFF7C3AED);
+  static const Color chartCyan = Color(0xFF0891B2);
+  static const Color chartOrange = Color(0xFFEA580C);
+  static const Color chartEmerald = Color(0xFF22C55E);
+  static const Color chartIndigo = Color(0xFF7AA2FF);
+  static const Color eventHaldi = Color(0xFFF4B400);
+  static const Color eventEngagement = Color(0xFFFF6B6B);
+  static const Color eventWedding = Color(0xFF8B5CF6);
+  static const Color eventBirthday = Color(0xFF06B6D4);
+  static const Color neutralGrey = Color(0xFF757575);
+
+  /// Enquiry pipeline status colors (calendar, chips — distinct from primary gold)
+  static const Color statusNew = Color(0xFF2563EB);
+  static const Color statusInTalks = Color(0xFFD97706);
+  static const Color statusQuoteSent = Color(0xFF7C3AED);
+  static const Color statusConfirmed = Color(0xFF059669);
+  static const Color statusCompleted = Color(0xFF0891B2);
+
+  /// SnackBar / inline feedback (semantic — distinct from brand gold primary)
+  static const Color snackSuccess = success;
+  static const Color snackError = Color(0xFFDC2626);
+  static const Color snackWarning = warning;
+
+  static Color statusColorFor(String? status) {
+    switch ((status ?? '').toLowerCase().replaceAll(' ', '_')) {
+      case 'new':
+        return statusNew;
+      case 'in_talks':
+        return statusInTalks;
+      case 'quote_sent':
+        return statusQuoteSent;
+      case 'confirmed':
+      case 'approved':
+      case 'scheduled':
+        return statusConfirmed;
+      case 'completed':
+        return statusCompleted;
+      case 'cancelled':
+      case 'not_interested':
+      case 'closed_lost':
+        return chartRed;
+      default:
+        return neutralGrey;
+    }
+  }
+
+  static const List<Color> chartPalette = [
+    chartBlue,
+    chartGreen,
+    chartAmber,
+    chartRed,
+    chartPurple,
+    chartCyan,
+    chartOrange,
+    chartEmerald,
+  ];
 }
 
 /// Theme configuration for the app
@@ -120,13 +185,21 @@ class AppTheme {
     brightness: Brightness.light,
     scaffoldBackgroundColor: _weDecorBackgroundLight,
 
-    // App bar theme
+    // App bar theme — white surface bar, terracotta accent via icons/FAB
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColorScheme.light.primary,
-      foregroundColor: AppColorScheme.light.onPrimary,
-      elevation: AppTokens.elevation1,
+      backgroundColor: AppColorScheme.light.surface,
+      foregroundColor: AppColorScheme.light.onSurface,
+      elevation: 0,
+      scrolledUnderElevation: 1,
+      shadowColor: AppColorScheme.light.shadow.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       centerTitle: false,
-      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.light.onPrimary),
+      titleTextStyle: AppTypography.headlineMedium.copyWith(
+        color: AppColorScheme.light.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+      iconTheme: IconThemeData(color: AppColorScheme.light.onSurface),
+      actionsIconTheme: IconThemeData(color: AppColorScheme.light.onSurface),
     ),
 
     // Card theme
@@ -274,13 +347,21 @@ class AppTheme {
     brightness: Brightness.dark,
     scaffoldBackgroundColor: _weDecorBackgroundDark,
 
-    // App bar theme
+    // App bar theme — surface bar matches dark background
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColorScheme.dark.primary,
-      foregroundColor: AppColorScheme.dark.onPrimary,
-      elevation: AppTokens.elevation1,
+      backgroundColor: AppColorScheme.dark.surface,
+      foregroundColor: AppColorScheme.dark.onSurface,
+      elevation: 0,
+      scrolledUnderElevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.3),
+      surfaceTintColor: Colors.transparent,
       centerTitle: false,
-      titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColorScheme.dark.onPrimary),
+      titleTextStyle: AppTypography.headlineMedium.copyWith(
+        color: AppColorScheme.dark.onSurface,
+        fontWeight: FontWeight.w700,
+      ),
+      iconTheme: IconThemeData(color: AppColorScheme.dark.onSurface),
+      actionsIconTheme: IconThemeData(color: AppColorScheme.dark.onSurface),
     ),
 
     // Card theme
@@ -340,9 +421,9 @@ class AppTheme {
     ),
 
     tabBarTheme: TabBarThemeData(
-      labelColor: AppColorScheme.dark.secondary,
+      labelColor: AppColorScheme.dark.primary,
       unselectedLabelColor: AppColorScheme.dark.onSurfaceVariant,
-      indicatorColor: AppColorScheme.dark.secondary,
+      indicatorColor: AppColorScheme.dark.primary,
       indicatorSize: TabBarIndicatorSize.label,
     ),
 

@@ -161,7 +161,8 @@ class FirebaseAuthService {
         case 'user-not-found':
           return 'No user found with this email address.';
         case 'wrong-password':
-          return 'Incorrect password.';
+        case 'invalid-credential':
+          return 'Incorrect email or password.';
         case 'invalid-email':
           return 'Invalid email address.';
         case 'user-disabled':
@@ -171,6 +172,11 @@ class FirebaseAuthService {
         case 'operation-not-allowed':
           return 'Email/password sign in is not enabled.';
         default:
+          final message = error.message ?? '';
+          if (message.contains('referer') || message.contains('API key')) {
+            return 'Sign-in blocked for this site (API key restriction). '
+                'Run scripts/secure_api_keys.sh or allow localhost in Google Cloud Console.';
+          }
           return 'Authentication failed: ${error.message}';
       }
     }

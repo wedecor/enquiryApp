@@ -4,8 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/providers/role_provider.dart';
 import '../../../../core/auth/role_guards.dart';
+import '../../../../core/providers/role_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/user_model.dart' show UserRole;
 import '../domain/user_model.dart' as domain;
 import 'invite_user_dialog.dart';
@@ -72,7 +73,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       icon: const Icon(Icons.email),
                       label: const Text('Invite'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColorScheme.snackSuccess,
                         foregroundColor: Colors.white,
                       ),
                     ),
@@ -123,7 +124,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -202,12 +203,16 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           roleAsync.when(
             data: (role) {
               if (role != UserRole.admin) {
-                return const Expanded(
+                return Expanded(
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.lock, size: 64, color: Colors.grey),
+                        Icon(
+                          Icons.lock,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                         SizedBox(height: 16),
                         Text(
                           'Access Denied',
@@ -283,24 +288,25 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     }
 
     if (users.isEmpty) {
+      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
+            Icon(Icons.people_outline, size: 64, color: mutedColor),
             const SizedBox(height: 16),
             Text(
               isAdmin
                   ? 'No users found. Use "Add User" to create one.'
                   : 'No users to show or you lack permissions to modify.',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
             ),
             const SizedBox(height: 8),
             Text(
               isAdmin
                   ? 'Start by adding your first user to the system.'
                   : 'Contact an admin to get access or check your role in Firestore.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: mutedColor),
               textAlign: TextAlign.center,
             ),
           ],
@@ -462,7 +468,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   Widget _buildRoleChip(String role) {
-    final color = role == 'admin' ? Colors.purple : Colors.blue;
+    final color = role == 'admin' ? AppColorScheme.chartPurple : AppColorScheme.chartBlue;
     return Chip(
       label: Text(
         role.toUpperCase(),
@@ -479,7 +485,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         active ? 'ACTIVE' : 'INACTIVE',
         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
       ),
-      backgroundColor: active ? Colors.green : Colors.red,
+      backgroundColor: active ? AppColorScheme.chartGreen : AppColorScheme.chartRed,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
@@ -503,17 +509,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   Widget _buildErrorState(Object error) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
           Text('Error loading users', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -641,7 +650,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
         action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );

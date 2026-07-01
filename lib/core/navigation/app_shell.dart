@@ -6,8 +6,11 @@ import '../../features/dashboard/presentation/screens/calendar_view_screen.dart'
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../features/enquiries/presentation/screens/enquiry_form_screen.dart';
+import '../../features/enquiries/presentation/screens/kanban_board_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../shared/models/user_model.dart';
+import '../providers/notification_provider.dart';
 import '../providers/role_provider.dart';
 import '../services/firebase_auth_service.dart';
 import '../theme/tokens.dart';
@@ -23,13 +26,19 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   int _selectedIndex = 0;
 
+  // Calendar is always index 1 — used by DashboardScreen to navigate to it.
+  static const int _calendarTabIndex = 1;
+
   List<_ShellDestination> _destinations(bool isAdmin) {
-    final destinations = <_ShellDestination>[
-      const _ShellDestination(
+    return [
+      _ShellDestination(
         label: 'Dashboard',
         icon: Icons.dashboard_outlined,
         selectedIcon: Icons.dashboard,
-        body: DashboardScreen(embeddedInShell: true),
+        body: DashboardScreen(
+          embeddedInShell: true,
+          onNavigateToCalendar: () => setState(() => _selectedIndex = _calendarTabIndex),
+        ),
       ),
       const _ShellDestination(
         label: 'Calendar',
@@ -42,6 +51,12 @@ class _AppShellState extends ConsumerState<AppShell> {
         icon: Icons.list_alt_outlined,
         selectedIcon: Icons.list_alt,
         body: EnquiriesListScreen(embeddedInShell: true),
+      ),
+      const _ShellDestination(
+        label: 'Board',
+        icon: Icons.view_kanban_outlined,
+        selectedIcon: Icons.view_kanban,
+        body: KanbanBoardScreen(embeddedInShell: true),
       ),
       if (isAdmin)
         const _ShellDestination(
@@ -57,25 +72,36 @@ class _AppShellState extends ConsumerState<AppShell> {
         body: SettingsScreen(embeddedInShell: true),
       ),
     ];
-    return destinations;
   }
 
   bool _showFab(List<_ShellDestination> destinations) {
     if (_selectedIndex >= destinations.length) return false;
     final label = destinations[_selectedIndex].label;
-    return label == 'Dashboard' || label == 'Enquiries';
+    return label == 'Dashboard' || label == 'Enquiries' || label == 'Board';
   }
 
   Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text('You will need to sign in again to access the app.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign out')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await ref.read(firebaseAuthServiceProvider).signOut();
     } catch (_) {}
   }
 
   void _openNewEnquiry() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
   }
 
   @override
@@ -101,11 +127,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       appBar: AppBar(
         title: Text(current.label),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: _signOut,
-          ),
+          _NotificationBell(isAdmin: isAdmin),
+          IconButton(icon: const Icon(Icons.logout), tooltip: 'Sign Out', onPressed: _signOut),
         ],
       ),
       body: Row(
@@ -115,9 +138,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               extended: railExtended,
               selectedIndex: safeIndex,
               onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-              labelType: railExtended
-                  ? NavigationRailLabelType.none
-                  : NavigationRailLabelType.all,
+              labelType: railExtended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               destinations: [
                 for (final d in destinations)
                   NavigationRailDestination(
@@ -130,10 +151,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             const VerticalDivider(width: 1, thickness: 1),
           ],
           Expanded(
-            child: IndexedStack(
-              index: safeIndex,
-              children: [for (final d in destinations) d.body],
-            ),
+            child: IndexedStack(index: safeIndex, children: [for (final d in destinations) d.body]),
           ),
         ],
       ),
@@ -161,6 +179,38 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 }
+
+// ── Notification bell with badge ──────────────────────────────────────────────
+
+class _NotificationBell extends ConsumerWidget {
+  const _NotificationBell({required this.isAdmin});
+
+  final bool isAdmin;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(currentUserWithFirestoreProvider);
+    final userId = userAsync.valueOrNull?.uid;
+    if (userId == null) return const SizedBox.shrink();
+
+    final countAsync = ref.watch(unreadNotificationCountProvider(userId));
+    final count = countAsync.valueOrNull ?? 0;
+
+    return IconButton(
+      tooltip: 'Notifications',
+      onPressed: () => Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())),
+      icon: Badge(
+        isLabelVisible: count > 0,
+        label: Text(count > 99 ? '99+' : '$count'),
+        child: const Icon(Icons.notifications_outlined),
+      ),
+    );
+  }
+}
+
+// ── Shell destination ─────────────────────────────────────────────────────────
 
 class _ShellDestination {
   const _ShellDestination({

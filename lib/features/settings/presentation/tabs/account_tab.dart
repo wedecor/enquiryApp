@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../../../core/providers/role_provider.dart';
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/update_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/user_model.dart';
 
 class AccountTab extends ConsumerWidget {
@@ -147,8 +148,8 @@ class AccountTab extends ConsumerWidget {
         icon: const Icon(Icons.logout),
         label: const Text('Sign Out'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.error,
+          foregroundColor: Theme.of(context).colorScheme.onError,
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
@@ -225,7 +226,7 @@ class AccountTab extends ConsumerWidget {
   Future<void> _checkForUpdates(BuildContext context) async {
     try {
       // Show loading indicator
-      showDialog(
+      showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (context) => const AlertDialog(
@@ -257,14 +258,14 @@ class AccountTab extends ConsumerWidget {
         // No updates available - show current version info
         final packageInfo = await PackageInfo.fromPlatform();
         if (context.mounted) {
-          showDialog(
+          showDialog<void>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green),
-                  SizedBox(width: 8),
-                  Text('Up to Date'),
+                  const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess),
+                  const SizedBox(width: 8),
+                  const Text('Up to Date'),
                 ],
               ),
               content: Column(
@@ -330,8 +331,12 @@ class AccountTab extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Theme.of(context).colorScheme.onPrimary,
+          onPressed: () {},
+        ),
       ),
     );
   }

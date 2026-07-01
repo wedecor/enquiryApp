@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../data/enquiry_repository.dart';
 import '../../domain/enquiry.dart';
@@ -24,35 +25,47 @@ class StatusInlineControl extends ConsumerWidget {
     final isAssignee = enquiry.assignedTo == meUid;
     final canChange = isAdmin || (isStaff && isAssignee);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DropdownButton<String>(
-          key: const Key('statusDropdown'),
-          value: enquiry.status,
-          items: const <String>[
-            'new',
-            'contacted',
-            'quoted',
-            'confirmed',
-            'in_talks',
-            'completed',
-            'cancelled',
-            'not_interested',
-          ].map((s) => DropdownMenuItem<String>(value: s, child: Text(s))).toList(),
-          onChanged: canChange
-              ? (next) async {
-                  if (next == null || next == enquiry.status) return;
-                  await repo.updateStatus(id: enquiry.id, nextStatus: next, userId: meUid ?? '');
-                }
-              : null,
-        ),
-        if (isStaff && !isAssignee)
-          Text(
-            'Only the assigned user can change status',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-      ],
+    return StreamBuilder(
+      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
+      builder: (context, snapshot) {
+        final statuses = snapshot.hasData
+            ? snapshot.data!.docs.map((d) => d.data() as Map<String, dynamic>).toList()
+            : <Map<String, dynamic>>[];
+
+        final values = statuses.map((s) => s['value'] as String? ?? '').toList();
+        final currentValue = values.contains(enquiry.status) ? enquiry.status : null;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButton<String>(
+              key: const Key('statusDropdown'),
+              value: currentValue,
+              hint: Text(enquiry.statusDisplay),
+              items: statuses.map((s) {
+                final v = s['value'] as String? ?? '';
+                final l = s['label'] as String? ?? v;
+                return DropdownMenuItem<String>(value: v, child: Text(l));
+              }).toList(),
+              onChanged: canChange
+                  ? (next) async {
+                      if (next == null || next == enquiry.status) return;
+                      await repo.updateStatus(
+                        id: enquiry.id,
+                        nextStatus: next,
+                        userId: meUid ?? '',
+                      );
+                    }
+                  : null,
+            ),
+            if (isStaff && !isAssignee)
+              Text(
+                'Only the assigned user can change status',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+          ],
+        );
+      },
     );
   }
 }

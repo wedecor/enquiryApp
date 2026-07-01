@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
+
 class ConfirmDialog extends StatelessWidget {
   final String title;
   final String content;
@@ -35,7 +37,7 @@ class ConfirmDialog extends StatelessWidget {
               onConfirm();
             },
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColorScheme.snackError,
               foregroundColor: Colors.white,
             ),
             child: Text(confirmText ?? 'Confirm'),

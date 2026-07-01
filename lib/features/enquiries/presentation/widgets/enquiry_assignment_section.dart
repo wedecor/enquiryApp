@@ -123,7 +123,13 @@ class _AsyncUserRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(child: _UserDisplay(userId: userId, currentUserId: currentUserId, getUserDisplayName: getUserDisplayName)),
+          Expanded(
+            child: _UserDisplay(
+              userId: userId,
+              currentUserId: currentUserId,
+              getUserDisplayName: getUserDisplayName,
+            ),
+          ),
         ],
       ),
     );
@@ -131,11 +137,7 @@ class _AsyncUserRow extends StatelessWidget {
 }
 
 class _UserDisplay extends StatelessWidget {
-  const _UserDisplay({
-    required this.userId,
-    required this.getUserDisplayName,
-    this.currentUserId,
-  });
+  const _UserDisplay({required this.userId, required this.getUserDisplayName, this.currentUserId});
 
   final String? userId;
   final String? currentUserId;

@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_theme.dart';
+
 Color eventAccent(String? eventType) {
   switch ((eventType ?? '').toLowerCase()) {
     case 'haldi':
-      return const Color(0xFFF4B400);
+      return AppColorScheme.eventHaldi;
     case 'engagement':
-      return const Color(0xFFFF6B6B);
+      return AppColorScheme.eventEngagement;
     case 'wedding':
-      return const Color(0xFF8B5CF6);
+      return AppColorScheme.eventWedding;
     case 'birthday':
-      return const Color(0xFF06B6D4);
+      return AppColorScheme.eventBirthday;
     case 'babyshower':
     case 'baby_shower':
     case 'baby-shower':
-      return const Color(0xFFF59E0B);
+      return AppColorScheme.chartAmber;
     case 'corporate':
-      return const Color(0xFF22C55E);
+      return AppColorScheme.chartEmerald;
     default:
-      return const Color(0xFF7AA2FF);
+      return AppColorScheme.chartIndigo;
   }
 }
 
@@ -43,7 +45,7 @@ class EventColors {
   static EventTypeColors resolve(BuildContext context, String? rawType) {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = accentFor(rawType, fallback: colorScheme.primary);
-    final chipBackground = colorScheme.surfaceContainerHighest.withOpacity(0.35);
+    final chipBackground = colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
     final chipForeground = colorScheme.onSurface;
 
     return EventTypeColors(

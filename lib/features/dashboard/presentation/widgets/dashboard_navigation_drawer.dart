@@ -197,7 +197,8 @@ class _DrawerHeader extends StatelessWidget {
           height: 40,
           child: Center(child: CircularProgressIndicator(color: theme.colorScheme.onPrimary)),
         ),
-        error: (_, __) => Text('Error loading user', style: TextStyle(color: theme.colorScheme.onPrimary)),
+        error: (_, __) =>
+            Text('Error loading user', style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
     );
   }
@@ -240,7 +241,9 @@ class _DrawerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = danger ? theme.colorScheme.error : theme.colorScheme.onSurface.withValues(alpha: 0.85);
+    final color = danger
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurface.withValues(alpha: 0.85);
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: color)),

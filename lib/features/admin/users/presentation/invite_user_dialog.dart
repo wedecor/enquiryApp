@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
+import '../../../../core/theme/app_theme.dart';
 
 // Removed shared user model import - using string-based roles instead
 
@@ -103,14 +104,14 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 ),
               ] else ...[
                 // Success state with reset link
-                const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess, size: 64),
 
                 const SizedBox(height: 16),
 
                 Text(
                   'User invited successfully!',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.green,
+                    color: AppColorScheme.snackSuccess,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
@@ -122,19 +123,19 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: AppColorScheme.successContainerLight,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.shade200),
+                      border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.email, color: Colors.green.shade700),
+                        const Icon(Icons.email, color: AppColorScheme.onSuccessContainerLight),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Invitation email sent to ${_emailController.text.trim()}',
-                            style: TextStyle(
-                              color: Colors.green.shade700,
+                            style: const TextStyle(
+                              color: AppColorScheme.onSuccessContainerLight,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -158,9 +159,9 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: SelectableText(
                     _resetLink!,
@@ -274,7 +275,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColorScheme.snackError,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
               label: 'Retry',
@@ -293,7 +294,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Reset link copied to clipboard'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColorScheme.snackSuccess,
         ),
       );
     }

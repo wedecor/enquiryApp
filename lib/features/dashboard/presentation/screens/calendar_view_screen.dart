@@ -83,7 +83,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calendar View'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -228,7 +227,11 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                             hasConflict,
                           ),
                         if (statusCounts['new'] != null && statusCounts['new']! > 0)
-                          _buildStatusIndicator(AppColorScheme.statusNew, statusCounts['new']!, hasConflict),
+                          _buildStatusIndicator(
+                            AppColorScheme.statusNew,
+                            statusCounts['new']!,
+                            hasConflict,
+                          ),
                         if (statusCounts['completed'] != null && statusCounts['completed']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusCompleted,
@@ -358,26 +361,26 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
               final error = Theme.of(context).colorScheme.error;
               final errorContainer = Theme.of(context).colorScheme.errorContainer;
               return Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: errorContainer.withValues(alpha: 0.5),
-              border: Border.all(color: error.withValues(alpha: 0.5)),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning, color: error),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Conflict: Multiple events on this date',
-                    style: TextStyle(color: error, fontWeight: FontWeight.bold),
-                  ),
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: errorContainer.withValues(alpha: 0.5),
+                  border: Border.all(color: error.withValues(alpha: 0.5)),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
-            ),
-          );
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Conflict: Multiple events on this date',
+                        style: TextStyle(color: error, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ...selectedDayEvents.map(_buildEventListItem),
@@ -424,11 +427,12 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       enquiryId: event.enquiryId,
       data: {
         'customerName': event.customerName,
-        'statusLabel': event.status,
+        'statusValue': event.status,
         'eventTypeLabel': event.eventType,
         'eventDate': Timestamp.fromDate(event.eventDate),
         'eventLocation': event.eventLocation,
-        'createdAt': Timestamp.fromDate(event.eventDate),
+        'createdAt': Timestamp.fromDate(event.createdAt),
+        if (event.customerPhone != null) 'customerPhone': event.customerPhone,
       },
       dropdownLookup: dropdownLookup,
     );
@@ -489,6 +493,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         eventDate: eventDate,
         eventLocation: data['eventLocation'] as String?,
         status: status,
+        createdAt: _parseDateTime(data['createdAt']) ?? eventDate,
+        customerPhone: data['customerPhone'] as String?,
       );
 
       dayEvents.putIfAbsent(dayKey, () => []).add(event);
@@ -564,6 +570,8 @@ class CalendarEvent {
   final DateTime eventDate;
   final String? eventLocation;
   final String status;
+  final DateTime createdAt;
+  final String? customerPhone;
 
   CalendarEvent({
     required this.enquiryId,
@@ -572,5 +580,7 @@ class CalendarEvent {
     required this.eventDate,
     this.eventLocation,
     required this.status,
+    required this.createdAt,
+    this.customerPhone,
   });
 }

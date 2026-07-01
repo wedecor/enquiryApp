@@ -8,6 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../app_config.dart';
 import '../logging/logger.dart';
+import '../theme/app_theme.dart';
 
 /// In-app feedback collection sheet with device info and log bundle
 /// Non-PII compliant feedback system for internal testing
@@ -59,15 +60,17 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -77,7 +80,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: colorScheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -87,7 +90,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.feedback, color: Colors.blue),
+                    Icon(Icons.feedback, color: colorScheme.primary),
                     const SizedBox(width: 12),
                     const Text(
                       'Send Feedback',
@@ -217,11 +220,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                             onPressed: _isSubmitting ? null : _submitFeedback,
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
                             ),
                             child: _isSubmitting
-                                ? const Row(
+                                ? Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       SizedBox(
@@ -229,11 +232,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                         height: 16,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                                          valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary),
                                         ),
                                       ),
-                                      SizedBox(width: 12),
-                                      Text('Submitting...'),
+                                      const SizedBox(width: 12),
+                                      const Text('Submitting...'),
                                     ],
                                   )
                                 : const Text(
@@ -247,12 +250,12 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
 
                         // Privacy note
                         Card(
-                          color: Colors.blue[50],
-                          child: const Padding(
-                            padding: EdgeInsets.all(12),
+                          color: colorScheme.primaryContainer,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
                             child: Row(
                               children: [
-                                Icon(Icons.privacy_tip, color: Colors.blue, size: 20),
+                                Icon(Icons.privacy_tip, color: colorScheme.primary, size: 20),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -292,7 +295,7 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Feedback submitted successfully. Thank you!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
@@ -300,7 +303,10 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       Logger.error('Failed to submit feedback', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit feedback: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Failed to submit feedback: $e'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     } finally {

@@ -142,18 +142,13 @@ class EnquiryFormEventFields extends ConsumerWidget {
                       ),
                       hint: const Text('Select user to assign'),
                       items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Unassigned'),
-                        ),
+                        const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
                         ...users.docs.map((doc) {
                           final user = doc.data() as Map<String, dynamic>;
                           return DropdownMenuItem<String>(
                             value: doc.id,
                             child: Text(
-                              (user['name'] as String?) ??
-                                  (user['email'] as String?) ??
-                                  'Unknown',
+                              (user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown',
                             ),
                           );
                         }),

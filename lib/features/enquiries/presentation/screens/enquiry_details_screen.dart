@@ -273,7 +273,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                             EnquiryDetailInfoRow(
                               label: 'Notes',
                               value:
-                                  (enquiryData['description'] as String?) ?? 'No description provided',
+                                  (enquiryData['description'] as String?) ??
+                                  'No description provided',
                             ),
                           ],
                         ),

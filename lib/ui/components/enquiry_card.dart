@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/tokens.dart';
 import '../../utils/event_colors.dart';
 import 'age_chip.dart';
 import 'event_type_chip.dart';
@@ -43,18 +44,21 @@ class EnquiryCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      margin: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space1),
       child: InkWell(
         onTap: onTap ?? onView,
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: AppSpacing.space5,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (leadingBadge != null) ...[leadingBadge!, const SizedBox(width: 16)],
+                  if (leadingBadge != null) ...[
+                    leadingBadge!,
+                    const SizedBox(width: AppTokens.space4),
+                  ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

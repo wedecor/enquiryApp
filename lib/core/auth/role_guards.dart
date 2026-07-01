@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../shared/models/user_model.dart';
 import '../logging/logger.dart';
 import '../providers/audit_provider.dart';
 import '../providers/role_provider.dart';
-import '../../shared/models/user_model.dart';
 
 /// Provides boolean value indicating if current user is an admin
 /// Uses the standardized isAdminProvider from role_provider.dart
@@ -132,8 +132,6 @@ String getRoleDisplayName(WidgetRef ref) {
       return 'Administrator';
     case UserRole.staff:
       return 'Staff Member';
-    default:
-      return 'Unknown Role';
   }
 }
 

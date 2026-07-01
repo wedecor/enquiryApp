@@ -343,9 +343,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 const SizedBox(width: 12),
                 Text(
                   _formatDateRange(state.filters.dateRange),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -843,9 +841,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               const SizedBox(height: 8),
               Text(
                 'Please contact your administrator if you need access to these features.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
@@ -1001,7 +997,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       },
       error: (error, stack) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${error.toString()}'), backgroundColor: AppColorScheme.snackError),
+          SnackBar(
+            content: Text('Error: ${error.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       },
     );

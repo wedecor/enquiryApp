@@ -1,17 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/logging/logger.dart';
-import '../../../../core/providers/audit_provider.dart';
-import '../../../../core/providers/notification_provider.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../data/enquiry_repository.dart';
 
 /// Status dropdown with role-based transition guards for enquiry details.
 class EnquiryStatusControl extends ConsumerStatefulWidget {
@@ -143,20 +140,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   }
 
   Future<void> _handleStatusChange(String? value, String currentStatusValue) async {
-    if (kDebugMode) {
-      debugPrint('🚀 STATUS CHANGE TRIGGERED');
-      debugPrint('   New value: $value');
-      debugPrint('   Current value: $currentStatusValue');
-      debugPrint('   Is Admin: ${widget.isAdmin}');
-      debugPrint('   EnquiryId: ${widget.enquiryId}');
-    }
-
-    if (value == null || value == currentStatusValue) {
-      if (kDebugMode) {
-        debugPrint('⚠️ STATUS CHANGE: No change needed, returning early');
-      }
-      return;
-    }
+    if (value == null || value == currentStatusValue) return;
 
     final safeValue = (_selectedStatus ?? widget.currentStatusValue);
     if (!widget.isAdmin) {
@@ -202,62 +186,12 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     });
 
     try {
-      final oldStatusValue = currentStatusValue;
-      final firestoreService = ref.read(firestoreServiceProvider);
-      await firestoreService.updateEnquiry(widget.enquiryId, {
-        'statusValue': value,
-        'statusLabel': nextLabel,
-        'statusUpdatedAt': FieldValue.serverTimestamp(),
-        'statusUpdatedBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-        'updatedBy': ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-        'eventStatus': FieldValue.delete(),
-        'status': FieldValue.delete(),
-        'status_slug': FieldValue.delete(),
-      });
-
-      final auditService = ref.read(auditServiceProvider);
-      await auditService.recordChange(
-        enquiryId: widget.enquiryId,
-        fieldChanged: 'statusValue',
-        oldValue: oldStatusValue,
-        newValue: value,
-      );
-
-      try {
-        if (kDebugMode) {
-          debugPrint('📢 STATUS UPDATE: About to call notifyStatusUpdated');
-          debugPrint('   EnquiryId: ${widget.enquiryId}');
-          debugPrint('   OldStatus: $oldStatusLabel → NewStatus: $nextLabel');
-          debugPrint(
-            '   UpdatedBy: ${ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown'}',
-          );
-        }
-
-        final currentEnquiryData = await firestoreService.getEnquiry(widget.enquiryId) ?? {};
-        final notificationService = ref.read(notificationServiceProvider);
-        await notificationService.notifyStatusUpdated(
-          enquiryId: widget.enquiryId,
-          customerName: currentEnquiryData['customerName'] as String? ?? 'Unknown Customer',
-          oldStatus: oldStatusLabel,
-          newStatus: nextLabel,
-          updatedBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-          assignedTo: currentEnquiryData['assignedTo'] as String?,
-        );
-
-        if (kDebugMode) {
-          debugPrint('✅ STATUS UPDATE: notifyStatusUpdated completed');
-        }
-      } catch (notificationError, stackTrace) {
-        if (kDebugMode) {
-          debugPrint('❌ ERROR sending notifications: $notificationError');
-          debugPrint('Stack trace: $stackTrace');
-        }
-        Log.e(
-          'EnquiryStatusControl: error sending notifications',
-          error: notificationError,
-          stackTrace: stackTrace,
-        );
-      }
+      final userId = ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown';
+      // Route through repository — handles audit history, statusLabel,
+      // statusUpdatedBy, notifications, and legacy field cleanup in one place.
+      await ref
+          .read(enquiryRepositoryProvider)
+          .updateStatus(id: widget.enquiryId, nextStatus: value, userId: userId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -298,10 +232,9 @@ class _ReadOnlyStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: AppSpacing.horizontal(AppTokens.space3).copyWith(
-        top: AppTokens.space1 + 2,
-        bottom: AppTokens.space1 + 2,
-      ),
+      padding: AppSpacing.horizontal(
+        AppTokens.space3,
+      ).copyWith(top: AppTokens.space1 + 2, bottom: AppTokens.space1 + 2),
       decoration: BoxDecoration(
         color: statusColorFor(context, statusValue),
         borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),

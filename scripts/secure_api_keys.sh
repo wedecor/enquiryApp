@@ -35,7 +35,7 @@ key_name() {
 echo "Restricting Browser key (${BROWSER_KEY_ID})..."
 gcloud services api-keys update "$(key_name "$BROWSER_KEY_ID")" \
   --project="$PROJECT_ID" \
-  --allowed-referrers="https://wedecorenquries.web.app/*,https://wedecorenquries.firebaseapp.com/*,http://localhost:*,http://127.0.0.1:*"
+  --allowed-referrers="https://wedecorenquries.web.app/*,https://wedecorenquries.firebaseapp.com/*,http://localhost/*,http://127.0.0.1/*,http://localhost:8080/*,http://localhost:5000/*,http://127.0.0.1:8080/*,http://127.0.0.1:5000/*"
 
 android_args=()
 IFS=',' read -r -a sha_list <<< "$ANDROID_SHA1_LIST"

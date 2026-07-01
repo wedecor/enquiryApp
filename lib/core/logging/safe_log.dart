@@ -1,8 +1,8 @@
 /// Safe logging utility to prevent accidental exposure of sensitive data.
 library;
 
-import 'redaction.dart';
 import 'logger.dart';
+import 'redaction.dart';
 
 /// Safely logs a map by redacting sensitive fields and embedded PII.
 void safeLog(String label, Map<String, Object?> data) {

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -81,127 +80,121 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             FiltersBar(
               onClearFilters: () => ref.read(enquiryFiltersProvider.notifier).clearFilters(),
             ),
-              if (filters.searchQuery?.isNotEmpty ?? false)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Chip(
-                      label: Text('Search: ${filters.searchQuery}'),
-                      onDeleted: () =>
-                          ref.read(enquiryFiltersProvider.notifier).updateSearchQuery(null),
-                    ),
+            if (filters.searchQuery?.isNotEmpty ?? false)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Chip(
+                    label: Text('Search: ${filters.searchQuery}'),
+                    onDeleted: () =>
+                        ref.read(enquiryFiltersProvider.notifier).updateSearchQuery(null),
                   ),
-                ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: firestoreService.watchEnquiriesForRole(
-                    isAdmin: userRole == UserRole.admin,
-                    assignedToUid: user.uid,
-                  ),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
-                              size: 64,
-                              color: mutedColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              userRole == UserRole.admin
-                                  ? 'No enquiries found'
-                                  : 'No enquiries assigned to you',
-                              style: TextStyle(fontSize: 18, color: mutedColor),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final enquiries = snapshot.data!.docs.where((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      return matchesEnquiryFilters(data, filters, currentUserId: user.uid);
-                    }).toList();
-
-                    if (enquiries.isEmpty) {
-                      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              filters.hasActiveFilters ? Icons.filter_list_off : Icons.inbox,
-                              size: 64,
-                              color: mutedColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              filters.hasActiveFilters
-                                  ? 'No enquiries match your filters'
-                                  : (userRole == UserRole.admin
-                                        ? 'No enquiries found'
-                                        : 'No enquiries assigned to you'),
-                              style: TextStyle(fontSize: 18, color: mutedColor),
-                            ),
-                            if (filters.hasActiveFilters) ...[
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: () =>
-                                    ref.read(enquiryFiltersProvider.notifier).clearFilters(),
-                                child: const Text('Clear filters'),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Debug: Log the count
-                    if (kDebugMode) {
-                      print('Enquiries count: ${enquiries.length}');
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: enquiries.length,
-                      itemBuilder: (context, index) {
-                        final enquiry = enquiries[index];
-                        final enquiryData = enquiry.data() as Map<String, dynamic>;
-                        final enquiryId = enquiry.id;
-                        final assignedTo = enquiryData['assignedTo'] as String?;
-
-                        return EnquiryListItem(
-                          enquiryId: enquiryId,
-                          data: enquiryData,
-                          dropdownLookup: dropdownLookup,
-                          showAssignee:
-                              userRole == UserRole.admin && assignedTo != null,
-                          assigneeLabel: _getAssignedUserName(assignedTo),
-                        );
-                      },
-                    );
-                  },
                 ),
               ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error loading user data: $error')),
-      );
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: firestoreService.watchEnquiriesForRole(
+                  isAdmin: userRole == UserRole.admin,
+                  assignedToUid: user.uid,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            userRole == UserRole.admin ? Icons.inbox : Icons.assignment,
+                            size: 64,
+                            color: mutedColor,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            userRole == UserRole.admin
+                                ? 'No enquiries found'
+                                : 'No enquiries assigned to you',
+                            style: TextStyle(fontSize: 18, color: mutedColor),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final enquiries = snapshot.data!.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return matchesEnquiryFilters(data, filters, currentUserId: user.uid);
+                  }).toList();
+
+                  if (enquiries.isEmpty) {
+                    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            filters.hasActiveFilters ? Icons.filter_list_off : Icons.inbox,
+                            size: 64,
+                            color: mutedColor,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            filters.hasActiveFilters
+                                ? 'No enquiries match your filters'
+                                : (userRole == UserRole.admin
+                                      ? 'No enquiries found'
+                                      : 'No enquiries assigned to you'),
+                            style: TextStyle(fontSize: 18, color: mutedColor),
+                          ),
+                          if (filters.hasActiveFilters) ...[
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () =>
+                                  ref.read(enquiryFiltersProvider.notifier).clearFilters(),
+                              child: const Text('Clear filters'),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: enquiries.length,
+                    itemBuilder: (context, index) {
+                      final enquiry = enquiries[index];
+                      final enquiryData = enquiry.data() as Map<String, dynamic>;
+                      final enquiryId = enquiry.id;
+                      final assignedTo = enquiryData['assignedTo'] as String?;
+
+                      return EnquiryListItem(
+                        enquiryId: enquiryId,
+                        data: enquiryData,
+                        dropdownLookup: dropdownLookup,
+                        showAssignee: userRole == UserRole.admin && assignedTo != null,
+                        // assigneeLabel is now resolved inside EnquiryListItem via provider
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error loading user data: $error')),
+    );
 
     if (widget.embeddedInShell) {
       return body;
@@ -274,12 +267,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         ),
       ),
     );
-  }
-
-  String _getAssignedUserName(String? assignedTo) {
-    if (assignedTo == null) return 'Unassigned';
-    // TODO: Fetch user name from Firestore
-    return 'User ID: $assignedTo';
   }
 
   void _handleAction(

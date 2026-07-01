@@ -180,11 +180,11 @@ class DropdownReorderState extends StateNotifier<Map<String, dynamic>> {
   DropdownReorderState() : super({'isReordering': false, 'reorderedValues': <String>[]});
 
   void startReordering(List<String> initialValues) {
-    state = {'isReordering': true, 'reorderedValues': List.from(initialValues)};
+    state = {'isReordering': true, 'reorderedValues': List<String>.from(initialValues)};
   }
 
   void updateReorderedValues(List<String> newOrder) {
-    state = {...state, 'reorderedValues': List.from(newOrder)};
+    state = {...state, 'reorderedValues': List<String>.from(newOrder)};
   }
 
   void cancelReordering() {

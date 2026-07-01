@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../../core/theme/app_theme.dart';
 import '../domain/dropdown_item.dart';
 import 'dropdown_providers.dart';
 
@@ -175,7 +177,7 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -232,14 +234,17 @@ class _DropdownFormDialogState extends ConsumerState<DropdownFormDialog> {
                   ? 'Dropdown item created successfully'
                   : 'Dropdown item updated successfully',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }
@@ -268,7 +273,7 @@ class DropdownDeleteDialog extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (hasReferences) ...[
-            const Icon(Icons.warning, color: Colors.orange, size: 48),
+            const Icon(Icons.warning, color: AppColorScheme.snackWarning, size: 48),
             const SizedBox(height: 16),
             Text(
               'Cannot delete "${item.label}" because it is referenced by existing enquiries.',
@@ -281,7 +286,10 @@ class DropdownDeleteDialog extends ConsumerWidget {
           ] else ...[
             Text('Are you sure you want to delete "${item.label}"?'),
             const SizedBox(height: 8),
-            const Text('This action cannot be undone.', style: TextStyle(color: Colors.red)),
+            Text(
+              'This action cannot be undone.',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ],
         ],
       ),
@@ -291,7 +299,7 @@ class DropdownDeleteDialog extends ConsumerWidget {
           FilledButton(
             onPressed: () => _confirmDelete(context, ref),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColorScheme.snackError,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -309,14 +317,17 @@ class DropdownDeleteDialog extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Dropdown item deleted successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }
@@ -369,7 +380,7 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
                 if (replacements.isEmpty) {
                   return const Text(
                     'No other active dropdown items available for replacement.',
-                    style: TextStyle(color: Colors.orange),
+                    style: TextStyle(color: AppColorScheme.snackWarning),
                   );
                 }
 
@@ -455,14 +466,17 @@ class _DropdownReplaceDialogState extends ConsumerState<DropdownReplaceDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Values replaced successfully in all enquiries'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 
@@ -327,7 +328,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
         action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );

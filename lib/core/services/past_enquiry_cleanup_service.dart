@@ -2,99 +2,55 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../features/enquiries/data/enquiry_repository.dart';
-import '../../services/dropdown_lookup.dart';
 import '../../core/logging/logger.dart';
+import '../../features/enquiries/data/enquiry_repository.dart';
 import '../services/firestore_service.dart';
 
 /// Provider for PastEnquiryCleanupService
 final pastEnquiryCleanupServiceProvider = Provider<PastEnquiryCleanupService>((ref) {
   final enquiryRepository = ref.watch(enquiryRepositoryProvider);
-  final dropdownLookupFuture = ref.watch(dropdownLookupProvider.future);
   final firestoreService = ref.watch(firestoreServiceProvider);
-  return PastEnquiryCleanupService(enquiryRepository, dropdownLookupFuture, firestoreService);
+  return PastEnquiryCleanupService(enquiryRepository, firestoreService);
 });
 
 /// Service to automatically mark enquiries with passed event dates
 ///
 /// This service checks for enquiries with passed event dates and updates them:
-/// - Status "new", "in_talks", or "quote_sent" → "not_interested"
 /// - Status "confirmed" → "completed"
+///
+/// NOTE: "new", "in_talks", and "quote_sent" are intentionally NOT auto-closed.
+/// Clients may reschedule or postpone; auto-closing loses legitimate leads.
+/// Staff should manually close enquiries they know are no longer active.
 class PastEnquiryCleanupService {
   final EnquiryRepository _enquiryRepository;
-  final Future<DropdownLookup> _dropdownLookupFuture;
   final FirestoreService _firestoreService;
 
-  PastEnquiryCleanupService(
-    this._enquiryRepository,
-    this._dropdownLookupFuture,
-    this._firestoreService,
-  );
+  PastEnquiryCleanupService(this._enquiryRepository, this._firestoreService);
 
   /// Updates enquiries with passed event dates based on their current status
   ///
-  /// - Enquiries with status "new", "in_talks", or "quote_sent" → "not_interested"
   /// - Enquiries with status "confirmed" → "completed"
+  ///
+  /// Enquiries in "new", "in_talks", or "quote_sent" are NOT auto-closed — clients
+  /// may reschedule. Staff should manually close these when appropriate.
   ///
   /// Only updates enquiries that have event dates before today.
   ///
   /// Returns the number of enquiries updated.
   Future<int> markPastEnquiriesAsNotInterested({String? userId}) async {
     try {
-      final now = DateTime.now();
-      // Use start of today for date comparison (so events on today are not marked until tomorrow)
-      // This ensures events on the 23rd are marked completed/not_interested on the 24th
+      // Always use local time — guards against platform-specific UTC/local DateTime differences
+      final now = DateTime.now().toLocal();
+      // Start of today in local time. Events on today are NOT marked until tomorrow 00:00.
       final todayStart = DateTime(now.year, now.month, now.day);
 
-      // Statuses that should be marked as "not_interested"
-      final statusesToMarkNotInterested = ['new', 'in_talks', 'quote_sent'];
       // Statuses that should be marked as "completed"
       final statusesToMarkCompleted = ['confirmed'];
 
       int updatedCount = 0;
 
-      // Query all enquiries once and process both status types
+      // Query all enquiries once and process
       final allSnapshot = await _firestoreService.fetchAllEnquiries();
-
-      // Process enquiries to mark as "not_interested"
-      for (final doc in allSnapshot.docs) {
-        final data = doc.data();
-
-        // Only use statusValue - standard field
-        final statusValue = data['statusValue'] as String?;
-        final status = (statusValue ?? '').toLowerCase().trim();
-
-        // Skip if not in the list of statuses to mark as not_interested
-        if (!statusesToMarkNotInterested.contains(status)) {
-          continue;
-        }
-
-        final eventDate = data['eventDate'];
-        if (eventDate == null) continue;
-
-        DateTime? eventDateTime;
-        if (eventDate is Timestamp) {
-          eventDateTime = eventDate.toDate();
-        } else if (eventDate is DateTime) {
-          eventDateTime = eventDate;
-        } else {
-          continue;
-        }
-
-        // Normalize event date to start of day (ignore time)
-        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
-
-        // Mark as not_interested if event date day has passed (event date < today)
-        // This ensures events on the 23rd are marked not_interested on the 24th
-        if (eventDay.isBefore(todayStart)) {
-          await _enquiryRepository.updateStatus(
-            id: doc.id,
-            nextStatus: 'not_interested',
-            userId: userId ?? 'system',
-          );
-          updatedCount++;
-        }
-      }
 
       // Process enquiries to mark as "completed"
       for (final doc in allSnapshot.docs) {
@@ -121,11 +77,14 @@ class PastEnquiryCleanupService {
           continue;
         }
 
-        // Normalize event date to start of day (ignore time)
-        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
+        // Always work in local timezone — Timestamp.toDate() may return a UTC-aware
+        // DateTime on Flutter Web, causing off-by-one date errors for IST users
+        // (July 1 00:00 IST = June 30 18:30 UTC → would wrongly appear as June 30).
+        final localEvent = eventDateTime.toLocal();
+        final eventDay = DateTime(localEvent.year, localEvent.month, localEvent.day);
 
-        // Mark as completed if event date day has passed (event date < today)
-        // This ensures events on the 23rd are marked completed on the 24th
+        // Mark as completed only if the event day is STRICTLY before today.
+        // July 1st event: NOT marked on July 1st. Marked on July 2nd 00:00 onwards.
         if (eventDay.isBefore(todayStart)) {
           await _enquiryRepository.updateStatus(
             id: doc.id,
@@ -149,8 +108,7 @@ class PastEnquiryCleanupService {
   /// - Force is set to true
   ///
   /// Updates:
-  /// - "new", "in_talks", "quote_sent" → "not_interested"
-  /// - "confirmed" → "completed"
+  /// - "confirmed" → "completed" (when event date has fully passed, i.e. next day 00:00)
   ///
   /// Returns the number of enquiries updated, or null if cleanup was skipped.
   Future<int?> runAutomaticCleanup({bool force = false, String? userId}) async {
@@ -198,7 +156,8 @@ class PastEnquiryCleanupService {
       // Use start of today for date comparison
       final todayStart = DateTime(now.year, now.month, now.day);
 
-      final statusesToCheck = ['new', 'in_talks', 'quote_sent', 'confirmed'];
+      // Only count confirmed enquiries — others are not auto-closed (see B-06)
+      final statusesToCheck = ['confirmed'];
       int count = 0;
 
       // Query all enquiries and filter client-side using statusValue only

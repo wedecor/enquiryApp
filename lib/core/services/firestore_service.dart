@@ -184,8 +184,7 @@ class FirestoreService {
 
   /// Per-user saved enquiry filter views (`users/{uid}/savedViews`).
   CollectionReference<Map<String, dynamic>> savedViewsCollection(String userId) {
-    return _usersCollection.doc(userId).collection('savedViews')
-        as CollectionReference<Map<String, dynamic>>;
+    return _usersCollection.doc(userId).collection('savedViews');
   }
 
   /// Starts a Firestore write batch (for multi-document updates).
@@ -198,8 +197,11 @@ class FirestoreService {
 
   /// FCM device tokens (`users/{uid}/private/notifications/tokens`).
   CollectionReference<Map<String, dynamic>> fcmTokensCollection(String uid) {
-    return _usersCollection.doc(uid).collection('private').doc('notifications').collection('tokens')
-        as CollectionReference<Map<String, dynamic>>;
+    return _usersCollection
+        .doc(uid)
+        .collection('private')
+        .doc('notifications')
+        .collection('tokens');
   }
 
   Future<void> saveFcmToken(String uid, String token, {bool refreshed = false}) async {

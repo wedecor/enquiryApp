@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/user_model.dart';
 import '../domain/dropdown_item.dart';
 import 'dropdown_form_dialog.dart';
@@ -158,11 +159,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
       child: statsAsync.when(
         data: (stats) => Row(
           children: [
-            _buildStatCard('Total', stats['total']!, Colors.blue),
+            _buildStatCard('Total', stats['total']!, AppColorScheme.chartBlue),
             const SizedBox(width: 16),
-            _buildStatCard('Active', stats['active']!, Colors.green),
+            _buildStatCard('Active', stats['active']!, AppColorScheme.chartGreen),
             const SizedBox(width: 16),
-            _buildStatCard('Inactive', stats['inactive']!, Colors.orange),
+            _buildStatCard('Inactive', stats['inactive']!, AppColorScheme.chartAmber),
           ],
         ),
         loading: () => const SizedBox(height: 80),
@@ -197,22 +198,23 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   }
 
   Widget _buildEmptyState(DropdownGroup group, bool isAdmin) {
+    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_getGroupIcon(group), size: 64, color: Colors.grey.shade400),
+          Icon(_getGroupIcon(group), size: 64, color: mutedColor),
           const SizedBox(height: 16),
           Text(
             'No ${group.displayName.toLowerCase()} found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
           ),
           const SizedBox(height: 8),
           Text(
             isAdmin
                 ? 'Tap "Add Item" to create your first dropdown item'
                 : 'Contact an administrator to add dropdown items',
-            style: TextStyle(color: Colors.grey.shade500),
+            style: TextStyle(color: mutedColor),
           ),
         ],
       ),
@@ -220,20 +222,21 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   }
 
   Widget _buildErrorState(Object error) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
           Text(
             'Error loading dropdowns',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.red),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colorScheme.error),
           ),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -264,6 +267,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   }
 
   Widget _buildDropdownItem(DropdownGroup group, DropdownItem item, int index, bool isAdmin) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       key: ValueKey(item.value),
       margin: const EdgeInsets.only(bottom: 8),
@@ -274,7 +278,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             if (isAdmin) ...[
               ReorderableDragStartListener(
                 index: index,
-                child: const Icon(Icons.drag_handle, color: Colors.grey),
+                child: Icon(Icons.drag_handle, color: colorScheme.onSurfaceVariant),
               ),
               const SizedBox(width: 8),
             ],
@@ -285,7 +289,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                 decoration: BoxDecoration(
                   color: Color(int.parse(item.color!.replaceFirst('#', '0xFF'))),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
               ),
               const SizedBox(width: 8),
@@ -295,7 +299,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         title: Text(item.label, style: const TextStyle(fontWeight: FontWeight.w500)),
         subtitle: Text(
           item.value,
-          style: TextStyle(fontFamily: 'monospace', color: Colors.grey.shade600),
+          style: TextStyle(fontFamily: 'monospace', color: colorScheme.onSurfaceVariant),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -303,9 +307,13 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             // Active status chip
             Chip(
               label: Text(item.active ? 'Active' : 'Inactive'),
-              backgroundColor: item.active ? Colors.green.shade100 : Colors.red.shade100,
+              backgroundColor: item.active
+                  ? AppColorScheme.successContainerLight
+                  : colorScheme.errorContainer,
               labelStyle: TextStyle(
-                color: item.active ? Colors.green.shade800 : Colors.red.shade800,
+                color: item.active
+                    ? AppColorScheme.onSuccessContainerLight
+                    : colorScheme.onErrorContainer,
                 fontSize: 12,
               ),
             ),
@@ -340,13 +348,13 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                     ],
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
+                      Icon(Icons.delete, color: colorScheme.error),
+                      const SizedBox(width: 8),
+                      Text('Delete', style: TextStyle(color: colorScheme.error)),
                     ],
                   ),
                 ),
@@ -381,7 +389,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Items reordered successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
@@ -390,7 +398,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error reordering items: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColorScheme.snackError,
           ),
         );
       }
@@ -416,14 +424,14 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   }
 
   void _showAddDialog(BuildContext context, DropdownGroup group) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => DropdownFormDialog(group: group),
     );
   }
 
   void _showEditDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => DropdownFormDialog(group: group, item: item),
     );
@@ -441,21 +449,24 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             content: Text(
               item.active ? 'Item deactivated successfully' : 'Item activated successfully',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }
   }
 
   void _showReplaceDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) =>
           DropdownReplaceDialog(group: group, oldValue: item.value, oldLabel: item.label),
@@ -470,7 +481,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     final hasReferences = await ref.read(isDropdownReferencedProvider((group, item.value)).future);
 
     if (mounted) {
-      showDialog(
+      showDialog<void>(
         context: context,
         builder: (context) =>
             DropdownDeleteDialog(group: group, item: item, hasReferences: hasReferences),

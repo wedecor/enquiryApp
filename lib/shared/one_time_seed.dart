@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-import '../firebase_options.dart';
 import '../core/logging/logger.dart';
+import '../firebase_options.dart';
 import 'seed_data.dart';
 
 void _info(String message, {Object? data}) => Log.i(message, data: data);
@@ -55,7 +55,7 @@ void main() async {
   _info('🎉 Seeding script completed');
 
   // Keep the app running for a moment to see the output
-  await Future.delayed(const Duration(seconds: 3));
+  await Future<void>.delayed(const Duration(seconds: 3));
 }
 
 /// Checks if data has already been seeded and runs seeding if needed

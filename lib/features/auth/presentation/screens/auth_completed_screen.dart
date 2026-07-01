@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+
 /// Screen shown after password reset completion
 class AuthCompletedScreen extends StatelessWidget {
   const AuthCompletedScreen({super.key});
@@ -14,7 +16,7 @@ class AuthCompletedScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Success Icon
-              const Icon(Icons.check_circle, size: 80, color: Colors.green),
+              Icon(Icons.check_circle, size: 80, color: AppColorScheme.snackSuccess),
               const SizedBox(height: 32),
 
               // Title
@@ -22,7 +24,7 @@ class AuthCompletedScreen extends StatelessWidget {
                 'Password Reset Complete',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.green,
+                  color: AppColorScheme.snackSuccess,
                 ),
                 textAlign: TextAlign.center,
               ),

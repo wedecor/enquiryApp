@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_config.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Terms of Service screen for legal compliance
 class TermsOfServiceScreen extends StatelessWidget {
@@ -13,14 +14,22 @@ class TermsOfServiceScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Terms of Service', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
-            Text('Last updated: $_lastUpdated', style: TextStyle(color: Colors.grey)),
+            Text(
+              'Terms of Service',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Last updated: $_lastUpdated',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
             SizedBox(height: 24),
 
             _SectionWidget(
@@ -62,7 +71,11 @@ class TermsOfServiceScreen extends StatelessWidget {
             SizedBox(height: 32),
             Text(
               'This is a placeholder terms of service. Please replace with your actual terms that comply with applicable laws and your business requirements.',
-              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.orange, fontSize: 12),
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: AppColorScheme.snackWarning,
+                fontSize: 12,
+              ),
             ),
           ],
         ),

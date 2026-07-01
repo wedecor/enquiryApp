@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
+
 /// KPI card widget displaying a metric with delta change
 class KpiCard extends StatelessWidget {
   final String title;
@@ -118,10 +120,10 @@ class KpiCard extends StatelessWidget {
       deltaColor = theme.colorScheme.onSurface.withOpacity(0.5);
       deltaIcon = Icons.remove;
     } else if (isPositive) {
-      deltaColor = Colors.green;
+      deltaColor = AppColorScheme.chartGreen;
       deltaIcon = Icons.trending_up;
     } else {
-      deltaColor = Colors.red;
+      deltaColor = AppColorScheme.chartRed;
       deltaIcon = Icons.trending_down;
     }
 
@@ -173,7 +175,7 @@ class TotalEnquiriesCard extends StatelessWidget {
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
       icon: Icons.inbox,
-      color: const Color(0xFF2563EB), // Blue
+      color: AppColorScheme.chartBlue,
       isLoading: isLoading,
     );
   }
@@ -198,7 +200,7 @@ class ActiveEnquiriesCard extends StatelessWidget {
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
       icon: Icons.pending,
-      color: Colors.orange,
+      color: AppColorScheme.chartAmber,
       subtitle: 'New, In Progress, Quote Sent',
       isLoading: isLoading,
     );
@@ -224,7 +226,7 @@ class WonEnquiriesCard extends StatelessWidget {
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
       icon: Icons.check_circle,
-      color: Colors.green,
+      color: AppColorScheme.chartGreen,
       subtitle: 'Confirmed, Completed',
       isLoading: isLoading,
     );
@@ -250,7 +252,7 @@ class LostEnquiriesCard extends StatelessWidget {
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
       icon: Icons.cancel,
-      color: Colors.red,
+      color: AppColorScheme.chartRed,
       subtitle: 'Cancelled, Closed Lost',
       isLoading: isLoading,
     );
@@ -276,7 +278,7 @@ class ConversionRateCard extends StatelessWidget {
       value: isLoading ? '...' : '${rate.toStringAsFixed(1)}%',
       deltaPercentage: deltaPercentage,
       icon: Icons.trending_up,
-      color: Colors.purple,
+      color: AppColorScheme.chartPurple,
       subtitle: 'Won / (Won + Lost)',
       isLoading: isLoading,
     );
@@ -302,7 +304,7 @@ class EstimatedRevenueCard extends StatelessWidget {
       value: isLoading ? '...' : _formatCurrency(revenue),
       deltaPercentage: deltaPercentage,
       icon: Icons.attach_money,
-      color: Colors.teal,
+      color: AppColorScheme.chartCyan,
       subtitle: 'Total Cost Sum',
       isLoading: isLoading,
     );

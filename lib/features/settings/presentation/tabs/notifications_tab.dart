@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 
@@ -195,7 +196,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
     return SwitchListTile(
       title: Text(title),
       subtitle: Text(subtitle),
-      secondary: Icon(icon, color: enabled ? null : Colors.grey),
+      secondary: Icon(icon, color: enabled ? null : Theme.of(context).colorScheme.onSurfaceVariant),
       value: value,
       onChanged: enabled ? onChanged : null,
     );
@@ -210,26 +211,29 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
           children: [
             Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade600),
+                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   'Important Notes',
                   style: Theme.of(
                     context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
+                  ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             _buildInfoItem(
+              context,
               'Push notifications require browser permission. You may need to allow notifications in your browser settings.',
             ),
             const SizedBox(height: 8),
             _buildInfoItem(
+              context,
               'Email notifications depend on admin settings and may not be available for all events.',
             ),
             const SizedBox(height: 8),
             _buildInfoItem(
+              context,
               'Changes take effect immediately but may take a few minutes to apply to all services.',
             ),
           ],
@@ -238,7 +242,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
     );
   }
 
-  Widget _buildInfoItem(String text) {
+  Widget _buildInfoItem(BuildContext context, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -246,7 +250,10 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
           margin: const EdgeInsets.only(top: 6),
           width: 4,
           height: 4,
-          decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            shape: BoxShape.circle,
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
@@ -349,7 +356,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
         action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );

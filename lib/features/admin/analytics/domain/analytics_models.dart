@@ -228,16 +228,20 @@ enum EnquiryStatusCategory {
     switch (normalizedStatus) {
       case 'new':
       case 'in_progress':
+      case 'in_talks':
+      case 'reminders':
       case 'quote_sent':
         return EnquiryStatusCategory.active;
       case 'confirmed':
       case 'completed':
+      case 'scheduled':
         return EnquiryStatusCategory.won;
       case 'cancelled':
       case 'closed_lost':
+      case 'not_interested': // treat as lost — client declined
         return EnquiryStatusCategory.lost;
       default:
-        return null; // Unknown status
+        return null; // Unknown status — excluded from conversion calc
     }
   }
 }

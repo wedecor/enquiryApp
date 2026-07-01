@@ -17,9 +17,9 @@ const _kAppearanceKey = 'appearance.mode.v2';
 class AppearanceController extends Notifier<AppearanceMode> {
   @override
   AppearanceMode build() {
-    // lazy init from prefs (non-blocking) with fallback to system
+    // lazy init from prefs (non-blocking) with fallback to light
     _load();
-    return AppearanceMode.system;
+    return AppearanceMode.light;
   }
 
   Future<void> _load() async {
@@ -28,7 +28,7 @@ class AppearanceController extends Notifier<AppearanceMode> {
       final raw = prefs.getString(_kAppearanceKey);
       final parsed = AppearanceMode.values.firstWhere(
         (e) => e.name == raw,
-        orElse: () => AppearanceMode.system,
+        orElse: () => AppearanceMode.light,
       );
       if (state != parsed) state = parsed;
     } catch (_) {
@@ -67,7 +67,7 @@ final appearanceModeProvider = StateNotifierProvider<_LegacyAppearanceController
 
 /// Legacy controller that delegates to the new Notifier-based controller
 class _LegacyAppearanceController extends StateNotifier<AppearanceMode> {
-  _LegacyAppearanceController(this.ref) : super(AppearanceMode.system) {
+  _LegacyAppearanceController(this.ref) : super(AppearanceMode.light) {
     // Sync with new controller
     ref.listen(appearanceControllerProvider, (previous, next) {
       state = next;

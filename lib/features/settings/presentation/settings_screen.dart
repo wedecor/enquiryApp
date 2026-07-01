@@ -25,8 +25,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
   @override
   void initState() {
     super.initState();
-    // Initialize with max possible tabs (including admin)
-    _tabController = TabController(length: 6, vsync: this);
+    // Start with base (non-admin) tab count; upgraded to 6 once role resolves.
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override

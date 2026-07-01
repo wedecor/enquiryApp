@@ -76,8 +76,10 @@ int compareByCreatedDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aCreated = parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-  final bCreated = parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final aCreated =
+      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final bCreated =
+      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   return aCreated.compareTo(bCreated);
 }
@@ -100,8 +102,10 @@ int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<O
     return 1;
   }
 
-  final aCreated = parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-  final bCreated = parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final aCreated =
+      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final bCreated =
+      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
   return aCreated.compareTo(bCreated);
 }
 
@@ -147,8 +151,10 @@ int compareByNearestEventDate(
     return -1;
   }
 
-  final aCreated = parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
-  final bCreated = parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final aCreated =
+      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  final bCreated =
+      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
   return bCreated.compareTo(aCreated);
 }
 
@@ -216,6 +222,9 @@ bool shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
   final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
       ? statusValueRaw!.trim().toLowerCase()
       : 'new';
+
+  // quote_sent folds into In Talks (quotes managed externally via WhatsApp)
+  if (statusValue == 'quote_sent') return true;
 
   if (statusValue != 'in_talks') {
     return false;

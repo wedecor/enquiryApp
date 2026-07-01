@@ -151,7 +151,7 @@ class AuditService {
             );
             return docs;
           })
-          .handleError((error) {
+          .handleError((Object error) {
             Log.e(
               'AuditService: history stream error',
               error: error,
@@ -160,7 +160,7 @@ class AuditService {
             // Try one-time fetch as fallback on error
             return getEnquiryHistory(enquiryId).asStream();
           })
-          .handleError((error) {
+          .handleError((Object error) {
             Log.e(
               'AuditService: fallback fetch also failed',
               error: error,
@@ -177,7 +177,7 @@ class AuditService {
         data: {'enquiryId': enquiryId},
       );
       // Try one-time fetch as fallback
-      return getEnquiryHistory(enquiryId).asStream().handleError((error) {
+      return getEnquiryHistory(enquiryId).asStream().handleError((Object error) {
         Log.e(
           'AuditService: fallback fetch failed in catch',
           error: error,

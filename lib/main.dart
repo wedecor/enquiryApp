@@ -5,19 +5,19 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
+import 'core/logging/logger.dart';
 import 'core/notifications/fcm_bootstrap.dart';
 import 'core/services/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
 import 'firebase_options.dart';
-import 'core/logging/logger.dart';
 
 /// Main entry point for the We Decor Enquiries application.
 ///
@@ -167,13 +167,13 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: 'We Decor Enquiries',
       theme: AppTheme.lightTheme.copyWith(
-        scrollbarTheme: ScrollbarThemeData(
+        scrollbarTheme: const ScrollbarThemeData(
           // Disable interactive scrollbars on web to prevent conflicts
           interactive: !kIsWeb,
         ),
       ),
       darkTheme: AppTheme.darkTheme.copyWith(
-        scrollbarTheme: ScrollbarThemeData(
+        scrollbarTheme: const ScrollbarThemeData(
           // Disable interactive scrollbars on web to prevent conflicts
           interactive: !kIsWeb,
         ),

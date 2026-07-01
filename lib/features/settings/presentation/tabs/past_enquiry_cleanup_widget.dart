@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/models/user_model.dart';
 
 /// Widget for cleaning up past enquiries
@@ -57,7 +58,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Only admins can run this cleanup'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
       return;
@@ -73,13 +74,14 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
 
     try {
       final service = ref.read(pastEnquiryCleanupServiceProvider);
-      final updatedCount = await service.markPastEnquiriesAsNotInterested(userId: userId);
+      // Use runAutomaticCleanup(force: true) — same date-guarded logic as the daily run
+      final updatedCount = await service.runAutomaticCleanup(force: true, userId: userId) ?? 0;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Successfully updated $updatedCount enquiry(ies)'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
 
@@ -92,7 +94,10 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
       safeLog('past_enquiry_cleanup_error', {'error': e.toString()});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error running cleanup: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error running cleanup: $e'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
         setState(() {
           _isRunning = false;
@@ -109,9 +114,7 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
         const Text('Update Past Enquiries Status', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         Text(
-          'Automatically update enquiries with passed event dates:\n'
-          '• "new", "in_talks", "quote_sent" → "not_interested"\n'
-          '• "confirmed" → "completed"',
+          'Automatically marks confirmed events as completed once their event date has passed (runs at start of next day).',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
@@ -127,8 +130,8 @@ class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWid
               Chip(
                 label: Text('$_pendingCount pending'),
                 backgroundColor: _pendingCount! > 0
-                    ? Colors.orange.shade100
-                    : Colors.green.shade100,
+                    ? AppColorScheme.warningContainerLight
+                    : AppColorScheme.successContainerLight,
               ),
             const Spacer(),
             ElevatedButton.icon(

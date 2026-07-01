@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../admin/analytics/presentation/analytics_screen.dart';
+import '../../../admin/dropdowns/presentation/dropdown_management_screen.dart';
+import '../../../admin/users/presentation/user_management_screen.dart';
 import '../../domain/app_config.dart';
 import '../../providers/settings_providers.dart';
 import 'past_enquiry_cleanup_widget.dart';
@@ -413,7 +417,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
         action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
@@ -510,13 +514,13 @@ class NotificationConfigTab extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade600),
+                      Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         'SMTP Status',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -536,7 +540,7 @@ class NotificationConfigTab extends ConsumerWidget {
   }
 
   void _showInfoDialog(BuildContext context, String title, String message) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
@@ -551,7 +555,7 @@ class NotificationConfigTab extends ConsumerWidget {
   void _showReminderDaysDialog(BuildContext context, WidgetRef ref, AppNotificationConfig config) {
     final controller = TextEditingController(text: config.reminderDaysDefault.toString());
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Default Reminder Days'),
@@ -702,7 +706,7 @@ class SecurityConfigTab extends ConsumerWidget {
   void _showAddDomainDialog(BuildContext context, WidgetRef ref, AppSecurityConfig config) {
     final controller = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add Allowed Domain'),
@@ -815,7 +819,9 @@ class DataIntegrationsTab extends ConsumerWidget {
                     subtitle: const Text('Manage event types, sources, and other dropdowns'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
-                      Navigator.of(context).pushNamed('/admin/dropdowns');
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(builder: (_) => const DropdownManagementScreen()),
+                      );
                     },
                   ),
 
@@ -824,7 +830,9 @@ class DataIntegrationsTab extends ConsumerWidget {
                     subtitle: const Text('Manage users, roles, and permissions'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
-                      Navigator.of(context).pushNamed('/admin/users');
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute<void>(builder: (_) => const UserManagementScreen()));
                     },
                   ),
 
@@ -833,7 +841,9 @@ class DataIntegrationsTab extends ConsumerWidget {
                     subtitle: const Text('View detailed analytics and reports'),
                     trailing: const Icon(Icons.arrow_forward_ios),
                     onTap: () {
-                      Navigator.of(context).pushNamed('/admin/analytics');
+                      Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute<void>(builder: (_) => const AnalyticsScreen()));
                     },
                   ),
                 ],
@@ -851,7 +861,7 @@ class DataIntegrationsTab extends ConsumerWidget {
                 children: [
                   Text('Maintenance', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 16),
-                  PastEnquiryCleanupWidget(),
+                  const PastEnquiryCleanupWidget(),
                 ],
               ),
             ),
@@ -867,27 +877,42 @@ class DataIntegrationsTab extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade600),
+                      Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         'Integration Status',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(color: Colors.blue.shade600),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
-                  _buildStatusItem('SMTP Email', 'Active (Gmail)', Icons.email, Colors.green),
+                  _buildStatusItem(
+                    'SMTP Email',
+                    'Active (Gmail)',
+                    Icons.email,
+                    AppColorScheme.chartGreen,
+                  ),
                   _buildStatusItem(
                     'Push Notifications',
                     'Active (FCM)',
                     Icons.notifications,
-                    Colors.green,
+                    AppColorScheme.chartGreen,
                   ),
-                  _buildStatusItem('Cloud Functions', 'Deployed', Icons.cloud, Colors.green),
-                  _buildStatusItem('Firestore', 'Connected', Icons.storage, Colors.green),
+                  _buildStatusItem(
+                    'Cloud Functions',
+                    'Deployed',
+                    Icons.cloud,
+                    AppColorScheme.chartGreen,
+                  ),
+                  _buildStatusItem(
+                    'Firestore',
+                    'Connected',
+                    Icons.storage,
+                    AppColorScheme.chartGreen,
+                  ),
                 ],
               ),
             ),
@@ -966,10 +991,14 @@ class _AboutTabState extends ConsumerState<AboutTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 32,
-                    backgroundColor: Colors.blue,
-                    child: Icon(Icons.event, size: 32, color: Colors.white),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      Icons.event,
+                      size: 32,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -1047,7 +1076,7 @@ class _AboutTabState extends ConsumerState<AboutTab> {
 
                   Row(
                     children: [
-                      Icon(Icons.security, color: Colors.green.shade600, size: 16),
+                      Icon(Icons.security, color: AppColorScheme.chartGreen, size: 16),
                       const SizedBox(width: 8),
                       const Text(
                         'All data is encrypted and securely stored',
@@ -1080,6 +1109,7 @@ class _AboutTabState extends ConsumerState<AboutTab> {
   }
 
   Widget _buildFeatureItem(String title, String description) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1089,7 +1119,7 @@ class _AboutTabState extends ConsumerState<AboutTab> {
             margin: const EdgeInsets.only(top: 6),
             width: 4,
             height: 4,
-            decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1097,7 +1127,10 @@ class _AboutTabState extends ConsumerState<AboutTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-                Text(description, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  description,
+                  style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                ),
               ],
             ),
           ),

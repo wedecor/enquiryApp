@@ -83,10 +83,9 @@ class _ReadOnlyStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: AppSpacing.horizontal(AppTokens.space3).copyWith(
-        top: AppTokens.space1 + 2,
-        bottom: AppTokens.space1 + 2,
-      ),
+      padding: AppSpacing.horizontal(
+        AppTokens.space3,
+      ).copyWith(top: AppTokens.space1 + 2, bottom: AppTokens.space1 + 2),
       decoration: BoxDecoration(
         color: statusColorFor(context, statusValue),
         borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),

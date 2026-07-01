@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_config.dart';
+import '../../core/theme/app_theme.dart';
 
 /// Privacy Policy screen for legal compliance
 class PrivacyPolicyScreen extends StatelessWidget {
@@ -13,14 +14,22 @@ class PrivacyPolicyScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: const SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Privacy Policy', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
-            Text('Last updated: $_lastUpdated', style: TextStyle(color: Colors.grey)),
+            Text(
+              'Privacy Policy',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Last updated: $_lastUpdated',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
             SizedBox(height: 24),
 
             _SectionWidget(
@@ -56,7 +65,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
             SizedBox(height: 32),
             Text(
               'This is a placeholder privacy policy. Please replace with your actual privacy policy that complies with applicable laws (GDPR, CCPA, etc.).',
-              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.orange, fontSize: 12),
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: AppColorScheme.snackWarning,
+                fontSize: 12,
+              ),
             ),
           ],
         ),

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/providers/role_provider.dart';
 import '../../../../core/auth/current_user_role_provider.dart' as auth_providers;
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../data/users_repository.dart';
 import '../domain/user_model.dart';

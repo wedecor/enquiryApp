@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
 import '../../domain/analytics_models.dart';
 
 /// Line chart widget for showing trend data
@@ -41,7 +42,9 @@ class LineTrendChart extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle!,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ],
@@ -60,7 +63,7 @@ class LineTrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: Colors.grey.shade300, strokeWidth: 1);
+            return FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1);
           },
         ),
         titlesData: FlTitlesData(
@@ -88,7 +91,10 @@ class LineTrendChart extends StatelessWidget {
             ),
           ),
         ),
-        borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300)),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
         minX: 0,
         maxX: (data.length - 1).toDouble(),
         minY: 0,
@@ -129,16 +135,20 @@ class LineTrendChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.show_chart, size: 48, color: Colors.grey.shade400),
+          Icon(Icons.show_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           Text(
             'Select a different date range or filters',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -178,7 +188,10 @@ class LineTrendChart extends StatelessWidget {
       final point = data[index];
       return SideTitleWidget(
         axisSide: meta.axisSide,
-        child: Text(_formatDate(point.x), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        child: Text(
+          _formatDate(point.x),
+          style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
+        ),
       );
     }
     return const SizedBox.shrink();
@@ -189,7 +202,7 @@ class LineTrendChart extends StatelessWidget {
       axisSide: meta.axisSide,
       child: Text(
         value.toInt().toString(),
-        style: const TextStyle(fontSize: 10, color: Colors.grey),
+        style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
       ),
     );
   }

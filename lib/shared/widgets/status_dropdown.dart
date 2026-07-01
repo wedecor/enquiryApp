@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/logging/logger.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
 import '../../shared/models/user_model.dart';
-import '../../core/logging/logger.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
-  final Function(String?) onChanged;
+  final void Function(String?) onChanged;
   final String label;
   final String collectionName;
   final String? Function(String?)? validator;
@@ -143,7 +144,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
       return;
@@ -161,7 +162,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${widget.label} already exists'), backgroundColor: Colors.orange),
+        SnackBar(
+          content: Text('${widget.label} already exists'),
+          backgroundColor: AppColorScheme.snackWarning,
+        ),
       );
       return;
     }
@@ -194,7 +198,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${widget.label} "$newStatus" added successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
@@ -203,7 +207,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error adding ${widget.label.toLowerCase()}: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColorScheme.snackError,
           ),
         );
       }
@@ -222,13 +226,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
       return;
     }
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Add New ${widget.label}'),
@@ -263,11 +267,6 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   @override
   Widget build(BuildContext context) {
     final roleAsync = ref.watch(roleProvider);
-    final isAdmin = roleAsync.when(
-      data: (role) => role == UserRole.admin,
-      loading: () => false,
-      error: (_, __) => false,
-    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,7 +316,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _showAddDialog,
-                      icon: const Icon(Icons.add_circle, color: Colors.green),
+                      icon: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
                       tooltip: 'Add new ${widget.label.toLowerCase()}',
                     ),
                   ],

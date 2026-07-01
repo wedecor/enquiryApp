@@ -140,17 +140,23 @@ class AnalyticsRepository {
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
-  /// Sum total revenue from totalCost field
+  /// Sum total revenue from totalCost field.
+  ///
+  /// Only counts confirmed and completed enquiries — cancelled and not_interested
+  /// should not be included as they represent lost or unrealised revenue.
   Future<double> sumRevenue({required DateRange dateRange, AnalyticsFilters? filters}) async {
     final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
 
+    const revenueStatuses = {'confirmed', 'completed'};
     double totalRevenue = 0.0;
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final totalCost = data['totalCost'];
+      final status = (data['statusValue'] as String?)?.toLowerCase() ?? '';
+      if (!revenueStatuses.contains(status)) continue;
 
+      final totalCost = data['totalCost'];
       if (totalCost is num) {
         totalRevenue += totalCost.toDouble();
       }

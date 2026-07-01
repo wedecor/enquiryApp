@@ -29,6 +29,13 @@ class SessionService {
   Stream<SessionState> _bindSessionStream() {
     _sessionController = StreamController<SessionState>.broadcast();
     _authSubscription = _auth.authStateChanges().listen(_handleAuthStateChange);
+    // Emit immediately from cached auth — don't wait on splash for first stream event.
+    final currentUser = _auth.currentUser;
+    if (currentUser != null) {
+      _handleAuthStateChange(currentUser);
+    } else {
+      _emitSessionState(const SessionState.unauthenticated());
+    }
     return _sessionController!.stream;
   }
 
@@ -117,7 +124,11 @@ class SessionService {
 
     for (int attempt = 0; attempt < delays.length; attempt++) {
       try {
-        final doc = await _firestore.collection('users').doc(uid).get();
+        final doc = await _firestore
+            .collection('users')
+            .doc(uid)
+            .get()
+            .timeout(const Duration(seconds: 15));
 
         if (doc.exists) {
           final data = doc.data();
@@ -132,7 +143,7 @@ class SessionService {
         }
 
         // Wait before next attempt
-        await Future.delayed(Duration(milliseconds: delays[attempt]));
+        await Future<void>.delayed(Duration(milliseconds: delays[attempt]));
 
         safeLog('profile_fetch_retry', {
           'attempt': attempt + 1,
@@ -145,7 +156,7 @@ class SessionService {
           rethrow;
         }
 
-        await Future.delayed(Duration(milliseconds: delays[attempt]));
+        await Future<void>.delayed(Duration(milliseconds: delays[attempt]));
 
         safeLog('profile_fetch_error_retry', {
           'attempt': attempt + 1,

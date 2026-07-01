@@ -7,24 +7,15 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService(ref.watch(firestoreServiceProvider));
 });
 
-/// Provider for user notifications stream
+/// Real-time stream of all notifications for a user (newest first)
 final userNotificationsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((
   ref,
   userId,
 ) {
-  final notificationService = ref.read(notificationServiceProvider);
-
-  // This would typically be a stream, but for now we'll return a future
-  return Stream.fromFuture(notificationService.getUserNotifications(userId));
+  return ref.watch(notificationServiceProvider).watchUserNotifications(userId);
 });
 
-/// Provider for notification count
-final notificationCountProvider = StreamProvider.family<int, String>((ref, userId) {
-  final notificationsAsync = ref.watch(userNotificationsProvider(userId));
-
-  return notificationsAsync.when(
-    data: (notifications) => Stream.value(notifications.length),
-    loading: () => Stream.value(0),
-    error: (error, stack) => Stream.value(0),
-  );
+/// Real-time unread notification count
+final unreadNotificationCountProvider = StreamProvider.family<int, String>((ref, userId) {
+  return ref.watch(notificationServiceProvider).watchUnreadCount(userId);
 });

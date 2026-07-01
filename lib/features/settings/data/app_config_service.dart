@@ -25,7 +25,7 @@ class AppConfigService {
           }
           return const AppGeneralConfig();
         })
-        .handleError((error, stackTrace) {
+        .handleError((Object error, StackTrace stackTrace) {
           safeLog('app_config_observe_error', {
             'kind': 'general',
             'error': error.toString(),
@@ -45,7 +45,7 @@ class AppConfigService {
           }
           return const AppNotificationConfig();
         })
-        .handleError((error, stackTrace) {
+        .handleError((Object error, StackTrace stackTrace) {
           safeLog('app_config_observe_error', {
             'kind': 'notifications',
             'error': error.toString(),
@@ -65,7 +65,7 @@ class AppConfigService {
           }
           return const AppSecurityConfig();
         })
-        .handleError((error, stackTrace) {
+        .handleError((Object error, StackTrace stackTrace) {
           safeLog('app_config_observe_error', {
             'kind': 'security',
             'error': error.toString(),

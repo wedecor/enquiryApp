@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart';
+import '../../../../core/logging/logger.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/widgets/appearance_setting.dart';
-import '../../../../core/logging/logger.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 

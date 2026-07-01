@@ -42,7 +42,7 @@ class UserSettingsService {
           }
           return const UserSettings();
         })
-        .handleError((error, stackTrace) {
+        .handleError((Object error, StackTrace stackTrace) {
           safeLog('user_settings_observe_error', {
             'uid': uid,
             'error': error.toString(),
@@ -112,22 +112,6 @@ class UserSettingsService {
     final key = 'user_settings_$uid';
     final json = settings.toJson();
     await prefs.setString(key, json.toString());
-  }
-
-  /// Load settings from SharedPreferences fallback
-  Future<UserSettings?> _loadFromSharedPreferences(String uid) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final key = 'user_settings_$uid';
-      final jsonString = prefs.getString(key);
-      if (jsonString != null) {
-        // This would need proper JSON parsing, but for now just return defaults
-        return const UserSettings();
-      }
-    } catch (e) {
-      // Ignore SharedPreferences errors
-    }
-    return null;
   }
 
   /// Initialize settings if missing

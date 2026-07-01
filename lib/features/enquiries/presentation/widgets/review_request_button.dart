@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/review_request_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../settings/providers/settings_providers.dart';
 
 /// Button widget for requesting reviews from customers for completed enquiries
@@ -22,7 +23,6 @@ class ReviewRequestButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
     final reviewService = ref.read(reviewRequestServiceProvider);
     final configAsync = ref.watch(appGeneralConfigProvider);
 
@@ -80,7 +80,7 @@ class ReviewRequestButton extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No phone number available for review request'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
       return;
@@ -103,7 +103,7 @@ class ReviewRequestButton extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Review request sent to $customerName'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColorScheme.snackSuccess,
             ),
           );
           break;
@@ -112,7 +112,7 @@ class ReviewRequestButton extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Invalid phone number format'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColorScheme.snackError,
             ),
           );
           break;
@@ -121,21 +121,27 @@ class ReviewRequestButton extends ConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('WhatsApp not installed. Opened in browser instead.'),
-              backgroundColor: Colors.orange,
+              backgroundColor: AppColorScheme.snackWarning,
             ),
           );
           break;
 
         case ContactLaunchStatus.failed:
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open WhatsApp'), backgroundColor: Colors.red),
+            const SnackBar(
+              content: Text('Could not open WhatsApp'),
+              backgroundColor: AppColorScheme.snackError,
+            ),
           );
           break;
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending review request: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error sending review request: $e'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }

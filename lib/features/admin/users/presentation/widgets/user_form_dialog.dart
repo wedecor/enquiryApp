@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/providers/role_provider.dart';
+import '../../../../../core/theme/app_theme.dart';
 import '../../../../../shared/models/user_model.dart';
 import '../../domain/user_model.dart' as domain;
 import '../users_providers.dart';
@@ -170,7 +171,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           content: Text(
             widget.user != null ? 'User updated successfully' : 'User created successfully',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColorScheme.snackSuccess,
         ),
       );
     }

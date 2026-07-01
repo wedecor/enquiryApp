@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logging/logger.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
 import '../../shared/models/user_model.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
-  final Function(String) onChanged;
+  final void Function(String) onChanged;
   final String? Function(String?)? validator;
 
   const EventTypeAutocomplete({
@@ -30,7 +31,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
   List<Map<String, String>> _filteredEventTypes = [];
   bool _isLoading = false;
   bool _showAddButton = false;
-  bool _isInitialized = false;
 
   static List<Map<String, String>> _defaultEventTypes() => [
     {'label': 'Wedding', 'value': 'wedding'},
@@ -62,7 +62,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         'EventTypeAutocomplete initial value changed',
         data: {'from': oldWidget.initialValue, 'to': widget.initialValue},
       );
-      _isInitialized = false;
       if (!_isLoading) {
         _setInitialValue();
       }
@@ -123,7 +122,6 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           widget.onChanged(widget.initialValue!);
         });
-        _isInitialized = true;
       } else {
         final matchingByLabel = _eventTypes.firstWhere(
           (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
@@ -135,13 +133,11 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             widget.onChanged(matchingByLabel['value'] ?? widget.initialValue!);
           });
-          _isInitialized = true;
         } else {
           _controller.text = widget.initialValue!;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             widget.onChanged(widget.initialValue!);
           });
-          _isInitialized = true;
         }
       }
     }
@@ -177,7 +173,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Only admins can add new event types'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
       return;
@@ -196,7 +192,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Event type "$trimmedType" already exists'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColorScheme.snackWarning,
         ),
       );
       return;
@@ -227,14 +223,17 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Event type "$trimmedType" added successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColorScheme.snackSuccess,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding event type: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error adding event type: $e'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     } finally {
@@ -339,10 +338,10 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const Icon(Icons.add_circle, color: Colors.green),
+        leading: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
         title: Text(
           'Add "${_controller.text.trim()}" as new event type',
-          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: AppColorScheme.snackSuccess, fontWeight: FontWeight.bold),
         ),
         subtitle: const Text('Admin only'),
         onTap: () => _addNewEventType(_controller.text),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/audit_provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../features/admin/users/presentation/users_providers.dart' as users_providers;
 import '../../services/dropdown_lookup.dart';
 
@@ -167,7 +168,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 if (timestamp != null) ...[
                   Text(
                     _formatTimestamp(timestamp),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -191,7 +195,7 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.arrow_forward, color: Colors.grey),
+                Icon(Icons.arrow_forward, color: AppColorScheme.neutralGrey),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -213,11 +217,14 @@ class EnquiryHistoryWidget extends ConsumerWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.person, size: 16, color: Colors.grey),
+                Icon(Icons.person, size: 16, color: AppColorScheme.neutralGrey),
                 const SizedBox(width: 4),
                 Text(
                   'Changed by: $userEmail',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -230,24 +237,28 @@ class EnquiryHistoryWidget extends ConsumerWidget {
   IconData _getFieldIcon(String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
+      case 'statusvalue': // stored as 'statusValue' in audit trail
         return Icons.flag;
       case 'assignedto':
         return Icons.person_add;
       case 'eventstatus':
         return Icons.timeline;
       case 'priority':
+      case 'priorityvalue':
         return Icons.priority_high;
       case 'totalcost':
         return Icons.attach_money;
       case 'advancepaid':
         return Icons.payment;
       case 'paymentstatus':
+      case 'paymentstatusvalue':
         return Icons.account_balance_wallet;
       case 'customername':
         return Icons.person;
       case 'customerphone':
         return Icons.phone;
       case 'eventtype':
+      case 'eventtypevalue':
         return Icons.event;
       case 'eventdate':
         return Icons.calendar_today;
@@ -263,50 +274,58 @@ class EnquiryHistoryWidget extends ConsumerWidget {
   Color _getFieldColor(BuildContext context, String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
+      case 'statusvalue':
         return Theme.of(context).colorScheme.primary;
       case 'assignedto':
         return Theme.of(context).colorScheme.primary;
       case 'priority':
-        return Colors.orange;
+      case 'priorityvalue':
+        return AppColorScheme.warning;
       case 'totalcost':
       case 'advancepaid':
       case 'paymentstatus':
-        return Colors.green;
+      case 'paymentstatusvalue':
+        return AppColorScheme.chartGreen;
       case 'customername':
       case 'customerphone':
-        return Colors.indigo;
+        return AppColorScheme.chartIndigo;
       case 'eventtype':
+      case 'eventtypevalue':
       case 'eventdate':
       case 'eventlocation':
         return Theme.of(context).colorScheme.secondary;
       case 'description':
-        return Colors.brown;
+        return Theme.of(context).colorScheme.tertiary;
       default:
-        return Colors.grey;
+        return AppColorScheme.neutralGrey;
     }
   }
 
   String _getFieldDisplayName(String fieldName) {
     switch (fieldName.toLowerCase()) {
       case 'status':
+      case 'statusvalue': // stored as 'statusValue' in audit trail
         return 'Status';
       case 'assignedto':
         return 'Assignment';
       case 'eventstatus':
         return 'Event Status';
       case 'priority':
+      case 'priorityvalue':
         return 'Priority';
       case 'totalcost':
         return 'Total Cost';
       case 'advancepaid':
         return 'Advance Paid';
       case 'paymentstatus':
+      case 'paymentstatusvalue':
         return 'Payment Status';
       case 'customername':
         return 'Customer Name';
       case 'customerphone':
         return 'Customer Phone';
       case 'eventtype':
+      case 'eventtypevalue':
         return 'Event Type';
       case 'eventdate':
         return 'Event Date';
@@ -315,7 +334,13 @@ class EnquiryHistoryWidget extends ConsumerWidget {
       case 'description':
         return 'Description';
       default:
-        return fieldName.replaceAll('_', ' ').toTitleCase();
+        // Strip trailing 'Value' suffix from camelCase field names (e.g. "eventTypeValue" → "Event Type")
+        final cleaned = fieldName.replaceAll(RegExp(r'Value$'), '');
+        return cleaned
+            .replaceAllMapped(RegExp(r'([A-Z])'), (m) => ' ${m[0]}')
+            .replaceAll('_', ' ')
+            .trim()
+            .toTitleCase();
     }
   }
 
@@ -351,9 +376,10 @@ class _ValueChip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bgColor = isNew ? Colors.green[50] : Colors.red[50];
-    final borderColor = isNew ? Colors.green[200]! : Colors.red[200]!;
-    final textColor = isNew ? Colors.green[700]! : Colors.red[700]!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final bgColor = isNew ? AppColorScheme.successContainerLight : colorScheme.errorContainer;
+    final borderColor = isNew ? AppColorScheme.successLight : colorScheme.error;
+    final textColor = isNew ? AppColorScheme.onSuccessContainerLight : colorScheme.onErrorContainer;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -389,11 +415,14 @@ class _ValueText extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final style = TextStyle(color: textColor, fontSize: 14);
 
-    if (value == null) return Text('Not Set', style: style);
+    // For assignment field, null means "was unassigned" — show that specifically
+    if (value == null) {
+      return Text(fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set', style: style);
+    }
     if (value is String) {
       final normalized = (value as String).trim();
       if (normalized.isEmpty || normalized.toLowerCase() == 'not set') {
-        return Text('Not Set', style: style);
+        return Text(fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set', style: style);
       }
     }
 
@@ -406,34 +435,42 @@ class _ValueText extends ConsumerWidget {
 
     switch (fieldKey) {
       case 'assignedto':
+        // null / empty means "was not assigned" — check before calling the provider
+        if (stringValue.isEmpty || stringValue.toLowerCase() == 'unassigned') {
+          return Text('Unassigned', style: style);
+        }
         final asyncName = ref.watch(users_providers.userDisplayNameProvider(stringValue));
         return asyncName.when(
-          data: (name) => Text(name, style: style),
+          data: (name) => Text(name == 'Unknown' ? 'Unassigned' : name, style: style),
           loading: () => Text('Loading...', style: style),
-          error: (err, _) => Text(stringValue, style: style),
+          error: (err, _) => Text('Unassigned', style: style),
         );
       case 'status':
       case 'eventstatus':
-        final label =
+      case 'statusvalue': // camelCase key stored in audit trail
+        final statusLabel =
             dropdownLookup?.labelForStatus(stringValue) ?? DropdownLookup.titleCase(stringValue);
-        return Text(label, style: style);
+        return Text(statusLabel, style: style);
       case 'eventtype':
-        final label =
+      case 'eventtypevalue':
+        final eventTypeLabel =
             dropdownLookup?.labelForEventType(stringValue) ?? DropdownLookup.titleCase(stringValue);
-        return Text(label, style: style);
+        return Text(eventTypeLabel, style: style);
       case 'priority':
-        final label =
+      case 'priorityvalue':
+        final priorityLabel =
             dropdownLookup?.labelForPriority(stringValue) ?? DropdownLookup.titleCase(stringValue);
-        return Text(label, style: style);
+        return Text(priorityLabel, style: style);
       case 'paymentstatus':
-        final label =
+      case 'paymentstatusvalue':
+        final paymentStatusLabel =
             dropdownLookup?.labelForPaymentStatus(stringValue) ??
             DropdownLookup.titleCase(stringValue);
-        return Text(label, style: style);
+        return Text(paymentStatusLabel, style: style);
       case 'source':
-        final label =
+        final sourceLabel =
             dropdownLookup?.labelForSource(stringValue) ?? DropdownLookup.titleCase(stringValue);
-        return Text(label, style: style);
+        return Text(sourceLabel, style: style);
       default:
         return Text(stringValue.isEmpty ? 'Not Set' : stringValue, style: style);
     }
@@ -442,7 +479,7 @@ class _ValueText extends ConsumerWidget {
 
 const TextStyle _sectionLabelStyle = TextStyle(
   fontSize: 12,
-  color: Color(0xFF757575),
+  color: AppColorScheme.neutralGrey,
   fontWeight: FontWeight.w500,
 );
 

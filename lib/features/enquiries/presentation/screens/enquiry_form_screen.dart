@@ -51,6 +51,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   String? _selectedPriority;
   String? _selectedPaymentStatus;
   String? _selectedAssignedTo;
+  String _selectedSource = 'instagram'; // default — user changes at creation
   final List<XFile> _selectedImages = [];
   final List<String> _existingImageUrls = []; // URLs from Firestore
   bool _isLoading = false;
@@ -167,11 +168,13 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _selectDate() async {
+    // In edit mode, allow past dates so staff can correct wrong entries.
+    final isEdit = widget.mode == 'edit';
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: isEdit ? DateTime(2020, 1, 1) : DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
     );
     if (picked != null && picked != _selectedDate) {
       setState(() {
@@ -265,7 +268,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final paymentStatusValue = _selectedPaymentStatus ?? 'unpaid';
     final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(paymentStatusValue);
 
-    const sourceValue = 'app';
+    final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
     final enquiryId = await firestoreService.createEnquiry(
@@ -484,6 +487,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       },
     );
 
+    // Determine if status changed (needed for statusUpdatedAt below)
+    final oldStatusValueForUpdate = (oldEnquiryData['statusValue'] as String?) ?? 'new';
+    final statusDidChange = oldStatusValueForUpdate != statusValue;
+
     // Update the enquiry document — include images field with complete list
     await firestoreService.updateEnquiry(widget.enquiryId!, {
       'customerName': newCustomerName,
@@ -499,6 +506,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'priorityLabel': priorityLabel,
       'statusValue': statusValue,
       'statusLabel': statusLabel,
+      // Keep statusUpdatedAt / statusUpdatedBy in sync when status changes via form
+      if (statusDidChange) ...{
+        'statusUpdatedAt': FieldValue.serverTimestamp(),
+        'statusUpdatedBy': currentUser.uid,
+      },
       'paymentStatus': paymentStatusValue,
       'paymentStatusValue': paymentStatusValue,
       'paymentStatusLabel': paymentStatusLabel,
@@ -532,8 +544,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final oldAssignedTo = oldEnquiryData['assignedTo'] as String?;
     if (oldAssignedTo != _selectedAssignedTo) {
       changes['assignedTo'] = {
-        'old_value': oldAssignedTo ?? 'Unassigned',
-        'new_value': _selectedAssignedTo ?? 'Unassigned',
+        'old_value':
+            oldAssignedTo, // null = previously unassigned; display layer shows "Unassigned"
+        'new_value': _selectedAssignedTo, // null = clearing the assignment
       };
     }
 
@@ -739,10 +752,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+      appBar: AppBar(title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -750,6 +760,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.mode == 'create') ...[
+                _FormSectionProgress(
+                  sections: const ['Customer', 'Event', 'Financial', 'Notes & Images'],
+                ),
+                const SizedBox(height: AppTokens.space4),
+              ],
               EnquiryFormCustomerFields(
                 nameController: _nameController,
                 phoneController: _phoneController,
@@ -780,6 +796,29 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               EnquiryFormSection(
                 title: 'Additional Information',
                 children: [
+                  if (widget.mode == 'create')
+                    DropdownButtonFormField<String>(
+                      value: _selectedSource,
+                      decoration: const InputDecoration(
+                        labelText: 'Lead Source *',
+                        prefixIcon: Icon(Icons.campaign_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
+                        DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp')),
+                        DropdownMenuItem(value: 'referral', child: Text('Referral')),
+                        DropdownMenuItem(value: 'walk_in', child: Text('Walk-in')),
+                        DropdownMenuItem(value: 'website', child: Text('Website')),
+                        DropdownMenuItem(value: 'exhibition', child: Text('Exhibition')),
+                        DropdownMenuItem(value: 'google', child: Text('Google')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) setState(() => _selectedSource = value);
+                      },
+                    ),
+                  if (widget.mode == 'create') const SizedBox(height: 16),
                   TextFormField(
                     controller: _notesController,
                     maxLines: 4,
@@ -802,13 +841,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
               ),
 
               const SizedBox(height: AppTokens.space8),
-              ElevatedButton(
+              FilledButton(
                 onPressed: _isLoading ? null : _submitForm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: AppSpacing.vertical(AppTokens.space4),
-                ),
+                style: FilledButton.styleFrom(padding: AppSpacing.vertical(AppTokens.space4)),
                 child: _isLoading
                     ? SizedBox(
                         height: 20,
@@ -826,6 +861,53 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Form section progress indicator ──────────────────────────────────────────
+
+class _FormSectionProgress extends StatelessWidget {
+  const _FormSectionProgress({required this.sections});
+
+  final List<String> sections;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < sections.length; i++) ...[
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    sections[i],
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            if (i < sections.length - 1) const SizedBox(width: 4),
+          ],
+        ],
       ),
     );
   }

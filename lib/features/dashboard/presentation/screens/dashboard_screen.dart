@@ -28,10 +28,14 @@ import '../widgets/dashboard_welcome_panel.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key, this.embeddedInShell = false});
+  const DashboardScreen({super.key, this.embeddedInShell = false, this.onNavigateToCalendar});
 
   /// When true, renders body only (no [Scaffold]); used inside [AppShell].
   final bool embeddedInShell;
+
+  /// Called when the user taps the "this week" priority bucket, requesting
+  /// the shell to switch to the Calendar tab.
+  final VoidCallback? onNavigateToCalendar;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -43,15 +47,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   final Map<String, Color> _statusColorCache = <String, Color>{};
   final Map<String, Color> _eventColorCache = <String, Color>{};
   final List<Map<String, String>> _statusTabs = [
-    {'label': 'All', 'value': 'All'},
     {'label': 'New', 'value': 'new'},
     {'label': 'In Talks', 'value': 'in_talks'},
-    {'label': 'Reminders', 'value': 'reminders'},
-    {'label': 'Quote Sent', 'value': 'quote_sent'},
+    {'label': 'Follow Up', 'value': 'reminders'},
     {'label': 'Confirmed', 'value': 'confirmed'},
-    {'label': 'Not Interested', 'value': 'not_interested'},
     {'label': 'Completed', 'value': 'completed'},
-    {'label': 'Cancelled', 'value': 'cancelled'},
+    {'label': 'Closed', 'value': 'closed'},
   ];
 
   late final List<Tab> _tabs;
@@ -232,9 +233,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     return SafeArea(
       child: NestedScrollView(
+        floatHeaderSlivers: true,
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverToBoxAdapter(child: _buildWelcomeAndStats(user, isAdmin)),
-          SliverPersistentHeader(pinned: true, delegate: DashboardTabBarDelegate(tabBar)),
+          SliverOverlapAbsorber(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+            sliver: SliverPersistentHeader(
+              pinned: true,
+              delegate: DashboardTabBarDelegate(
+                tabBar,
+                searchController: _searchController,
+                searchQuery: _searchQuery,
+                onClearSearch: () {
+                  _searchController.clear();
+                  _handleSearchChanged();
+                },
+              ),
+            ),
+          ),
         ],
         body: TabBarView(
           controller: _tabController,
@@ -266,14 +282,28 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return DashboardWelcomePanel(
       user: user,
       isAdmin: isAdmin,
-      searchController: _searchController,
-      searchQuery: _searchQuery,
-      onClearSearch: () {
-        _searchController.clear();
-        _handleSearchChanged();
-      },
       statsChild: DashboardStatisticsSection(isAdmin: isAdmin, userId: user?.uid),
+      onPriorityBucketTap: _jumpToTab,
     );
+  }
+
+  /// Jump to the tab matching [bucket] key ('new', 'reminders', 'this_week', 'quote_sent').
+  void _jumpToTab(String bucket) {
+    if (bucket == 'this_week') {
+      // Navigate to Calendar shell tab if possible, else fall through to All
+      if (widget.onNavigateToCalendar != null) {
+        widget.onNavigateToCalendar!();
+        return;
+      }
+    }
+    final targetStatus = switch (bucket) {
+      'new' => 'new',
+      'reminders' => 'reminders',
+      'quote_sent' => 'in_talks', // quote_sent folded into In Talks
+      _ => 'new',
+    };
+    final idx = _statusTabs.indexWhere((t) => t['value'] == targetStatus);
+    if (idx >= 0) _tabController.animateTo(idx);
   }
 
   Future<void> _handleCall(String? phone, String customerName, String enquiryId) async {
@@ -627,4 +657,3 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 }
-

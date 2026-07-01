@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 
 import '../../features/admin/analytics/domain/analytics_models.dart';
 import '../auth/role_guards.dart';
+import '../theme/app_theme.dart';
 
 /// Utility class for exporting data to CSV format
 class CsvExport {
@@ -380,8 +381,12 @@ class CsvExport {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Exported successfully: $filename'),
-        backgroundColor: Colors.green,
-        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        backgroundColor: AppColorScheme.snackSuccess,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Theme.of(context).colorScheme.onPrimary,
+          onPressed: () {},
+        ),
       ),
     );
   }
@@ -391,8 +396,12 @@ class CsvExport {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Export failed: $error'),
-        backgroundColor: Colors.red,
-        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        backgroundColor: AppColorScheme.snackError,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Theme.of(context).colorScheme.onError,
+          onPressed: () {},
+        ),
       ),
     );
   }

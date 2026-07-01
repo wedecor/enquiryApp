@@ -35,9 +35,7 @@ class EnquiryFormImagesSection extends StatelessWidget {
           onPressed: onPickImages,
           icon: const Icon(Icons.upload),
           label: const Text('Upload Images'),
-          style: ElevatedButton.styleFrom(
-            padding: AppSpacing.vertical(AppTokens.space4),
-          ),
+          style: ElevatedButton.styleFrom(padding: AppSpacing.vertical(AppTokens.space4)),
         ),
         const SizedBox(height: AppTokens.space4),
         if (selectedImages.isNotEmpty) ...[
@@ -78,10 +76,7 @@ class EnquiryFormImagesSection extends StatelessWidget {
                                     return const Icon(Icons.error);
                                   },
                                 )
-                              : Image.file(
-                                  File(selectedImages[index].path),
-                                  fit: BoxFit.cover,
-                                ),
+                              : Image.file(File(selectedImages[index].path), fit: BoxFit.cover),
                         ),
                       ),
                       Positioned(
@@ -116,10 +111,7 @@ class EnquiryFormImagesSection extends StatelessWidget {
             padding: AppSpacing.space2,
             child: Text(
               'No existing images found',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-              ),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontStyle: FontStyle.italic),
             ),
           ),
         ] else ...[

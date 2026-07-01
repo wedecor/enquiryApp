@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/theme/app_theme.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
 
@@ -52,7 +53,9 @@ class TopListTable extends StatelessWidget {
         TableRow(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(bottom: BorderSide(color: Colors.grey.shade300, width: 1)),
+            border: Border(
+              bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+            ),
           ),
           children: [
             _buildHeaderCell(context, 'Name'),
@@ -106,11 +109,17 @@ class TopListTable extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(Icons.table_chart, size: 48, color: Colors.grey.shade400),
+            Icon(
+              Icons.table_chart,
+              size: 48,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
             Text(
               'No data available',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -296,16 +305,20 @@ class RecentEnquiriesTable extends ConsumerWidget {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(Icons.table_rows, size: 48, color: Colors.grey.shade400),
+            Icon(Icons.table_rows, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'No recent enquiries',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Select a different date range or filters',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -328,37 +341,18 @@ class RecentEnquiriesTable extends ConsumerWidget {
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase().replaceAll(' ', '_')) {
-      case 'new':
-        return Colors.orange;
-      case 'in_progress':
-        return const Color(0xFF2563EB);
-      case 'quote_sent':
-        return Colors.blue;
-      case 'confirmed':
-        return Colors.indigo;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'closed_lost':
-        return Colors.red.shade300;
-      default:
-        return Colors.grey;
-    }
-  }
+  Color _getStatusColor(String status) => AppColorScheme.statusColorFor(status);
 
   Color _getPriorityColor(String priority) {
     switch (priority.toLowerCase()) {
       case 'high':
-        return Colors.red;
+        return AppColorScheme.chartRed;
       case 'medium':
-        return Colors.orange;
+        return AppColorScheme.chartAmber;
       case 'low':
-        return Colors.green;
+        return AppColorScheme.chartGreen;
       default:
-        return Colors.grey;
+        return AppColorScheme.neutralGrey;
     }
   }
 

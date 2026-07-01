@@ -61,9 +61,9 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
       children: [
         const Text('Privacy & Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Manage your privacy preferences and data sharing settings.',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 24),
 
@@ -194,8 +194,8 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 ),
                 const SizedBox(height: 12),
                 Text('Version: ${_versionDisplay ?? (_isLoadingVersion ? "Loading…" : "Unknown")}'),
-                Text('Environment: ${AppConfig.env}'),
-                Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
+                const Text('Environment: ${AppConfig.env}'),
+                const Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
                 const SizedBox(height: 8),
                 Text('© ${DateTime.now().year} We Decor Enquiries. All rights reserved.'),
               ],

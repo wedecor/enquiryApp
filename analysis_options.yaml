@@ -21,6 +21,8 @@ analyzer:
     dead_code: error
     invalid_use_of_visible_for_testing_member: error
     invalid_use_of_protected_member: error
+    # Freezed/json_serializable place @JsonKey on factory constructor params
+    invalid_annotation_target: ignore
     # Don't fail builds on stylistic nits
     lines_longer_than_80_chars: ignore
     avoid_print: error

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/a11y/tap_target.dart';
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 
 /// Contact action buttons for calling and messaging customers
@@ -129,13 +130,13 @@ class ContactButtons extends ConsumerWidget {
                 height: AppTokens.minTapTarget,
                 decoration: BoxDecoration(
                   color: enabled
-                      ? const Color(0xFF25D366).withOpacity(0.1) // WhatsApp green
-                      : theme.colorScheme.onSurface.withOpacity(0.05),
+                      ? AppColorScheme.whatsApp.withValues(alpha: 0.1)
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.05),
                   borderRadius: AppRadius.medium,
                   border: Border.all(
                     color: enabled
-                        ? const Color(0xFF25D366)
-                        : theme.colorScheme.onSurface.withOpacity(0.2),
+                        ? AppColorScheme.whatsApp
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
@@ -145,16 +146,16 @@ class ContactButtons extends ConsumerWidget {
                       Icons.chat,
                       size: AppTokens.iconSmall,
                       color: enabled
-                          ? const Color(0xFF25D366)
-                          : theme.colorScheme.onSurface.withOpacity(0.4),
+                          ? AppColorScheme.whatsApp
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                     const SizedBox(width: AppTokens.space1),
                     Text(
                       'WhatsApp',
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: enabled
-                            ? const Color(0xFF25D366)
-                            : theme.colorScheme.onSurface.withOpacity(0.4),
+                            ? AppColorScheme.whatsApp
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.4),
                         fontWeight: FontWeight.w600,
                       ),
                     ),

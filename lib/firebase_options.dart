@@ -46,7 +46,8 @@ class DefaultFirebaseOptions {
   );
 
   static FirebaseOptions get android => FirebaseOptions(
-    apiKey: 'AIzaSyC9iN0NutarAKAxm-TNE_f2m1SIDGQWyLA',
+    // Must match android/app/google-services.json current_key
+    apiKey: 'AIzaSyBrNRND3_O6Gavhd_a_FYP11ZpKbBGXgF4',
     appId: '1:747327664982:android:2b36161e30beb0cd6edcf7',
     messagingSenderId: '747327664982',
     projectId: 'wedecorenquries',

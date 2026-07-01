@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
+
 class RoleCheckerPanel extends StatelessWidget {
   final String? email;
   final String? uid;
@@ -21,6 +23,7 @@ class RoleCheckerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final warningColor = AppColorScheme.warning;
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -34,7 +37,7 @@ class RoleCheckerPanel extends StatelessWidget {
               children: [
                 Icon(
                   isAdmin ? Icons.admin_panel_settings : Icons.person,
-                  color: isAdmin ? Colors.green : Colors.orange,
+                  color: isAdmin ? AppColorScheme.chartGreen : AppColorScheme.chartAmber,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -51,7 +54,7 @@ class RoleCheckerPanel extends StatelessWidget {
               children: [
                 _buildInfoChip('Email', email ?? 'Unknown', Icons.email),
                 _buildInfoChip('UID', _truncateUid(uid), Icons.fingerprint),
-                _buildRoleChip(role ?? 'unknown'),
+                _buildRoleChip(context, role ?? 'unknown'),
               ],
             ),
             const SizedBox(height: 16),
@@ -59,22 +62,22 @@ class RoleCheckerPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: AppColorScheme.warningContainerLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
+                  border: Border.all(color: warningColor.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 18),
+                        Icon(Icons.info_outline, color: warningColor, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           'Limited Access',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Colors.orange.shade700,
+                            color: warningColor,
                           ),
                         ),
                       ],
@@ -84,7 +87,7 @@ class RoleCheckerPanel extends StatelessWidget {
                       "You're signed in but not an admin. To access User Management actions, "
                       "make sure your Firestore users/{uid} document has role: 'admin' and active: true, "
                       'or sign in as the seeded admin user.',
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange.shade700),
+                      style: theme.textTheme.bodySmall?.copyWith(color: warningColor),
                     ),
                   ],
                 ),
@@ -93,18 +96,22 @@ class RoleCheckerPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: AppColorScheme.successContainerLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
+                  border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 18),
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: AppColorScheme.onSuccessContainerLight,
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Admin access granted. You can manage users.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.green.shade700,
+                        color: AppColorScheme.onSuccessContainerLight,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -136,19 +143,20 @@ class RoleCheckerPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildRoleChip(String role) {
+  Widget _buildRoleChip(BuildContext context, String role) {
     final isAdminRole = role == 'admin';
+    final onChip = Theme.of(context).colorScheme.onPrimary;
     return Chip(
       avatar: Icon(
         isAdminRole ? Icons.admin_panel_settings : Icons.person,
         size: 16,
-        color: Colors.white,
+        color: onChip,
       ),
       label: Text(
         'Role: ${role.toUpperCase()}',
-        style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+        style: TextStyle(fontSize: 12, color: onChip, fontWeight: FontWeight.w600),
       ),
-      backgroundColor: isAdminRole ? Colors.green : Colors.blue,
+      backgroundColor: isAdminRole ? AppColorScheme.chartGreen : AppColorScheme.chartBlue,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

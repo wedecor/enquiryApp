@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../contacts/contact_launcher.dart';
 import '../../core/logging/logger.dart';
+import '../contacts/contact_launcher.dart';
 
 /// Provider for ReviewRequestService
 final reviewRequestServiceProvider = Provider<ReviewRequestService>((ref) {
@@ -31,9 +31,9 @@ class ReviewRequestService {
     String? websiteUrl,
   }) {
     // Default values if not provided
-    final defaultGoogleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA';
-    final defaultInstagramHandle = '@wedecorbangalore';
-    final defaultWebsiteUrl = 'https://www.wedecorevents.com/';
+    const defaultGoogleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA';
+    const defaultInstagramHandle = '@wedecorbangalore';
+    const defaultWebsiteUrl = 'https://www.wedecorevents.com/';
 
     final reviewLink = googleReviewLink?.isNotEmpty == true
         ? googleReviewLink!

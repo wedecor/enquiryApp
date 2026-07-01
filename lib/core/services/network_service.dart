@@ -118,7 +118,7 @@ class NetworkAwareQueue {
 
           // Wait before retry with exponential backoff
           final delay = Duration(seconds: pow(2, 3 - operation.retryCount).toInt());
-          await Future.delayed(delay);
+          await Future<void>.delayed(delay);
         }
       }
     }
@@ -139,7 +139,7 @@ class NetworkAwareQueue {
 
         // Exponential backoff
         final delay = Duration(milliseconds: 500 * pow(2, attempt).toInt());
-        await Future.delayed(delay);
+        await Future<void>.delayed(delay);
       }
     }
   }

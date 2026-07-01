@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../shared/models/user_model.dart';
 import '../../core/logging/logger.dart';
+import '../../shared/models/user_model.dart';
 import 'firestore_service.dart';
 
 /// Service for managing notification triggers and sending notifications
@@ -40,20 +40,6 @@ class NotificationService {
         );
       }
 
-      // Also send to general admin topic
-      await _sendNotificationToTopic(
-        topic: 'admin',
-        title: 'New Enquiry Created',
-        body: 'New enquiry from $customerName for $eventType',
-        data: {
-          'type': 'new_enquiry',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'createdBy': createdBy,
-        },
-      );
-
       Log.i(
         'NotificationService: sent new enquiry notifications',
         data: {'adminCount': adminUsers.length},
@@ -86,20 +72,6 @@ class NotificationService {
       // Send notification to assigned staff member
       await _sendNotificationToUser(
         userId: assignedTo,
-        title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
-        data: {
-          'type': 'enquiry_assigned',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'assignedBy': assignedBy,
-        },
-      );
-
-      // Send notification to user's personal topic
-      await _sendNotificationToTopic(
-        topic: 'user_$assignedTo',
         title: 'Enquiry Assigned to You',
         body: 'You have been assigned an enquiry from $customerName for $eventType',
         data: {
@@ -255,21 +227,6 @@ class NotificationService {
         }
       }
 
-      // Also send to general admin topic
-      await _sendNotificationToTopic(
-        topic: 'admin',
-        title: 'Enquiry Status Updated',
-        body: 'Status changed from $oldStatus to $newStatus for $customerName',
-        data: {
-          'type': 'status_update',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'oldStatus': oldStatus,
-          'newStatus': newStatus,
-          'updatedBy': updatedBy,
-        },
-      );
-
       Log.i(
         'NotificationService: sent status change notifications',
         data: {
@@ -404,20 +361,6 @@ class NotificationService {
           }
         }
       }
-
-      // Also send to general admin topic
-      await _sendNotificationToTopic(
-        topic: 'admin',
-        title: 'Enquiry Updated',
-        body: 'Enquiry from $customerName for $eventType has been updated',
-        data: {
-          'type': 'enquiry_updated',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'updatedBy': updatedBy,
-        },
-      );
 
       Log.i(
         'NotificationService: sent enquiry update notifications',
@@ -619,47 +562,45 @@ class NotificationService {
         rethrow; // Re-throw so we know it failed
       }
 
-      if (notificationRef != null) {
-        if (kDebugMode) {
-          final hasPushTargets = tokens.isNotEmpty;
-          final pushTargetCount = tokens.length;
-          debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
-          debugPrint('   UserId: $userId');
-          debugPrint('   NotificationId: ${notificationRef.id}');
-          debugPrint('   Title: $title');
-          debugPrint('   Body: $body');
-          debugPrint('   HasPushTargets: $hasPushTargets');
-          debugPrint('   PushTargetCount: $pushTargetCount');
-          if (tokens.isEmpty) {
-            debugPrint(
-              '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
-            );
-          }
+      if (kDebugMode) {
+        final hasPushTargets = tokens.isNotEmpty;
+        final pushTargetCount = tokens.length;
+        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
+        debugPrint('   UserId: $userId');
+        debugPrint('   NotificationId: ${notificationRef.id}');
+        debugPrint('   Title: $title');
+        debugPrint('   Body: $body');
+        debugPrint('   HasPushTargets: $hasPushTargets');
+        debugPrint('   PushTargetCount: $pushTargetCount');
+        if (tokens.isEmpty) {
+          debugPrint(
+            '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
+          );
         }
+      }
 
-        Log.i(
-          'NotificationService: notification stored in Firestore',
+      Log.i(
+        'NotificationService: notification stored in Firestore',
+        data: {
+          'userId': userId,
+          'notificationId': notificationRef.id,
+          'title': title,
+          'body': body,
+          'hasTokens': tokens.isNotEmpty,
+          'tokenCount': tokens.length,
+          'data': data,
+        },
+      );
+
+      if (tokens.isEmpty) {
+        Log.w(
+          'NotificationService: notification stored but user has no FCM tokens',
           data: {
             'userId': userId,
             'notificationId': notificationRef.id,
-            'title': title,
-            'body': body,
-            'hasTokens': tokens.isNotEmpty,
-            'tokenCount': tokens.length,
-            'data': data,
+            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
           },
         );
-
-        if (tokens.isEmpty) {
-          Log.w(
-            'NotificationService: notification stored but user has no FCM tokens',
-            data: {
-              'userId': userId,
-              'notificationId': notificationRef.id,
-              'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
-            },
-          );
-        }
       }
     } catch (e, st) {
       Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
@@ -689,6 +630,43 @@ class NotificationService {
       );
     } catch (e, st) {
       Log.e('NotificationService: error sending notification to topic', error: e, stackTrace: st);
+    }
+  }
+
+  /// Real-time stream of all notifications for a user (newest first, max 50)
+  Stream<List<Map<String, dynamic>>> watchUserNotifications(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .orderBy('createdAt', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((snap) => snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+  }
+
+  /// Real-time stream of unread notification count
+  Stream<int> watchUnreadCount(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .map((snap) => snap.docs.length);
+  }
+
+  /// Delete a notification
+  Future<void> deleteNotification(String userId, String notificationId) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+    } catch (e, st) {
+      Log.e('NotificationService: error deleting notification', error: e, stackTrace: st);
     }
   }
 

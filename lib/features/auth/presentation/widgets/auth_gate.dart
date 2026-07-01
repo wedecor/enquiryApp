@@ -165,7 +165,9 @@ class AuthGate extends ConsumerWidget {
 
               Text(
                 'Access Disabled',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: colorScheme.error),
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineMedium?.copyWith(color: colorScheme.error),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -308,11 +310,7 @@ class AuthGate extends ConsumerWidget {
           const SizedBox(width: 8),
           Text(
             'DEBUG: $info',
-            style: TextStyle(
-              fontSize: 12,
-              color: warningColor,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 12, color: warningColor, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -350,7 +348,10 @@ class AuthGate extends ConsumerWidget {
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign out failed: ${e.toString()}'), backgroundColor: AppColorScheme.snackError),
+          SnackBar(
+            content: Text('Sign out failed: ${e.toString()}'),
+            backgroundColor: AppColorScheme.snackError,
+          ),
         );
       }
     }

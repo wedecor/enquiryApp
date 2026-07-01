@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
 
@@ -106,17 +107,7 @@ class EventTypePieChart extends StatelessWidget {
   }
 
   Color _getColor(int index) {
-    final colors = [
-      const Color(0xFF2563EB), // Blue
-      const Color(0xFF059669), // Green
-      const Color(0xFFF59E0B), // Amber
-      const Color(0xFFDC2626), // Red
-      const Color(0xFF7C3AED), // Purple
-      const Color(0xFF0891B2), // Cyan
-      const Color(0xFFEA580C), // Orange
-      const Color(0xFF059669), // Emerald
-    ];
-    return colors[index % colors.length];
+    return AppColorScheme.chartPalette[index % AppColorScheme.chartPalette.length];
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -124,11 +115,13 @@ class EventTypePieChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.pie_chart, size: 48, color: Colors.grey.shade400),
+          Icon(Icons.pie_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -203,7 +196,7 @@ class SourceBarChart extends StatelessWidget {
                     axisSide: meta.axisSide,
                     child: Text(
                       _truncateLabel(_labelFor(data[index])),
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                      style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
                     ),
                   );
                 }
@@ -221,21 +214,24 @@ class SourceBarChart extends StatelessWidget {
                   axisSide: meta.axisSide,
                   child: Text(
                     value.toInt().toString(),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
                   ),
                 );
               },
             ),
           ),
         ),
-        borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300)),
+        borderData: FlBorderData(
+          show: true,
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
         barGroups: _getBarGroups(context),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: Colors.grey.shade300, strokeWidth: 1);
+            return FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1);
           },
         ),
       ),
@@ -281,11 +277,13 @@ class SourceBarChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.bar_chart, size: 48, color: Colors.grey.shade400),
+          Icon(Icons.bar_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -419,26 +417,7 @@ class StatusStackedBarChart extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase().replaceAll(' ', '_')) {
-      case 'new':
-        return Colors.orange;
-      case 'in_progress':
-        return const Color(0xFF2563EB);
-      case 'quote_sent':
-        return Colors.blue;
-      case 'confirmed':
-        return Colors.indigo;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'closed_lost':
-        return Colors.red.shade300;
-      default:
-        return Colors.grey;
-    }
-  }
+  Color _getStatusColor(String status) => AppColorScheme.statusColorFor(status);
 
   String _statusLabel(CategoryCount item) => item.label ?? _formatStatusName(item.key);
 
@@ -454,11 +433,17 @@ class StatusStackedBarChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.stacked_bar_chart, size: 48, color: Colors.grey.shade400),
+          Icon(
+            Icons.stacked_bar_chart,
+            size: 48,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),

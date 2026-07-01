@@ -154,7 +154,7 @@ class SavedViewsSheet extends ConsumerWidget {
   }
 
   void _deleteView(BuildContext context, WidgetRef ref, SavedView view) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Saved View'),
@@ -197,7 +197,7 @@ class SavedViewsSheet extends ConsumerWidget {
   }
 
   void _showSaveViewDialog(BuildContext context, WidgetRef ref, {SavedView? existingView}) {
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => _SaveViewDialog(
         existingView: existingView,
@@ -304,11 +304,11 @@ class _SavedViewTile extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: ListTile(
-                leading: Icon(Icons.delete, color: Colors.red),
-                title: Text('Delete', style: TextStyle(color: Colors.red)),
+                leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
