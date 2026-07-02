@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../../core/utils/enquiry_fields.dart';
 import '../domain/analytics_models.dart';
 
 /// Repository for analytics data from Firestore
@@ -11,7 +14,10 @@ class AnalyticsRepository {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Count total enquiries in date range with optional filters
-  Future<int> countEnquiries({required DateRange dateRange, AnalyticsFilters? filters}) async {
+  Future<int> countEnquiries({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+  }) async {
     try {
       // Try using aggregate query first (more efficient)
       final Query query = _buildBaseQuery(dateRange, filters);
@@ -39,7 +45,8 @@ class AnalyticsRepository {
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final status = (data['statusValue'] as String?) ?? 'unknown'; // Use statusValue only
+      final status =
+          (data['statusValue'] as String?) ?? 'unknown'; // Use statusValue only
       statusCounts[status] = (statusCounts[status] ?? 0) + 1;
     }
 
@@ -58,8 +65,16 @@ class AnalyticsRepository {
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final eventType = (data['eventType'] as String?) ?? 'unknown';
-      eventTypeCounts[eventType] = (eventTypeCounts[eventType] ?? 0) + 1;
+      final eventType = canonicalFieldString(
+        data,
+        'eventTypeValue',
+        'eventType',
+      );
+      if (eventType.isEmpty) {
+        eventTypeCounts['unknown'] = (eventTypeCounts['unknown'] ?? 0) + 1;
+      } else {
+        eventTypeCounts[eventType] = (eventTypeCounts[eventType] ?? 0) + 1;
+      }
     }
 
     return eventTypeCounts;
@@ -77,8 +92,12 @@ class AnalyticsRepository {
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final source = (data['source'] as String?) ?? 'unknown';
-      sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
+      final source = canonicalFieldString(data, 'sourceValue', 'source');
+      if (source.isEmpty) {
+        sourceCounts['unknown'] = (sourceCounts['unknown'] ?? 0) + 1;
+      } else {
+        sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
+      }
     }
 
     return sourceCounts;
@@ -96,8 +115,12 @@ class AnalyticsRepository {
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final priority = (data['priority'] as String?) ?? 'unknown';
-      priorityCounts[priority] = (priorityCounts[priority] ?? 0) + 1;
+      final priority = canonicalFieldString(data, 'priorityValue', 'priority');
+      if (priority.isEmpty) {
+        priorityCounts['unknown'] = (priorityCounts['unknown'] ?? 0) + 1;
+      } else {
+        priorityCounts[priority] = (priorityCounts[priority] ?? 0) + 1;
+      }
     }
 
     return priorityCounts;
@@ -136,7 +159,9 @@ class AnalyticsRepository {
       }
     }
 
-    return dateCounts.entries.map((entry) => SeriesPoint(x: entry.key, count: entry.value)).toList()
+    return dateCounts.entries
+        .map((entry) => SeriesPoint(x: entry.key, count: entry.value))
+        .toList()
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
@@ -144,17 +169,20 @@ class AnalyticsRepository {
   ///
   /// Only counts confirmed and completed enquiries — cancelled and not_interested
   /// should not be included as they represent lost or unrealised revenue.
-  Future<double> sumRevenue({required DateRange dateRange, AnalyticsFilters? filters}) async {
+  Future<double> sumRevenue({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+  }) async {
     final Query query = _buildBaseQuery(dateRange, filters);
     final snapshot = await query.get();
 
-    const revenueStatuses = {'confirmed', 'completed'};
     double totalRevenue = 0.0;
 
     for (final doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final status = (data['statusValue'] as String?)?.toLowerCase() ?? '';
-      if (!revenueStatuses.contains(status)) continue;
+      final status = data['statusValue'] as String?;
+      if (EnquiryStatus.fromValue(status)?.category != StatusCategory.won)
+        continue;
 
       final totalCost = data['totalCost'];
       if (totalCost is num) {
@@ -178,14 +206,17 @@ class AnalyticsRepository {
 
     return snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+      final createdAt =
+          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
       return RecentEnquiry(
         id: doc.id,
         date: createdAt,
         customerName: (data['customerName'] as String?) ?? 'Unknown',
         eventType: (data['eventType'] as String?) ?? 'Unknown',
-        status: (data['statusValue'] as String?) ?? 'Unknown', // Use statusValue only
+        status:
+            (data['statusValue'] as String?) ??
+            'Unknown', // Use statusValue only
         source: (data['source'] as String?) ?? 'Unknown',
         priority: (data['priority'] as String?) ?? 'medium',
         totalCost: (data['totalCost'] as num?)?.toDouble(),
@@ -202,7 +233,9 @@ class AnalyticsRepository {
           .collection('items')
           .get();
 
-      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
+      return snapshot.docs
+          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
+          .toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -219,7 +252,9 @@ class AnalyticsRepository {
           .collection('items')
           .get();
 
-      return snapshot.docs.map((doc) => (doc.data()['value'] as String?) ?? doc.id).toList()
+      return snapshot.docs
+          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
+          .toList()
         ..sort();
     } catch (e) {
       // Fallback to unique values from enquiries
@@ -229,12 +264,12 @@ class AnalyticsRepository {
 
   /// Get all available sources for filters
   Future<List<String>> getSources() async {
-    return _getUniqueFieldValues('source');
+    return _getUniqueCanonicalValues('sourceValue', 'source');
   }
 
   /// Get all available priorities for filters
   Future<List<String>> getPriorities() async {
-    return _getUniqueFieldValues('priority');
+    return _getUniqueCanonicalValues('priorityValue', 'priority');
   }
 
   /// Build base query with date range and filters
@@ -243,22 +278,25 @@ class AnalyticsRepository {
 
     // Apply date range filter
     query = query
-        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start))
+        .where(
+          'createdAt',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start),
+        )
         .where('createdAt', isLessThan: Timestamp.fromDate(dateRange.end));
 
     // Apply additional filters
     if (filters != null) {
       if (filters.eventType != null && filters.eventType!.isNotEmpty) {
-        query = query.where('eventType', isEqualTo: filters.eventType);
+        query = query.where('eventTypeValue', isEqualTo: filters.eventType);
       }
       if (filters.status != null && filters.status!.isNotEmpty) {
         query = query.where('statusValue', isEqualTo: filters.status);
       }
       if (filters.priority != null && filters.priority!.isNotEmpty) {
-        query = query.where('priority', isEqualTo: filters.priority);
+        query = query.where('priorityValue', isEqualTo: filters.priority);
       }
       if (filters.source != null && filters.source!.isNotEmpty) {
-        query = query.where('source', isEqualTo: filters.source);
+        query = query.where('sourceValue', isEqualTo: filters.source);
       }
     }
 
@@ -276,6 +314,25 @@ class AnalyticsRepository {
       if (value != null && value.isNotEmpty) {
         values.add(value);
       }
+    }
+
+    return values.toList()..sort();
+  }
+
+  Future<List<String>> _getUniqueCanonicalValues(
+    String canonical,
+    String legacy,
+  ) async {
+    final snapshot = await _firestore.collection('enquiries').get();
+    final values = <String>{};
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final canonicalVal = data[canonical] as String?;
+      if (canonicalVal != null && canonicalVal.isNotEmpty)
+        values.add(canonicalVal);
+      final legacyVal = data[legacy] as String?;
+      if (legacyVal != null && legacyVal.isNotEmpty) values.add(legacyVal);
     }
 
     return values.toList()..sort();
@@ -310,5 +367,7 @@ class AnalyticsRepository {
 
 /// Riverpod provider for analytics repository
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepository(firestore: ref.watch(firestoreServiceProvider).firestore);
+  return AnalyticsRepository(
+    firestore: ref.watch(firestoreServiceProvider).firestore,
+  );
 });

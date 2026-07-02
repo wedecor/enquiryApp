@@ -140,16 +140,16 @@ async function main() {
     const sourcesSnapshot = await firestore.collection('dropdowns/sources/items').get();
     
     const totalDropdowns = statusesSnapshot.size + eventTypesSnapshot.size + prioritiesSnapshot.size + paymentStatusesSnapshot.size + sourcesSnapshot.size;
-    const expectedTotal = 29; // 8 statuses + 6 event_types + 4 priorities + 4 payment_statuses + 7 sources
+    const expectedTotal = 31; // 10 statuses + 6 event_types + 4 priorities + 4 payment_statuses + 7 sources
     
     if (totalDropdowns >= expectedTotal) {
-      results.push({ Check: 'Dropdown Count (29 expected)', Result: 'PASS' });
+      results.push({ Check: 'Dropdown Count (31 expected)', Result: 'PASS' });
     } else {
-      results.push({ Check: 'Dropdown Count (29 expected)', Result: 'FAIL', Details: `Only ${totalDropdowns}/${expectedTotal} dropdown items found` });
+      results.push({ Check: 'Dropdown Count (31 expected)', Result: 'FAIL', Details: `Only ${totalDropdowns}/${expectedTotal} dropdown items found` });
       allPassed = false;
     }
   } catch (error) {
-    results.push({ Check: 'Dropdown Count (29 expected)', Result: 'FAIL', Details: `Error: ${error}` });
+    results.push({ Check: 'Dropdown Count (31 expected)', Result: 'FAIL', Details: `Error: ${error}` });
     allPassed = false;
   }
 

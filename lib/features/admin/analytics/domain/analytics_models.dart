@@ -1,14 +1,18 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
+
 part 'analytics_models.freezed.dart';
 part 'analytics_models.g.dart';
 
 /// Date range for analytics filtering
 @freezed
 class DateRange with _$DateRange {
-  const factory DateRange({required DateTime start, required DateTime end}) = _DateRange;
+  const factory DateRange({required DateTime start, required DateTime end}) =
+      _DateRange;
 
-  factory DateRange.fromJson(Map<String, dynamic> json) => _$DateRangeFromJson(json);
+  factory DateRange.fromJson(Map<String, dynamic> json) =>
+      _$DateRangeFromJson(json);
 }
 
 /// Predefined date range presets
@@ -43,7 +47,10 @@ enum DateRangePreset {
 
     switch (this) {
       case DateRangePreset.today:
-        return DateRange(start: today, end: today.add(const Duration(days: 1, microseconds: -1)));
+        return DateRange(
+          start: today,
+          end: today.add(const Duration(days: 1, microseconds: -1)),
+        );
       case DateRangePreset.last7Days:
         return DateRange(
           start: today.subtract(const Duration(days: 6)),
@@ -84,7 +91,8 @@ class KpiSummary with _$KpiSummary {
     required KpiDeltas deltas,
   }) = _KpiSummary;
 
-  factory KpiSummary.fromJson(Map<String, dynamic> json) => _$KpiSummaryFromJson(json);
+  factory KpiSummary.fromJson(Map<String, dynamic> json) =>
+      _$KpiSummaryFromJson(json);
 }
 
 /// Delta changes for KPIs compared to previous period
@@ -99,15 +107,18 @@ class KpiDeltas with _$KpiDeltas {
     required double estimatedRevenueChange,
   }) = _KpiDeltas;
 
-  factory KpiDeltas.fromJson(Map<String, dynamic> json) => _$KpiDeltasFromJson(json);
+  factory KpiDeltas.fromJson(Map<String, dynamic> json) =>
+      _$KpiDeltasFromJson(json);
 }
 
 /// Data point for time series charts
 @freezed
 class SeriesPoint with _$SeriesPoint {
-  const factory SeriesPoint({required DateTime x, required int count}) = _SeriesPoint;
+  const factory SeriesPoint({required DateTime x, required int count}) =
+      _SeriesPoint;
 
-  factory SeriesPoint.fromJson(Map<String, dynamic> json) => _$SeriesPointFromJson(json);
+  factory SeriesPoint.fromJson(Map<String, dynamic> json) =>
+      _$SeriesPointFromJson(json);
 }
 
 /// Category count for breakdown charts
@@ -120,7 +131,8 @@ class CategoryCount with _$CategoryCount {
     String? label,
   }) = _CategoryCount;
 
-  factory CategoryCount.fromJson(Map<String, dynamic> json) => _$CategoryCountFromJson(json);
+  factory CategoryCount.fromJson(Map<String, dynamic> json) =>
+      _$CategoryCountFromJson(json);
 }
 
 /// Recent enquiry summary for tables
@@ -137,7 +149,8 @@ class RecentEnquiry with _$RecentEnquiry {
     double? totalCost,
   }) = _RecentEnquiry;
 
-  factory RecentEnquiry.fromJson(Map<String, dynamic> json) => _$RecentEnquiryFromJson(json);
+  factory RecentEnquiry.fromJson(Map<String, dynamic> json) =>
+      _$RecentEnquiryFromJson(json);
 }
 
 /// Analytics filters
@@ -152,7 +165,8 @@ class AnalyticsFilters with _$AnalyticsFilters {
     String? source,
   }) = _AnalyticsFilters;
 
-  factory AnalyticsFilters.fromJson(Map<String, dynamic> json) => _$AnalyticsFiltersFromJson(json);
+  factory AnalyticsFilters.fromJson(Map<String, dynamic> json) =>
+      _$AnalyticsFiltersFromJson(json);
 
   factory AnalyticsFilters.initial() {
     const preset = DateRangePreset.last30Days;
@@ -178,7 +192,8 @@ class AnalyticsState with _$AnalyticsState {
     String? error,
   }) = _AnalyticsState;
 
-  factory AnalyticsState.fromJson(Map<String, dynamic> json) => _$AnalyticsStateFromJson(json);
+  factory AnalyticsState.fromJson(Map<String, dynamic> json) =>
+      _$AnalyticsStateFromJson(json);
 
   factory AnalyticsState.initial() {
     return AnalyticsState(filters: AnalyticsFilters.initial());
@@ -223,25 +238,15 @@ enum EnquiryStatusCategory {
   lost;
 
   static EnquiryStatusCategory? fromStatus(String status) {
-    final normalizedStatus = status.toLowerCase().replaceAll(' ', '_');
-
-    switch (normalizedStatus) {
-      case 'new':
-      case 'in_progress':
-      case 'in_talks':
-      case 'reminders':
-      case 'quote_sent':
+    final category = EnquiryStatus.fromValue(status)?.category;
+    if (category == null) return null;
+    switch (category) {
+      case StatusCategory.active:
         return EnquiryStatusCategory.active;
-      case 'confirmed':
-      case 'completed':
-      case 'scheduled':
+      case StatusCategory.won:
         return EnquiryStatusCategory.won;
-      case 'cancelled':
-      case 'closed_lost':
-      case 'not_interested': // treat as lost — client declined
+      case StatusCategory.lost:
         return EnquiryStatusCategory.lost;
-      default:
-        return null; // Unknown status — excluded from conversion calc
     }
   }
 }

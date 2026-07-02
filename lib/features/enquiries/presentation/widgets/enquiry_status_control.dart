@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -30,24 +31,13 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
   final bool isAssignee;
 
   @override
-  ConsumerState<EnquiryStatusControl> createState() => _EnquiryStatusControlState();
+  ConsumerState<EnquiryStatusControl> createState() =>
+      _EnquiryStatusControlState();
 }
 
 class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   String? _selectedStatus;
   bool _isUpdatingStatus = false;
-
-  static const Map<String, List<String>> _allowedTransitions = {
-    'new': ['in_talks', 'cancelled', 'not_interested'],
-    'in_talks': ['quote_sent', 'cancelled', 'not_interested'],
-    'quote_sent': ['confirmed', 'closed_lost', 'not_interested'],
-    'confirmed': ['scheduled', 'cancelled'],
-    'scheduled': ['completed', 'cancelled'],
-    'completed': [],
-    'cancelled': [],
-    'closed_lost': [],
-    'not_interested': [],
-  };
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +49,12 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
+      stream: ref
+          .read(firestoreServiceProvider)
+          .watchActiveStatusDropdownItems(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const SizedBox(
             width: 20,
             height: 20,
@@ -70,37 +63,48 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         }
 
         List<Map<String, dynamic>> statuses;
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          statuses = [
-            {'value': 'new', 'label': 'New', 'order': 1},
-            {'value': 'in_talks', 'label': 'In Talks', 'order': 2},
-            {'value': 'quote_sent', 'label': 'Quote Sent', 'order': 3},
-            {'value': 'approved', 'label': 'Approved', 'order': 4},
-            {'value': 'scheduled', 'label': 'Scheduled', 'order': 5},
-            {'value': 'completed', 'label': 'Completed', 'order': 6},
-            {'value': 'cancelled', 'label': 'Cancelled', 'order': 7},
-            {'value': 'closed_lost', 'label': 'Closed Lost', 'order': 8},
-          ];
+        if (snapshot.hasError ||
+            !snapshot.hasData ||
+            snapshot.data!.docs.isEmpty) {
+          statuses = EnquiryStatus.values
+              .map(
+                (s) => {
+                  'value': s.value,
+                  'label': s.label,
+                  'order': s.index + 1,
+                },
+              )
+              .toList();
         } else {
-          statuses = snapshot.data!.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+          statuses = snapshot.data!.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList();
         }
 
         final currentStatus = (_selectedStatus ?? widget.currentStatusValue);
-        final values = statuses.map((s) => (s['value'] as String?) ?? '').toList();
-        final safeValue = values.contains(currentStatus)
-            ? currentStatus
-            : (values.isNotEmpty ? values.first : 'new');
+        final values = statuses
+            .map((s) => (s['value'] as String?) ?? '')
+            .toList();
+        if (!values.contains(currentStatus)) {
+          return _ReadOnlyStatusChip(
+            label: widget.currentStatusLabel.isNotEmpty
+                ? widget.currentStatusLabel
+                : currentStatus,
+            statusValue: currentStatus,
+          );
+        }
 
         final nextOptions = <Map<String, dynamic>>[...statuses];
         if (!widget.isAdmin) {
-          final allowed = _allowedTransitions[safeValue] ?? const <String>[];
+          final allowed = EnquiryStatus.staffAllowedNextValues(currentStatus);
           nextOptions.retainWhere((s) {
             final v = (s['value'] as String?) ?? '';
-            return v == safeValue || allowed.contains(v);
+            return v == currentStatus || allowed.contains(v);
           });
         }
 
-        final canChange = widget.isAdmin || (!widget.isAdmin && widget.isAssignee);
+        final canChange =
+            widget.isAdmin || (!widget.isAdmin && widget.isAssignee);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -108,15 +112,19 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
           children: [
             DropdownButton<String>(
               key: const Key('statusDropdown'),
-              value: safeValue,
+              value: currentStatus,
               items: nextOptions.map((status) {
                 final value = (status['value'] as String?) ?? '';
                 final label = (status['label'] as String?) ?? value;
-                return DropdownMenuItem<String>(value: value, child: Text(label));
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(label),
+                );
               }).toList(),
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
-                  : (value) => _handleStatusChange(value, widget.currentStatusValue),
+                  : (value) =>
+                        _handleStatusChange(value, widget.currentStatusValue),
             ),
             if (_isUpdatingStatus) ...[
               const SizedBox(width: AppTokens.space2),
@@ -139,13 +147,15 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     );
   }
 
-  Future<void> _handleStatusChange(String? value, String currentStatusValue) async {
+  Future<void> _handleStatusChange(
+    String? value,
+    String currentStatusValue,
+  ) async {
     if (value == null || value == currentStatusValue) return;
 
     final safeValue = (_selectedStatus ?? widget.currentStatusValue);
     if (!widget.isAdmin) {
-      final allowed = _allowedTransitions[safeValue] ?? const <String>[];
-      if (!allowed.contains(value)) {
+      if (!EnquiryStatus.isStaffTransitionAllowed(safeValue, value)) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -186,12 +196,17 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     });
 
     try {
-      final userId = ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown';
+      final userId =
+          ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown';
       // Route through repository — handles audit history, statusLabel,
       // statusUpdatedBy, notifications, and legacy field cleanup in one place.
       await ref
           .read(enquiryRepositoryProvider)
-          .updateStatus(id: widget.enquiryId, nextStatus: value, userId: userId);
+          .updateStatus(
+            id: widget.enquiryId,
+            nextStatus: value,
+            userId: userId,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -251,25 +266,5 @@ class _ReadOnlyStatusChip extends StatelessWidget {
 }
 
 Color statusColorFor(BuildContext context, String? status) {
-  final colorScheme = Theme.of(context).colorScheme;
-
-  switch (status) {
-    case 'new':
-      return AppColorScheme.warning;
-    case 'in_talks':
-      return colorScheme.primary;
-    case 'quote_sent':
-      return AppColorScheme.info;
-    case 'approved':
-      return colorScheme.secondary;
-    case 'scheduled':
-      return colorScheme.tertiary;
-    case 'completed':
-      return AppColorScheme.success;
-    case 'cancelled':
-    case 'closed_lost':
-      return colorScheme.error;
-    default:
-      return colorScheme.outline;
-  }
+  return AppColorScheme.statusColorFor(status);
 }

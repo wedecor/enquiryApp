@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../constants/status_vocabulary.dart';
 import 'tokens.dart';
 
 // Cream & terracotta palette — event decoration / hospitality brand
@@ -7,8 +9,9 @@ const Color _weDecorPrimary = Color(0xFFD4603A); // terracotta (brightened)
 const Color _weDecorSecondary = Color(0xFFB07355); // warm clay
 const Color _weDecorTertiary = Color(0xFF5B7553); // muted sage
 const Color _weDecorBackgroundLight = Color(0xFFFBF8F3); // cream
-const Color _weDecorBackgroundDark = Color(0xFF221C16); // warm dark brown
-const Color _weDecorSurfaceDark = Color(0xFF2C241D); // warm dark surface
+const Color _weDecorBackgroundDark = Color(0xFF131110); // neutral charcoal base
+const Color _weDecorSurfaceDark = Color(0xFF1C1917); // elevated surface
+const Color _weDecorSurfaceCardDark = Color(0xFF24211F); // cards / list rows
 
 /// Light and dark color schemes following Material 3 design
 class AppColorScheme {
@@ -47,37 +50,37 @@ class AppColorScheme {
     surfaceTint: _weDecorPrimary,
   );
 
-  /// Dark color scheme
+  /// Dark color scheme — charcoal base with restrained terracotta accents
   static const ColorScheme dark = ColorScheme(
     brightness: Brightness.dark,
-    primary: Color(0xFFE8835C),
-    onPrimary: Color(0xFF3D1400),
-    primaryContainer: Color(0xFF7A3018),
-    onPrimaryContainer: Color(0xFFFFD9C7),
-    secondary: Color(0xFFD9A98C),
-    onSecondary: Color(0xFF3D2A1F),
-    secondaryContainer: Color(0xFF5C4435),
-    onSecondaryContainer: Color(0xFFF0DDD0),
-    tertiary: Color(0xFF8FB07F),
-    onTertiary: Color(0xFF1F2E1A),
-    tertiaryContainer: Color(0xFF3A4A32),
-    onTertiaryContainer: Color(0xFFDCE8D6),
-    error: Color(0xFFF87171),
-    onError: Color(0xFF290000),
-    errorContainer: Color(0xFFB91C1C),
-    onErrorContainer: Color(0xFFFEE2E2),
+    primary: Color(0xFFEB9B7A),
+    onPrimary: Color(0xFF431408),
+    primaryContainer: Color(0xFF4A3028),
+    onPrimaryContainer: Color(0xFFFFDCCF),
+    secondary: Color(0xFFCDB29C),
+    onSecondary: Color(0xFF2C2119),
+    secondaryContainer: Color(0xFF3F342C),
+    onSecondaryContainer: Color(0xFFE8D8CC),
+    tertiary: Color(0xFF97B38B),
+    onTertiary: Color(0xFF1A2918),
+    tertiaryContainer: Color(0xFF2D3D2A),
+    onTertiaryContainer: Color(0xFFD4E8CE),
+    error: Color(0xFFFF8A80),
+    onError: Color(0xFF4A0000),
+    errorContainer: Color(0xFF7F1D1D),
+    onErrorContainer: Color(0xFFFFDAD4),
     surface: _weDecorSurfaceDark,
-    onSurface: Color(0xFFF5EDE3),
-    surfaceContainerHighest: Color(0xFF3D3530),
-    onSurfaceVariant: Color(0xFFC4B5A5),
-    outline: Color(0xFF6B5E52),
-    outlineVariant: Color(0xFF4A4038),
+    onSurface: Color(0xFFEDE8E3),
+    surfaceContainerHighest: Color(0xFF32302E),
+    onSurfaceVariant: Color(0xFFADA59C),
+    outline: Color(0xFF5C5650),
+    outlineVariant: Color(0xFF3D3935),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFFF5EDE3),
-    onInverseSurface: Color(0xFF2C241D),
+    inverseSurface: Color(0xFFEDE8E3),
+    onInverseSurface: Color(0xFF1C1917),
     inversePrimary: _weDecorPrimary,
-    surfaceTint: Color(0xFFE8835C),
+    surfaceTint: Color(0xFFEB9B7A),
   );
 
   /// Additional semantic colors
@@ -140,9 +143,13 @@ class AppColorScheme {
   static const Color snackWarning = warning;
 
   static Color statusColorFor(String? status) {
-    switch ((status ?? '').toLowerCase().replaceAll(' ', '_')) {
+    final canonical =
+        EnquiryStatus.fromValue(status)?.value ??
+        (status ?? '').toLowerCase().replaceAll(' ', '_');
+    switch (canonical) {
       case 'new':
         return statusNew;
+      case 'contacted':
       case 'in_talks':
         return statusInTalks;
       case 'quote_sent':
@@ -177,6 +184,29 @@ class AppColorScheme {
 /// Theme configuration for the app
 class AppTheme {
   AppTheme._();
+
+  static TextTheme _brandTextTheme(TextTheme base, ColorScheme scheme) {
+    final dmSans = GoogleFonts.dmSansTextTheme(base);
+    TextStyle outfit(TextStyle? style, {FontWeight? weight}) =>
+        GoogleFonts.outfit(
+          textStyle: style,
+          fontWeight: weight ?? style?.fontWeight,
+          color: style?.color ?? scheme.onSurface,
+        );
+
+    return dmSans.copyWith(
+      displayLarge: outfit(base.displayLarge, weight: FontWeight.w600),
+      headlineMedium: outfit(base.headlineMedium, weight: FontWeight.w600),
+      titleLarge: outfit(base.titleLarge, weight: FontWeight.w600),
+      titleMedium: outfit(base.titleMedium, weight: FontWeight.w600),
+      titleSmall: outfit(base.titleSmall, weight: FontWeight.w600),
+      bodyLarge: dmSans.bodyLarge?.copyWith(color: scheme.onSurface),
+      bodyMedium: dmSans.bodyMedium?.copyWith(color: scheme.onSurface),
+      bodySmall: dmSans.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      labelLarge: dmSans.labelLarge?.copyWith(color: scheme.onSurface),
+      labelMedium: dmSans.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+    );
+  }
 
   /// Light theme configuration
   static ThemeData get lightTheme => ThemeData(
@@ -242,7 +272,9 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColorScheme.light.primary,
-        side: BorderSide(color: AppColorScheme.light.primary.withValues(alpha: 0.4)),
+        side: BorderSide(
+          color: AppColorScheme.light.primary.withValues(alpha: 0.4),
+        ),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.space6,
@@ -296,24 +328,52 @@ class AppTheme {
     ),
 
     // Text theme
-    textTheme: TextTheme(
-      displayLarge: AppTypography.displayLarge.copyWith(color: AppColorScheme.light.onSurface),
-      headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColorScheme.light.onSurface),
-      titleLarge: AppTypography.titleLarge.copyWith(color: AppColorScheme.light.onSurface),
-      bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColorScheme.light.onSurface),
-      bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColorScheme.light.onSurface),
-      bodySmall: AppTypography.bodySmall.copyWith(color: AppColorScheme.light.onSurfaceVariant),
-      labelLarge: AppTypography.labelLarge.copyWith(color: AppColorScheme.light.onSurface),
-      labelMedium: AppTypography.labelMedium.copyWith(color: AppColorScheme.light.onSurfaceVariant),
+    textTheme: _brandTextTheme(
+      TextTheme(
+        displayLarge: AppTypography.displayLarge.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        headlineMedium: AppTypography.headlineMedium.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        titleLarge: AppTypography.titleLarge.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        titleMedium: AppTypography.titleLarge.copyWith(
+          fontSize: AppTokens.fontSizeBodyLarge,
+          color: AppColorScheme.light.onSurface,
+        ),
+        bodyLarge: AppTypography.bodyLarge.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        bodyMedium: AppTypography.bodyMedium.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        bodySmall: AppTypography.bodySmall.copyWith(
+          color: AppColorScheme.light.onSurfaceVariant,
+        ),
+        labelLarge: AppTypography.labelLarge.copyWith(
+          color: AppColorScheme.light.onSurface,
+        ),
+        labelMedium: AppTypography.labelMedium.copyWith(
+          color: AppColorScheme.light.onSurfaceVariant,
+        ),
+      ),
+      AppColorScheme.light,
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
       backgroundColor: AppColorScheme.light.surfaceContainerHighest,
       selectedColor: AppColorScheme.light.primaryContainer,
-      labelStyle: AppTypography.labelMedium.copyWith(color: AppColorScheme.light.onSurface),
+      labelStyle: AppTypography.labelMedium.copyWith(
+        color: AppColorScheme.light.onSurface,
+      ),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space3,
+        vertical: AppTokens.space1,
+      ),
     ),
 
     // Switch theme
@@ -366,9 +426,9 @@ class AppTheme {
 
     // Card theme
     cardTheme: CardThemeData(
-      elevation: AppTokens.elevation2,
+      elevation: AppTokens.elevation1,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-      color: AppColorScheme.dark.surface,
+      color: _weDecorSurfaceCardDark,
       surfaceTintColor: Colors.transparent,
     ),
 
@@ -404,7 +464,9 @@ class AppTheme {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColorScheme.dark.primary,
-        side: BorderSide(color: AppColorScheme.dark.primary.withValues(alpha: 0.4)),
+        side: BorderSide(
+          color: AppColorScheme.dark.primary.withValues(alpha: 0.4),
+        ),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
         padding: const EdgeInsets.symmetric(
           horizontal: AppTokens.space6,
@@ -425,6 +487,50 @@ class AppTheme {
       unselectedLabelColor: AppColorScheme.dark.onSurfaceVariant,
       indicatorColor: AppColorScheme.dark.primary,
       indicatorSize: TabBarIndicatorSize.label,
+    ),
+
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: _weDecorSurfaceCardDark,
+      indicatorColor: AppColorScheme.dark.primaryContainer.withValues(
+        alpha: 0.55,
+      ),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return AppTypography.labelMedium.copyWith(
+          color: selected
+              ? AppColorScheme.dark.primary
+              : AppColorScheme.dark.onSurfaceVariant,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+        );
+      }),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(
+          color: selected
+              ? AppColorScheme.dark.primary
+              : AppColorScheme.dark.onSurfaceVariant,
+        );
+      }),
+    ),
+
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: _weDecorSurfaceDark,
+      indicatorColor: AppColorScheme.dark.primaryContainer.withValues(
+        alpha: 0.55,
+      ),
+      selectedIconTheme: IconThemeData(color: AppColorScheme.dark.primary),
+      unselectedIconTheme: IconThemeData(
+        color: AppColorScheme.dark.onSurfaceVariant,
+      ),
+      selectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+        color: AppColorScheme.dark.primary,
+        fontWeight: FontWeight.w600,
+      ),
+      unselectedLabelTextStyle: AppTypography.labelMedium.copyWith(
+        color: AppColorScheme.dark.onSurfaceVariant,
+      ),
     ),
 
     // Input decoration theme
@@ -458,24 +564,52 @@ class AppTheme {
     ),
 
     // Text theme
-    textTheme: TextTheme(
-      displayLarge: AppTypography.displayLarge.copyWith(color: AppColorScheme.dark.onSurface),
-      headlineMedium: AppTypography.headlineMedium.copyWith(color: AppColorScheme.dark.onSurface),
-      titleLarge: AppTypography.titleLarge.copyWith(color: AppColorScheme.dark.onSurface),
-      bodyLarge: AppTypography.bodyLarge.copyWith(color: AppColorScheme.dark.onSurface),
-      bodyMedium: AppTypography.bodyMedium.copyWith(color: AppColorScheme.dark.onSurface),
-      bodySmall: AppTypography.bodySmall.copyWith(color: AppColorScheme.dark.onSurfaceVariant),
-      labelLarge: AppTypography.labelLarge.copyWith(color: AppColorScheme.dark.onSurface),
-      labelMedium: AppTypography.labelMedium.copyWith(color: AppColorScheme.dark.onSurfaceVariant),
+    textTheme: _brandTextTheme(
+      TextTheme(
+        displayLarge: AppTypography.displayLarge.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        headlineMedium: AppTypography.headlineMedium.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        titleLarge: AppTypography.titleLarge.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        titleMedium: AppTypography.titleLarge.copyWith(
+          fontSize: AppTokens.fontSizeBodyLarge,
+          color: AppColorScheme.dark.onSurface,
+        ),
+        bodyLarge: AppTypography.bodyLarge.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        bodyMedium: AppTypography.bodyMedium.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        bodySmall: AppTypography.bodySmall.copyWith(
+          color: AppColorScheme.dark.onSurfaceVariant,
+        ),
+        labelLarge: AppTypography.labelLarge.copyWith(
+          color: AppColorScheme.dark.onSurface,
+        ),
+        labelMedium: AppTypography.labelMedium.copyWith(
+          color: AppColorScheme.dark.onSurfaceVariant,
+        ),
+      ),
+      AppColorScheme.dark,
     ),
 
     // Chip theme
     chipTheme: ChipThemeData(
       backgroundColor: AppColorScheme.dark.surfaceContainerHighest,
       selectedColor: AppColorScheme.dark.primaryContainer,
-      labelStyle: AppTypography.labelMedium.copyWith(color: AppColorScheme.dark.onSurface),
+      labelStyle: AppTypography.labelMedium.copyWith(
+        color: AppColorScheme.dark.onSurface,
+      ),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space3,
+        vertical: AppTokens.space1,
+      ),
     ),
 
     // Switch theme
