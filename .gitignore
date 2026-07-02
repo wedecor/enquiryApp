@@ -3,6 +3,7 @@
 *_secrets.*
 serviceAccount*.json
 **/keys/**
+backups/
 *.pem
 *.p12
 id_rsa*

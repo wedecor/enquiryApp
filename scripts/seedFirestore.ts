@@ -51,16 +51,6 @@ const SOURCES = [
   { value: "other",            label: "Other",            order: 7, active: true }
 ];
 
-const SOURCES = [
-  { value: "instagram",       label: "Instagram",         order: 1, active: true },
-  { value: "facebook",        label: "Facebook",          order: 2, active: true },
-  { value: "whatsapp",        label: "WhatsApp",          order: 3, active: true },
-  { value: "referral",        label: "Referral",          order: 4, active: true },
-  { value: "walk_in",         label: "Walk-in",           order: 5, active: true },
-  { value: "google_website",  label: "Google / Website",  order: 6, active: true },
-  { value: "other",           label: "Other",             order: 7, active: true }
-];
-
 type Count = { written: number; skipped: number; };
 const counts: Record<string, Count> = {
   dropdowns: { written: 0, skipped: 0 },
@@ -196,7 +186,6 @@ async function main() {
   await upsertDropdown("event_types", EVENT_TYPES);
   await upsertDropdown("priorities", PRIORITIES);
   await upsertDropdown("payment_statuses", PAYMENT_STATUSES);
-  await upsertDropdown("sources", SOURCES);
   await upsertDropdown("sources", SOURCES);
 
   console.log("\n👤 Creating admin user...");

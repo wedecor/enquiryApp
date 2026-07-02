@@ -28,13 +28,27 @@ void main() {
 
       final eventTypeBreakdown =
           eventTypeCounts.entries
-              .map((e) => CategoryCount(key: e.key, label: e.key, count: e.value))
+              .map(
+                (e) => CategoryCount(
+                  key: e.key,
+                  label: e.key,
+                  count: e.value,
+                  percentage: 0,
+                ),
+              )
               .toList()
             ..sort((a, b) => b.count.compareTo(a.count));
 
       final statusBreakdown =
           statusCounts.entries
-              .map((e) => CategoryCount(key: e.key, label: e.key, count: e.value))
+              .map(
+                (e) => CategoryCount(
+                  key: e.key,
+                  label: e.key,
+                  count: e.value,
+                  percentage: 0,
+                ),
+              )
               .toList()
             ..sort((a, b) => b.count.compareTo(a.count));
 

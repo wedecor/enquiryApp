@@ -5,10 +5,19 @@ import { execSync } from "node:child_process";
 
 function init() {
   if (getApps().length) return;
-  
-  // Firebase project configuration
+
   const projectId = "wedecorenquries";
-  
+  const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (credsPath && fs.existsSync(credsPath)) {
+    const svc = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+    initializeApp({
+      credential: cert(svc),
+      projectId: projectId,
+    });
+    return;
+  }
+
   try {
     // Try to use Firebase CLI token for authentication
     const token = execSync('firebase auth:print-access-token', { encoding: 'utf8' }).trim();
@@ -29,7 +38,6 @@ function init() {
     console.log("Firebase CLI [REDACTED] not available, trying other methods...");
     
     // Fallback to service account file if available
-    const credsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
     if (credsPath && fs.existsSync(credsPath)) {
       const svc = JSON.parse(fs.readFileSync(credsPath, "utf8"));
       initializeApp({ 
