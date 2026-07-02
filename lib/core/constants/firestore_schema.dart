@@ -17,6 +17,7 @@ class FirestoreCollections {
   /// Dropdowns collection path
   static const String dropdowns = 'dropdowns';
 
+  // AUDIT-FIXME(F-13): legacy 2-segment paths — retained for database_setup_service.dart only
   /// Event types subcollection path
   static const String eventTypes = 'dropdowns/event_types';
 
@@ -154,7 +155,11 @@ class FinancialDocument {
   });
 
   Map<String, dynamic> toMap() {
-    return {'totalCost': totalCost, 'advancePaid': advancePaid, 'paymentStatus': paymentStatus};
+    return {
+      'totalCost': totalCost,
+      'advancePaid': advancePaid,
+      'paymentStatus': paymentStatus,
+    };
   }
 }
 
@@ -196,6 +201,7 @@ class HistoryDocument {
   }
 }
 
+/// AUDIT-FIXME(F-13): legacy dropdown doc types — retained for database_setup_service.dart only
 /// Document structure for event types dropdown
 /// Collection: dropdowns/event_types/
 /// Document ID: Auto-generated or lowercase eventType as ID
@@ -238,6 +244,7 @@ class PaymentStatusDocument {
   }
 }
 
+/// AUDIT-FIXME(F-13): legacy defaults — retained for database_setup_service.dart only
 /// Default values for dropdown collections
 class DefaultDropdownValues {
   /// Default event types
@@ -263,5 +270,10 @@ class DefaultDropdownValues {
   ];
 
   /// Default payment statuses
-  static const List<String> paymentStatuses = ['Pending', 'Partial', 'Paid', 'Overdue'];
+  static const List<String> paymentStatuses = [
+    'Pending',
+    'Partial',
+    'Paid',
+    'Overdue',
+  ];
 }

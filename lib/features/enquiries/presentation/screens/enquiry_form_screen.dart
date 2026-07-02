@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/providers/audit_provider.dart';
@@ -16,6 +17,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../../../ui/components/sticky_bottom_bar.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
@@ -40,8 +42,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
+  final _guestCountController = TextEditingController();
+  final _budgetController = TextEditingController();
   final _totalCostController = TextEditingController();
   final _advancePaidController = TextEditingController();
 
@@ -84,7 +89,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _loadEnquiryData() async {
-    Log.d('EnquiryFormScreen load start', data: {'enquiryId': widget.enquiryId?.substring(0, 6)});
+    Log.d(
+      'EnquiryFormScreen load start',
+      data: {'enquiryId': widget.enquiryId?.substring(0, 6)},
+    );
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
       final data = await firestoreService.getEnquiry(widget.enquiryId!);
@@ -93,8 +101,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         setState(() {
           _nameController.text = (data['customerName'] as String?) ?? '';
           _phoneController.text = (data['customerPhone'] as String?) ?? '';
+          _emailController.text = (data['customerEmail'] as String?) ?? '';
           _locationController.text = (data['eventLocation'] as String?) ?? '';
-          _notesController.text = (data['description'] as String?) ?? '';
+          _notesController.text = enquiryNotesFrom(data) ?? '';
 
           if (data['totalCost'] != null) {
             _totalCostController.text = data['totalCost'].toString();
@@ -104,21 +113,42 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           }
 
           // Set dropdown values from database
-          _selectedEventType = (data['eventTypeValue'] ?? data['eventType']) as String?;
-          Log.d('EnquiryFormScreen loaded event type', data: {'eventType': _selectedEventType});
+          _selectedEventType =
+              (data['eventTypeValue'] ?? data['eventType']) as String?;
+          Log.d(
+            'EnquiryFormScreen loaded event type',
+            data: {'eventType': _selectedEventType},
+          );
 
           // Safely set dropdown values - ensure they exist in valid options
           // Only use statusValue - standard field
           final statusValue = data['statusValue'] as String?;
           _selectedStatus = statusValue;
 
-          final priority = (data['priorityValue'] ?? data['priority']) as String?;
+          final priority =
+              (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
 
-          final paymentStatus = (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
+          final paymentStatus =
+              (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
           _selectedPaymentStatus = paymentStatus;
 
           _selectedAssignedTo = data['assignedTo'] as String?;
+
+          final sourceValue =
+              (data['sourceValue'] ?? data['source']) as String?;
+          if (sourceValue != null && sourceValue.trim().isNotEmpty) {
+            _selectedSource = sourceValue.trim();
+          }
+
+          final guestCount = data['guestCount'];
+          if (guestCount != null) {
+            _guestCountController.text = guestCount.toString();
+          }
+          final budget = data['budgetRange'] as String?;
+          if (budget != null && budget.trim().isNotEmpty) {
+            _budgetController.text = budget;
+          }
 
           if (data['eventDate'] != null) {
             final timestamp = data['eventDate'] as Timestamp;
@@ -149,9 +179,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading enquiry data: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading enquiry data: $e')),
+        );
       }
     }
   }
@@ -160,8 +190,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _guestCountController.dispose();
+    _budgetController.dispose();
     _totalCostController.dispose();
     _advancePaidController.dispose();
     super.dispose();
@@ -206,15 +239,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select an event date')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an event date')),
+      );
       return;
     }
     if (_selectedEventType == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select an event type')),
+      );
       return;
     }
 
@@ -239,7 +272,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e'),
+            content: Text(
+              'Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e',
+            ),
           ),
         );
       }
@@ -265,21 +300,23 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final priorityValue = _selectedPriority ?? 'medium';
     final priorityLabel = dropdownLookup.labelForPriority(priorityValue);
 
-    final paymentStatusValue = _selectedPaymentStatus ?? 'unpaid';
-    final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(paymentStatusValue);
+    final paymentStatusValue = _selectedPaymentStatus ?? 'pending';
+    final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(
+      paymentStatusValue,
+    );
 
     final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
     final enquiryId = await firestoreService.createEnquiry(
       customerName: _nameController.text.trim(),
-      customerEmail: '', // TODO: Add email field if needed
+      customerEmail: _emailController.text.trim(),
       customerPhone: _phoneController.text.trim(),
       eventType: eventTypeValue,
       eventDate: _selectedDate!,
       eventLocation: _locationController.text.trim(),
-      guestCount: 0, // TODO: Add guest count field
-      budgetRange: '', // TODO: Add budget field
+      guestCount: int.tryParse(_guestCountController.text.trim()) ?? 0,
+      budgetRange: _budgetController.text.trim(),
       description: _notesController.text.trim(),
       createdBy: currentUser.uid,
       priority: priorityValue,
@@ -350,9 +387,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enquiry created successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enquiry created successfully!')),
+      );
       Navigator.of(context).pop();
     }
   }
@@ -362,7 +399,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
     // Fetch old enquiry data to compare changes
-    final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
+    final oldEnquiryData =
+        await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
 
     final statusValue = _selectedStatus ?? 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
@@ -380,7 +418,13 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         ? dropdownLookup.labelForPaymentStatus(paymentStatusValue)
         : null;
 
+    final sourceValue = _selectedSource;
+    final sourceLabel = dropdownLookup.labelForSource(sourceValue);
+
     final newCustomerName = _nameController.text.trim();
+    final newCustomerEmail = _emailController.text.trim();
+    final newGuestCount = int.tryParse(_guestCountController.text.trim());
+    final newBudgetRange = _budgetController.text.trim();
     final newCustomerPhone = _phoneController.text.trim();
     final newEventLocation = _locationController.text.trim();
     final newDescription = _notesController.text.trim();
@@ -390,7 +434,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Check if financial fields are being changed (admin only)
     final oldTotalCost = oldEnquiryData['totalCost'] as num?;
     final oldAdvancePaid = oldEnquiryData['advancePaid'] as num?;
-    final isFinancialChange = (oldTotalCost != newTotalCost) || (oldAdvancePaid != newAdvancePaid);
+    final isFinancialChange =
+        (oldTotalCost != newTotalCost) || (oldAdvancePaid != newAdvancePaid);
 
     // Show confirmation for financial changes (admin only)
     if (isFinancialChange) {
@@ -446,7 +491,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         if (urls.isNotEmpty) {
           Log.d(
             'EnquiryFormScreen uploaded new images',
-            data: {'enquiryId': widget.enquiryId, 'urlCount': urls.length, 'urls': urls},
+            data: {
+              'enquiryId': widget.enquiryId,
+              'urlCount': urls.length,
+              'urls': urls,
+            },
           );
           newImageUrls = urls;
           // Clear selected images after successful upload
@@ -488,19 +537,28 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     );
 
     // Determine if status changed (needed for statusUpdatedAt below)
-    final oldStatusValueForUpdate = (oldEnquiryData['statusValue'] as String?) ?? 'new';
+    final oldStatusValueForUpdate =
+        (oldEnquiryData['statusValue'] as String?) ?? 'new';
     final statusDidChange = oldStatusValueForUpdate != statusValue;
 
     // Update the enquiry document — include images field with complete list
     await firestoreService.updateEnquiry(widget.enquiryId!, {
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
+      if (newCustomerEmail.isNotEmpty)
+        'customerEmail': newCustomerEmail.toLowerCase(),
       'eventLocation': newEventLocation,
-      'description': newDescription,
+      ...enquiryNotesFields(newDescription),
       'eventType': eventTypeValue,
       'eventTypeValue': eventTypeValue,
       'eventTypeLabel': eventTypeLabel,
       'eventDate': Timestamp.fromDate(_selectedDate!),
+      if (newGuestCount != null && newGuestCount >= 0)
+        'guestCount': newGuestCount,
+      if (newBudgetRange.isNotEmpty) 'budgetRange': newBudgetRange,
+      'source': sourceValue,
+      'sourceValue': sourceValue,
+      'sourceLabel': sourceLabel,
       'priority': priorityValue,
       'priorityValue': priorityValue,
       'priorityLabel': priorityLabel,
@@ -522,8 +580,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       ...FirestoreService.searchIndexFieldsFor(
         customerName: newCustomerName,
         customerPhone: newCustomerPhone,
-        customerEmail: oldEnquiryData['customerEmail'] as String?,
+        customerEmail: newCustomerEmail.isNotEmpty ? newCustomerEmail : null,
         description: newDescription,
+        notes: newDescription,
       ),
     });
 
@@ -537,7 +596,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Only use statusValue - standard field
     final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
     if (oldStatusValue != statusValue) {
-      changes['statusValue'] = {'old_value': oldStatusValue, 'new_value': statusValue};
+      changes['statusValue'] = {
+        'old_value': oldStatusValue,
+        'new_value': statusValue,
+      };
     }
 
     // Track assignment change
@@ -551,7 +613,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     // Track priority change
-    final oldPriorityValue = oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
+    final oldPriorityValue =
+        oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
     if (oldPriorityValue != priorityValue) {
       changes['priority'] = {
         'old_value': oldPriorityValue ?? 'Not Set',
@@ -598,17 +661,26 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Track total cost change (oldTotalCost already declared above)
     if (oldTotalCost != newTotalCost) {
-      changes['totalCost'] = {'old_value': oldTotalCost ?? 0, 'new_value': newTotalCost ?? 0};
+      changes['totalCost'] = {
+        'old_value': oldTotalCost ?? 0,
+        'new_value': newTotalCost ?? 0,
+      };
     }
 
     // Track advance paid change (oldAdvancePaid already declared above)
     if (oldAdvancePaid != newAdvancePaid) {
-      changes['advancePaid'] = {'old_value': oldAdvancePaid ?? 0, 'new_value': newAdvancePaid ?? 0};
+      changes['advancePaid'] = {
+        'old_value': oldAdvancePaid ?? 0,
+        'new_value': newAdvancePaid ?? 0,
+      };
     }
 
     // Record all changes at once
     if (changes.isNotEmpty) {
-      await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
+      await auditService.recordMultipleChanges(
+        enquiryId: widget.enquiryId!,
+        changes: changes,
+      );
     }
 
     // Send notifications
@@ -651,9 +723,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Enquiry updated successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enquiry updated successfully!')),
+      );
       Navigator.of(context).pop();
     }
   }
@@ -679,7 +751,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final contentType = _getContentType(fileName);
 
           // Upload with metadata - ensure bytes are Uint8List
-          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
+          final metadata = SettableMetadata(
+            contentType: contentType,
+            cacheControl: 'max-age=3600',
+          );
 
           // Convert to Uint8List if needed
           final uint8List = bytes;
@@ -687,7 +762,10 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final task = await ref.putData(uint8List, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
+          Log.d(
+            'EnquiryFormScreen image uploaded',
+            data: {'fileName': fileName, 'url': url},
+          );
         } else {
           // For mobile, use File
           final file = File(xfile.path);
@@ -706,14 +784,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final task = await ref.putFile(file, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
+          Log.d(
+            'EnquiryFormScreen image uploaded',
+            data: {'fileName': fileName, 'url': url},
+          );
         }
       } catch (e) {
         Log.e('Error uploading image ${xfile.name}', error: e);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error uploading ${xfile.name}: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading ${xfile.name}: $e')),
+          );
         }
         // Continue with other images
       }
@@ -739,127 +820,183 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
   }
 
-  void _removeExistingImage(int index) {
+  Future<void> _removeExistingImage(int index) async {
+    if (index < 0 || index >= _existingImageUrls.length) return;
+    final removedUrl = _existingImageUrls[index];
     setState(() {
       _existingImageUrls.removeAt(index);
     });
-    // TODO: Optionally delete from Firestore and Storage
+
+    if (widget.mode != 'edit' || widget.enquiryId == null) return;
+
+    try {
+      final storageRef = FirebaseStorage.instance.refFromURL(removedUrl);
+      await storageRef.delete();
+    } catch (e) {
+      Log.w(
+        'Could not delete image from storage',
+        data: {'url': removedUrl, 'error': e.toString()},
+      );
+    }
+
+    try {
+      await ref.read(firestoreServiceProvider).updateEnquiry(
+        widget.enquiryId!,
+        {'images': _existingImageUrls},
+      );
+    } catch (e) {
+      Log.e('Failed to update enquiry images after removal', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Image removed locally but failed to save — try saving the form',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // Watch role provider directly to handle loading state properly
     final colorScheme = Theme.of(context).colorScheme;
+    final isAdmin = ref.watch(isAdminProvider);
+
+    if (widget.mode == 'create' && !isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('New Enquiry')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Only admins can create enquiries',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry')),
+      appBar: AppBar(
+        title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry'),
+      ),
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          padding: AppSpacing.space4,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (widget.mode == 'create') ...[
-                _FormSectionProgress(
-                  sections: const ['Customer', 'Event', 'Financial', 'Notes & Images'],
-                ),
-                const SizedBox(height: AppTokens.space4),
-              ],
-              EnquiryFormCustomerFields(
-                nameController: _nameController,
-                phoneController: _phoneController,
-                locationController: _locationController,
-              ),
-
-              EnquiryFormEventFields(
-                selectedDate: _selectedDate,
-                onSelectDate: _selectDate,
-                selectedEventType: _selectedEventType,
-                onEventTypeChanged: (value) => setState(() => _selectedEventType = value),
-                selectedStatus: _selectedStatus,
-                onStatusChanged: (value) => setState(() => _selectedStatus = value),
-                selectedPriority: _selectedPriority,
-                onPriorityChanged: (value) => setState(() => _selectedPriority = value),
-                selectedAssignedTo: _selectedAssignedTo,
-                onAssignedToChanged: (value) => setState(() => _selectedAssignedTo = value),
-              ),
-
-              EnquiryFormFinancialFields(
-                totalCostController: _totalCostController,
-                advancePaidController: _advancePaidController,
-                selectedPaymentStatus: _selectedPaymentStatus,
-                onPaymentStatusChanged: (value) => setState(() => _selectedPaymentStatus = value),
-                parseDouble: _parseDouble,
-              ),
-
-              EnquiryFormSection(
-                title: 'Additional Information',
-                children: [
-                  if (widget.mode == 'create')
-                    DropdownButtonFormField<String>(
-                      value: _selectedSource,
-                      decoration: const InputDecoration(
-                        labelText: 'Lead Source *',
-                        prefixIcon: Icon(Icons.campaign_outlined),
-                        border: OutlineInputBorder(),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: AppSpacing.space4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.mode == 'create') ...[
+                      _FormSectionProgress(
+                        sections: const [
+                          'Customer',
+                          'Event',
+                          'Financial',
+                          'Notes & Images',
+                        ],
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
-                        DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp')),
-                        DropdownMenuItem(value: 'referral', child: Text('Referral')),
-                        DropdownMenuItem(value: 'walk_in', child: Text('Walk-in')),
-                        DropdownMenuItem(value: 'website', child: Text('Website')),
-                        DropdownMenuItem(value: 'exhibition', child: Text('Exhibition')),
-                        DropdownMenuItem(value: 'google', child: Text('Google')),
-                        DropdownMenuItem(value: 'other', child: Text('Other')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) setState(() => _selectedSource = value);
+                      const SizedBox(height: AppTokens.space4),
+                    ],
+                    EnquiryFormCustomerFields(
+                      nameController: _nameController,
+                      phoneController: _phoneController,
+                      emailController: _emailController,
+                      locationController: _locationController,
+                    ),
+
+                    EnquiryFormEventFields(
+                      selectedDate: _selectedDate,
+                      onSelectDate: _selectDate,
+                      selectedEventType: _selectedEventType,
+                      onEventTypeChanged: (value) =>
+                          setState(() => _selectedEventType = value),
+                      selectedStatus: _selectedStatus,
+                      onStatusChanged: (value) =>
+                          setState(() => _selectedStatus = value),
+                      selectedPriority: _selectedPriority,
+                      onPriorityChanged: (value) =>
+                          setState(() => _selectedPriority = value),
+                      selectedAssignedTo: _selectedAssignedTo,
+                      onAssignedToChanged: (value) =>
+                          setState(() => _selectedAssignedTo = value),
+                      selectedSource: _selectedSource,
+                      onSourceChanged: (value) {
+                        if (value != null)
+                          setState(() => _selectedSource = value);
                       },
+                      guestCountController: _guestCountController,
+                      budgetController: _budgetController,
+                      showLeadSource: true,
                     ),
-                  if (widget.mode == 'create') const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _notesController,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes',
-                      prefixIcon: Icon(Icons.note),
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
+
+                    EnquiryFormFinancialFields(
+                      totalCostController: _totalCostController,
+                      advancePaidController: _advancePaidController,
+                      selectedPaymentStatus: _selectedPaymentStatus,
+                      onPaymentStatusChanged: (value) =>
+                          setState(() => _selectedPaymentStatus = value),
+                      parseDouble: _parseDouble,
                     ),
-                  ),
-                ],
-              ),
 
-              EnquiryFormImagesSection(
-                selectedImages: _selectedImages,
-                existingImageUrls: _existingImageUrls,
-                onPickImages: _pickImages,
-                onRemoveImage: _removeImage,
-                onRemoveExistingImage: _removeExistingImage,
-              ),
+                    EnquiryFormSection(
+                      title: 'Additional Information',
+                      children: [
+                        TextFormField(
+                          controller: _notesController,
+                          maxLines: 4,
+                          decoration: const InputDecoration(
+                            labelText: 'Notes',
+                            prefixIcon: Icon(Icons.note),
+                            border: OutlineInputBorder(),
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                      ],
+                    ),
 
-              const SizedBox(height: AppTokens.space8),
-              FilledButton(
+                    EnquiryFormImagesSection(
+                      selectedImages: _selectedImages,
+                      existingImageUrls: _existingImageUrls,
+                      onPickImages: _pickImages,
+                      onRemoveImage: _removeImage,
+                      onRemoveExistingImage: _removeExistingImage,
+                    ),
+
+                    const SizedBox(height: AppTokens.space4),
+                  ],
+                ),
+              ),
+            ),
+            StickyBottomBar(
+              child: FilledButton(
                 onPressed: _isLoading ? null : _submitForm,
-                style: FilledButton.styleFrom(padding: AppSpacing.vertical(AppTokens.space4)),
                 child: _isLoading
                     ? SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            colorScheme.onPrimary,
+                          ),
                         ),
                       )
                     : Text(
-                        widget.mode == 'edit' ? 'Update Enquiry' : 'Create Enquiry',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        widget.mode == 'edit'
+                            ? 'Update enquiry'
+                            : 'Create enquiry',
                       ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -900,7 +1037,9 @@ class _FormSectionProgress extends StatelessWidget {
                   Text(
                     sections[i],
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),

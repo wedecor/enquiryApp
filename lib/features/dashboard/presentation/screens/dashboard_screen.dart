@@ -19,16 +19,21 @@ import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../../enquiries/presentation/widgets/status_inline_control.dart';
 import '../../../settings/providers/settings_providers.dart';
+import '../../../../core/theme/tokens.dart';
 import '../widgets/dashboard_enquiries_tab.dart';
 import '../widgets/dashboard_enquiry_utils.dart';
 import '../widgets/dashboard_navigation_drawer.dart';
-import '../widgets/dashboard_statistics_section.dart';
 import '../widgets/dashboard_tab_bar_delegate.dart';
 import '../widgets/dashboard_welcome_panel.dart';
 
 /// Enhanced Dashboard Screen with tabs and statistics
 class DashboardScreen extends ConsumerStatefulWidget {
-  const DashboardScreen({super.key, this.embeddedInShell = false, this.onNavigateToCalendar});
+  const DashboardScreen({
+    super.key,
+    this.embeddedInShell = false,
+    this.onNavigateToCalendar,
+    this.onNavigateToAnalytics,
+  });
 
   /// When true, renders body only (no [Scaffold]); used inside [AppShell].
   final bool embeddedInShell;
@@ -36,6 +41,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
   /// Called when the user taps the "this week" priority bucket, requesting
   /// the shell to switch to the Calendar tab.
   final VoidCallback? onNavigateToCalendar;
+
+  /// Called when admin taps "View all stats" on the dashboard.
+  final VoidCallback? onNavigateToAnalytics;
 
   @override
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
@@ -64,7 +72,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     super.initState();
     _tabController = TabController(length: _statusTabs.length, vsync: this);
     _primeDropdownColors();
-    _tabs = _statusTabs.map((tab) => Tab(text: tab['label']!)).toList(growable: false);
+    _tabs = _statusTabs
+        .map(
+          (tab) => Tab(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4),
+              child: Text(tab['label']!),
+            ),
+          ),
+        )
+        .toList(growable: false);
     _searchController.addListener(_handleSearchChanged);
     // Run automatic cleanup for past enquiries (only for admins, runs silently in background)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -75,7 +93,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Future<void> _primeDropdownColors() async {
     final firestoreService = ref.read(firestoreServiceProvider);
     try {
-      final statusSnapshot = await firestoreService.fetchActiveDropdownItems('statuses');
+      final statusSnapshot = await firestoreService.fetchActiveDropdownItems(
+        'statuses',
+      );
       for (final doc in statusSnapshot.docs) {
         final data = doc.data();
         final value = (data['value'] as String?)?.trim();
@@ -87,7 +107,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         }
       }
 
-      final eventSnapshot = await firestoreService.fetchActiveDropdownItems('event_types');
+      final eventSnapshot = await firestoreService.fetchActiveDropdownItems(
+        'event_types',
+      );
       for (final doc in eventSnapshot.docs) {
         final data = doc.data();
         final value = (data['value'] as String?)?.trim();
@@ -139,7 +161,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           .then((updatedCount) {
             if (updatedCount != null && updatedCount > 0 && mounted) {
               // Optionally show a subtle notification
-              Log.i('Automatic cleanup completed', data: {'updatedCount': updatedCount});
+              Log.i(
+                'Automatic cleanup completed',
+                data: {'updatedCount': updatedCount},
+              );
             }
           })
           .catchError((Object error, StackTrace stack) {
@@ -166,19 +191,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     });
   }
 
+  TabBar _buildPillTabBar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return TabBar(
+      controller: _tabController,
+      tabs: _tabs,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      dividerColor: Colors.transparent,
+      indicatorSize: TabBarIndicatorSize.tab,
+      labelPadding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
+      indicatorPadding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space4,
+        vertical: AppTokens.space2,
+      ),
+      indicator: BoxDecoration(
+        borderRadius: AppRadius.full,
+        color: cs.primaryContainer,
+      ),
+      labelColor: cs.onPrimaryContainer,
+      unselectedLabelColor: cs.onSurfaceVariant,
+      labelStyle: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: AppTokens.fontSizeBody,
+      ),
+      unselectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.w500,
+        fontSize: AppTokens.fontSizeBody,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final roleAsync = ref.watch(roleProvider);
 
     final body = currentUser.when(
-      data: (user) => roleAsync.when(
-        data: (role) => _buildDashboardContent(context, user, role == UserRole.admin),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _buildDashboardContent(context, user, false),
-      ),
+      data: (user) {
+        final isAdmin = roleAsync.valueOrNull == UserRole.admin;
+        return _buildDashboardContent(context, user, isAdmin);
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object error, StackTrace stack) => _buildErrorWidget(context, error),
+      error: (Object error, StackTrace stack) =>
+          _buildErrorWidget(context, error),
     );
 
     if (widget.embeddedInShell) {
@@ -200,25 +257,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ],
       ),
       drawer: roleAsync.when(
-        data: (role) => DashboardNavigationDrawer(isAdmin: role == UserRole.admin),
+        data: (role) =>
+            DashboardNavigationDrawer(isAdmin: role == UserRole.admin),
         loading: () => const DashboardNavigationDrawer(isAdmin: false),
         error: (_, __) => const DashboardNavigationDrawer(isAdmin: false),
       ),
       body: body,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
-        },
-        tooltip: 'Add New Enquiry',
-        child: const Icon(Icons.add),
+      floatingActionButton: roleAsync.maybeWhen(
+        data: (role) => role == UserRole.admin
+            ? FloatingActionButton(
+                onPressed: () {
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (context) => const EnquiryFormScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Add New Enquiry',
+                child: const Icon(Icons.add),
+              )
+            : null,
+        orElse: () => null,
       ),
     );
   }
 
-  Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
-    final tabBar = TabBar(controller: _tabController, tabs: _tabs, isScrollable: true);
+  Widget _buildDashboardContent(
+    BuildContext context,
+    UserModel? user,
+    bool isAdmin,
+  ) {
+    final tabBar = _buildPillTabBar(context);
     final tabActions = DashboardEnquiryTabActions(
       onView: _openEnquiryDetails,
       onCall: _handleCall,
@@ -232,48 +301,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
 
     return SafeArea(
-      child: NestedScrollView(
-        floatHeaderSlivers: true,
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(child: _buildWelcomeAndStats(user, isAdmin)),
-          SliverOverlapAbsorber(
-            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-            sliver: SliverPersistentHeader(
-              pinned: true,
-              delegate: DashboardTabBarDelegate(
-                tabBar,
-                searchController: _searchController,
-                searchQuery: _searchQuery,
-                onClearSearch: () {
-                  _searchController.clear();
-                  _handleSearchChanged();
-                },
-              ),
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
-          children: _statusTabs
-              .map(
-                (s) => DashboardEnquiriesTab(
-                  status: s['value']!,
-                  isAdmin: isAdmin,
-                  userId: user?.uid,
+      child: ListenableBuilder(
+        listenable: _tabController,
+        builder: (context, _) {
+          final s = _statusTabs[_tabController.index];
+          return DashboardEnquiriesTab(
+            key: ValueKey(s['value']),
+            status: s['value']!,
+            isAdmin: isAdmin,
+            userId: user?.uid,
+            searchQuery: _searchQuery,
+            onClearSearch: () {
+              _searchController.clear();
+              _handleSearchChanged();
+            },
+            actions: tabActions,
+            errorBuilder: _buildErrorWidget,
+            onTabVisible: s['value'] == 'in_talks'
+                ? _runAutomaticCleanup
+                : null,
+            headerSlivers: [
+              SliverToBoxAdapter(child: _buildWelcomeAndStats(user, isAdmin)),
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: DashboardTabBarDelegate(
+                  tabBar,
+                  searchController: _searchController,
                   searchQuery: _searchQuery,
                   onClearSearch: () {
                     _searchController.clear();
                     _handleSearchChanged();
                   },
-                  statusColorCache: _statusColorCache,
-                  eventColorCache: _eventColorCache,
-                  actions: tabActions,
-                  errorBuilder: _buildErrorWidget,
-                  onTabVisible: s['value'] == 'in_talks' ? _runAutomaticCleanup : null,
                 ),
-              )
-              .toList(),
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -282,8 +345,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return DashboardWelcomePanel(
       user: user,
       isAdmin: isAdmin,
-      statsChild: DashboardStatisticsSection(isAdmin: isAdmin, userId: user?.uid),
       onPriorityBucketTap: _jumpToTab,
+      onViewAnalytics: isAdmin ? widget.onNavigateToAnalytics : null,
     );
   }
 
@@ -306,14 +369,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (idx >= 0) _tabController.animateTo(idx);
   }
 
-  Future<void> _handleCall(String? phone, String customerName, String enquiryId) async {
+  Future<void> _handleCall(
+    String? phone,
+    String customerName,
+    String enquiryId,
+  ) async {
     if (phone == null || phone.trim().isEmpty) {
       _showSnack('No phone number available for $customerName');
       return;
     }
 
     final launcher = ref.read(contactLauncherProvider);
-    final status = await launcher.callNumberWithAudit(phone, enquiryId: enquiryId);
+    final status = await launcher.callNumberWithAudit(
+      phone,
+      enquiryId: enquiryId,
+    );
 
     switch (status) {
       case ContactLaunchStatus.opened:
@@ -331,7 +401,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Future<void> _handleWhatsApp(String? phone, String customerName, String enquiryId) async {
+  Future<void> _handleWhatsApp(
+    String? phone,
+    String customerName,
+    String enquiryId,
+  ) async {
     if (phone == null || phone.trim().isEmpty) {
       _showSnack('No phone number available for WhatsApp');
       return;
@@ -361,7 +435,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Future<void> _handleReviewRequest(String phone, String customerName, String enquiryId) async {
+  Future<void> _handleReviewRequest(
+    String phone,
+    String customerName,
+    String enquiryId,
+  ) async {
     try {
       final reviewService = ref.read(reviewRequestServiceProvider);
       final appConfigAsync = ref.read(appGeneralConfigProvider);
@@ -378,7 +456,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       final instagramHandle = appConfig.instagramHandle.isNotEmpty
           ? appConfig.instagramHandle
           : null;
-      final websiteUrl = appConfig.websiteUrl.isNotEmpty ? appConfig.websiteUrl : null;
+      final websiteUrl = appConfig.websiteUrl.isNotEmpty
+          ? appConfig.websiteUrl
+          : null;
 
       final status = await reviewService.sendReviewRequest(
         customerPhone: phone,
@@ -431,7 +511,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
       if (!confirmed || !mounted) return;
 
-      await repository.updateStatus(id: enquiryId, nextStatus: 'not_interested', userId: userId);
+      await repository.updateStatus(
+        id: enquiryId,
+        nextStatus: 'not_interested',
+        userId: userId,
+      );
 
       if (mounted) {
         _showSnack('Enquiry marked as Not Interested');
@@ -455,7 +539,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Update status', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Update status',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               StatusInlineControl(enquiry: enquiry),
               const SizedBox(height: 12),
@@ -498,12 +585,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       builder: (context) {
         final viewInsets = MediaQuery.of(context).viewInsets.bottom;
         return Padding(
-          padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + viewInsets),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: 16 + viewInsets,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Follow-up notes', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Follow-up notes',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
@@ -532,7 +627,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           child: const Text('Clear'),
                         ),
                       FilledButton(
-                        onPressed: () => Navigator.of(context).pop(value.text.trim()),
+                        onPressed: () =>
+                            Navigator.of(context).pop(value.text.trim()),
                         child: const Text('Save'),
                       ),
                     ],
@@ -551,10 +647,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
       if (result.isEmpty) {
-        await firestoreService.updateEnquiry(enquiry.id, {'notes': FieldValue.delete()});
+        await firestoreService.updateEnquiry(enquiry.id, {
+          'notes': FieldValue.delete(),
+          'description': FieldValue.delete(),
+        });
         _showSnack('Notes cleared');
       } else {
-        await firestoreService.updateEnquiry(enquiry.id, {'notes': result});
+        await firestoreService.updateEnquiry(enquiry.id, {
+          'notes': result,
+          'description': result,
+        });
         _showSnack('Notes updated');
       }
     } catch (e) {
@@ -564,7 +666,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   void _openEnquiryDetails(String enquiryId) {
     Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId)),
+      MaterialPageRoute<void>(
+        builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
+      ),
     );
   }
 
@@ -602,7 +706,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     // Build and send reminder message
     final launcher = ref.read(contactLauncherProvider);
-    final prefill = buildReminderMessage(customerName, eventType, createdAt, eventDate);
+    final prefill = buildReminderMessage(
+      customerName,
+      eventType,
+      createdAt,
+      eventDate,
+    );
     final status = await launcher.openWhatsAppWithAudit(
       phone,
       prefillText: prefill,

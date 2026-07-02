@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/firestore_schema.dart';
+import '../utils/enquiry_fields.dart';
 
 /// Service class for handling all Firestore database operations.
 ///
@@ -37,7 +38,8 @@ class FirestoreService {
 
   // Collection references
   /// Reference to the users collection in Firestore.
-  CollectionReference get _usersCollection => _firestore.collection(FirestoreCollections.users);
+  CollectionReference get _usersCollection =>
+      _firestore.collection(FirestoreCollections.users);
 
   /// Reference to the enquiries collection in Firestore.
   CollectionReference get _enquiriesCollection =>
@@ -91,18 +93,6 @@ class FirestoreService {
       ),
     };
   }
-
-  /// Reference to the event types collection in Firestore.
-  CollectionReference get _eventTypesCollection =>
-      _firestore.collection(FirestoreCollections.eventTypes);
-
-  /// Reference to the statuses collection in Firestore.
-  CollectionReference get _statusesCollection =>
-      _firestore.collection(FirestoreCollections.statuses);
-
-  /// Reference to the payment statuses collection in Firestore.
-  CollectionReference get _paymentStatusesCollection =>
-      _firestore.collection(FirestoreCollections.paymentStatuses);
 
   /// Creates a new user document in Firestore.
   ///
@@ -179,11 +169,15 @@ class FirestoreService {
 
   /// Real-time stream for a single user profile document.
   Stream<DocumentSnapshot<Map<String, dynamic>>> watchUser(String uid) {
-    return (_usersCollection.doc(uid) as DocumentReference<Map<String, dynamic>>).snapshots();
+    return (_usersCollection.doc(uid)
+            as DocumentReference<Map<String, dynamic>>)
+        .snapshots();
   }
 
   /// Per-user saved enquiry filter views (`users/{uid}/savedViews`).
-  CollectionReference<Map<String, dynamic>> savedViewsCollection(String userId) {
+  CollectionReference<Map<String, dynamic>> savedViewsCollection(
+    String userId,
+  ) {
     return _usersCollection.doc(userId).collection('savedViews');
   }
 
@@ -204,7 +198,11 @@ class FirestoreService {
         .collection('tokens');
   }
 
-  Future<void> saveFcmToken(String uid, String token, {bool refreshed = false}) async {
+  Future<void> saveFcmToken(
+    String uid,
+    String token, {
+    bool refreshed = false,
+  }) async {
     await fcmTokensCollection(uid).doc(token).set({
       'token': token,
       if (refreshed)
@@ -316,21 +314,22 @@ class FirestoreService {
   }) async {
     final enquiryData = {
       'customerName': customerName,
-      'customerEmail': customerEmail.toLowerCase(),
+      if (customerEmail.trim().isNotEmpty)
+        'customerEmail': customerEmail.toLowerCase(),
       'customerPhone': customerPhone,
       'eventType': eventType,
       'eventDate': eventDate,
       'eventLocation': eventLocation,
-      'guestCount': guestCount,
-      'budgetRange': budgetRange,
-      'description': description,
+      if (guestCount > 0) 'guestCount': guestCount,
+      if (budgetRange.trim().isNotEmpty) 'budgetRange': budgetRange,
+      ...enquiryNotesFields(description),
       // Only use statusValue - standard field
       'statusValue': statusValue,
       if (statusLabel != null) 'statusLabel': statusLabel,
       'eventTypeValue': eventType,
       if (eventTypeLabel != null) 'eventTypeLabel': eventTypeLabel,
-      'paymentStatus': paymentStatus ?? 'unpaid',
-      'paymentStatusValue': paymentStatus ?? 'unpaid',
+      'paymentStatus': paymentStatus ?? 'pending',
+      'paymentStatusValue': paymentStatus ?? 'pending',
       if (paymentStatusLabel != null) 'paymentStatusLabel': paymentStatusLabel,
       'totalCost': totalCost,
       'advancePaid': advancePaid,
@@ -349,6 +348,7 @@ class FirestoreService {
         customerPhone: customerPhone,
         customerEmail: customerEmail,
         description: description,
+        notes: description,
       ),
     };
 
@@ -397,7 +397,9 @@ class FirestoreService {
   /// });
   /// ```
   Stream<QuerySnapshot> getEnquiries() {
-    return _enquiriesCollection.orderBy('createdAt', descending: true).snapshots();
+    return _enquiriesCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 
   /// Retrieves a real-time stream of enquiries filtered by status.
@@ -426,7 +428,10 @@ class FirestoreService {
   }
 
   /// Real-time enquiries stream scoped by role (admin: all, staff: assigned only).
-  Stream<QuerySnapshot> watchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+  Stream<QuerySnapshot> watchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+  }) {
     if (isAdmin) {
       return getEnquiries();
     }
@@ -437,7 +442,10 @@ class FirestoreService {
   }
 
   /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
-  Future<QuerySnapshot> fetchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+  Future<QuerySnapshot> fetchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+  }) {
     Query query = _enquiriesCollection.orderBy('createdAt', descending: true);
     if (!isAdmin && assignedToUid != null) {
       query = _enquiriesCollection
@@ -480,17 +488,23 @@ class FirestoreService {
   }
 
   /// Active dropdown items from `dropdowns/{kind}/items`.
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(String kind) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(
+    String kind,
+  ) {
     return _activeDropdownItemsQuery(kind).snapshots();
   }
 
   /// One-shot fetch of active dropdown items (e.g. dashboard color priming).
-  Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(String kind) {
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(
+    String kind,
+  ) {
     return _activeDropdownItemsQuery(kind).get();
   }
 
   /// Active dropdown options as label/value maps for form widgets.
-  Future<List<Map<String, String>>> fetchActiveDropdownOptions(String kind) async {
+  Future<List<Map<String, String>>> fetchActiveDropdownOptions(
+    String kind,
+  ) async {
     final snapshot = await fetchActiveDropdownItems(kind);
     return parseDropdownOptions(snapshot.docs);
   }
@@ -533,7 +547,11 @@ class FirestoreService {
 
   /// Value→label map for a dropdown kind (includes inactive items for history display).
   Future<Map<String, String>> fetchDropdownValueLabelMap(String kind) async {
-    final snapshot = await _firestore.collection('dropdowns').doc(kind).collection('items').get();
+    final snapshot = await _firestore
+        .collection('dropdowns')
+        .doc(kind)
+        .collection('items')
+        .get();
     final map = <String, String>{};
     for (final doc in snapshot.docs) {
       final data = doc.data();
@@ -554,8 +572,8 @@ class FirestoreService {
   }
 
   /// Active status options for enquiry status dropdowns.
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveStatusDropdownItems() =>
-      watchActiveDropdownItems('statuses');
+  Stream<QuerySnapshot<Map<String, dynamic>>>
+  watchActiveStatusDropdownItems() => watchActiveDropdownItems('statuses');
 
   /// Calendar view: enquiries ordered by event date (role-scoped).
   Stream<QuerySnapshot> watchEnquiriesForRoleByEventDate({
@@ -590,7 +608,10 @@ class FirestoreService {
   ///   'assignedTo': 'staff456',
   /// });
   /// ```
-  Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
+  Future<void> updateEnquiry(
+    String enquiryId,
+    Map<String, dynamic> data,
+  ) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
@@ -616,214 +637,6 @@ class FirestoreService {
     await _enquiriesCollection.doc(enquiryId).delete();
   }
 
-  /// Retrieves a real-time stream of all active event types.
-  ///
-  /// This method returns a stream of event types that are currently active
-  /// in the system. Event types are ordered by their sort order for
-  /// consistent display in dropdowns and forms.
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits active event types.
-  ///
-  /// Example:
-  /// ```dart
-  /// final eventTypesStream = firestoreService.getEventTypes();
-  /// eventTypesStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Event Type: ${data['name']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> getEventTypes() {
-    return _eventTypesCollection.orderBy('value').snapshots();
-  }
-
-  /// Retrieves a real-time stream of all active statuses.
-  ///
-  /// This method returns a stream of enquiry statuses that are currently
-  /// active in the system. Statuses are ordered by their sort order for
-  /// consistent display in dropdowns and forms.
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits active statuses.
-  ///
-  /// Example:
-  /// ```dart
-  /// final statusesStream = firestoreService.getStatuses();
-  /// statusesStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Status: ${data['value']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> getStatuses() {
-    return _statusesCollection.orderBy('value').snapshots();
-  }
-
-  /// Retrieves a real-time stream of all active payment statuses.
-  ///
-  /// This method returns a stream of payment statuses that are currently
-  /// active in the system. Payment statuses are ordered by their sort order
-  /// for consistent display in dropdowns and forms.
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits active payment statuses.
-  ///
-  /// Example:
-  /// ```dart
-  /// final paymentStatusesStream = firestoreService.getPaymentStatuses();
-  /// paymentStatusesStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Payment Status: ${data['value']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> getPaymentStatuses() {
-    return _paymentStatusesCollection.orderBy('value').snapshots();
-  }
-
-  /// Initializes the default dropdown values in Firestore.
-  ///
-  /// This method populates the dropdown collections (event types, statuses,
-  /// payment statuses) with default values if they don't already exist.
-  /// This ensures the application has the necessary data for forms and
-  /// filtering functionality.
-  ///
-  /// The method creates documents for:
-  /// - Event types (Wedding, Birthday, Corporate, etc.)
-  /// - Enquiry statuses (New, In Progress, Completed, etc.)
-  /// - Payment statuses (Pending, Partial, Paid, etc.)
-  ///
-  /// Returns a [Future<void>] that completes when all dropdowns are initialized.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.initializeDropdowns();
-  /// ```
-  Future<void> initializeDropdowns() async {
-    // Initialize event types
-    for (final eventType in DefaultDropdownValues.eventTypes) {
-      final data = {
-        'value': eventType,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      await _eventTypesCollection.add(data);
-    }
-
-    // Initialize statuses
-    for (final status in DefaultDropdownValues.statuses) {
-      final data = {
-        'value': status,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      await _statusesCollection.add(data);
-    }
-
-    // Initialize payment statuses
-    for (final paymentStatus in DefaultDropdownValues.paymentStatuses) {
-      final data = {
-        'value': paymentStatus,
-        'isActive': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      await _paymentStatusesCollection.add(data);
-    }
-  }
-
-  /// Checks if the dropdown collections have been initialized.
-  ///
-  /// This method verifies whether the default dropdown values have been
-  /// created in Firestore by checking if each collection has at least
-  /// one document.
-  ///
-  /// Returns a [Future<bool>] that resolves to:
-  /// - `true` if all dropdown collections have data
-  /// - `false` if any collection is empty
-  ///
-  /// Example:
-  /// ```dart
-  /// final isInitialized = await firestoreService.areDropdownsInitialized();
-  /// if (!isInitialized) {
-  ///   await firestoreService.initializeDropdowns();
-  /// }
-  /// ```
-  Future<bool> areDropdownsInitialized() async {
-    final eventTypesSnapshot = await _eventTypesCollection.limit(1).get();
-    final statusesSnapshot = await _statusesCollection.limit(1).get();
-    final paymentStatusesSnapshot = await _paymentStatusesCollection.limit(1).get();
-
-    return eventTypesSnapshot.docs.isNotEmpty &&
-        statusesSnapshot.docs.isNotEmpty &&
-        paymentStatusesSnapshot.docs.isNotEmpty;
-  }
-
-  /// Retrieves statistics about enquiries grouped by status.
-  ///
-  /// This method analyzes all enquiries in the database and returns
-  /// a count of enquiries for each status. Useful for dashboard
-  /// analytics and reporting.
-  ///
-  /// Returns a [Future<Map<String, int>>] where:
-  /// - Keys are status names (e.g., "New", "In Progress", "Completed")
-  /// - Values are the count of enquiries with that status
-  ///
-  /// Example:
-  /// ```dart
-  /// final stats = await firestoreService.getEnquiryStatistics();
-  /// print('New enquiries: ${stats['New'] ?? 0}');
-  /// print('Completed enquiries: ${stats['Completed'] ?? 0}');
-  /// ```
-  Future<Map<String, int>> getEnquiryStatistics() async {
-    final snapshot = await _enquiriesCollection.get();
-    final enquiries = snapshot.docs;
-
-    final stats = <String, int>{};
-    for (final doc in enquiries) {
-      final data = doc.data() as Map<String, dynamic>;
-      final status = data['statusValue'] as String? ?? 'Unknown'; // Use statusValue only
-      stats[status] = (stats[status] ?? 0) + 1;
-    }
-
-    return stats;
-  }
-
-  /// Searches enquiries by customer name.
-  ///
-  /// This method performs a prefix search on customer names to find
-  /// enquiries that match the provided search term. The search is
-  /// case-sensitive and uses Firestore's string comparison operators.
-  ///
-  /// Parameters:
-  /// - [searchTerm]: The search term to match against customer names
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits matching enquiries.
-  ///
-  /// Example:
-  /// ```dart
-  /// final searchResults = firestoreService.searchEnquiries('John');
-  /// searchResults.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Found: ${data['customerName']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> searchEnquiries(String searchTerm) {
-    return _enquiriesCollection
-        .where('customerName', isGreaterThanOrEqualTo: searchTerm)
-        .where('customerName', isLessThan: '$searchTerm\uf8ff')
-        .orderBy('customerName')
-        .snapshots();
-  }
-
   /// Retrieves a real-time stream of all active users.
   ///
   /// This method returns a stream of users who are currently active
@@ -831,173 +644,17 @@ class FirestoreService {
   /// consistent display in dropdowns and lists.
   ///
   /// Returns a [Stream<QuerySnapshot>] that emits active users.
-  ///
-  /// Example:
-  /// ```dart
-  /// final usersStream = firestoreService.getActiveUsers();
-  /// usersStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('User: ${data['name']} (${data['role']})');
-  ///   }
-  /// });
-  /// ```
   Stream<QuerySnapshot> getActiveUsers() {
     return _usersCollection.orderBy('name').snapshots();
   }
 }
 
 /// Riverpod provider that creates and provides a [FirestoreService] instance.
-///
-/// This provider ensures that the Firestore service is properly
-/// initialized and can be accessed throughout the app using Riverpod.
-///
-/// Usage:
-/// ```dart
-/// final firestoreService = ref.read(firestoreServiceProvider);
-/// ```
 final firestoreServiceProvider = Provider<FirestoreService>((ref) {
   return FirestoreService();
 });
 
-/// Riverpod provider that checks if dropdown collections are initialized.
-///
-/// This provider returns a [Future<bool>] indicating whether the default
-/// dropdown values have been created in Firestore.
-///
-/// Usage:
-/// ```dart
-/// final isInitialized = ref.watch(dropdownsInitializedProvider);
-/// isInitialized.when(
-///   data: (initialized) {
-///     if (!initialized) {
-///       // Initialize dropdowns
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
-final dropdownsInitializedProvider = FutureProvider<bool>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.areDropdownsInitialized();
-});
-
-/// Riverpod provider that streams event types from Firestore.
-///
-/// This provider provides real-time access to the event types collection,
-/// automatically updating when the data changes in Firestore.
-///
-/// Usage:
-/// ```dart
-/// final eventTypes = ref.watch(eventTypesProvider);
-/// eventTypes.when(
-///   data: (snapshot) {
-///     for (final doc in snapshot.docs) {
-///       final data = doc.data() as Map<String, dynamic>;
-///       // Use event type data
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
-final eventTypesProvider = StreamProvider<QuerySnapshot>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.getEventTypes();
-});
-
-/// Riverpod provider that streams statuses from Firestore.
-///
-/// This provider provides real-time access to the statuses collection,
-/// automatically updating when the data changes in Firestore.
-///
-/// Usage:
-/// ```dart
-/// final statuses = ref.watch(statusesProvider);
-/// statuses.when(
-///   data: (snapshot) {
-///     for (final doc in snapshot.docs) {
-///       final data = doc.data() as Map<String, dynamic>;
-///       // Use status data
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
-final statusesProvider = StreamProvider<QuerySnapshot>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.getStatuses();
-});
-
-/// Riverpod provider that streams payment statuses from Firestore.
-///
-/// This provider provides real-time access to the payment statuses collection,
-/// automatically updating when the data changes in Firestore.
-///
-/// Usage:
-/// ```dart
-/// final paymentStatuses = ref.watch(paymentStatusesProvider);
-/// paymentStatuses.when(
-///   data: (snapshot) {
-///     for (final doc in snapshot.docs) {
-///       final data = doc.data() as Map<String, dynamic>;
-///       // Use payment status data
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
-final paymentStatusesProvider = StreamProvider<QuerySnapshot>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.getPaymentStatuses();
-});
-
-/// Riverpod provider that streams all enquiries from Firestore.
-///
-/// This provider provides real-time access to the enquiries collection,
-/// automatically updating when enquiries are added, modified, or deleted.
-///
-/// Usage:
-/// ```dart
-/// final enquiries = ref.watch(enquiriesProvider);
-/// enquiries.when(
-///   data: (snapshot) {
-///     for (final doc in snapshot.docs) {
-///       final data = doc.data() as Map<String, dynamic>;
-///       // Use enquiry data
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
-final enquiriesProvider = StreamProvider<QuerySnapshot>((ref) {
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return firestoreService.getEnquiries();
-});
-
 /// Riverpod provider that streams active users from Firestore.
-///
-/// This provider provides real-time access to the active users collection,
-/// automatically updating when user data changes in Firestore.
-///
-/// Usage:
-/// ```dart
-/// final users = ref.watch(activeUsersProvider);
-/// users.when(
-///   data: (snapshot) {
-///     for (final doc in snapshot.docs) {
-///       final data = doc.data() as Map<String, dynamic>;
-///       // Use user data
-///     }
-///   },
-///   loading: () => CircularProgressIndicator(),
-///   error: (error, stack) => Text('Error: $error'),
-/// );
-/// ```
 final activeUsersProvider = StreamProvider<QuerySnapshot>((ref) {
   final firestoreService = ref.watch(firestoreServiceProvider);
   return firestoreService.getActiveUsers();

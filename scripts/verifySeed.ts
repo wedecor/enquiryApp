@@ -117,24 +117,39 @@ async function main() {
     allPassed = false;
   }
 
-  // Check 7: Dropdown Count (22 expected)
+  // Check 7: Sources Dropdown
+  try {
+    const sourceDoc = await firestore.doc('dropdowns/sources/items/instagram').get();
+    if (sourceDoc.exists) {
+      results.push({ Check: 'Sources Dropdown', Result: 'PASS' });
+    } else {
+      results.push({ Check: 'Sources Dropdown', Result: 'FAIL', Details: 'dropdowns/sources/items/instagram missing' });
+      allPassed = false;
+    }
+  } catch (error) {
+    results.push({ Check: 'Sources Dropdown', Result: 'FAIL', Details: `Error: ${error}` });
+    allPassed = false;
+  }
+
+  // Check 8: Dropdown Count (29 expected)
   try {
     const statusesSnapshot = await firestore.collection('dropdowns/statuses/items').get();
     const eventTypesSnapshot = await firestore.collection('dropdowns/event_types/items').get();
     const prioritiesSnapshot = await firestore.collection('dropdowns/priorities/items').get();
     const paymentStatusesSnapshot = await firestore.collection('dropdowns/payment_statuses/items').get();
+    const sourcesSnapshot = await firestore.collection('dropdowns/sources/items').get();
     
-    const totalDropdowns = statusesSnapshot.size + eventTypesSnapshot.size + prioritiesSnapshot.size + paymentStatusesSnapshot.size;
-    const expectedTotal = 22; // 8 statuses + 6 event_types + 4 priorities + 4 payment_statuses
+    const totalDropdowns = statusesSnapshot.size + eventTypesSnapshot.size + prioritiesSnapshot.size + paymentStatusesSnapshot.size + sourcesSnapshot.size;
+    const expectedTotal = 29; // 8 statuses + 6 event_types + 4 priorities + 4 payment_statuses + 7 sources
     
     if (totalDropdowns >= expectedTotal) {
-      results.push({ Check: 'Dropdown Count (22 expected)', Result: 'PASS' });
+      results.push({ Check: 'Dropdown Count (29 expected)', Result: 'PASS' });
     } else {
-      results.push({ Check: 'Dropdown Count (22 expected)', Result: 'FAIL', Details: `Only ${totalDropdowns}/${expectedTotal} dropdown items found` });
+      results.push({ Check: 'Dropdown Count (29 expected)', Result: 'FAIL', Details: `Only ${totalDropdowns}/${expectedTotal} dropdown items found` });
       allPassed = false;
     }
   } catch (error) {
-    results.push({ Check: 'Dropdown Count (22 expected)', Result: 'FAIL', Details: `Error: ${error}` });
+    results.push({ Check: 'Dropdown Count (29 expected)', Result: 'FAIL', Details: `Error: ${error}` });
     allPassed = false;
   }
 

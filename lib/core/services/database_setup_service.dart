@@ -1,3 +1,5 @@
+// AUDIT-NOTE(F-10): legacy, do not use in prod
+// AUDIT-NOTE(F-10): legacy, do not use in prod
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -49,7 +51,10 @@ class DatabaseSetupService {
       // Note: We don't delete users collection as it contains user data
       Log.i('DatabaseSetupService collections deleted');
     } catch (e) {
-      Log.w('DatabaseSetupService delete collections warning', data: {'error': e.toString()});
+      Log.w(
+        'DatabaseSetupService delete collections warning',
+        data: {'error': e.toString()},
+      );
       // Continue even if deletion fails (collections might not exist)
     }
   }
@@ -88,11 +93,17 @@ class DatabaseSetupService {
 
     // Create enquiries collection
     final enquiryRef = _firestore.collection('enquiries').doc('_temp');
-    await enquiryRef.set({'temp': true, 'createdAt': FieldValue.serverTimestamp()});
+    await enquiryRef.set({
+      'temp': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
     // Create dropdowns collection structure
     final dropdownsRef = _firestore.collection('dropdowns').doc('_temp');
-    await dropdownsRef.set({'temp': true, 'createdAt': FieldValue.serverTimestamp()});
+    await dropdownsRef.set({
+      'temp': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
     // Create subcollections
     await _firestore
@@ -102,9 +113,12 @@ class DatabaseSetupService {
         .doc('_temp')
         .set({'temp': true});
 
-    await _firestore.collection('dropdowns').doc('statuses').collection('items').doc('_temp').set({
-      'temp': true,
-    });
+    await _firestore
+        .collection('dropdowns')
+        .doc('statuses')
+        .collection('items')
+        .doc('_temp')
+        .set({'temp': true});
 
     await _firestore
         .collection('dropdowns')
@@ -157,10 +171,15 @@ class DatabaseSetupService {
   /// Initialize event types dropdown
   Future<void> _initializeEventTypes() async {
     final batch = _firestore.batch();
-    final collectionRef = _firestore.collection('dropdowns').doc('event_types').collection('items');
+    final collectionRef = _firestore
+        .collection('dropdowns')
+        .doc('event_types')
+        .collection('items');
 
     for (final eventType in DefaultDropdownValues.eventTypes) {
-      final docRef = collectionRef.doc(eventType.toLowerCase().replaceAll(' ', '_'));
+      final docRef = collectionRef.doc(
+        eventType.toLowerCase().replaceAll(' ', '_'),
+      );
       batch.set(docRef, EventTypeDocument(value: eventType).toMap());
     }
 
@@ -171,10 +190,15 @@ class DatabaseSetupService {
   /// Initialize statuses dropdown
   Future<void> _initializeStatuses() async {
     final batch = _firestore.batch();
-    final collectionRef = _firestore.collection('dropdowns').doc('statuses').collection('items');
+    final collectionRef = _firestore
+        .collection('dropdowns')
+        .doc('statuses')
+        .collection('items');
 
     for (final status in DefaultDropdownValues.statuses) {
-      final docRef = collectionRef.doc(status.toLowerCase().replaceAll(' ', '_'));
+      final docRef = collectionRef.doc(
+        status.toLowerCase().replaceAll(' ', '_'),
+      );
       batch.set(docRef, StatusDocument(value: status).toMap());
     }
 
@@ -191,7 +215,9 @@ class DatabaseSetupService {
         .collection('items');
 
     for (final paymentStatus in DefaultDropdownValues.paymentStatuses) {
-      final docRef = collectionRef.doc(paymentStatus.toLowerCase().replaceAll(' ', '_'));
+      final docRef = collectionRef.doc(
+        paymentStatus.toLowerCase().replaceAll(' ', '_'),
+      );
       batch.set(docRef, PaymentStatusDocument(value: paymentStatus).toMap());
     }
 
@@ -221,7 +247,9 @@ class DatabaseSetupService {
         createdAt: DateTime.now(),
       );
 
-      final docRef = await _firestore.collection('enquiries').add(enquiryData.toMap());
+      final docRef = await _firestore
+          .collection('enquiries')
+          .add(enquiryData.toMap());
 
       // Create financial subcollection
       await _firestore
@@ -251,7 +279,10 @@ class DatabaseSetupService {
             ).toMap(),
           );
 
-      Log.d('DatabaseSetupService sample enquiry created', data: {'enquiryId': docRef.id});
+      Log.d(
+        'DatabaseSetupService sample enquiry created',
+        data: {'enquiryId': docRef.id},
+      );
       return docRef.id;
     } catch (e) {
       Log.e('DatabaseSetupService sample enquiry failed', error: e);
@@ -280,7 +311,12 @@ class DatabaseSetupService {
           .get();
       results['event_types_subcollection'] = true;
 
-      await _firestore.collection('dropdowns').doc('statuses').collection('items').limit(1).get();
+      await _firestore
+          .collection('dropdowns')
+          .doc('statuses')
+          .collection('items')
+          .limit(1)
+          .get();
       results['statuses_subcollection'] = true;
 
       await _firestore
@@ -314,7 +350,8 @@ class DatabaseSetupService {
           .collection('items')
           .count()
           .get();
-      results['payment_statuses_has_data'] = (paymentStatusesCount.count ?? 0) > 0;
+      results['payment_statuses_has_data'] =
+          (paymentStatusesCount.count ?? 0) > 0;
     } catch (e) {
       Log.e('DatabaseSetupService verification failed', error: e);
       results['verification_error'] = true;

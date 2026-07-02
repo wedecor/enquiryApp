@@ -5,10 +5,10 @@ import '../../../core/providers/audit_provider.dart';
 import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../core/services/notification_service.dart' as notification_service;
+import '../../../core/services/notification_service.dart'
+    as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
-import '../filters/filters_state.dart';
 import 'pagination_state.dart';
 
 /// Provider for enquiry repository
@@ -37,14 +37,18 @@ class EnquiryRepository {
     this._notificationService,
   );
 
-  CollectionReference<Map<String, dynamic>> get _enquiries => _firestoreService.enquiriesCollection;
+  CollectionReference<Map<String, dynamic>> get _enquiries =>
+      _firestoreService.enquiriesCollection;
 
   /// Get all enquiries as a stream
   Stream<List<Enquiry>> getEnquiries() {
     return _enquiries
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList(),
+        );
   }
 
   /// Get paginated enquiries (cursor-based pagination)
@@ -56,13 +60,19 @@ class EnquiryRepository {
     int pageSize = 20,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
+      Query<Map<String, dynamic>> query = _enquiries.orderBy(
+        'createdAt',
+        descending: true,
+      );
 
       if (!isAdmin && assignedTo != null) {
         query = query.where('assignedTo', isEqualTo: assignedTo);
       }
 
-      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
+      if (status != null &&
+          status.isNotEmpty &&
+          status != 'All' &&
+          status != 'reminders') {
         query = query.where('statusValue', isEqualTo: status);
       }
 
@@ -90,36 +100,6 @@ class EnquiryRepository {
     }
   }
 
-  /// Get filtered enquiries
-  Future<List<Enquiry>> getFilteredEnquiries(EnquiryFilters filters) async {
-    Query<Map<String, dynamic>> query = _enquiries;
-
-    if (filters.statuses.isNotEmpty) {
-      query = query.where('status', whereIn: filters.statuses);
-    }
-
-    if (filters.eventTypes.isNotEmpty) {
-      query = query.where('eventType', whereIn: filters.eventTypes);
-    }
-
-    if (filters.assigneeId != null) {
-      query = query.where('assignedTo', isEqualTo: filters.assigneeId);
-    }
-
-    if (filters.dateRange != null) {
-      final startDate = Timestamp.fromDate(filters.dateRange!.start);
-      final endDate = Timestamp.fromDate(filters.dateRange!.end);
-      query = query
-          .where('eventDate', isGreaterThanOrEqualTo: startDate)
-          .where('eventDate', isLessThanOrEqualTo: endDate);
-    }
-
-    query = query.orderBy('createdAt', descending: true);
-
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList();
-  }
-
   /// Update status fields with server timestamps (rules-compliant for staff)
   Future<void> updateStatus({
     required String id,
@@ -143,7 +123,8 @@ class EnquiryRepository {
     final statusLabel = lookup.labelForStatus(nextStatus);
     final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
-    final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
+    final customerName =
+        oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
     await _enquiries.doc(id).update({

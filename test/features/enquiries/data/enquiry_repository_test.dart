@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:we_decor_enquiries/core/services/audit_service.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
-import 'package:we_decor_enquiries/core/services/notification_service.dart' as notification_service;
+import 'package:we_decor_enquiries/core/services/notification_service.dart'
+    as notification_service;
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
 import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
-import 'package:we_decor_enquiries/features/enquiries/filters/filters_state.dart';
 import 'package:we_decor_enquiries/services/dropdown_lookup.dart';
 import '../../../test_helper.dart';
 
@@ -13,7 +13,8 @@ class MockDropdownLookup extends Mock implements DropdownLookup {}
 
 class MockAuditService extends Mock implements AuditService {}
 
-class MockNotificationService extends Mock implements notification_service.NotificationService {}
+class MockNotificationService extends Mock
+    implements notification_service.NotificationService {}
 
 void main() {
   late bool firebaseAvailable;
@@ -51,45 +52,11 @@ void main() {
       });
     });
 
-    group('getFilteredEnquiries', () {
-      test('returns list for empty filters', () async {
+    group('getPaginatedEnquiries', () {
+      test('returns pagination state', () async {
         if (!firebaseAvailable) return;
-        const filters = EnquiryFilters();
-        final enquiries = await repository.getFilteredEnquiries(filters);
-        expect(enquiries, isA<List<Enquiry>>());
-      });
-
-      test('filters by status', () async {
-        if (!firebaseAvailable) return;
-        const filters = EnquiryFilters(statuses: ['new', 'contacted']);
-        final enquiries = await repository.getFilteredEnquiries(filters);
-        expect(enquiries, isA<List<Enquiry>>());
-      });
-
-      test('filters by event type', () async {
-        if (!firebaseAvailable) return;
-        const filters = EnquiryFilters(eventTypes: ['wedding']);
-        final enquiries = await repository.getFilteredEnquiries(filters);
-        expect(enquiries, isA<List<Enquiry>>());
-      });
-
-      test('filters by assignee', () async {
-        if (!firebaseAvailable) return;
-        const filters = EnquiryFilters(assigneeId: 'user123');
-        final enquiries = await repository.getFilteredEnquiries(filters);
-        expect(enquiries, isA<List<Enquiry>>());
-      });
-
-      test('filters by date range', () async {
-        if (!firebaseAvailable) return;
-        final filters = EnquiryFilters(
-          dateRange: FilterDateRange(
-            start: DateTime.now().subtract(const Duration(days: 30)),
-            end: DateTime.now(),
-          ),
-        );
-        final enquiries = await repository.getFilteredEnquiries(filters);
-        expect(enquiries, isA<List<Enquiry>>());
+        final state = await repository.getPaginatedEnquiries(isAdmin: true);
+        expect(state, isNotNull);
       });
     });
 
@@ -97,7 +64,11 @@ void main() {
       test('updates status successfully', () async {
         if (!firebaseAvailable) return;
         await expectLater(
-          repository.updateStatus(id: 'test-id', nextStatus: 'contacted', userId: 'user123'),
+          repository.updateStatus(
+            id: 'test-id',
+            nextStatus: 'contacted',
+            userId: 'user123',
+          ),
           completes,
         );
       });
