@@ -4,33 +4,34 @@ service cloud.firestore {
 
     function isSignedIn() { return request.auth != null; }
     
-    function isAdmin() {
+    function isActiveUser() {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userData.get('isActive', userData.get('active', true)) == true;
+    }
+
+    function isAdmin() {
+      return isActiveUser()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
     
     // Check if user is staff (not admin)
     function isStaff() {
-      return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+      return isActiveUser()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "staff";
     }
     
-    // Financial fields: staff may READ assigned enquiries in full (including totals/payment).
+    // Staff may READ assigned enquiries in full (including totals/payment).
     // Write protection only — UI/export must hide financial data for staff (see csv_export_rbac).
-    function isModifyingOnlyNonFinancialFields() {
-      // List of financial fields
-      let financialFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel'];
-      
-      // Get all fields being modified
+    function isModifyingOnlyStaffEditableFields() {
+      let protectedFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel', 'assignedTo', 'createdBy', 'createdAt'];
       let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
-      
-      // Check if any financial field is in the modified fields
-      return !modifiedFields.hasAny(financialFields);
+      return !modifiedFields.hasAny(protectedFields);
     }
 
     // Public-ish profile (NO tokens here)
+    // D6: signed-in users may read colleague profiles (name/email/phone) — accepted 2026-07
     match /users/{uid} {
       allow read: if isSignedIn();                     // profile-safe fields only
       allow create, update, delete: if isAdmin();
@@ -53,7 +54,7 @@ service cloud.firestore {
     match /enquiries/{id} {
       // Read: Admins see all, Staff see only assigned enquiries
       allow read: if isAdmin()
-        || (isSignedIn() && resource.data.assignedTo == request.auth.uid);
+        || (isStaff() && resource.data.assignedTo == request.auth.uid);
       
       // Create: Admin only
       allow create: if isAdmin();
@@ -69,15 +70,15 @@ service cloud.firestore {
           // 2. They are NOT modifying financial fields
           isStaff()
           && resource.data.assignedTo == request.auth.uid
-          && isModifyingOnlyNonFinancialFields()
+          && isModifyingOnlyStaffEditableFields()
         );
       
       // Enquiry History - same permissions as parent enquiry
       match /history/{historyId} {
         allow read: if isAdmin()
-          || (isSignedIn() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
+          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
         allow create, update: if isAdmin()
-          || (isSignedIn() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
+          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
         allow delete: if isAdmin();
       }
     }

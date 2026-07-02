@@ -26,6 +26,8 @@ class _FcmBootstrapState extends ConsumerState<FcmBootstrap> {
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         FcmTokenManager.ensureFcmRegistered(ref.read(firestoreServiceProvider));
+      } else {
+        unawaited(FcmTokenManager.dispose());
       }
     });
   }

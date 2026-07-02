@@ -60,6 +60,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   final List<XFile> _selectedImages = [];
   final List<String> _existingImageUrls = []; // URLs from Firestore
   bool _isLoading = false;
+  bool _hydrated = false;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -70,21 +71,20 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       'EnquiryFormScreen initState',
       data: {'mode': widget.mode, 'hasEnquiryId': widget.enquiryId != null},
     );
-    // Set default values for dropdowns
-    // Use dropdown value keys (snake_case)
-    _selectedStatus = 'new';
-    _selectedPriority = 'medium';
-    _selectedPaymentStatus = 'pending';
 
-    // Load existing data if in edit mode
-    if (widget.mode == 'edit' && widget.enquiryId != null) {
+    if (widget.mode != 'edit') {
+      // Set default values for dropdowns (create mode only)
+      _selectedStatus = 'new';
+      _selectedPriority = 'medium';
+      _selectedPaymentStatus = 'pending';
+      _hydrated = true;
+      Log.d('EnquiryFormScreen skip load (create mode)');
+    } else if (widget.enquiryId != null) {
       Log.d(
         'EnquiryFormScreen scheduled load',
         data: {'enquiryId': widget.enquiryId?.substring(0, 6)},
       );
       _loadEnquiryData();
-    } else {
-      Log.d('EnquiryFormScreen skip load (create mode)');
     }
   }
 
@@ -175,13 +175,21 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           } else {
             Log.d('EnquiryFormScreen no images field found in document');
           }
+
+          _hydrated = true;
         });
+      } else if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Enquiry not found')));
+        Navigator.of(context).maybePop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading enquiry data: $e')),
         );
+        Navigator.of(context).maybePop();
       }
     }
   }
@@ -739,7 +747,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         if (kIsWeb) {
           // For web, use Uint8List for putData
           final bytes = await xfile.readAsBytes();
-          final fileName = xfile.name;
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
           final ref = storage
               .ref()
               .child('enquiries')
@@ -769,7 +778,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         } else {
           // For mobile, use File
           final file = File(xfile.path);
-          final fileName = xfile.name;
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
           final ref = storage
               .ref()
               .child('enquiries')
@@ -880,125 +890,131 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       );
     }
 
+    final isEditLoading = widget.mode == 'edit' && !_hydrated;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry'),
       ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: AppSpacing.space4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.mode == 'create') ...[
-                      _FormSectionProgress(
-                        sections: const [
-                          'Customer',
-                          'Event',
-                          'Financial',
-                          'Notes & Images',
+      body: isEditLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: AppSpacing.space4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.mode == 'create') ...[
+                            _FormSectionProgress(
+                              sections: const [
+                                'Customer',
+                                'Event',
+                                'Financial',
+                                'Notes & Images',
+                              ],
+                            ),
+                            const SizedBox(height: AppTokens.space4),
+                          ],
+                          EnquiryFormCustomerFields(
+                            nameController: _nameController,
+                            phoneController: _phoneController,
+                            emailController: _emailController,
+                            locationController: _locationController,
+                          ),
+
+                          EnquiryFormEventFields(
+                            selectedDate: _selectedDate,
+                            onSelectDate: _selectDate,
+                            selectedEventType: _selectedEventType,
+                            onEventTypeChanged: (value) =>
+                                setState(() => _selectedEventType = value),
+                            selectedStatus: _selectedStatus,
+                            onStatusChanged: (value) =>
+                                setState(() => _selectedStatus = value),
+                            selectedPriority: _selectedPriority,
+                            onPriorityChanged: (value) =>
+                                setState(() => _selectedPriority = value),
+                            selectedAssignedTo: _selectedAssignedTo,
+                            onAssignedToChanged: (value) =>
+                                setState(() => _selectedAssignedTo = value),
+                            selectedSource: _selectedSource,
+                            onSourceChanged: (value) {
+                              if (value != null)
+                                setState(() => _selectedSource = value);
+                            },
+                            guestCountController: _guestCountController,
+                            budgetController: _budgetController,
+                            showLeadSource: true,
+                          ),
+
+                          EnquiryFormFinancialFields(
+                            totalCostController: _totalCostController,
+                            advancePaidController: _advancePaidController,
+                            selectedPaymentStatus: _selectedPaymentStatus,
+                            onPaymentStatusChanged: (value) =>
+                                setState(() => _selectedPaymentStatus = value),
+                            parseDouble: _parseDouble,
+                          ),
+
+                          EnquiryFormSection(
+                            title: 'Additional Information',
+                            children: [
+                              TextFormField(
+                                controller: _notesController,
+                                maxLines: 4,
+                                decoration: const InputDecoration(
+                                  labelText: 'Notes',
+                                  prefixIcon: Icon(Icons.note),
+                                  border: OutlineInputBorder(),
+                                  alignLabelWithHint: true,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          EnquiryFormImagesSection(
+                            selectedImages: _selectedImages,
+                            existingImageUrls: _existingImageUrls,
+                            onPickImages: _pickImages,
+                            onRemoveImage: _removeImage,
+                            onRemoveExistingImage: _removeExistingImage,
+                          ),
+
+                          const SizedBox(height: AppTokens.space4),
                         ],
                       ),
-                      const SizedBox(height: AppTokens.space4),
-                    ],
-                    EnquiryFormCustomerFields(
-                      nameController: _nameController,
-                      phoneController: _phoneController,
-                      emailController: _emailController,
-                      locationController: _locationController,
                     ),
-
-                    EnquiryFormEventFields(
-                      selectedDate: _selectedDate,
-                      onSelectDate: _selectDate,
-                      selectedEventType: _selectedEventType,
-                      onEventTypeChanged: (value) =>
-                          setState(() => _selectedEventType = value),
-                      selectedStatus: _selectedStatus,
-                      onStatusChanged: (value) =>
-                          setState(() => _selectedStatus = value),
-                      selectedPriority: _selectedPriority,
-                      onPriorityChanged: (value) =>
-                          setState(() => _selectedPriority = value),
-                      selectedAssignedTo: _selectedAssignedTo,
-                      onAssignedToChanged: (value) =>
-                          setState(() => _selectedAssignedTo = value),
-                      selectedSource: _selectedSource,
-                      onSourceChanged: (value) {
-                        if (value != null)
-                          setState(() => _selectedSource = value);
-                      },
-                      guestCountController: _guestCountController,
-                      budgetController: _budgetController,
-                      showLeadSource: true,
+                  ),
+                  StickyBottomBar(
+                    child: FilledButton(
+                      onPressed: (_isLoading || !_hydrated)
+                          ? null
+                          : _submitForm,
+                      child: _isLoading
+                          ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.onPrimary,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              widget.mode == 'edit'
+                                  ? 'Update enquiry'
+                                  : 'Create enquiry',
+                            ),
                     ),
-
-                    EnquiryFormFinancialFields(
-                      totalCostController: _totalCostController,
-                      advancePaidController: _advancePaidController,
-                      selectedPaymentStatus: _selectedPaymentStatus,
-                      onPaymentStatusChanged: (value) =>
-                          setState(() => _selectedPaymentStatus = value),
-                      parseDouble: _parseDouble,
-                    ),
-
-                    EnquiryFormSection(
-                      title: 'Additional Information',
-                      children: [
-                        TextFormField(
-                          controller: _notesController,
-                          maxLines: 4,
-                          decoration: const InputDecoration(
-                            labelText: 'Notes',
-                            prefixIcon: Icon(Icons.note),
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    EnquiryFormImagesSection(
-                      selectedImages: _selectedImages,
-                      existingImageUrls: _existingImageUrls,
-                      onPickImages: _pickImages,
-                      onRemoveImage: _removeImage,
-                      onRemoveExistingImage: _removeExistingImage,
-                    ),
-
-                    const SizedBox(height: AppTokens.space4),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            StickyBottomBar(
-              child: FilledButton(
-                onPressed: _isLoading ? null : _submitForm,
-                child: _isLoading
-                    ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            colorScheme.onPrimary,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        widget.mode == 'edit'
-                            ? 'Update enquiry'
-                            : 'Create enquiry',
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

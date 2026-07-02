@@ -2,12 +2,20 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/models/user_model.dart';
 import '../auth/session_state.dart';
 import '../logging/safe_log.dart';
 import 'firestore_service.dart';
+
+/// Returns false when the Firestore profile marks the user inactive.
+@visibleForTesting
+bool isProfileActive(Map<String, dynamic> data) {
+  final isActive = data['isActive'] ?? data['active'] ?? true;
+  return isActive != false;
+}
 
 class SessionService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -24,7 +32,8 @@ class SessionService {
   User? _lastUser;
 
   /// Stream of session states with debouncing and profile fetching.
-  Stream<SessionState> get sessionStream => _sessionStream ??= _bindSessionStream();
+  Stream<SessionState> get sessionStream =>
+      _sessionStream ??= _bindSessionStream();
 
   Stream<SessionState> _bindSessionStream() {
     _sessionController = StreamController<SessionState>.broadcast();
@@ -47,7 +56,10 @@ class SessionService {
     if (user == null) {
       _lastUser = null;
       _emitSessionState(const SessionState.unauthenticated());
-      safeLog('session_transition', {'outcome': 'unauthenticated', 'reason': 'auth_user_null'});
+      safeLog('session_transition', {
+        'outcome': 'unauthenticated',
+        'reason': 'auth_user_null',
+      });
       return;
     }
 
@@ -82,7 +94,9 @@ class SessionService {
 
     try {
       // Fetch profile with exponential backoff
-      final profile = await _fetchProfileWithBackoff(user.uid);
+      final fetchResult = await _fetchProfileWithBackoff(user.uid);
+      final profile = fetchResult.profile;
+      final rawData = fetchResult.rawData;
 
       if (profile == null) {
         _emitSessionState(SessionState.unprovisioned(email: user.email ?? ''));
@@ -94,11 +108,19 @@ class SessionService {
         return;
       }
 
-      // Note: UserModel doesn't have active field in current implementation
-      // If needed, check if user exists in a disabled users collection
-      // For now, assume all found profiles are active
+      if (rawData != null && !isProfileActive(rawData)) {
+        _emitSessionState(SessionState.disabled(email: user.email ?? ''));
+        safeLog('session_transition', {
+          'outcome': 'disabled',
+          'emailPrefix': _emailPrefix(user.email),
+          'uid': user.uid,
+        });
+        return;
+      }
 
-      _emitSessionState(SessionState.authenticated(user: userLite, profile: profile));
+      _emitSessionState(
+        SessionState.authenticated(user: userLite, profile: profile),
+      );
 
       safeLog('session_transition', {
         'outcome': 'authenticated',
@@ -107,7 +129,9 @@ class SessionService {
         'uid': user.uid,
       });
     } catch (e, stackTrace) {
-      _emitSessionState(SessionState.error(message: 'Failed to load user profile', cause: e));
+      _emitSessionState(
+        SessionState.error(message: 'Failed to load user profile', cause: e),
+      );
 
       safeLog('session_transition_error', {
         'outcome': 'error',
@@ -119,7 +143,8 @@ class SessionService {
   }
 
   /// Fetch user profile with exponential backoff
-  Future<UserModel?> _fetchProfileWithBackoff(String uid) async {
+  Future<({UserModel? profile, Map<String, dynamic>? rawData})>
+  _fetchProfileWithBackoff(String uid) async {
     const delays = [250, 500, 1000, 2000, 4000]; // ~7.75s total
 
     for (int attempt = 0; attempt < delays.length; attempt++) {
@@ -133,13 +158,16 @@ class SessionService {
         if (doc.exists) {
           final data = doc.data();
           if (data != null) {
-            return UserModel.fromJson({'uid': uid, ...data});
+            return (
+              profile: UserModel.fromJson({'uid': uid, ...data}),
+              rawData: data,
+            );
           }
         }
 
         // If not found and this is the last attempt, return null
         if (attempt == delays.length - 1) {
-          return null;
+          return (profile: null, rawData: null);
         }
 
         // Wait before next attempt
@@ -166,7 +194,7 @@ class SessionService {
       }
     }
 
-    return null;
+    return (profile: null, rawData: null);
   }
 
   void _emitSessionState(SessionState state) {
@@ -180,7 +208,9 @@ class SessionService {
     if (email == null || email.isEmpty) return 'unknown';
     final parts = email.split('@');
     if (parts.length != 2) return 'invalid';
-    final prefix = parts[0].length > 3 ? '${parts[0].substring(0, 3)}***' : '***';
+    final prefix = parts[0].length > 3
+        ? '${parts[0].substring(0, 3)}***'
+        : '***';
     return '$prefix@${parts[1]}';
   }
 

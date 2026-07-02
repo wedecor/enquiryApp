@@ -10,11 +10,13 @@ describe('RBAC Firestore Security Rules Tests', () => {
   let testEnv;
   let staffContext;
   let adminContext;
+  let inactiveStaffContext;
   let unauthenticatedContext;
 
   const STAFF_UID = 'staff-user-123';
   const ADMIN_UID = 'admin-user-456';
   const OTHER_STAFF_UID = 'other-staff-789';
+  const INACTIVE_STAFF_UID = 'inactive-staff-999';
 
   beforeAll(async () => {
     // Initialize test environment
@@ -38,6 +40,11 @@ describe('RBAC Firestore Security Rules Tests', () => {
       email: 'admin@example.com',
     });
 
+    inactiveStaffContext = testEnv.authenticatedContext(INACTIVE_STAFF_UID, {
+      role: 'staff',
+      email: 'inactive@example.com',
+    });
+
     unauthenticatedContext = testEnv.unauthenticatedContext();
 
     // Seed test data
@@ -50,6 +57,7 @@ describe('RBAC Firestore Security Rules Tests', () => {
         email: 'staff@example.com',
         role: 'staff',
         active: true,
+        isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -59,6 +67,7 @@ describe('RBAC Firestore Security Rules Tests', () => {
         email: 'admin@example.com',
         role: 'admin',
         active: true,
+        isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -68,6 +77,17 @@ describe('RBAC Firestore Security Rules Tests', () => {
         email: 'other@example.com',
         role: 'staff',
         active: true,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      await firestore.collection('users').doc(INACTIVE_STAFF_UID).set({
+        name: 'Inactive Staff',
+        email: 'inactive@example.com',
+        role: 'staff',
+        active: false,
+        isActive: false,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -112,6 +132,28 @@ describe('RBAC Firestore Security Rules Tests', () => {
         assignedTo: OTHER_STAFF_UID, // Assigned to different staff
         priority: 'medium',
         source: 'phone',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: ADMIN_UID,
+      });
+
+      await firestore.collection('enquiries').doc('enquiry-assigned-to-inactive').set({
+        customerName: 'Inactive Assignee',
+        customerEmail: 'inactive-assignee@example.com',
+        customerPhone: '+1234567899',
+        eventType: 'Wedding',
+        eventDate: new Date('2024-12-15'),
+        eventLocation: 'Test Venue',
+        guestCount: 80,
+        budgetRange: '20000-30000',
+        description: 'Assigned to inactive staff',
+        eventStatus: 'new',
+        paymentStatus: 'pending',
+        totalCost: 25000,
+        advancePaid: 5000,
+        assignedTo: INACTIVE_STAFF_UID,
+        priority: 'medium',
+        source: 'website',
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: ADMIN_UID,
@@ -259,6 +301,36 @@ describe('RBAC Firestore Security Rules Tests', () => {
       await assertFails(
         firestore.collection('enquiries').doc('enquiry-assigned-to-staff').update({
           assignedTo: OTHER_STAFF_UID,
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Inactive staff cannot read assigned enquiries', async () => {
+      const firestore = inactiveStaffContext.firestore();
+
+      await assertFails(
+        firestore.collection('enquiries').doc('enquiry-assigned-to-inactive').get()
+      );
+    });
+
+    test('❌ Staff cannot modify createdAt field', async () => {
+      const firestore = staffContext.firestore();
+
+      await assertFails(
+        firestore.collection('enquiries').doc('enquiry-assigned-to-staff').update({
+          createdAt: new Date('2020-01-01'),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Staff cannot modify createdBy field', async () => {
+      const firestore = staffContext.firestore();
+
+      await assertFails(
+        firestore.collection('enquiries').doc('enquiry-assigned-to-staff').update({
+          createdBy: OTHER_STAFF_UID,
           updatedAt: new Date(),
         })
       );
