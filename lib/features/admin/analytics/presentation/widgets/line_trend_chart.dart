@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_theme.dart';
 import '../../domain/analytics_models.dart';
+import 'analytics_section_card.dart';
 
 /// Line chart widget for showing trend data
 class LineTrendChart extends StatelessWidget {
@@ -14,40 +15,10 @@ class LineTrendChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 16),
-            SizedBox(height: 300, child: _buildChart(context)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            subtitle!,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
-        ],
-      ],
+    return AnalyticsSectionCard(
+      title: title,
+      subtitle: subtitle,
+      child: SizedBox(height: 300, child: _buildChart(context)),
     );
   }
 
@@ -55,6 +26,8 @@ class LineTrendChart extends StatelessWidget {
     if (data.isEmpty) {
       return _buildEmptyState(context);
     }
+
+    final primary = Theme.of(context).colorScheme.primary;
 
     return LineChart(
       LineChartData(
@@ -103,22 +76,14 @@ class LineTrendChart extends StatelessWidget {
           LineChartBarData(
             spots: _getSpots(),
             isCurved: true,
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.7),
-              ],
-            ),
+            gradient: LinearGradient(colors: [primary, primary.withValues(alpha: 0.7)]),
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).primaryColor.withOpacity(0.3),
-                  Theme.of(context).primaryColor.withOpacity(0.1),
-                ],
+                colors: [primary.withValues(alpha: 0.3), primary.withValues(alpha: 0.1)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -263,7 +228,7 @@ class MiniTrendChart extends StatelessWidget {
               barWidth: 2,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(show: true, color: color.withOpacity(0.1)),
+              belowBarData: BarAreaData(show: true, color: color.withValues(alpha: 0.1)),
             ),
           ],
           lineTouchData: const LineTouchData(enabled: false),

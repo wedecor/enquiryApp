@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/dropdown_defaults.dart';
 import '../../core/logging/logger.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/role_provider.dart';
@@ -34,10 +35,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   List<Map<String, String>> _statuses = [];
   bool _isLoading = false;
   final TextEditingController _addController = TextEditingController();
+  final _fieldKey = GlobalKey<FormFieldState<String>>();
 
   @override
   void initState() {
     super.initState();
+    _statuses = DropdownDefaults.forCollection(widget.collectionName);
     _loadStatuses();
   }
 
@@ -67,9 +70,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .fetchActiveDropdownOptions(widget.collectionName);
 
       setState(() {
-        _statuses = options;
+        _statuses = DropdownDefaults.resolve(options, widget.collectionName);
         _isLoading = false;
       });
+      _syncFieldValueAfterLoad();
     } catch (e, st) {
       // Fallback to default values if Firestore is not available
       Log.w(
@@ -78,54 +82,30 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       );
       Log.d('StatusDropdown fallback stack', data: st);
       setState(() {
-        _statuses = _getDefaultValues(widget.collectionName);
+        _statuses = DropdownDefaults.forCollection(widget.collectionName);
         _isLoading = false;
       });
+      _syncFieldValueAfterLoad();
     }
   }
 
-  List<Map<String, String>> _getDefaultValues(String collectionName) {
-    switch (collectionName) {
-      case 'statuses':
-        return [
-          {'label': 'New', 'value': 'new'},
-          {'label': 'Contacted', 'value': 'contacted'},
-          {'label': 'In Talks', 'value': 'in_talks'},
-          {'label': 'Quote Sent', 'value': 'quote_sent'},
-          {'label': 'Approved', 'value': 'approved'},
-          {'label': 'Scheduled', 'value': 'scheduled'},
-          {'label': 'Completed', 'value': 'completed'},
-          {'label': 'Not Interested', 'value': 'not_interested'},
-          {'label': 'Closed - Lost', 'value': 'closed_lost'},
-          {'label': 'Cancelled', 'value': 'cancelled'},
-        ];
-      case 'payment_statuses':
-        return [
-          {'label': 'Pending', 'value': 'pending'},
-          {'label': 'Partial', 'value': 'partial'},
-          {'label': 'Paid', 'value': 'paid'},
-          {'label': 'Overdue', 'value': 'overdue'},
-        ];
-      case 'priorities':
-        return [
-          {'label': 'Low', 'value': 'low'},
-          {'label': 'Medium', 'value': 'medium'},
-          {'label': 'High', 'value': 'high'},
-          {'label': 'Urgent', 'value': 'urgent'},
-        ];
-      default:
-        return [];
-    }
+  void _syncFieldValueAfterLoad() {
+    final value = widget.value;
+    if (value == null) return;
+    if (!_statuses.any((status) => status['value'] == value)) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_fieldKey.currentState?.value == null) {
+        _fieldKey.currentState?.didChange(value);
+      }
+    });
   }
 
   // Validate if the current value exists in the statuses list
   String? _getValidValue(String? value) {
     if (value == null) return null;
 
-    // If still loading, return null to show hint text
-    if (_isLoading) return null;
-
-    // CRITICAL FIX: Return null if _statuses is empty (still loading)
     if (_statuses.isEmpty) return null;
 
     // Check if the value exists in the current statuses list
@@ -275,6 +255,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
+                key: _fieldKey,
                 // CRITICAL: Always ensure value is valid or null
                 initialValue: _getValidValue(widget.value),
                 decoration: InputDecoration(
@@ -339,6 +320,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         return Icons.payment;
       case 'priorities':
         return Icons.priority_high;
+      case 'sources':
+        return Icons.campaign_outlined;
+      case 'event_types':
+        return Icons.celebration_outlined;
       default:
         return Icons.list;
     }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/utils/enquiry_fields.dart';
+import '../../../../services/dropdown_lookup.dart';
 import '../domain/analytics_models.dart';
 
 /// Repository for analytics data from Firestore
@@ -14,10 +15,7 @@ class AnalyticsRepository {
     : _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Count total enquiries in date range with optional filters
-  Future<int> countEnquiries({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
+  Future<int> countEnquiries({required DateRange dateRange, AnalyticsFilters? filters}) async {
     try {
       // Try using aggregate query first (more efficient)
       final Query query = _buildBaseQuery(dateRange, filters);
@@ -33,43 +31,96 @@ class AnalyticsRepository {
     }
   }
 
+  /// Fetch all enquiry documents for a period in a single query.
+  Future<List<Map<String, dynamic>>> fetchEnquiriesRaw({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+  }) async {
+    final snapshot = await _buildBaseQuery(dateRange, filters).get();
+    return snapshot.docs
+        .map((doc) => {'id': doc.id, ...(doc.data() as Map<String, dynamic>)})
+        .toList();
+  }
+
   /// Get count breakdown by status
   Future<Map<String, int>> countByStatus({
     required DateRange dateRange,
     AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
   }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
-
-    final statusCounts = <String, int>{};
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final status =
-          (data['statusValue'] as String?) ?? 'unknown'; // Use statusValue only
-      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
-    }
-
-    return statusCounts;
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateCountByStatus(raw);
   }
 
   /// Get count breakdown by event type
   Future<Map<String, int>> countByEventType({
     required DateRange dateRange,
     AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
   }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateCountByEventType(raw);
+  }
 
+  /// Get count breakdown by source
+  Future<Map<String, int>> countBySource({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
+  }) async {
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateCountBySource(raw);
+  }
+
+  /// Get count breakdown by priority
+  Future<Map<String, int>> countByPriority({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
+  }) async {
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateCountByPriority(raw);
+  }
+
+  /// Generate time series data
+  Future<List<SeriesPoint>> getTimeSeries({
+    required DateRange dateRange,
+    required TimeBucket bucket,
+    AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
+  }) async {
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateTimeSeries(raw, dateRange: dateRange, bucket: bucket);
+  }
+
+  /// Sum total revenue from totalCost field.
+  ///
+  /// Only counts won-category enquiries.
+  Future<double> sumRevenue({
+    required DateRange dateRange,
+    AnalyticsFilters? filters,
+    List<Map<String, dynamic>>? rawData,
+  }) async {
+    final raw = rawData ?? await fetchEnquiriesRaw(dateRange: dateRange, filters: filters);
+    return aggregateSumRevenue(raw);
+  }
+
+  static Map<String, int> aggregateCountByStatus(List<Map<String, dynamic>> raw) {
+    final statusCounts = <String, int>{};
+
+    for (final data in raw) {
+      final status = (data['statusValue'] as String?) ?? 'unknown';
+      statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+    }
+
+    return statusCounts;
+  }
+
+  static Map<String, int> aggregateCountByEventType(List<Map<String, dynamic>> raw) {
     final eventTypeCounts = <String, int>{};
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final eventType = canonicalFieldString(
-        data,
-        'eventTypeValue',
-        'eventType',
-      );
+    for (final data in raw) {
+      final eventType = canonicalFieldString(data, 'eventTypeValue', 'eventType');
       if (eventType.isEmpty) {
         eventTypeCounts['unknown'] = (eventTypeCounts['unknown'] ?? 0) + 1;
       } else {
@@ -80,18 +131,10 @@ class AnalyticsRepository {
     return eventTypeCounts;
   }
 
-  /// Get count breakdown by source
-  Future<Map<String, int>> countBySource({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
-
+  static Map<String, int> aggregateCountBySource(List<Map<String, dynamic>> raw) {
     final sourceCounts = <String, int>{};
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+    for (final data in raw) {
       final source = canonicalFieldString(data, 'sourceValue', 'source');
       if (source.isEmpty) {
         sourceCounts['unknown'] = (sourceCounts['unknown'] ?? 0) + 1;
@@ -103,18 +146,10 @@ class AnalyticsRepository {
     return sourceCounts;
   }
 
-  /// Get count breakdown by priority
-  Future<Map<String, int>> countByPriority({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
-
+  static Map<String, int> aggregateCountByPriority(List<Map<String, dynamic>> raw) {
     final priorityCounts = <String, int>{};
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+    for (final data in raw) {
       final priority = canonicalFieldString(data, 'priorityValue', 'priority');
       if (priority.isEmpty) {
         priorityCounts['unknown'] = (priorityCounts['unknown'] ?? 0) + 1;
@@ -126,63 +161,12 @@ class AnalyticsRepository {
     return priorityCounts;
   }
 
-  /// Generate time series data
-  Future<List<SeriesPoint>> getTimeSeries({
-    required DateRange dateRange,
-    required TimeBucket bucket,
-    AnalyticsFilters? filters,
-  }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
-
-    final Map<DateTime, int> dateCounts = {};
-
-    // Initialize all buckets to 0
-    DateTime current = _truncateToTimeBucket(dateRange.start, bucket);
-    final end = _truncateToTimeBucket(dateRange.end, bucket);
-
-    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
-      dateCounts[current] = 0;
-      current = _incrementTimeBucket(current, bucket);
-    }
-
-    // Count actual data points
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-      final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-
-      if (createdAt != null) {
-        final bucketDate = _truncateToTimeBucket(createdAt, bucket);
-        if (dateCounts.containsKey(bucketDate)) {
-          dateCounts[bucketDate] = (dateCounts[bucketDate] ?? 0) + 1;
-        }
-      }
-    }
-
-    return dateCounts.entries
-        .map((entry) => SeriesPoint(x: entry.key, count: entry.value))
-        .toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
-  }
-
-  /// Sum total revenue from totalCost field.
-  ///
-  /// Only counts confirmed and completed enquiries — cancelled and not_interested
-  /// should not be included as they represent lost or unrealised revenue.
-  Future<double> sumRevenue({
-    required DateRange dateRange,
-    AnalyticsFilters? filters,
-  }) async {
-    final Query query = _buildBaseQuery(dateRange, filters);
-    final snapshot = await query.get();
-
+  static double aggregateSumRevenue(List<Map<String, dynamic>> raw) {
     double totalRevenue = 0.0;
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+    for (final data in raw) {
       final status = data['statusValue'] as String?;
-      if (EnquiryStatus.fromValue(status)?.category != StatusCategory.won)
-        continue;
+      if (EnquiryStatus.fromValue(status)?.category != StatusCategory.won) continue;
 
       final totalCost = data['totalCost'];
       if (totalCost is num) {
@@ -191,6 +175,36 @@ class AnalyticsRepository {
     }
 
     return totalRevenue;
+  }
+
+  static List<SeriesPoint> aggregateTimeSeries(
+    List<Map<String, dynamic>> raw, {
+    required DateRange dateRange,
+    required TimeBucket bucket,
+  }) {
+    final Map<DateTime, int> dateCounts = {};
+
+    DateTime current = _truncateToTimeBucketStatic(dateRange.start, bucket);
+    final end = _truncateToTimeBucketStatic(dateRange.end, bucket);
+
+    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+      dateCounts[current] = 0;
+      current = _incrementTimeBucketStatic(current, bucket);
+    }
+
+    for (final data in raw) {
+      final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
+
+      if (createdAt != null) {
+        final bucketDate = _truncateToTimeBucketStatic(createdAt, bucket);
+        if (dateCounts.containsKey(bucketDate)) {
+          dateCounts[bucketDate] = (dateCounts[bucketDate] ?? 0) + 1;
+        }
+      }
+    }
+
+    return dateCounts.entries.map((entry) => SeriesPoint(x: entry.key, count: entry.value)).toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
   }
 
   /// Get recent enquiries for table display
@@ -206,17 +220,14 @@ class AnalyticsRepository {
 
     return snapshot.docs.map((doc) {
       final data = doc.data() as Map<String, dynamic>;
-      final createdAt =
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+      final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
       return RecentEnquiry(
         id: doc.id,
         date: createdAt,
         customerName: (data['customerName'] as String?) ?? 'Unknown',
         eventType: (data['eventType'] as String?) ?? 'Unknown',
-        status:
-            (data['statusValue'] as String?) ??
-            'Unknown', // Use statusValue only
+        status: (data['statusValue'] as String?) ?? 'Unknown', // Use statusValue only
         source: (data['source'] as String?) ?? 'Unknown',
         priority: (data['priority'] as String?) ?? 'medium',
         totalCost: (data['totalCost'] as num?)?.toDouble(),
@@ -224,42 +235,14 @@ class AnalyticsRepository {
     }).toList();
   }
 
-  /// Get all available dropdown values for filters
-  Future<List<String>> getEventTypes() async {
-    try {
-      final snapshot = await _firestore
-          .collection('dropdowns')
-          .doc('event_types')
-          .collection('items')
-          .get();
-
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
-        ..sort();
-    } catch (e) {
-      // Fallback to unique values from enquiries
-      return _getUniqueFieldValues('eventType');
-    }
+  /// Get all available event types for filters from canonical lookup.
+  List<String> getEventTypes(DropdownLookup lookup) {
+    return lookup.eventTypeMap.keys.toList()..sort();
   }
 
-  /// Get all available statuses for filters
-  Future<List<String>> getStatuses() async {
-    try {
-      final snapshot = await _firestore
-          .collection('dropdowns')
-          .doc('statuses')
-          .collection('items')
-          .get();
-
-      return snapshot.docs
-          .map((doc) => (doc.data()['value'] as String?) ?? doc.id)
-          .toList()
-        ..sort();
-    } catch (e) {
-      // Fallback to unique values from enquiries
-      return _getUniqueFieldValues('statusValue'); // Use statusValue only
-    }
+  /// Get all available statuses for filters from canonical lookup.
+  List<String> getStatuses(DropdownLookup lookup) {
+    return lookup.statusMap.keys.toList()..sort();
   }
 
   /// Get all available sources for filters
@@ -278,10 +261,7 @@ class AnalyticsRepository {
 
     // Apply date range filter
     query = query
-        .where(
-          'createdAt',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start),
-        )
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(dateRange.start))
         .where('createdAt', isLessThan: Timestamp.fromDate(dateRange.end));
 
     // Apply additional filters
@@ -303,34 +283,14 @@ class AnalyticsRepository {
     return query;
   }
 
-  /// Get unique values for a field from enquiries collection
-  Future<List<String>> _getUniqueFieldValues(String fieldName) async {
-    final snapshot = await _firestore.collection('enquiries').get();
-    final values = <String>{};
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final value = data[fieldName] as String?;
-      if (value != null && value.isNotEmpty) {
-        values.add(value);
-      }
-    }
-
-    return values.toList()..sort();
-  }
-
-  Future<List<String>> _getUniqueCanonicalValues(
-    String canonical,
-    String legacy,
-  ) async {
-    final snapshot = await _firestore.collection('enquiries').get();
+  Future<List<String>> _getUniqueCanonicalValues(String canonical, String legacy) async {
+    final snapshot = await _firestore.collection('enquiries').limit(1000).get();
     final values = <String>{};
 
     for (final doc in snapshot.docs) {
       final data = doc.data();
       final canonicalVal = data[canonical] as String?;
-      if (canonicalVal != null && canonicalVal.isNotEmpty)
-        values.add(canonicalVal);
+      if (canonicalVal != null && canonicalVal.isNotEmpty) values.add(canonicalVal);
       final legacyVal = data[legacy] as String?;
       if (legacyVal != null && legacyVal.isNotEmpty) values.add(legacyVal);
     }
@@ -338,8 +298,7 @@ class AnalyticsRepository {
     return values.toList()..sort();
   }
 
-  /// Truncate date to time bucket boundary
-  DateTime _truncateToTimeBucket(DateTime date, TimeBucket bucket) {
+  static DateTime _truncateToTimeBucketStatic(DateTime date, TimeBucket bucket) {
     switch (bucket) {
       case TimeBucket.day:
         return DateTime(date.year, date.month, date.day);
@@ -352,8 +311,7 @@ class AnalyticsRepository {
     }
   }
 
-  /// Increment date by one time bucket
-  DateTime _incrementTimeBucket(DateTime date, TimeBucket bucket) {
+  static DateTime _incrementTimeBucketStatic(DateTime date, TimeBucket bucket) {
     switch (bucket) {
       case TimeBucket.day:
         return date.add(const Duration(days: 1));
@@ -367,7 +325,5 @@ class AnalyticsRepository {
 
 /// Riverpod provider for analytics repository
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
-  return AnalyticsRepository(
-    firestore: ref.watch(firestoreServiceProvider).firestore,
-  );
+  return AnalyticsRepository(firestore: ref.watch(firestoreServiceProvider).firestore);
 });

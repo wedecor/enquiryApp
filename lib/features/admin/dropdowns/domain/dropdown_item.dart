@@ -9,7 +9,8 @@ enum DropdownGroup {
   statuses,
   eventTypes,
   priorities,
-  paymentStatuses;
+  paymentStatuses,
+  sources;
 
   /// Display name for the dropdown group
   String get displayName {
@@ -22,6 +23,8 @@ enum DropdownGroup {
         return 'Priorities';
       case DropdownGroup.paymentStatuses:
         return 'Payment Statuses';
+      case DropdownGroup.sources:
+        return 'Lead Sources';
     }
   }
 
@@ -36,20 +39,40 @@ enum DropdownGroup {
         return 'priorities';
       case DropdownGroup.paymentStatuses:
         return 'payment_statuses';
+      case DropdownGroup.sources:
+        return 'sources';
     }
   }
 
-  /// Corresponding enquiry field name for reference checking
-  String get enquiryFieldName {
+  /// Corresponding enquiry field names for reference checking and replacement
+  List<String> get enquiryFieldNames {
     switch (this) {
       case DropdownGroup.statuses:
-        return 'statusValue'; // Use statusValue instead of eventStatus
+        return const ['statusValue'];
       case DropdownGroup.eventTypes:
-        return 'eventType';
+        return const ['eventTypeValue', 'eventType'];
       case DropdownGroup.priorities:
-        return 'priority';
+        return const ['priorityValue', 'priority'];
       case DropdownGroup.paymentStatuses:
-        return 'paymentStatus';
+        return const ['paymentStatusValue', 'paymentStatus'];
+      case DropdownGroup.sources:
+        return const ['sourceValue', 'source'];
+    }
+  }
+
+  /// Corresponding enquiry label field, if one exists for this group.
+  String? get enquiryLabelFieldName {
+    switch (this) {
+      case DropdownGroup.statuses:
+        return 'statusLabel';
+      case DropdownGroup.eventTypes:
+        return 'eventTypeLabel';
+      case DropdownGroup.priorities:
+        return 'priorityLabel';
+      case DropdownGroup.paymentStatuses:
+        return 'paymentStatusLabel';
+      case DropdownGroup.sources:
+        return 'sourceLabel';
     }
   }
 }

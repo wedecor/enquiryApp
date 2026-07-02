@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/utils/enquiry_fields.dart';
+
 part 'enquiry.freezed.dart';
 part 'enquiry.g.dart';
 
@@ -59,11 +61,12 @@ class Enquiry with _$Enquiry {
       customerPhone: data['customerPhone'] as String?,
       eventType: (data['eventTypeValue'] as String?) ?? (data['eventType'] as String?) ?? '',
       eventTypeLabel: data['eventTypeLabel'] as String?,
-      eventDate: (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      eventDate:
+          (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0),
       eventLocation: data['eventLocation'] as String?,
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
-      description: data['description'] as String?,
+      description: enquiryNotesFrom(data),
       status: (data['statusValue'] as String?) ?? 'new', // Only use statusValue
       statusLabel: data['statusLabel'] as String?,
       paymentStatus: (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
@@ -78,7 +81,7 @@ class Enquiry with _$Enquiry {
       priorityLabel: data['priorityLabel'] as String?,
       source: (data['sourceValue'] ?? data['source']) as String?,
       sourceLabel: data['sourceLabel'] as String?,
-      notes: data['notes'] as String?,
+      notes: enquiryNotesFrom(data),
       images:
           (data['images'] as List<dynamic>?)
               ?.map((e) => e.toString())

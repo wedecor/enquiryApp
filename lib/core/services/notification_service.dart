@@ -607,32 +607,6 @@ class NotificationService {
     }
   }
 
-  /// Send notification to a topic
-  Future<void> _sendNotificationToTopic({
-    required String topic,
-    required String title,
-    required String body,
-    required Map<String, dynamic> data,
-  }) async {
-    try {
-      // Store notification in Firestore for the topic
-      await _firestore.collection('notifications').doc(topic).collection('messages').add({
-        'title': title,
-        'body': body,
-        'data': data,
-        'topic': topic,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      Log.d(
-        'NotificationService: stubbed FCM send to topic',
-        data: {'topic': topic, 'title': title, 'body': body, 'data': data},
-      );
-    } catch (e, st) {
-      Log.e('NotificationService: error sending notification to topic', error: e, stackTrace: st);
-    }
-  }
-
   /// Real-time stream of all notifications for a user (newest first, max 50)
   Stream<List<Map<String, dynamic>>> watchUserNotifications(String userId) {
     return _firestore

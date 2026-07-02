@@ -81,12 +81,12 @@ class ContactButtons extends ConsumerWidget {
                 height: AppTokens.minTapTarget,
                 decoration: BoxDecoration(
                   color: enabled
-                      ? theme.colorScheme.primary.withOpacity(0.1)
+                      ? theme.colorScheme.surface
                       : theme.colorScheme.onSurface.withOpacity(0.05),
                   borderRadius: AppRadius.medium,
                   border: Border.all(
                     color: enabled
-                        ? theme.colorScheme.primary
+                        ? theme.colorScheme.outlineVariant
                         : theme.colorScheme.onSurface.withOpacity(0.2),
                   ),
                 ),
@@ -94,10 +94,10 @@ class ContactButtons extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      Icons.call,
+                      Icons.call_outlined,
                       size: AppTokens.iconSmall,
                       color: enabled
-                          ? theme.colorScheme.primary
+                          ? AppColorScheme.phoneCall
                           : theme.colorScheme.onSurface.withOpacity(0.4),
                     ),
                     const SizedBox(width: AppTokens.space1),
@@ -105,7 +105,7 @@ class ContactButtons extends ConsumerWidget {
                       'Call',
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: enabled
-                            ? theme.colorScheme.primary
+                            ? theme.colorScheme.onSurface
                             : theme.colorScheme.onSurface.withOpacity(0.4),
                         fontWeight: FontWeight.w600,
                       ),
@@ -230,6 +230,7 @@ class ContactButtons extends ConsumerWidget {
   /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
   String _formatDate(DateTime? date) {
     if (date == null) return '';
+    if (date.year <= 1971) return '—';
     const months = [
       'Jan',
       'Feb',

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../utils/enquiry_fields.dart';
 import '../../features/admin/analytics/domain/analytics_models.dart';
 import '../auth/role_guards.dart';
 import '../theme/app_theme.dart';
@@ -54,7 +55,6 @@ class CsvExport {
         'Assigned To',
         'Priority',
         'Source',
-        'Staff Notes',
         'Created At',
         'Created By',
         'Updated At',
@@ -73,7 +73,6 @@ class CsvExport {
         'Status',
         'Priority',
         'Source',
-        'Staff Notes',
         'Created At',
       ];
     }
@@ -89,20 +88,19 @@ class CsvExport {
           enquiry['customerName']?.toString() ?? '',
           enquiry['customerEmail']?.toString() ?? '',
           enquiry['customerPhone']?.toString() ?? '',
-          enquiry['eventType']?.toString() ?? '',
-          _formatTimestamp(enquiry['eventDate']),
+          _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
+          _formatEventDate(enquiry['eventDate']),
           enquiry['eventLocation']?.toString() ?? '',
           enquiry['guestCount']?.toString() ?? '',
           enquiry['budgetRange']?.toString() ?? '',
-          enquiry['description']?.toString() ?? '',
-          enquiry['statusValue']?.toString() ?? '', // Use statusValue only
-          enquiry['paymentStatus']?.toString() ?? '',
+          enquiryNotesFrom(enquiry) ?? '',
+          _labelOrValue(enquiry, 'statusLabel', 'statusValue'),
+          _labelOrValue(enquiry, 'paymentStatusLabel', 'paymentStatusValue', 'paymentStatus'),
           enquiry['totalCost']?.toString() ?? '',
           enquiry['advancePaid']?.toString() ?? '',
           enquiry['assignedTo']?.toString() ?? '',
-          enquiry['priority']?.toString() ?? '',
-          enquiry['source']?.toString() ?? '',
-          enquiry['staffNotes']?.toString() ?? '',
+          _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
+          _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
           _formatTimestamp(enquiry['createdAt']),
           enquiry['createdBy']?.toString() ?? '',
           _formatTimestamp(enquiry['updatedAt']),
@@ -113,15 +111,14 @@ class CsvExport {
           enquiry['id']?.toString() ?? '',
           enquiry['customerName']?.toString() ?? '',
           enquiry['customerPhone']?.toString() ?? '',
-          enquiry['eventType']?.toString() ?? '',
-          _formatTimestamp(enquiry['eventDate']),
+          _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
+          _formatEventDate(enquiry['eventDate']),
           enquiry['eventLocation']?.toString() ?? '',
           enquiry['guestCount']?.toString() ?? '',
-          enquiry['description']?.toString() ?? '',
-          enquiry['statusValue']?.toString() ?? '', // Use statusValue only
-          enquiry['priority']?.toString() ?? '',
-          enquiry['source']?.toString() ?? '',
-          enquiry['staffNotes']?.toString() ?? '',
+          enquiryNotesFrom(enquiry) ?? '',
+          _labelOrValue(enquiry, 'statusLabel', 'statusValue'),
+          _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
+          _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
           _formatTimestamp(enquiry['createdAt']),
         ]);
       }
@@ -374,6 +371,47 @@ class CsvExport {
     }
 
     return dateTime != null ? _dateFormat.format(dateTime) : '';
+  }
+
+  static String _formatEventDate(dynamic timestamp) {
+    if (timestamp == null) return '';
+
+    DateTime? dateTime;
+
+    if (timestamp is Timestamp) {
+      dateTime = timestamp.toDate();
+    } else if (timestamp is DateTime) {
+      dateTime = timestamp;
+    } else if (timestamp is String) {
+      try {
+        dateTime = DateTime.parse(timestamp);
+      } catch (e) {
+        return timestamp;
+      }
+    }
+
+    if (dateTime == null || dateTime.year <= 1971) return '—';
+    return _dateFormat.format(dateTime);
+  }
+
+  static String _labelOrValue(
+    Map<String, dynamic> enquiry,
+    String labelKey,
+    String valueKey, [
+    String? legacyKey,
+  ]) {
+    final label = enquiry[labelKey]?.toString();
+    if (label != null && label.isNotEmpty) return label;
+
+    final value = enquiry[valueKey]?.toString();
+    if (value != null && value.isNotEmpty) return value;
+
+    if (legacyKey != null) {
+      final legacy = enquiry[legacyKey]?.toString();
+      if (legacy != null && legacy.isNotEmpty) return legacy;
+    }
+
+    return '';
   }
 
   /// Show export success message

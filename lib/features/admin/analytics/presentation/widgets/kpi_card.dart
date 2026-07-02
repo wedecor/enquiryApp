@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_theme.dart';
+import '../../../../../core/theme/tokens.dart';
 
-/// KPI card widget displaying a metric with delta change
+/// KPI card widget displaying a metric with delta change.
 class KpiCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final double? deltaPercentage;
-  final IconData icon;
-  final Color? color;
-  final String? subtitle;
-  final bool isLoading;
-
   const KpiCard({
     super.key,
     required this.title,
@@ -23,93 +16,140 @@ class KpiCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final String title;
+  final String value;
+  final double? deltaPercentage;
+  final IconData icon;
+  final Color? color;
+  final String? subtitle;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cardColor = color ?? theme.colorScheme.primary;
+    final cs = theme.colorScheme;
+    final accent = color ?? cs.primary;
 
-    return Card(
-      elevation: 2,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [cardColor.withOpacity(0.1), cardColor.withOpacity(0.05)],
-          ),
+    final cardColor = cs.brightness == Brightness.dark
+        ? cs.surfaceContainerHighest.withValues(alpha: 0.55)
+        : cs.surface.withValues(alpha: 0.95);
+
+    return Card.filled(
+      color: cardColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.large,
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTokens.space2,
+          vertical: AppTokens.space3,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header row with icon and delta
-            Row(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxHeight.isFinite && constraints.maxHeight < 130;
+            final narrow = constraints.maxWidth.isFinite && constraints.maxWidth < 150;
+            final iconSize = compact ? 30.0 : 36.0;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: cardColor, size: 24),
-                if (deltaPercentage != null && !isLoading)
-                  _buildDeltaIndicator(deltaPercentage!, theme),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Title
-            Text(
-              title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-
-            const SizedBox(height: 4),
-
-            // Value
-            if (isLoading)
-              Container(
-                height: 32,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: iconSize,
+                        height: iconSize,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.15),
+                          borderRadius: AppRadius.medium,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          icon,
+                          color: accent,
+                          size: compact ? AppTokens.iconSmall : AppTokens.iconMedium,
+                        ),
+                      ),
+                      if (deltaPercentage != null && !isLoading) ...[
+                        const Spacer(),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _buildDeltaIndicator(
+                              deltaPercentage!,
+                              theme,
+                              decimals: narrow ? 0 : 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              )
-            else
-              Text(
-                value,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+                const SizedBox(height: AppTokens.space1),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    fontSize: compact ? AppTokens.fontSizeSmall : null,
+                  ),
                 ),
-              ),
-
-            // Subtitle if provided
-            if (subtitle != null && !isLoading) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ],
+                const SizedBox(height: AppTokens.space1),
+                if (isLoading)
+                  Container(
+                    height: compact ? 22 : 28,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: cs.onSurface.withValues(alpha: 0.08),
+                      borderRadius: AppRadius.small,
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                else
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      style: (compact ? theme.textTheme.titleLarge : theme.textTheme.headlineSmall)
+                          ?.copyWith(fontWeight: FontWeight.w700, color: cs.onSurface),
+                    ),
+                  ),
+                if (subtitle != null && !isLoading && !compact) ...[
+                  const SizedBox(height: AppTokens.space1),
+                  Text(
+                    subtitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildDeltaIndicator(double deltaPercentage, ThemeData theme) {
+  Widget _buildDeltaIndicator(double deltaPercentage, ThemeData theme, {int decimals = 1}) {
     final isPositive = deltaPercentage >= 0;
     final isNeutral = deltaPercentage == 0;
 
@@ -117,36 +157,38 @@ class KpiCard extends StatelessWidget {
     IconData deltaIcon;
 
     if (isNeutral) {
-      deltaColor = theme.colorScheme.onSurface.withOpacity(0.5);
-      deltaIcon = Icons.remove;
+      deltaColor = theme.colorScheme.onSurfaceVariant;
+      deltaIcon = Icons.remove_rounded;
     } else if (isPositive) {
       deltaColor = AppColorScheme.chartGreen;
-      deltaIcon = Icons.trending_up;
+      deltaIcon = Icons.trending_up_rounded;
     } else {
       deltaColor = AppColorScheme.chartRed;
-      deltaIcon = Icons.trending_down;
+      deltaIcon = Icons.trending_down_rounded;
     }
 
+    final formatted = isNeutral
+        ? '0'
+        : '${isPositive ? '+' : ''}${deltaPercentage.toStringAsFixed(decimals)}%';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
       decoration: BoxDecoration(
-        color: deltaColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: deltaColor.withValues(alpha: 0.12),
+        borderRadius: AppRadius.full,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(deltaIcon, color: deltaColor, size: 16),
-          const SizedBox(width: 4),
+          Icon(deltaIcon, color: deltaColor, size: 12),
+          const SizedBox(width: AppTokens.space1),
           Text(
-            '${isNeutral
-                ? '0'
-                : isPositive
-                ? '+'
-                : ''}${deltaPercentage.toStringAsFixed(1)}%',
-            style: theme.textTheme.bodySmall?.copyWith(
+            formatted,
+            maxLines: 1,
+            style: theme.textTheme.labelSmall?.copyWith(
               color: deltaColor,
               fontWeight: FontWeight.w600,
+              fontSize: 10,
             ),
           ),
         ],
@@ -155,12 +197,8 @@ class KpiCard extends StatelessWidget {
   }
 }
 
-/// Specialized KPI cards for different metrics
+/// Specialized KPI cards for different metrics.
 class TotalEnquiriesCard extends StatelessWidget {
-  final int count;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const TotalEnquiriesCard({
     super.key,
     required this.count,
@@ -168,13 +206,17 @@ class TotalEnquiriesCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final int count;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Total Enquiries',
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
-      icon: Icons.inbox,
+      icon: Icons.inbox_rounded,
       color: AppColorScheme.chartBlue,
       isLoading: isLoading,
     );
@@ -182,10 +224,6 @@ class TotalEnquiriesCard extends StatelessWidget {
 }
 
 class ActiveEnquiriesCard extends StatelessWidget {
-  final int count;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const ActiveEnquiriesCard({
     super.key,
     required this.count,
@@ -193,13 +231,17 @@ class ActiveEnquiriesCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final int count;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Active Enquiries',
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
-      icon: Icons.pending,
+      icon: Icons.pending_actions_rounded,
       color: AppColorScheme.chartAmber,
       subtitle: 'New, In Progress, Quote Sent',
       isLoading: isLoading,
@@ -208,10 +250,6 @@ class ActiveEnquiriesCard extends StatelessWidget {
 }
 
 class WonEnquiriesCard extends StatelessWidget {
-  final int count;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const WonEnquiriesCard({
     super.key,
     required this.count,
@@ -219,13 +257,17 @@ class WonEnquiriesCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final int count;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Won Enquiries',
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
-      icon: Icons.check_circle,
+      icon: Icons.check_circle_outline_rounded,
       color: AppColorScheme.chartGreen,
       subtitle: 'Confirmed, Completed',
       isLoading: isLoading,
@@ -234,10 +276,6 @@ class WonEnquiriesCard extends StatelessWidget {
 }
 
 class LostEnquiriesCard extends StatelessWidget {
-  final int count;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const LostEnquiriesCard({
     super.key,
     required this.count,
@@ -245,13 +283,17 @@ class LostEnquiriesCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final int count;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Lost Enquiries',
       value: isLoading ? '...' : count.toString(),
       deltaPercentage: deltaPercentage,
-      icon: Icons.cancel,
+      icon: Icons.cancel_outlined,
       color: AppColorScheme.chartRed,
       subtitle: 'Cancelled, Closed Lost',
       isLoading: isLoading,
@@ -260,10 +302,6 @@ class LostEnquiriesCard extends StatelessWidget {
 }
 
 class ConversionRateCard extends StatelessWidget {
-  final double rate;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const ConversionRateCard({
     super.key,
     required this.rate,
@@ -271,13 +309,17 @@ class ConversionRateCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final double rate;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Conversion Rate',
       value: isLoading ? '...' : '${rate.toStringAsFixed(1)}%',
       deltaPercentage: deltaPercentage,
-      icon: Icons.trending_up,
+      icon: Icons.trending_up_rounded,
       color: AppColorScheme.chartPurple,
       subtitle: 'Won / (Won + Lost)',
       isLoading: isLoading,
@@ -286,10 +328,6 @@ class ConversionRateCard extends StatelessWidget {
 }
 
 class EstimatedRevenueCard extends StatelessWidget {
-  final double revenue;
-  final double? deltaPercentage;
-  final bool isLoading;
-
   const EstimatedRevenueCard({
     super.key,
     required this.revenue,
@@ -297,13 +335,17 @@ class EstimatedRevenueCard extends StatelessWidget {
     this.isLoading = false,
   });
 
+  final double revenue;
+  final double? deltaPercentage;
+  final bool isLoading;
+
   @override
   Widget build(BuildContext context) {
     return KpiCard(
       title: 'Est. Revenue',
       value: isLoading ? '...' : _formatCurrency(revenue),
       deltaPercentage: deltaPercentage,
-      icon: Icons.attach_money,
+      icon: Icons.payments_outlined,
       color: AppColorScheme.chartCyan,
       subtitle: 'Total Cost Sum',
       isLoading: isLoading,

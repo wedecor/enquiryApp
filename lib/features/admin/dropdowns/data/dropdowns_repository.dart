@@ -84,37 +84,43 @@ class DropdownsRepository {
 
   /// Replace a dropdown value in all enquiries
   Future<void> replaceInEnquiries(DropdownGroup group, String oldValue, String newValue) async {
-    final enquiryField = group.enquiryFieldName;
     final enquiriesRef = _firestore.collection('enquiries');
+    final newItemDoc = await _getCollection(group).doc(newValue).get();
+    final newLabel = newItemDoc.exists ? (newItemDoc.data()?['label'] as String?) : null;
+    final labelField = group.enquiryLabelFieldName;
 
-    // Process in batches of 400
-    const batchSize = 400;
-    QueryDocumentSnapshot? lastDoc;
+    for (final enquiryField in group.enquiryFieldNames) {
+      const batchSize = 400;
+      QueryDocumentSnapshot? lastDoc;
 
-    while (true) {
-      Query query = enquiriesRef.where(enquiryField, isEqualTo: oldValue).limit(batchSize);
+      while (true) {
+        Query query = enquiriesRef.where(enquiryField, isEqualTo: oldValue).limit(batchSize);
 
-      if (lastDoc != null) {
-        query = query.startAfterDocument(lastDoc);
+        if (lastDoc != null) {
+          query = query.startAfterDocument(lastDoc);
+        }
+
+        final snapshot = await query.get();
+
+        if (snapshot.docs.isEmpty) break;
+
+        final batch = _firestore.batch();
+        for (final doc in snapshot.docs) {
+          final updates = <String, dynamic>{
+            enquiryField: newValue,
+            'updatedAt': FieldValue.serverTimestamp(),
+          };
+          if (newLabel != null && labelField != null) {
+            updates[labelField] = newLabel;
+          }
+          batch.update(doc.reference, updates);
+        }
+
+        await batch.commit();
+
+        if (snapshot.docs.length < batchSize) break;
+        lastDoc = snapshot.docs.last;
       }
-
-      final snapshot = await query.get();
-
-      if (snapshot.docs.isEmpty) break;
-
-      // Batch update
-      final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {
-          enquiryField: newValue,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      await batch.commit();
-
-      if (snapshot.docs.length < batchSize) break;
-      lastDoc = snapshot.docs.last;
     }
   }
 
@@ -130,14 +136,17 @@ class DropdownsRepository {
 
   /// Check if a dropdown value has references in enquiries
   Future<bool> _hasReferencesInEnquiries(DropdownGroup group, String value) async {
-    final enquiryField = group.enquiryFieldName;
-    final snapshot = await _firestore
-        .collection('enquiries')
-        .where(enquiryField, isEqualTo: value)
-        .limit(1)
-        .get();
+    for (final enquiryField in group.enquiryFieldNames) {
+      final snapshot = await _firestore
+          .collection('enquiries')
+          .where(enquiryField, isEqualTo: value)
+          .limit(1)
+          .get();
 
-    return snapshot.docs.isNotEmpty;
+      if (snapshot.docs.isNotEmpty) return true;
+    }
+
+    return false;
   }
 
   /// Get dropdown items for a specific group (non-stream)
@@ -185,12 +194,15 @@ final dropdownHasReferencesProvider = FutureProvider.family<bool, (DropdownGroup
   final (group, value) = params;
   final firestore = ref.watch(firestoreServiceProvider).firestore;
 
-  final enquiryField = group.enquiryFieldName;
-  final snapshot = await firestore
-      .collection('enquiries')
-      .where(enquiryField, isEqualTo: value)
-      .limit(1)
-      .get();
+  for (final enquiryField in group.enquiryFieldNames) {
+    final snapshot = await firestore
+        .collection('enquiries')
+        .where(enquiryField, isEqualTo: value)
+        .limit(1)
+        .get();
 
-  return snapshot.docs.isNotEmpty;
+    if (snapshot.docs.isNotEmpty) return true;
+  }
+
+  return false;
 });

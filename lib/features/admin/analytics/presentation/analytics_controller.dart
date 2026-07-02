@@ -27,10 +27,7 @@ class AnalyticsController extends _$AnalyticsController {
   /// Update date range preset and reload data
   Future<void> updateDateRangePreset(DateRangePreset preset) async {
     final currentState = await future;
-    final newFilters = currentState.filters.copyWith(
-      preset: preset,
-      dateRange: preset.dateRange,
-    );
+    final newFilters = currentState.filters.copyWith(preset: preset, dateRange: preset.dateRange);
     await updateFilters(newFilters);
   }
 
@@ -76,9 +73,7 @@ class AnalyticsController extends _$AnalyticsController {
   Future<void> refresh() async {
     final currentState = await future;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(
-      () => _loadAnalyticsData(currentState.filters),
-    );
+    state = await AsyncValue.guard(() => _loadAnalyticsData(currentState.filters));
   }
 
   /// Load all analytics data in parallel
@@ -163,25 +158,25 @@ class AnalyticsController extends _$AnalyticsController {
   ) async {
     final bucket = TimeBucket.fromDateRange(filters.dateRange);
 
+    final rawData = await repository.fetchEnquiriesRaw(
+      dateRange: filters.dateRange,
+      filters: filters,
+    );
+
     final results = await Future.wait([
       repository.countEnquiries(dateRange: filters.dateRange, filters: filters),
-      repository.countByStatus(dateRange: filters.dateRange, filters: filters),
-      repository.countByEventType(
-        dateRange: filters.dateRange,
-        filters: filters,
+      Future.value(AnalyticsRepository.aggregateCountByStatus(rawData)),
+      Future.value(AnalyticsRepository.aggregateCountByEventType(rawData)),
+      Future.value(AnalyticsRepository.aggregateCountBySource(rawData)),
+      Future.value(AnalyticsRepository.aggregateSumRevenue(rawData)),
+      Future.value(
+        AnalyticsRepository.aggregateTimeSeries(
+          rawData,
+          dateRange: filters.dateRange,
+          bucket: bucket,
+        ),
       ),
-      repository.countBySource(dateRange: filters.dateRange, filters: filters),
-      repository.sumRevenue(dateRange: filters.dateRange, filters: filters),
-      repository.getTimeSeries(
-        dateRange: filters.dateRange,
-        bucket: bucket,
-        filters: filters,
-      ),
-      repository.getRecentEnquiries(
-        dateRange: filters.dateRange,
-        filters: filters,
-        limit: 20,
-      ),
+      repository.getRecentEnquiries(dateRange: filters.dateRange, filters: filters, limit: 20),
     ]);
 
     return _CurrentPeriodData(
@@ -203,16 +198,15 @@ class AnalyticsController extends _$AnalyticsController {
   ) async {
     final previousFilters = filters.copyWith(dateRange: previousRange);
 
+    final rawData = await repository.fetchEnquiriesRaw(
+      dateRange: previousRange,
+      filters: previousFilters,
+    );
+
     final results = await Future.wait([
-      repository.countEnquiries(
-        dateRange: previousRange,
-        filters: previousFilters,
-      ),
-      repository.countByStatus(
-        dateRange: previousRange,
-        filters: previousFilters,
-      ),
-      repository.sumRevenue(dateRange: previousRange, filters: previousFilters),
+      repository.countEnquiries(dateRange: previousRange, filters: previousFilters),
+      Future.value(AnalyticsRepository.aggregateCountByStatus(rawData)),
+      Future.value(AnalyticsRepository.aggregateSumRevenue(rawData)),
     ]);
 
     return _PreviousPeriodData(
@@ -223,23 +217,11 @@ class AnalyticsController extends _$AnalyticsController {
   }
 
   /// Calculate KPI summary with deltas
-  KpiSummary _calculateKpiSummary(
-    _CurrentPeriodData current,
-    _PreviousPeriodData previous,
-  ) {
+  KpiSummary _calculateKpiSummary(_CurrentPeriodData current, _PreviousPeriodData previous) {
     // Calculate current period KPIs
-    final activeCount = _countByStatusCategory(
-      current.statusCounts,
-      EnquiryStatusCategory.active,
-    );
-    final wonCount = _countByStatusCategory(
-      current.statusCounts,
-      EnquiryStatusCategory.won,
-    );
-    final lostCount = _countByStatusCategory(
-      current.statusCounts,
-      EnquiryStatusCategory.lost,
-    );
+    final activeCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.active);
+    final wonCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.won);
+    final lostCount = _countByStatusCategory(current.statusCounts, EnquiryStatusCategory.lost);
 
     final conversionRate = (wonCount + lostCount) > 0
         ? (wonCount / (wonCount + lostCount)) * 100
@@ -250,14 +232,8 @@ class AnalyticsController extends _$AnalyticsController {
       previous.statusCounts,
       EnquiryStatusCategory.active,
     );
-    final prevWonCount = _countByStatusCategory(
-      previous.statusCounts,
-      EnquiryStatusCategory.won,
-    );
-    final prevLostCount = _countByStatusCategory(
-      previous.statusCounts,
-      EnquiryStatusCategory.lost,
-    );
+    final prevWonCount = _countByStatusCategory(previous.statusCounts, EnquiryStatusCategory.won);
+    final prevLostCount = _countByStatusCategory(previous.statusCounts, EnquiryStatusCategory.lost);
 
     final prevConversionRate = (prevWonCount + prevLostCount) > 0
         ? (prevWonCount / (prevWonCount + prevLostCount)) * 100
@@ -265,20 +241,11 @@ class AnalyticsController extends _$AnalyticsController {
 
     // Calculate percentage changes
     final deltas = KpiDeltas(
-      totalEnquiriesChange: _calculatePercentageChange(
-        previous.totalCount,
-        current.totalCount,
-      ),
-      activeEnquiriesChange: _calculatePercentageChange(
-        prevActiveCount,
-        activeCount,
-      ),
+      totalEnquiriesChange: _calculatePercentageChange(previous.totalCount, current.totalCount),
+      activeEnquiriesChange: _calculatePercentageChange(prevActiveCount, activeCount),
       wonEnquiriesChange: _calculatePercentageChange(prevWonCount, wonCount),
       lostEnquiriesChange: _calculatePercentageChange(prevLostCount, lostCount),
-      conversionRateChange: _calculatePercentageChange(
-        prevConversionRate,
-        conversionRate,
-      ),
+      conversionRateChange: _calculatePercentageChange(prevConversionRate, conversionRate),
       estimatedRevenueChange: _calculatePercentageChange(
         previous.totalRevenue,
         current.totalRevenue,
@@ -297,10 +264,7 @@ class AnalyticsController extends _$AnalyticsController {
   }
 
   /// Count enquiries by status category
-  int _countByStatusCategory(
-    Map<String, int> statusCounts,
-    EnquiryStatusCategory category,
-  ) {
+  int _countByStatusCategory(Map<String, int> statusCounts, EnquiryStatusCategory category) {
     int count = 0;
     for (final entry in statusCounts.entries) {
       if (EnquiryStatusCategory.fromStatus(entry.key) == category) {
@@ -380,14 +344,16 @@ class _PreviousPeriodData {
 /// Provider for filter dropdown values
 @riverpod
 Future<List<String>> eventTypesForFilter(EventTypesForFilterRef ref) async {
+  final lookup = await ref.watch(dropdownLookupProvider.future);
   final repository = ref.watch(analyticsRepositoryProvider);
-  return repository.getEventTypes();
+  return repository.getEventTypes(lookup);
 }
 
 @riverpod
 Future<List<String>> statusesForFilter(StatusesForFilterRef ref) async {
+  final lookup = await ref.watch(dropdownLookupProvider.future);
   final repository = ref.watch(analyticsRepositoryProvider);
-  return repository.getStatuses();
+  return repository.getStatuses(lookup);
 }
 
 @riverpod

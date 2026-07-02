@@ -17,11 +17,7 @@ import 'enquiry_details_screen.dart';
 // ── Column definitions ────────────────────────────────────────────────────────
 
 class _KanbanColumn {
-  const _KanbanColumn({
-    required this.status,
-    required this.label,
-    required this.icon,
-  });
+  const _KanbanColumn({required this.status, required this.label, required this.icon});
   final String status;
   final String label;
   final IconData icon;
@@ -53,13 +49,7 @@ IconData _iconForStatus(EnquiryStatus status) {
 }
 
 List<_KanbanColumn> get _kColumns => EnquiryStatus.values
-    .map(
-      (s) => _KanbanColumn(
-        status: s.value,
-        label: s.label,
-        icon: _iconForStatus(s),
-      ),
-    )
+    .map((s) => _KanbanColumn(status: s.value, label: s.label, icon: _iconForStatus(s)))
     .toList();
 
 const double _kColumnWidth = 260.0;
@@ -69,11 +59,7 @@ const double _kCardWidth = 244.0;
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 class KanbanBoardScreen extends ConsumerStatefulWidget {
-  const KanbanBoardScreen({
-    super.key,
-    this.embeddedInShell = false,
-    this.filters,
-  });
+  const KanbanBoardScreen({super.key, this.embeddedInShell = false, this.filters});
 
   final bool embeddedInShell;
   final EnquiryFilters? filters;
@@ -102,13 +88,9 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
         final isAdmin = user.role == UserRole.admin;
 
         return StreamBuilder<QuerySnapshot>(
-          stream: firestoreService.watchEnquiriesForRole(
-            isAdmin: isAdmin,
-            assignedToUid: user.uid,
-          ),
+          stream: firestoreService.watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: user.uid),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
+            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
@@ -132,8 +114,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
             for (final doc in docs) {
               final data = doc.data() as Map<String, dynamic>;
               final rawStatus = (data['statusValue'] as String?)?.trim();
-              final canonical =
-                  EnquiryStatus.fromValue(rawStatus)?.value ?? 'new';
+              final canonical = EnquiryStatus.fromValue(rawStatus)?.value ?? 'new';
               if (buckets.containsKey(canonical)) {
                 buckets[canonical]!.add(doc);
               }
@@ -146,8 +127,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                 final bData = b.data() as Map<String, dynamic>;
                 DateTime? aDate = _ts(aData['eventDate']);
                 DateTime? bDate = _ts(bData['eventDate']);
-                if (aDate != null && bDate != null)
-                  return aDate.compareTo(bDate);
+                if (aDate != null && bDate != null) return aDate.compareTo(bDate);
                 if (aDate != null) return -1;
                 if (bDate != null) return 1;
                 final aC = _ts(aData['createdAt']) ?? DateTime(2000);
@@ -162,8 +142,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               hoverColumn: _hoverColumn,
               dropdownLookup: dropdownLookup,
               onDragOver: (status) {
-                if (_hoverColumn != status)
-                  setState(() => _hoverColumn = status);
+                if (_hoverColumn != status) setState(() => _hoverColumn = status);
               },
               onDragLeave: () {
                 if (_hoverColumn != null) setState(() => _hoverColumn = null);
@@ -174,15 +153,10 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                   final doc = docs.firstWhere((d) => d.id == enquiryId);
                   final data = doc.data() as Map<String, dynamic>;
                   final currentStatus = data['statusValue'] as String?;
-                  if (!EnquiryStatus.isStaffTransitionAllowed(
-                    currentStatus,
-                    newStatus,
-                  )) {
+                  if (!EnquiryStatus.isStaffTransitionAllowed(currentStatus, newStatus)) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('This status change is not allowed'),
-                        ),
+                        const SnackBar(content: Text('This status change is not allowed')),
                       );
                     }
                     return;
@@ -193,23 +167,17 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                   // and legacy-field cleanup all happen — same as dashboard tabs.
                   await ref
                       .read(enquiryRepositoryProvider)
-                      .updateStatus(
-                        id: enquiryId,
-                        nextStatus: newStatus,
-                        userId: user.uid,
-                      );
+                      .updateStatus(id: enquiryId, nextStatus: newStatus, userId: user.uid);
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to update status: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('Failed to update status: $e')));
                   }
                 }
               },
               onTap: (enquiryId) => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (_) => EnquiryDetailsScreen(enquiryId: enquiryId),
-                ),
+                MaterialPageRoute<void>(builder: (_) => EnquiryDetailsScreen(enquiryId: enquiryId)),
               ),
             );
           },
@@ -314,9 +282,7 @@ class _ColumnWidget extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           width: _kColumnWidth,
           decoration: BoxDecoration(
-            color: accepting
-                ? statusColor.withValues(alpha: 0.08)
-                : cs.surfaceContainerLow,
+            color: accepting ? statusColor.withValues(alpha: 0.08) : cs.surfaceContainerLow,
             borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
             border: Border.all(
               color: accepting ? statusColor : cs.outlineVariant,
@@ -327,28 +293,19 @@ class _ColumnWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
-              _ColumnHeader(
-                column: column,
-                count: cards.length,
-                statusColor: statusColor,
-              ),
+              _ColumnHeader(column: column, count: cards.length, statusColor: statusColor),
               const Divider(height: 1),
               // Cards
               Expanded(
                 child: cards.isEmpty
-                    ? _EmptyColumn(
-                        accepting: accepting,
-                        statusColor: statusColor,
-                      )
+                    ? _EmptyColumn(accepting: accepting, statusColor: statusColor)
                     : ListView.builder(
                         padding: const EdgeInsets.all(AppTokens.space2),
                         itemCount: cards.length,
                         itemBuilder: (context, i) {
                           final doc = cards[i];
                           return Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: AppTokens.space2,
-                            ),
+                            padding: const EdgeInsets.only(bottom: AppTokens.space2),
                             child: _KanbanCard(
                               doc: doc,
                               statusColor: statusColor,
@@ -370,11 +327,7 @@ class _ColumnWidget extends StatelessWidget {
 // ── Column header ─────────────────────────────────────────────────────────────
 
 class _ColumnHeader extends StatelessWidget {
-  const _ColumnHeader({
-    required this.column,
-    required this.count,
-    required this.statusColor,
-  });
+  const _ColumnHeader({required this.column, required this.count, required this.statusColor});
 
   final _KanbanColumn column;
   final int count;
@@ -440,17 +393,13 @@ class _EmptyColumn extends StatelessWidget {
             Icon(
               accepting ? Icons.add_circle_outline : Icons.inbox_outlined,
               size: 32,
-              color: accepting
-                  ? statusColor
-                  : cs.onSurfaceVariant.withValues(alpha: 0.4),
+              color: accepting ? statusColor : cs.onSurfaceVariant.withValues(alpha: 0.4),
             ),
             const SizedBox(height: AppTokens.space2),
             Text(
               accepting ? 'Drop here' : 'Empty',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: accepting
-                    ? statusColor
-                    : cs.onSurfaceVariant.withValues(alpha: 0.4),
+                color: accepting ? statusColor : cs.onSurfaceVariant.withValues(alpha: 0.4),
               ),
             ),
           ],
@@ -479,12 +428,10 @@ class _KanbanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = doc.data() as Map<String, dynamic>;
     final customerName = (data['customerName'] as String?) ?? 'Customer';
-    final eventTypeValue =
-        (data['eventTypeValue'] ?? data['eventType']) as String? ?? '';
+    final eventTypeValue = (data['eventTypeValue'] ?? data['eventType']) as String? ?? '';
     final eventTypeLabel =
         (data['eventTypeLabel'] as String?) ??
-        (dropdownLookup?.labelForEventType(eventTypeValue) ??
-            _titleCase(eventTypeValue));
+        (dropdownLookup?.labelForEventType(eventTypeValue) ?? _titleCase(eventTypeValue));
     final location = (data['eventLocation'] ?? data['location']) as String?;
     final eventDate = _ts(data['eventDate']);
     final createdAt = _ts(data['createdAt']) ?? DateTime.now();
@@ -523,9 +470,9 @@ class _KanbanCard extends StatelessWidget {
                   // Name + event type
                   Text(
                     customerName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -541,12 +488,9 @@ class _KanbanCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           eventTypeLabel,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -566,12 +510,9 @@ class _KanbanCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             location,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -585,21 +526,17 @@ class _KanbanCard extends StatelessWidget {
                     children: [
                       if (countdown != null) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             countdown,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         const Spacer(),
@@ -652,7 +589,7 @@ class _KanbanCard extends StatelessWidget {
   }
 
   String? _countdownLabel(DateTime? date) {
-    if (date == null) return null;
+    if (date == null || date.year <= 1971) return null;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final eventDay = DateTime(date.year, date.month, date.day);

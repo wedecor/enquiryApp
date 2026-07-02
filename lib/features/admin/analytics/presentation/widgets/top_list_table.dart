@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_theme.dart';
+import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
+import 'analytics_section_card.dart';
 
 /// Reusable table widget for displaying top lists and recent enquiries
 class TopListTable extends StatelessWidget {
@@ -22,22 +24,9 @@ class TopListTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
-          ],
-        ),
-      ),
+    return AnalyticsSectionCard(
+      title: title,
+      child: data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
     );
   }
 
@@ -81,7 +70,7 @@ class TopListTable extends StatelessWidget {
 
   Widget _buildHeaderCell(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
       child: Text(
         text,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -94,7 +83,7 @@ class TopListTable extends StatelessWidget {
 
   Widget _buildDataCell(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium,
@@ -149,22 +138,9 @@ class RecentEnquiriesTable extends ConsumerWidget {
         .watch(dropdownLookupProvider)
         .maybeWhen(data: (value) => value, orElse: () => null);
 
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            data.isEmpty ? _buildEmptyState(context) : _buildTable(context, dropdownLookup),
-          ],
-        ),
-      ),
+    return AnalyticsSectionCard(
+      title: title,
+      child: data.isEmpty ? _buildEmptyState(context) : _buildTable(context, dropdownLookup),
     );
   }
 

@@ -24,14 +24,16 @@ class EventDetailsSection extends StatelessWidget {
 
   String _formatDate(dynamic value) {
     if (value == null) return 'N/A';
+    DateTime? date;
     if (value is Timestamp) {
-      final date = value.toDate();
-      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+      date = value.toDate();
+    } else if (value is DateTime) {
+      date = value;
+    } else {
+      return value.toString();
     }
-    if (value is DateTime) {
-      return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
-    }
-    return value.toString();
+    if (date.year <= 1971) return '—';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   @override

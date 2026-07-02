@@ -499,6 +499,8 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         return Icons.priority_high;
       case DropdownGroup.paymentStatuses:
         return Icons.payment;
+      case DropdownGroup.sources:
+        return Icons.campaign_outlined;
     }
   }
 }

@@ -2,8 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_theme.dart';
+import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../domain/analytics_models.dart';
+import 'analytics_section_card.dart';
 
 /// Pie chart for event type breakdown
 class EventTypePieChart extends StatelessWidget {
@@ -14,45 +16,69 @@ class EventTypePieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: data.isEmpty ? _buildEmptyState(context) : _buildChart(context),
-            ),
-          ],
-        ),
-      ),
+    if (data.isEmpty) {
+      return AnalyticsSectionCard(
+        title: title,
+        child: SizedBox(height: 200, child: _buildEmptyState(context)),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
+        return AnalyticsSectionCard(
+          title: title,
+          child: narrow ? _buildChart(context) : SizedBox(height: 300, child: _buildChart(context)),
+        );
+      },
     );
   }
 
   Widget _buildChart(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: PieChart(
-            PieChartData(
-              sections: _getPieSections(context),
-              centerSpaceRadius: 40,
-              sectionsSpace: 2,
-              startDegreeOffset: -90,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
+
+        if (narrow) {
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: PieChart(
+                    PieChartData(
+                      sections: _getPieSections(context),
+                      centerSpaceRadius: 36,
+                      sectionsSpace: 2,
+                      startDegreeOffset: -90,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppTokens.space3),
+                _buildLegend(context),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: _buildLegend(context)),
-      ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              flex: 2,
+              child: PieChart(
+                PieChartData(
+                  sections: _getPieSections(context),
+                  centerSpaceRadius: 40,
+                  sectionsSpace: 2,
+                  startDegreeOffset: -90,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTokens.space4),
+            Expanded(child: _buildLegend(context)),
+          ],
+        );
+      },
     );
   }
 
@@ -60,6 +86,7 @@ class EventTypePieChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: data.take(8).map((item) {
         final color = _getColor(data.indexOf(item));
         return Padding(
@@ -140,29 +167,17 @@ class SourceBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: data.isEmpty ? _buildEmptyState(context) : _buildChart(context),
-            ),
-          ],
-        ),
+    return AnalyticsSectionCard(
+      title: title,
+      child: SizedBox(
+        height: 300,
+        child: data.isEmpty ? _buildEmptyState(context) : _buildChart(context),
       ),
     );
   }
 
   Widget _buildChart(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
@@ -225,7 +240,7 @@ class SourceBarChart extends StatelessWidget {
           show: true,
           border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
-        barGroups: _getBarGroups(context),
+        barGroups: _getBarGroups(primary),
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -238,7 +253,7 @@ class SourceBarChart extends StatelessWidget {
     );
   }
 
-  List<BarChartGroupData> _getBarGroups(BuildContext context) {
+  List<BarChartGroupData> _getBarGroups(Color primary) {
     return data.take(10).map((item) {
       final index = data.indexOf(item);
       return BarChartGroupData(
@@ -246,11 +261,11 @@ class SourceBarChart extends StatelessWidget {
         barRods: [
           BarChartRodData(
             toY: item.count.toDouble(),
-            color: Theme.of(context).primaryColor,
+            color: primary,
             width: 20,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(4),
+            borderRadius: AppRadius.only(
+              topLeft: AppTokens.radiusSmall,
+              topRight: AppTokens.radiusSmall,
             ),
           ),
         ],
@@ -302,74 +317,127 @@ class StatusStackedBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 300,
-              child: data.isEmpty ? _buildEmptyState(context) : _buildChart(context),
-            ),
-          ],
-        ),
-      ),
+    if (data.isEmpty) {
+      return AnalyticsSectionCard(
+        title: title,
+        child: SizedBox(height: 200, child: _buildEmptyState(context)),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
+        return AnalyticsSectionCard(
+          title: title,
+          child: narrow ? _buildChart(context) : SizedBox(height: 300, child: _buildChart(context)),
+        );
+      },
     );
   }
 
   Widget _buildChart(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.center,
-              maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
-              barTouchData: BarTouchData(
-                enabled: true,
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    if (rodIndex < data.length) {
-                      final item = data[rodIndex];
-                      return BarTooltipItem(
-                        '${_statusLabel(item)}: ${item.count}',
-                        const TextStyle(color: Colors.white),
-                      );
-                    }
-                    return null;
-                  },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
+
+        if (narrow) {
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.center,
+                      maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
+                      barTouchData: BarTouchData(
+                        enabled: true,
+                        touchTooltipData: BarTouchTooltipData(
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                            if (rodIndex < data.length) {
+                              final item = data[rodIndex];
+                              return BarTooltipItem(
+                                '${_statusLabel(item)}: ${item.count}',
+                                const TextStyle(color: Colors.white),
+                              );
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      barGroups: [
+                        BarChartGroupData(
+                          x: 0,
+                          barRods: [
+                            BarChartRodData(
+                              toY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
+                              rodStackItems: _getStackItems(),
+                              width: 60,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+                      ],
+                      gridData: const FlGridData(show: false),
+                    ),
+                  ),
                 ),
-              ),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              barGroups: [
-                BarChartGroupData(
-                  x: 0,
-                  barRods: [
-                    BarChartRodData(
-                      toY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
-                      rodStackItems: _getStackItems(),
-                      width: 60,
-                      borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: AppTokens.space3),
+                _buildLegend(context),
+              ],
+            ),
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.center,
+                  maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        if (rodIndex < data.length) {
+                          final item = data[rodIndex];
+                          return BarTooltipItem(
+                            '${_statusLabel(item)}: ${item.count}',
+                            const TextStyle(color: Colors.white),
+                          );
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barGroups: [
+                    BarChartGroupData(
+                      x: 0,
+                      barRods: [
+                        BarChartRodData(
+                          toY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
+                          rodStackItems: _getStackItems(),
+                          width: 60,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
                     ),
                   ],
+                  gridData: const FlGridData(show: false),
                 ),
-              ],
-              gridData: const FlGridData(show: false),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(flex: 2, child: _buildLegend(context)),
-      ],
+            const SizedBox(width: AppTokens.space4),
+            Expanded(flex: 2, child: _buildLegend(context)),
+          ],
+        );
+      },
     );
   }
 
@@ -391,6 +459,7 @@ class StatusStackedBarChart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: data.map((item) {
         final color = _getStatusColor(item.key);
         return Padding(
