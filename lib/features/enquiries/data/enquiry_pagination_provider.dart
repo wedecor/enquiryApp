@@ -97,4 +97,7 @@ class PaginatedEnquiriesNotifier extends StateNotifier<PaginationState> {
 
   /// Refresh (reload first page)
   Future<void> refresh() => loadFirstPage();
+
+  /// Alias for [loadNextPage] used by scroll listeners.
+  Future<void> loadMore() => loadNextPage();
 }

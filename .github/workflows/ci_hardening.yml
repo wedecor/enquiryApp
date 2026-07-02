@@ -120,7 +120,7 @@ jobs:
             --dart-define=APP_ENV=prod \
             --dart-define=ENABLE_CRASHLYTICS=true \
             --dart-define=ENABLE_PERFORMANCE=true \
-            --dart-define=ENABLE_ANALYTICS=false \
+            --dart-define=ENABLE_ANALYTICS=true \
             --obfuscate \
             --split-debug-info=build/debug-info/
           
@@ -186,7 +186,7 @@ jobs:
             --dart-define=APP_ENV=prod \
             --dart-define=ENABLE_CRASHLYTICS=true \
             --dart-define=ENABLE_PERFORMANCE=true \
-            --dart-define=ENABLE_ANALYTICS=false
+            --dart-define=ENABLE_ANALYTICS=true
           echo "✅ Web build completed"
           echo "::endgroup::"
 
