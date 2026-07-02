@@ -38,7 +38,8 @@ class FirestoreService {
 
   // Collection references
   /// Reference to the users collection in Firestore.
-  CollectionReference get _usersCollection => _firestore.collection(FirestoreCollections.users);
+  CollectionReference get _usersCollection =>
+      _firestore.collection(FirestoreCollections.users);
 
   /// Reference to the enquiries collection in Firestore.
   CollectionReference get _enquiriesCollection =>
@@ -168,11 +169,15 @@ class FirestoreService {
 
   /// Real-time stream for a single user profile document.
   Stream<DocumentSnapshot<Map<String, dynamic>>> watchUser(String uid) {
-    return (_usersCollection.doc(uid) as DocumentReference<Map<String, dynamic>>).snapshots();
+    return (_usersCollection.doc(uid)
+            as DocumentReference<Map<String, dynamic>>)
+        .snapshots();
   }
 
   /// Per-user saved enquiry filter views (`users/{uid}/savedViews`).
-  CollectionReference<Map<String, dynamic>> savedViewsCollection(String userId) {
+  CollectionReference<Map<String, dynamic>> savedViewsCollection(
+    String userId,
+  ) {
     return _usersCollection.doc(userId).collection('savedViews');
   }
 
@@ -193,7 +198,11 @@ class FirestoreService {
         .collection('tokens');
   }
 
-  Future<void> saveFcmToken(String uid, String token, {bool refreshed = false}) async {
+  Future<void> saveFcmToken(
+    String uid,
+    String token, {
+    bool refreshed = false,
+  }) async {
     await fcmTokensCollection(uid).doc(token).set({
       'token': token,
       if (refreshed)
@@ -305,7 +314,8 @@ class FirestoreService {
   }) async {
     final enquiryData = {
       'customerName': customerName,
-      if (customerEmail.trim().isNotEmpty) 'customerEmail': customerEmail.toLowerCase(),
+      if (customerEmail.trim().isNotEmpty)
+        'customerEmail': customerEmail.toLowerCase(),
       'customerPhone': customerPhone,
       'eventType': eventType,
       'eventDate': eventDate,
@@ -387,7 +397,9 @@ class FirestoreService {
   /// });
   /// ```
   Stream<QuerySnapshot> getEnquiries() {
-    return _enquiriesCollection.orderBy('createdAt', descending: true).snapshots();
+    return _enquiriesCollection
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 
   /// Retrieves a real-time stream of enquiries filtered by status.
@@ -416,7 +428,10 @@ class FirestoreService {
   }
 
   /// Real-time enquiries stream scoped by role (admin: all, staff: assigned only).
-  Stream<QuerySnapshot> watchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+  Stream<QuerySnapshot> watchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+  }) {
     if (isAdmin) {
       return getEnquiries();
     }
@@ -427,7 +442,10 @@ class FirestoreService {
   }
 
   /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
-  Future<QuerySnapshot> fetchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
+  Future<QuerySnapshot> fetchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+  }) {
     Query query = _enquiriesCollection.orderBy('createdAt', descending: true);
     if (!isAdmin && assignedToUid != null) {
       query = _enquiriesCollection
@@ -470,17 +488,23 @@ class FirestoreService {
   }
 
   /// Active dropdown items from `dropdowns/{kind}/items`.
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(String kind) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(
+    String kind,
+  ) {
     return _activeDropdownItemsQuery(kind).snapshots();
   }
 
   /// One-shot fetch of active dropdown items (e.g. dashboard color priming).
-  Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(String kind) {
+  Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(
+    String kind,
+  ) {
     return _activeDropdownItemsQuery(kind).get();
   }
 
   /// Active dropdown options as label/value maps for form widgets.
-  Future<List<Map<String, String>>> fetchActiveDropdownOptions(String kind) async {
+  Future<List<Map<String, String>>> fetchActiveDropdownOptions(
+    String kind,
+  ) async {
     final snapshot = await fetchActiveDropdownItems(kind);
     return parseDropdownOptions(snapshot.docs);
   }
@@ -523,7 +547,11 @@ class FirestoreService {
 
   /// Value→label map for a dropdown kind (includes inactive items for history display).
   Future<Map<String, String>> fetchDropdownValueLabelMap(String kind) async {
-    final snapshot = await _firestore.collection('dropdowns').doc(kind).collection('items').get();
+    final snapshot = await _firestore
+        .collection('dropdowns')
+        .doc(kind)
+        .collection('items')
+        .get();
     final map = <String, String>{};
     for (final doc in snapshot.docs) {
       final data = doc.data();
@@ -544,8 +572,8 @@ class FirestoreService {
   }
 
   /// Active status options for enquiry status dropdowns.
-  Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveStatusDropdownItems() =>
-      watchActiveDropdownItems('statuses');
+  Stream<QuerySnapshot<Map<String, dynamic>>>
+  watchActiveStatusDropdownItems() => watchActiveDropdownItems('statuses');
 
   /// Calendar view: enquiries ordered by event date (role-scoped).
   Stream<QuerySnapshot> watchEnquiriesForRoleByEventDate({
@@ -580,7 +608,10 @@ class FirestoreService {
   ///   'assignedTo': 'staff456',
   /// });
   /// ```
-  Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
+  Future<void> updateEnquiry(
+    String enquiryId,
+    Map<String, dynamic> data,
+  ) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
@@ -614,7 +645,10 @@ class FirestoreService {
   ///
   /// Returns a [Stream<QuerySnapshot>] that emits active users.
   Stream<QuerySnapshot> getActiveUsers() {
-    return _usersCollection.where('isActive', isEqualTo: true).orderBy('name').snapshots();
+    return _usersCollection
+        .where('isActive', isEqualTo: true)
+        .orderBy('name')
+        .snapshots();
   }
 }
 

@@ -16,7 +16,11 @@ class AuthCompletedScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Success Icon
-              Icon(Icons.check_circle, size: 80, color: AppColorScheme.snackSuccess),
+              Icon(
+                Icons.check_circle,
+                size: 80,
+                color: AppColorScheme.snackSuccess,
+              ),
               const SizedBox(height: 32),
 
               // Title
@@ -46,8 +50,13 @@ class AuthCompletedScreen extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: const Text(
                   'Go to Sign In',

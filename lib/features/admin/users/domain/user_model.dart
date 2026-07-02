@@ -18,7 +18,8 @@ class UserModel with _$UserModel {
     required DateTime updatedAt,
   }) = _UserModel;
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) =>
+      _$UserModelFromJson(json);
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
@@ -33,7 +34,8 @@ class UserModel with _$UserModel {
     final phone = data['phone'] as String?;
     final role = data['role'] as String? ?? 'staff';
     // Backward compatibility: read both 'active' and 'isActive', prefer 'isActive'
-    final isActive = data['isActive'] as bool? ?? data['active'] as bool? ?? true;
+    final isActive =
+        data['isActive'] as bool? ?? data['active'] as bool? ?? true;
 
     // Handle timestamp fields safely
     DateTime createdAt;

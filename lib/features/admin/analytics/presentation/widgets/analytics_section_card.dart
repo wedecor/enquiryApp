@@ -38,7 +38,9 @@ class AnalyticsSectionCard extends StatelessWidget {
             if (title != null) ...[
               Text(
                 title!,
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: AppTokens.space1),
@@ -46,7 +48,9 @@ class AnalyticsSectionCard extends StatelessWidget {
                   subtitle!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
                 ),
               ],
               const SizedBox(height: AppTokens.space4),

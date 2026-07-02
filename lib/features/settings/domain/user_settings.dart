@@ -15,7 +15,8 @@ class UserSettings with _$UserSettings {
     DateTime? updatedAt,
   }) = _UserSettings;
 
-  factory UserSettings.fromJson(Map<String, dynamic> json) => _$UserSettingsFromJson(json);
+  factory UserSettings.fromJson(Map<String, dynamic> json) =>
+      _$UserSettingsFromJson(json);
 
   factory UserSettings.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
@@ -40,7 +41,7 @@ extension UserSettingsFirestore on UserSettings {
 class DashboardSettings with _$DashboardSettings {
   const factory DashboardSettings({
     @Default('30d') String dateRange,
-    @Default(['new', 'in_talks', 'quote_sent']) List<String> statusTabs,
+    @Default(['new', 'in_talks', 'approved']) List<String> statusTabs,
     @Default([
       ColumnSettings(id: 'customer', visible: true, order: 0),
       ColumnSettings(id: 'eventType', visible: true, order: 1),
@@ -63,7 +64,8 @@ class ColumnSettings with _$ColumnSettings {
     @Default(0) int order,
   }) = _ColumnSettings;
 
-  factory ColumnSettings.fromJson(Map<String, dynamic> json) => _$ColumnSettingsFromJson(json);
+  factory ColumnSettings.fromJson(Map<String, dynamic> json) =>
+      _$ColumnSettingsFromJson(json);
 }
 
 @freezed

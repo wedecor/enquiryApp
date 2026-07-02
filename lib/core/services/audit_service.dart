@@ -25,16 +25,23 @@ class AuditService {
       final currentUser = _auth.currentUser;
       final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
 
-      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add({
-        'field_changed': fieldChanged,
-        'old_value': oldValue,
-        'new_value': newValue,
-        'user_id': changeUserId,
-        'timestamp': FieldValue.serverTimestamp(),
-        'user_email': currentUser?.email ?? 'unknown',
-      });
+      await _firestore
+          .collection('enquiries')
+          .doc(enquiryId)
+          .collection('history')
+          .add({
+            'field_changed': fieldChanged,
+            'old_value': oldValue,
+            'new_value': newValue,
+            'user_id': changeUserId,
+            'timestamp': FieldValue.serverTimestamp(),
+            'user_email': currentUser?.email ?? 'unknown',
+          });
 
-      Log.d('AuditService: recorded change', data: {'field': fieldChanged, 'enquiryId': enquiryId});
+      Log.d(
+        'AuditService: recorded change',
+        data: {'field': fieldChanged, 'enquiryId': enquiryId},
+      );
     } catch (e, st) {
       Log.e('AuditService: error recording change', error: e, stackTrace: st);
     }
@@ -77,7 +84,11 @@ class AuditService {
         data: {'count': changes.length, 'enquiryId': enquiryId},
       );
     } catch (e, st) {
-      Log.e('AuditService: error recording multiple changes', error: e, stackTrace: st);
+      Log.e(
+        'AuditService: error recording multiple changes',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -101,7 +112,10 @@ class AuditService {
             );
 
             if (snapshot.docs.isEmpty) {
-              Log.d('AuditService: no history found', data: {'enquiryId': enquiryId});
+              Log.d(
+                'AuditService: no history found',
+                data: {'enquiryId': enquiryId},
+              );
               return <Map<String, dynamic>>[];
             }
 
@@ -138,11 +152,15 @@ class AuditService {
               }
 
               if (aDateTime != null && bDateTime != null) {
-                return bDateTime.compareTo(aDateTime); // Descending order (newest first)
+                return bDateTime.compareTo(
+                  aDateTime,
+                ); // Descending order (newest first)
               }
 
               // Fallback: compare by document ID if timestamps are invalid
-              return (a['id'] as String? ?? '').compareTo(b['id'] as String? ?? '');
+              return (a['id'] as String? ?? '').compareTo(
+                b['id'] as String? ?? '',
+              );
             });
 
             Log.d(
@@ -177,7 +195,9 @@ class AuditService {
         data: {'enquiryId': enquiryId},
       );
       // Try one-time fetch as fallback
-      return getEnquiryHistory(enquiryId).asStream().handleError((Object error) {
+      return getEnquiryHistory(enquiryId).asStream().handleError((
+        Object error,
+      ) {
         Log.e(
           'AuditService: fallback fetch failed in catch',
           error: error,
@@ -214,7 +234,10 @@ class AuditService {
   }
 
   /// Get change history for a specific field
-  Future<List<Map<String, dynamic>>> getFieldHistory(String enquiryId, String fieldName) async {
+  Future<List<Map<String, dynamic>>> getFieldHistory(
+    String enquiryId,
+    String fieldName,
+  ) async {
     try {
       final snapshot = await _firestore
           .collection('enquiries')
@@ -250,7 +273,11 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
+        return {
+          'id': doc.id,
+          'enquiry_id': doc.reference.parent.parent?.id,
+          ...data,
+        };
       }).toList();
     } catch (e, st) {
       Log.e(
@@ -274,10 +301,18 @@ class AuditService {
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        return {'id': doc.id, 'enquiry_id': doc.reference.parent.parent?.id, ...data};
+        return {
+          'id': doc.id,
+          'enquiry_id': doc.reference.parent.parent?.id,
+          ...data,
+        };
       }).toList();
     } catch (e, st) {
-      Log.e('AuditService: error getting recent changes', error: e, stackTrace: st);
+      Log.e(
+        'AuditService: error getting recent changes',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -301,7 +336,11 @@ class AuditService {
         data: {'action': action, 'userId': currentUser?.uid},
       );
     } catch (e, st) {
-      Log.e('AuditService: error logging admin action', error: e, stackTrace: st);
+      Log.e(
+        'AuditService: error logging admin action',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -374,7 +413,9 @@ class AuditService {
       final summary = <String, dynamic>{
         'total_changes': history.length,
         'last_modified': history.isNotEmpty ? history.first['timestamp'] : null,
-        'last_modified_by': history.isNotEmpty ? history.first['user_email'] : null,
+        'last_modified_by': history.isNotEmpty
+            ? history.first['user_email']
+            : null,
         'fields_changed': <String>[],
         'users_involved': <String>[],
       };
@@ -384,18 +425,25 @@ class AuditService {
         final userEmail = change['user_email'] as String?;
 
         if (fieldChanged != null &&
-            !(summary['fields_changed'] as List<String>).contains(fieldChanged)) {
+            !(summary['fields_changed'] as List<String>).contains(
+              fieldChanged,
+            )) {
           (summary['fields_changed'] as List<String>).add(fieldChanged);
         }
 
-        if (userEmail != null && !(summary['users_involved'] as List<String>).contains(userEmail)) {
+        if (userEmail != null &&
+            !(summary['users_involved'] as List<String>).contains(userEmail)) {
           (summary['users_involved'] as List<String>).add(userEmail);
         }
       }
 
       return summary;
     } catch (e, st) {
-      Log.e('AuditService: error getting change summary', error: e, stackTrace: st);
+      Log.e(
+        'AuditService: error getting change summary',
+        error: e,
+        stackTrace: st,
+      );
       return {
         'total_changes': 0,
         'last_modified': null,

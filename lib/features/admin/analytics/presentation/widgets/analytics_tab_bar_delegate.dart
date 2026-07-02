@@ -15,7 +15,11 @@ class AnalyticsTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height + AppTokens.space2;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final cs = Theme.of(context).colorScheme;
 
     return Material(
@@ -23,7 +27,9 @@ class AnalyticsTabBarDelegate extends SliverPersistentHeaderDelegate {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: cs.surface,
-          border: Border(bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.7))),
+          border: Border(
+            bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.7)),
+          ),
           boxShadow: overlapsContent ? AppShadows.elevation1 : null,
         ),
         child: Padding(
@@ -41,7 +47,10 @@ class AnalyticsTabBarDelegate extends SliverPersistentHeaderDelegate {
 }
 
 /// Builds a pill-style tab bar matching the main dashboard aesthetic.
-TabBar buildAnalyticsTabBar({required BuildContext context, required TabController controller}) {
+TabBar buildAnalyticsTabBar({
+  required BuildContext context,
+  required TabController controller,
+}) {
   final cs = Theme.of(context).colorScheme;
 
   return TabBar(
@@ -52,11 +61,20 @@ TabBar buildAnalyticsTabBar({required BuildContext context, required TabControll
     indicatorSize: TabBarIndicatorSize.tab,
     labelPadding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
     indicatorPadding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
-    padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
-    indicator: BoxDecoration(borderRadius: AppRadius.full, color: cs.primaryContainer),
+    padding: const EdgeInsets.symmetric(
+      horizontal: AppTokens.space4,
+      vertical: AppTokens.space2,
+    ),
+    indicator: BoxDecoration(
+      borderRadius: AppRadius.full,
+      color: cs.primaryContainer,
+    ),
     labelColor: cs.onPrimaryContainer,
     unselectedLabelColor: cs.onSurfaceVariant,
-    labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTokens.fontSizeBody),
+    labelStyle: const TextStyle(
+      fontWeight: FontWeight.w600,
+      fontSize: AppTokens.fontSizeBody,
+    ),
     unselectedLabelStyle: const TextStyle(
       fontWeight: FontWeight.w500,
       fontSize: AppTokens.fontSizeBody,

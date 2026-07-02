@@ -40,10 +40,14 @@ class ReviewRequestService {
         : defaultGoogleReviewLink;
 
     final instagram = instagramHandle?.isNotEmpty == true
-        ? (instagramHandle!.startsWith('@') ? instagramHandle : '@$instagramHandle')
+        ? (instagramHandle!.startsWith('@')
+              ? instagramHandle
+              : '@$instagramHandle')
         : defaultInstagramHandle;
 
-    final website = websiteUrl?.isNotEmpty == true ? websiteUrl! : defaultWebsiteUrl;
+    final website = websiteUrl?.isNotEmpty == true
+        ? websiteUrl!
+        : defaultWebsiteUrl;
 
     final buffer = StringBuffer();
 

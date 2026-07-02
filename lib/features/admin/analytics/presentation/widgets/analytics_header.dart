@@ -8,7 +8,11 @@ import '../analytics_controller.dart';
 
 /// Warm gradient hero header with title, date range subtitle, and actions.
 class AnalyticsHeader extends ConsumerWidget {
-  const AnalyticsHeader({super.key, required this.onExport, required this.onRefresh});
+  const AnalyticsHeader({
+    super.key,
+    required this.onExport,
+    required this.onRefresh,
+  });
 
   final VoidCallback onExport;
   final VoidCallback onRefresh;
@@ -51,7 +55,9 @@ class AnalyticsHeader extends ConsumerWidget {
               children: [
                 Text(
                   'Analytics',
-                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: AppTokens.space1),
                 Text(
@@ -75,7 +81,9 @@ class AnalyticsHeader extends ConsumerWidget {
                         dateRangeLabel,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],
@@ -90,7 +98,10 @@ class AnalyticsHeader extends ConsumerWidget {
                   IconButton.outlined(
                     onPressed: onExport,
                     tooltip: 'Export',
-                    icon: const Icon(Icons.download_outlined, size: AppTokens.iconMedium),
+                    icon: const Icon(
+                      Icons.download_outlined,
+                      size: AppTokens.iconMedium,
+                    ),
                   )
                 else
                   OutlinedButton.icon(
@@ -102,14 +113,20 @@ class AnalyticsHeader extends ConsumerWidget {
                         vertical: AppTokens.space2,
                       ),
                     ),
-                    icon: const Icon(Icons.download_outlined, size: AppTokens.iconSmall),
+                    icon: const Icon(
+                      Icons.download_outlined,
+                      size: AppTokens.iconSmall,
+                    ),
                     label: const Text('Export'),
                   ),
                 const SizedBox(width: AppTokens.space2),
                 IconButton.filledTonal(
                   onPressed: onRefresh,
                   tooltip: 'Refresh',
-                  icon: const Icon(Icons.refresh_rounded, size: AppTokens.iconMedium),
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    size: AppTokens.iconMedium,
+                  ),
                 ),
               ],
             );

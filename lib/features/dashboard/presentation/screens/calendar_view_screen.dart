@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
@@ -15,7 +16,7 @@ import '../../../enquiries/presentation/widgets/enquiry_list_item.dart';
 
 /// Calendar View Screen - Shows relevant enquiries on a calendar
 /// Filters out cancelled and not_interested events
-/// Shows: new, in_talks, quote_sent, confirmed, and recent completed events
+/// Shows: new, in_talks, approved, and recent completed events
 class CalendarViewScreen extends ConsumerStatefulWidget {
   const CalendarViewScreen({super.key, this.embeddedInShell = false});
 
@@ -137,7 +138,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildLegendItem('Confirmed', AppColorScheme.statusConfirmed),
+                  _buildLegendItem('Approved', AppColorScheme.statusConfirmed),
                   _buildLegendItem('In Talks', AppColorScheme.statusInTalks),
                   _buildLegendItem(
                     'Quote Sent',
@@ -222,11 +223,11 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Show colored dots for each status type
-                        if (statusCounts['confirmed'] != null &&
-                            statusCounts['confirmed']! > 0)
+                        if (statusCounts['approved'] != null &&
+                            statusCounts['approved']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusConfirmed,
-                            statusCounts['confirmed']!,
+                            statusCounts['approved']!,
                             hasConflict,
                           ),
                         if (statusCounts['in_talks'] != null &&
@@ -234,13 +235,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                           _buildStatusIndicator(
                             AppColorScheme.statusInTalks,
                             statusCounts['in_talks']!,
-                            hasConflict,
-                          ),
-                        if (statusCounts['quote_sent'] != null &&
-                            statusCounts['quote_sent']! > 0)
-                          _buildStatusIndicator(
-                            AppColorScheme.statusQuoteSent,
-                            statusCounts['quote_sent']!,
                             hasConflict,
                           ),
                         if (statusCounts['new'] != null &&
@@ -356,23 +350,17 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                   spacing: 12,
                   runSpacing: 8,
                   children: [
-                    if (statusCounts['confirmed'] != null)
+                    if (statusCounts['approved'] != null)
                       _buildStatusChip(
-                        'Confirmed',
+                        'Approved',
                         AppColorScheme.statusConfirmed,
-                        statusCounts['confirmed']!,
+                        statusCounts['approved']!,
                       ),
                     if (statusCounts['in_talks'] != null)
                       _buildStatusChip(
                         'In Talks',
                         AppColorScheme.statusInTalks,
                         statusCounts['in_talks']!,
-                      ),
-                    if (statusCounts['quote_sent'] != null)
-                      _buildStatusChip(
-                        'Quote Sent',
-                        AppColorScheme.statusQuoteSent,
-                        statusCounts['quote_sent']!,
                       ),
                     if (statusCounts['new'] != null)
                       _buildStatusChip(
@@ -502,11 +490,13 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       // Skip enquiries without event dates
       if (eventDate == null) continue;
 
-      // Get status - only use statusValue
-      final status = ((data['statusValue'] as String?) ?? 'new').toLowerCase();
+      // Get canonical status from statusValue (maps legacy confirmed → approved, etc.)
+      final rawStatus = ((data['statusValue'] as String?) ?? 'new')
+          .toLowerCase();
+      final status = EnquiryStatus.fromValue(rawStatus)?.value ?? rawStatus;
 
       // Filter out irrelevant statuses for calendar view
-      // Only show: new, in_talks, quote_sent, confirmed, completed
+      // Only show: new, in_talks, approved, completed
       // Exclude: cancelled, not_interested
       if (status == 'cancelled' || status == 'not_interested') {
         continue;
@@ -528,7 +518,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         }
       }
 
-      // Note: Past "in_talks", "new", and "quote_sent" events are NOT filtered here
+      // Note: Past "in_talks" and "new" events are NOT filtered here
       // They will be automatically marked as "not_interested" by the cleanup service
       // and will disappear once their status is updated
 

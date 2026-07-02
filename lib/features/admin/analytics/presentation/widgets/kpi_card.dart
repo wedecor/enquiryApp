@@ -49,8 +49,10 @@ class KpiCard extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxHeight.isFinite && constraints.maxHeight < 130;
-            final narrow = constraints.maxWidth.isFinite && constraints.maxWidth < 150;
+            final compact =
+                constraints.maxHeight.isFinite && constraints.maxHeight < 130;
+            final narrow =
+                constraints.maxWidth.isFinite && constraints.maxWidth < 150;
             final iconSize = compact ? 30.0 : 36.0;
 
             return Column(
@@ -73,7 +75,9 @@ class KpiCard extends StatelessWidget {
                         child: Icon(
                           icon,
                           color: accent,
-                          size: compact ? AppTokens.iconSmall : AppTokens.iconMedium,
+                          size: compact
+                              ? AppTokens.iconSmall
+                              : AppTokens.iconMedium,
                         ),
                       ),
                       if (deltaPercentage != null && !isLoading) ...[
@@ -128,8 +132,14 @@ class KpiCard extends StatelessWidget {
                     child: Text(
                       value,
                       maxLines: 1,
-                      style: (compact ? theme.textTheme.titleLarge : theme.textTheme.headlineSmall)
-                          ?.copyWith(fontWeight: FontWeight.w700, color: cs.onSurface),
+                      style:
+                          (compact
+                                  ? theme.textTheme.titleLarge
+                                  : theme.textTheme.headlineSmall)
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: cs.onSurface,
+                              ),
                     ),
                   ),
                 if (subtitle != null && !isLoading && !compact) ...[
@@ -138,7 +148,9 @@ class KpiCard extends StatelessWidget {
                     subtitle!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -149,7 +161,11 @@ class KpiCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDeltaIndicator(double deltaPercentage, ThemeData theme, {int decimals = 1}) {
+  Widget _buildDeltaIndicator(
+    double deltaPercentage,
+    ThemeData theme, {
+    int decimals = 1,
+  }) {
     final isPositive = deltaPercentage >= 0;
     final isNeutral = deltaPercentage == 0;
 
@@ -172,7 +188,10 @@ class KpiCard extends StatelessWidget {
         : '${isPositive ? '+' : ''}${deltaPercentage.toStringAsFixed(decimals)}%';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space2,
+        vertical: AppTokens.space1,
+      ),
       decoration: BoxDecoration(
         color: deltaColor.withValues(alpha: 0.12),
         borderRadius: AppRadius.full,

@@ -72,13 +72,39 @@ class DropdownDefaults {
     return map;
   }
 
-  /// Returns [fetched] when non-empty; otherwise built-in defaults for [collectionName].
+  /// Returns canonical status options for forms. Firestore labels override when present;
+  /// legacy/duplicate Firestore entries are ignored.
   static List<Map<String, String>> resolve(
     List<Map<String, String>> fetched,
     String collectionName,
   ) {
+    if (collectionName == 'statuses') {
+      return resolveStatusOptions(fetched);
+    }
     if (fetched.isNotEmpty) return fetched;
     return forCollection(collectionName);
+  }
+
+  static List<Map<String, String>> resolveStatusOptions(
+    List<Map<String, String>> fetched,
+  ) {
+    final labelOverrides = <String, String>{};
+    for (final item in fetched) {
+      final canonical = EnquiryStatus.fromValue(item['value']);
+      if (canonical == null) continue;
+      final label = item['label']?.trim();
+      if (label != null && label.isNotEmpty) {
+        labelOverrides[canonical.value] = label;
+      }
+    }
+    return EnquiryStatus.values
+        .map(
+          (s) => {
+            'value': s.value,
+            'label': labelOverrides[s.value] ?? s.label,
+          },
+        )
+        .toList(growable: false);
   }
 
   /// Returns [fetched] when non-empty; otherwise built-in value→label defaults.
@@ -86,6 +112,17 @@ class DropdownDefaults {
     Map<String, String> fetched,
     String collectionName,
   ) {
+    if (collectionName == 'statuses') {
+      final canonical = valueLabelMapFor('statuses');
+      if (fetched.isEmpty) return canonical;
+      for (final entry in fetched.entries) {
+        final status = EnquiryStatus.fromValue(entry.key);
+        if (status != null && entry.value.trim().isNotEmpty) {
+          canonical[status.value] = entry.value;
+        }
+      }
+      return canonical;
+    }
     if (fetched.isNotEmpty) return fetched;
     return valueLabelMapFor(collectionName);
   }

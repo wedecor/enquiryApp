@@ -11,8 +11,10 @@ import '../logging/logger.dart';
 
 /// Service for checking app updates and notifying users
 class UpdateService {
-  static const String _updateCheckUrl = 'https://wedecorenquries.web.app/android/version.json';
-  static const String _downloadUrl = 'https://wedecorenquries.web.app/android/app-release.apk';
+  static const String _updateCheckUrl =
+      'https://wedecorenquries.web.app/android/version.json';
+  static const String _downloadUrl =
+      'https://wedecorenquries.web.app/android/app-release.apk';
   static const String _lastDismissedKey = 'last_dismissed_update';
   static const String _lastCheckedKey = 'last_update_check';
 
@@ -26,7 +28,10 @@ class UpdateService {
 
       if (!forceCheck && now - lastChecked < 3600000) {
         // 1 hour
-        Logger.debug('Update check skipped - rate limited', tag: 'UpdateService');
+        Logger.debug(
+          'Update check skipped - rate limited',
+          tag: 'UpdateService',
+        );
         return null;
       }
 
@@ -42,11 +47,17 @@ class UpdateService {
 
       // Fetch remote version info
       final response = await http
-          .get(Uri.parse(_updateCheckUrl), headers: {'Cache-Control': 'no-cache'})
+          .get(
+            Uri.parse(_updateCheckUrl),
+            headers: {'Cache-Control': 'no-cache'},
+          )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200) {
-        Logger.warn('Update check failed - HTTP ${response.statusCode}', tag: 'UpdateService');
+        Logger.warn(
+          'Update check failed - HTTP ${response.statusCode}',
+          tag: 'UpdateService',
+        );
         return null;
       }
 
@@ -55,7 +66,8 @@ class UpdateService {
       final remoteBuildNumber = versionData['buildNumber'] as int?;
       final releaseNotes = versionData['releaseNotes'] as String?;
       final isForced = versionData['forceUpdate'] as bool? ?? false;
-      String downloadUrl = versionData['downloadUrl'] as String? ?? _downloadUrl;
+      String downloadUrl =
+          versionData['downloadUrl'] as String? ?? _downloadUrl;
       // Convert relative URLs to absolute URLs
       if (downloadUrl.isNotEmpty && !downloadUrl.startsWith('http')) {
         downloadUrl = 'https://wedecorenquries.web.app/android/$downloadUrl';
@@ -71,7 +83,10 @@ class UpdateService {
 
       // Check if update is available
       if (remoteBuildNumber > currentBuildNumber) {
-        Logger.info('Update available: $remoteVersion+$remoteBuildNumber', tag: 'UpdateService');
+        Logger.info(
+          'Update available: $remoteVersion+$remoteBuildNumber',
+          tag: 'UpdateService',
+        );
 
         return UpdateInfo(
           currentVersion: currentVersion,
@@ -87,7 +102,11 @@ class UpdateService {
       Logger.info('App is up to date', tag: 'UpdateService');
       return null;
     } catch (e) {
-      Logger.error('Error checking for updates', error: e, tag: 'UpdateService');
+      Logger.error(
+        'Error checking for updates',
+        error: e,
+        tag: 'UpdateService',
+      );
       return null;
     }
   }
@@ -103,7 +122,9 @@ class UpdateService {
     final now = DateTime.now().millisecondsSinceEpoch;
 
     // Don't show again if dismissed within last 24 hours (unless forced)
-    if (!bypassCooldown && !updateInfo.isForced && now - lastDismissed < 86400000) {
+    if (!bypassCooldown &&
+        !updateInfo.isForced &&
+        now - lastDismissed < 86400000) {
       // 24 hours
       return;
     }
@@ -143,7 +164,11 @@ class UpdateService {
       await Clipboard.setData(ClipboardData(text: downloadUrl));
       Logger.info('Download URL copied to clipboard', tag: 'UpdateService');
     } catch (e) {
-      Logger.error('Failed to copy download URL', error: e, tag: 'UpdateService');
+      Logger.error(
+        'Failed to copy download URL',
+        error: e,
+        tag: 'UpdateService',
+      );
     }
   }
 }
@@ -187,13 +212,17 @@ class UpdateDialog extends StatelessWidget {
         children: [
           Icon(
             updateInfo.isForced ? Icons.system_update : Icons.system_update_alt,
-            color: updateInfo.isForced ? theme.colorScheme.error : theme.colorScheme.primary,
+            color: updateInfo.isForced
+                ? theme.colorScheme.error
+                : theme.colorScheme.primary,
           ),
           const SizedBox(width: 12),
           Text(
             updateInfo.isForced ? 'Update Required' : 'Update Available',
             style: TextStyle(
-              color: updateInfo.isForced ? theme.colorScheme.error : theme.colorScheme.onSurface,
+              color: updateInfo.isForced
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.onSurface,
             ),
           ),
         ],
@@ -215,14 +244,20 @@ class UpdateDialog extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Text('Current: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Current: ',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       Text(updateInfo.currentVersionString),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Text('Latest: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const Text(
+                        'Latest: ',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       Text(
                         updateInfo.latestVersionString,
                         style: TextStyle(
@@ -254,7 +289,11 @@ class UpdateDialog extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.warning, color: theme.colorScheme.error, size: 20),
+                    Icon(
+                      Icons.warning,
+                      color: theme.colorScheme.error,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -274,7 +313,10 @@ class UpdateDialog extends StatelessWidget {
       ),
       actions: [
         if (!updateInfo.isForced)
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Later')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Later'),
+          ),
         TextButton(
           onPressed: () {
             UpdateService.copyDownloadUrl(updateInfo.downloadUrl);
@@ -312,7 +354,11 @@ class UpdateChecker extends StatefulWidget {
   final Widget child;
   final bool checkOnStart;
 
-  const UpdateChecker({super.key, required this.child, this.checkOnStart = true});
+  const UpdateChecker({
+    super.key,
+    required this.child,
+    this.checkOnStart = true,
+  });
 
   @override
   State<UpdateChecker> createState() => _UpdateCheckerState();

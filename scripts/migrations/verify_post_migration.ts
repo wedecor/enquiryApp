@@ -14,6 +14,9 @@ const LEGACY_STATUSES = new Set([
   "quoted",
   "enquired",
   "assigned",
+  "contacted",
+  "quote_sent",
+  "scheduled",
 ]);
 
 const VALID_PAYMENTS = new Set(["pending", "partial", "paid", "overdue"]);

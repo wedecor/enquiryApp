@@ -22,13 +22,16 @@ mixin _$FirebaseUserLite {
   bool get isEmailVerified => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $FirebaseUserLiteCopyWith<FirebaseUserLite> get copyWith => throw _privateConstructorUsedError;
+  $FirebaseUserLiteCopyWith<FirebaseUserLite> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $FirebaseUserLiteCopyWith<$Res> {
-  factory $FirebaseUserLiteCopyWith(FirebaseUserLite value, $Res Function(FirebaseUserLite) then) =
-      _$FirebaseUserLiteCopyWithImpl<$Res, FirebaseUserLite>;
+  factory $FirebaseUserLiteCopyWith(
+    FirebaseUserLite value,
+    $Res Function(FirebaseUserLite) then,
+  ) = _$FirebaseUserLiteCopyWithImpl<$Res, FirebaseUserLite>;
   @useResult
   $Res call({String uid, String email, bool isEmailVerified});
 }
@@ -45,7 +48,11 @@ class _$FirebaseUserLiteCopyWithImpl<$Res, $Val extends FirebaseUserLite>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? uid = null, Object? email = null, Object? isEmailVerified = null}) {
+  $Res call({
+    Object? uid = null,
+    Object? email = null,
+    Object? isEmailVerified = null,
+  }) {
     return _then(
       _value.copyWith(
             uid: null == uid
@@ -67,7 +74,8 @@ class _$FirebaseUserLiteCopyWithImpl<$Res, $Val extends FirebaseUserLite>
 }
 
 /// @nodoc
-abstract class _$$FirebaseUserLiteImplCopyWith<$Res> implements $FirebaseUserLiteCopyWith<$Res> {
+abstract class _$$FirebaseUserLiteImplCopyWith<$Res>
+    implements $FirebaseUserLiteCopyWith<$Res> {
   factory _$$FirebaseUserLiteImplCopyWith(
     _$FirebaseUserLiteImpl value,
     $Res Function(_$FirebaseUserLiteImpl) then,
@@ -88,7 +96,11 @@ class __$$FirebaseUserLiteImplCopyWithImpl<$Res>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? uid = null, Object? email = null, Object? isEmailVerified = null}) {
+  $Res call({
+    Object? uid = null,
+    Object? email = null,
+    Object? isEmailVerified = null,
+  }) {
     return _then(
       _$FirebaseUserLiteImpl(
         uid: null == uid
@@ -148,7 +160,10 @@ class _$FirebaseUserLiteImpl implements _FirebaseUserLite {
   @override
   @pragma('vm:prefer-inline')
   _$$FirebaseUserLiteImplCopyWith<_$FirebaseUserLiteImpl> get copyWith =>
-      __$$FirebaseUserLiteImplCopyWithImpl<_$FirebaseUserLiteImpl>(this, _$identity);
+      __$$FirebaseUserLiteImplCopyWithImpl<_$FirebaseUserLiteImpl>(
+        this,
+        _$identity,
+      );
 }
 
 abstract class _FirebaseUserLite implements FirebaseUserLite {
@@ -176,7 +191,8 @@ mixin _$SessionState {
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -232,8 +248,10 @@ mixin _$SessionState {
 
 /// @nodoc
 abstract class $SessionStateCopyWith<$Res> {
-  factory $SessionStateCopyWith(SessionState value, $Res Function(SessionState) then) =
-      _$SessionStateCopyWithImpl<$Res, SessionState>;
+  factory $SessionStateCopyWith(
+    SessionState value,
+    $Res Function(SessionState) then,
+  ) = _$SessionStateCopyWithImpl<$Res, SessionState>;
 }
 
 /// @nodoc
@@ -278,7 +296,8 @@ class _$SessionUnauthenticatedImpl implements SessionUnauthenticated {
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
-        (other.runtimeType == runtimeType && other is _$SessionUnauthenticatedImpl);
+        (other.runtimeType == runtimeType &&
+            other is _$SessionUnauthenticatedImpl);
   }
 
   @override
@@ -289,7 +308,8 @@ class _$SessionUnauthenticatedImpl implements SessionUnauthenticated {
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -436,14 +456,18 @@ class _$SessionLoadingImpl implements SessionLoading {
   @override
   @pragma('vm:prefer-inline')
   _$$SessionLoadingImplCopyWith<_$SessionLoadingImpl> get copyWith =>
-      __$$SessionLoadingImplCopyWithImpl<_$SessionLoadingImpl>(this, _$identity);
+      __$$SessionLoadingImplCopyWithImpl<_$SessionLoadingImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -620,15 +644,20 @@ class _$SessionAuthenticatedImpl implements SessionAuthenticated {
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
-  _$$SessionAuthenticatedImplCopyWith<_$SessionAuthenticatedImpl> get copyWith =>
-      __$$SessionAuthenticatedImplCopyWithImpl<_$SessionAuthenticatedImpl>(this, _$identity);
+  _$$SessionAuthenticatedImplCopyWith<_$SessionAuthenticatedImpl>
+  get copyWith =>
+      __$$SessionAuthenticatedImplCopyWithImpl<_$SessionAuthenticatedImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -719,8 +748,8 @@ abstract class SessionAuthenticated implements SessionState {
   FirebaseUserLite get user;
   UserModel get profile;
   @JsonKey(ignore: true)
-  _$$SessionAuthenticatedImplCopyWith<_$SessionAuthenticatedImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$SessionAuthenticatedImplCopyWith<_$SessionAuthenticatedImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -783,15 +812,20 @@ class _$SessionUnprovisionedImpl implements SessionUnprovisioned {
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
-  _$$SessionUnprovisionedImplCopyWith<_$SessionUnprovisionedImpl> get copyWith =>
-      __$$SessionUnprovisionedImplCopyWithImpl<_$SessionUnprovisionedImpl>(this, _$identity);
+  _$$SessionUnprovisionedImplCopyWith<_$SessionUnprovisionedImpl>
+  get copyWith =>
+      __$$SessionUnprovisionedImplCopyWithImpl<_$SessionUnprovisionedImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -874,12 +908,13 @@ class _$SessionUnprovisionedImpl implements SessionUnprovisioned {
 }
 
 abstract class SessionUnprovisioned implements SessionState {
-  const factory SessionUnprovisioned({required final String email}) = _$SessionUnprovisionedImpl;
+  const factory SessionUnprovisioned({required final String email}) =
+      _$SessionUnprovisionedImpl;
 
   String get email;
   @JsonKey(ignore: true)
-  _$$SessionUnprovisionedImplCopyWith<_$SessionUnprovisionedImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$SessionUnprovisionedImplCopyWith<_$SessionUnprovisionedImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -943,14 +978,18 @@ class _$SessionDisabledImpl implements SessionDisabled {
   @override
   @pragma('vm:prefer-inline')
   _$$SessionDisabledImplCopyWith<_$SessionDisabledImpl> get copyWith =>
-      __$$SessionDisabledImplCopyWithImpl<_$SessionDisabledImpl>(this, _$identity);
+      __$$SessionDisabledImplCopyWithImpl<_$SessionDisabledImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -1033,7 +1072,8 @@ class _$SessionDisabledImpl implements SessionDisabled {
 }
 
 abstract class SessionDisabled implements SessionState {
-  const factory SessionDisabled({required final String email}) = _$SessionDisabledImpl;
+  const factory SessionDisabled({required final String email}) =
+      _$SessionDisabledImpl;
 
   String get email;
   @JsonKey(ignore: true)
@@ -1100,7 +1140,11 @@ class _$SessionErrorImpl implements SessionError {
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, message, const DeepCollectionEquality().hash(cause));
+  int get hashCode => Object.hash(
+    runtimeType,
+    message,
+    const DeepCollectionEquality().hash(cause),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -1113,7 +1157,8 @@ class _$SessionErrorImpl implements SessionError {
   TResult when<TResult extends Object?>({
     required TResult Function() unauthenticated,
     required TResult Function(String? reason) loading,
-    required TResult Function(FirebaseUserLite user, UserModel profile) authenticated,
+    required TResult Function(FirebaseUserLite user, UserModel profile)
+    authenticated,
     required TResult Function(String email) unprovisioned,
     required TResult Function(String email) disabled,
     required TResult Function(String message, Object? cause) error,
@@ -1196,8 +1241,10 @@ class _$SessionErrorImpl implements SessionError {
 }
 
 abstract class SessionError implements SessionState {
-  const factory SessionError({required final String message, final Object? cause}) =
-      _$SessionErrorImpl;
+  const factory SessionError({
+    required final String message,
+    final Object? cause,
+  }) = _$SessionErrorImpl;
 
   String get message;
   Object? get cause;

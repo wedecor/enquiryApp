@@ -75,7 +75,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
   }
 
   Widget _buildAnalyticsContent(BuildContext context) {
-    final tabBar = buildAnalyticsTabBar(context: context, controller: _tabController);
+    final tabBar = buildAnalyticsTabBar(
+      context: context,
+      controller: _tabController,
+    );
 
     return SafeArea(
       child: NestedScrollView(
@@ -84,13 +87,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AnalyticsHeader(onExport: _exportAnalytics, onRefresh: _refreshData),
+                AnalyticsHeader(
+                  onExport: _exportAnalytics,
+                  onRefresh: _refreshData,
+                ),
                 const AnalyticsKpiGrid(),
-                AnalyticsFiltersPanel(onCustomDateRange: _showCustomDateRangePicker),
+                AnalyticsFiltersPanel(
+                  onCustomDateRange: _showCustomDateRangePicker,
+                ),
               ],
             ),
           ),
-          SliverPersistentHeader(pinned: true, delegate: AnalyticsTabBarDelegate(tabBar)),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: AnalyticsTabBarDelegate(tabBar),
+          ),
         ],
         body: TabBarView(
           controller: _tabController,
@@ -171,9 +182,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                           title: 'Status Breakdown',
                         ),
                         const SizedBox(height: AppTokens.space4),
-                        EventTypePieChart(data: state.eventTypeBreakdown, title: 'Event Types'),
+                        EventTypePieChart(
+                          data: state.eventTypeBreakdown,
+                          title: 'Event Types',
+                        ),
                         const SizedBox(height: AppTokens.space4),
-                        SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
+                        SourceBarChart(
+                          data: state.sourceBreakdown,
+                          title: 'Sources',
+                        ),
                       ],
                     );
                   }
@@ -198,7 +215,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                         ],
                       ),
                       const SizedBox(height: AppTokens.space4),
-                      SourceBarChart(data: state.sourceBreakdown, title: 'Sources'),
+                      SourceBarChart(
+                        data: state.sourceBreakdown,
+                        title: 'Sources',
+                      ),
                     ],
                   );
                 },
@@ -225,14 +245,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 builder: (context, constraints) {
                   return Column(
                     children: [
-                      RecentEnquiriesTable(data: state.recentEnquiries, title: 'Recent Enquiries'),
+                      RecentEnquiriesTable(
+                        data: state.recentEnquiries,
+                        title: 'Recent Enquiries',
+                      ),
                       const SizedBox(height: AppTokens.space4),
                       if (constraints.maxWidth < AppTokens.breakpointTablet)
                         Column(
                           children: [
-                            TopListTable(title: 'Top Event Types', data: state.topEventTypes),
+                            TopListTable(
+                              title: 'Top Event Types',
+                              data: state.topEventTypes,
+                            ),
                             const SizedBox(height: AppTokens.space4),
-                            TopListTable(title: 'Top Sources', data: state.topSources),
+                            TopListTable(
+                              title: 'Top Sources',
+                              data: state.topSources,
+                            ),
                           ],
                         )
                       else
@@ -247,7 +276,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                             ),
                             const SizedBox(width: AppTokens.space4),
                             Expanded(
-                              child: TopListTable(title: 'Top Sources', data: state.topSources),
+                              child: TopListTable(
+                                title: 'Top Sources',
+                                data: state.topSources,
+                              ),
                             ),
                           ],
                         ),
@@ -279,13 +311,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.security_rounded, size: 64, color: AppColorScheme.snackWarning),
+              Icon(
+                Icons.security_rounded,
+                size: 64,
+                color: AppColorScheme.snackWarning,
+              ),
               const SizedBox(height: AppTokens.space6),
               Text(
                 'Access Restricted',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: AppTokens.space4),
               Text(
@@ -296,7 +332,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               const SizedBox(height: AppTokens.space2),
               Text(
                 'Please contact your administrator if you need access to these features.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
               if (!widget.embeddedInShell) ...[
@@ -349,9 +387,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
               const SizedBox(height: AppTokens.space6),
               Text(
                 'Error Loading Data',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: AppTokens.space4),
               Text(
@@ -381,12 +419,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: currentRange.start, end: currentRange.end),
+      initialDateRange: DateTimeRange(
+        start: currentRange.start,
+        end: currentRange.end,
+      ),
     );
 
     if (picked != null) {
       final customRange = DateRange(start: picked.start, end: picked.end);
-      ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange);
+      ref
+          .read(analyticsControllerProvider.notifier)
+          .updateCustomDateRange(customRange);
     }
   }
 

@@ -17,7 +17,8 @@ class NotificationsScreen extends ConsumerWidget {
     final userAsync = ref.watch(currentUserWithFirestoreProvider);
 
     return userAsync.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
       data: (user) {
         if (user == null) {
@@ -71,7 +72,8 @@ class _NotificationsBody extends ConsumerWidget {
               return _NotificationTile(
                 notification: n,
                 onTap: () => _handleTap(context, ref, service, n),
-                onDismiss: () => service.deleteNotification(userId, n['id'] as String),
+                onDismiss: () =>
+                    service.deleteNotification(userId, n['id'] as String),
               );
             },
           );
@@ -88,7 +90,8 @@ class _NotificationsBody extends ConsumerWidget {
   ) {
     final notifId = notification['id'] as String;
     final enquiryId =
-        notification['data']?['enquiryId'] as String? ?? notification['enquiryId'] as String?;
+        notification['data']?['enquiryId'] as String? ??
+        notification['enquiryId'] as String?;
 
     // Mark as read
     if (notification['read'] != true) {
@@ -98,7 +101,9 @@ class _NotificationsBody extends ConsumerWidget {
     // Navigate to enquiry if available
     if (enquiryId != null && context.mounted) {
       Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => EnquiryDetailsScreen(enquiryId: enquiryId)),
+        MaterialPageRoute<void>(
+          builder: (_) => EnquiryDetailsScreen(enquiryId: enquiryId),
+        ),
       );
     }
   }
@@ -124,7 +129,10 @@ class _NotificationTile extends StatelessWidget {
     final isRead = notification['read'] == true;
     final title = notification['title'] as String? ?? 'Notification';
     final body = notification['body'] as String? ?? '';
-    final type = notification['data']?['type'] as String? ?? notification['type'] as String? ?? '';
+    final type =
+        notification['data']?['type'] as String? ??
+        notification['type'] as String? ??
+        '';
     final createdAt = _parseDate(notification['createdAt']);
 
     return Dismissible(
@@ -156,7 +164,11 @@ class _NotificationTile extends StatelessWidget {
                   color: _iconColor(type, cs).withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(_iconFor(type), size: 20, color: _iconColor(type, cs)),
+                child: Icon(
+                  _iconFor(type),
+                  size: 20,
+                  color: _iconColor(type, cs),
+                ),
               ),
               const SizedBox(width: AppTokens.space3),
               // Content
@@ -170,7 +182,9 @@ class _NotificationTile extends StatelessWidget {
                           child: Text(
                             title,
                             style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: isRead ? FontWeight.normal : FontWeight.w600,
+                              fontWeight: isRead
+                                  ? FontWeight.normal
+                                  : FontWeight.w600,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -181,7 +195,10 @@ class _NotificationTile extends StatelessWidget {
                           Container(
                             width: 8,
                             height: 8,
-                            decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                            decoration: BoxDecoration(
+                              color: cs.primary,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ],
                       ],
@@ -190,7 +207,9 @@ class _NotificationTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         body,
-                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -229,8 +248,10 @@ class _NotificationTile extends StatelessWidget {
     return switch (type) {
       'new_enquiry' => AppColorScheme.statusColorFor('new'),
       'enquiry_assigned' || 'assignment' => cs.primary,
-      'status_update' || 'statusChange' => AppColorScheme.statusColorFor('confirmed'),
-      'payment_update' || 'paymentUpdate' => AppColorScheme.statusColorFor('completed'),
+      'status_update' ||
+      'statusChange' => AppColorScheme.statusColorFor('approved'),
+      'payment_update' ||
+      'paymentUpdate' => AppColorScheme.statusColorFor('completed'),
       _ => cs.secondary,
     };
   }
@@ -261,18 +282,24 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.notifications_none_outlined, size: 64, color: cs.onSurfaceVariant),
+          Icon(
+            Icons.notifications_none_outlined,
+            size: 64,
+            color: cs.onSurfaceVariant,
+          ),
           const SizedBox(height: AppTokens.space3),
           Text(
             'All caught up!',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: cs.onSurfaceVariant),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: AppTokens.space1),
           Text(
             'No notifications yet.',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
           ),
         ],
       ),

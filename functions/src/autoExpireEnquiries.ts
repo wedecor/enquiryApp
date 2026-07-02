@@ -4,13 +4,23 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const BATCH_LIMIT = 300;
 
-const AUTO_COMPLETE_STATUSES = new Set(["confirmed"]);
+/** Canonical approved slugs (incl. legacy before migration). */
+const AUTO_COMPLETE_STATUSES = new Set([
+  "approved",
+  "confirmed",
+  "scheduled",
+]);
 
-// Statuses that should be marked as "not_interested" when event date passes
+/** Active pipeline — auto-close when event date has passed without booking. */
 const MARK_NOT_INTERESTED_STATUSES = new Set([
   "new",
   "in_talks",
+  "contacted",
   "quote_sent",
+  "in_progress",
+  "assigned",
+  "quoted",
+  "enquired",
 ]);
 
 const TERMINAL_STATUSES = new Set([
@@ -29,7 +39,6 @@ export const autoExpireEnquiries = onSchedule(
   async () => {
     const db = getFirestore();
     const now = new Date();
-    // Use start of today for date comparison (so events on today are not marked until tomorrow)
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let autoCompleted = 0;
     let scanned = 0;
@@ -64,7 +73,6 @@ export const autoExpireEnquiries = onSchedule(
           continue;
         }
 
-        // Get event date and normalize to start of day for accurate comparison
         const eventDateRaw = doc.get("eventDate");
         if (!eventDateRaw) continue;
 
@@ -77,20 +85,17 @@ export const autoExpireEnquiries = onSchedule(
           continue;
         }
 
-        // Normalize event date to start of day (ignore time)
         const eventDateStart = new Date(
           eventDate.getFullYear(),
           eventDate.getMonth(),
           eventDate.getDate()
         );
 
-        // Only process if event date day has passed (event date < today)
-        // This ensures events on the 23rd are marked completed on the 24th
         if (eventDateStart >= todayStart) {
           continue;
         }
 
-        // Mark "confirmed" events as "completed" (once the event date day has passed)
+        // Approved bookings → completed once event day has passed
         if (AUTO_COMPLETE_STATUSES.has(normalized)) {
           await doc.ref.update({
             statusValue: "completed",
@@ -98,7 +103,6 @@ export const autoExpireEnquiries = onSchedule(
             statusUpdatedAt: FieldValue.serverTimestamp(),
             statusUpdatedBy: "system:auto-complete",
             updatedAt: FieldValue.serverTimestamp(),
-            // Remove old fields
             status: FieldValue.delete(),
             eventStatus: FieldValue.delete(),
             status_slug: FieldValue.delete(),
@@ -108,7 +112,7 @@ export const autoExpireEnquiries = onSchedule(
           continue;
         }
 
-        // Mark "new", "in_talks", "quote_sent" as "not_interested"
+        // Unbooked pipeline → not interested when event date passed
         if (MARK_NOT_INTERESTED_STATUSES.has(normalized)) {
           await doc.ref.update({
             statusValue: "not_interested",
@@ -116,7 +120,6 @@ export const autoExpireEnquiries = onSchedule(
             statusUpdatedAt: FieldValue.serverTimestamp(),
             statusUpdatedBy: "system:auto-expire",
             updatedAt: FieldValue.serverTimestamp(),
-            // Remove old fields
             status: FieldValue.delete(),
             eventStatus: FieldValue.delete(),
             status_slug: FieldValue.delete(),
@@ -136,4 +139,3 @@ export const autoExpireEnquiries = onSchedule(
     });
   }
 );
-

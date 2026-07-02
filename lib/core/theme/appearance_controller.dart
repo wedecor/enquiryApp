@@ -47,9 +47,10 @@ class AppearanceController extends Notifier<AppearanceMode> {
   }
 }
 
-final appearanceControllerProvider = NotifierProvider<AppearanceController, AppearanceMode>(
-  AppearanceController.new,
-);
+final appearanceControllerProvider =
+    NotifierProvider<AppearanceController, AppearanceMode>(
+      AppearanceController.new,
+    );
 
 /// Provider for the current ThemeMode to be used by MaterialApp
 final themeModeProvider = Provider<ThemeMode>((ref) {
@@ -59,11 +60,10 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
 
 /// Legacy provider for backward compatibility
 /// @deprecated Use appearanceControllerProvider instead
-final appearanceModeProvider = StateNotifierProvider<_LegacyAppearanceController, AppearanceMode>((
-  ref,
-) {
-  return _LegacyAppearanceController(ref);
-});
+final appearanceModeProvider =
+    StateNotifierProvider<_LegacyAppearanceController, AppearanceMode>((ref) {
+      return _LegacyAppearanceController(ref);
+    });
 
 /// Legacy controller that delegates to the new Notifier-based controller
 class _LegacyAppearanceController extends StateNotifier<AppearanceMode> {

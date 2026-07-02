@@ -10,7 +10,10 @@ String formatLogData(Object? data) {
   if (data is Map) {
     final redacted = <String, Object?>{};
     for (final entry in data.entries) {
-      redacted[entry.key.toString()] = redactMapEntry(entry.key.toString(), entry.value);
+      redacted[entry.key.toString()] = redactMapEntry(
+        entry.key.toString(),
+        entry.value,
+      );
     }
     return redacted.toString();
   }
@@ -39,8 +42,18 @@ class Log {
     Logger.warn(message, data: data);
   }
 
-  static void e(String message, {Object? error, StackTrace? stackTrace, Object? data}) {
-    Logger.error(message, error: error, stackTrace: stackTrace, data: data ?? error);
+  static void e(
+    String message, {
+    Object? error,
+    StackTrace? stackTrace,
+    Object? data,
+  }) {
+    Logger.error(
+      message,
+      error: error,
+      stackTrace: stackTrace,
+      data: data ?? error,
+    );
   }
 }
 
@@ -151,7 +164,9 @@ class Logger {
     }
 
     final buffer = StringBuffer();
-    buffer.writeln('=== RECENT APP LOGS (LAST ${_logBuffer.length} ENTRIES) ===');
+    buffer.writeln(
+      '=== RECENT APP LOGS (LAST ${_logBuffer.length} ENTRIES) ===',
+    );
     buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
     buffer.writeln('');
 
@@ -180,7 +195,11 @@ class Logger {
       redactedParams[entry.key] = redactMapEntry(entry.key, entry.value);
     }
 
-    developer.log('Event: $event', name: '${_name}_Analytics', level: _infoLevel);
+    developer.log(
+      'Event: $event',
+      name: '${_name}_Analytics',
+      level: _infoLevel,
+    );
 
     for (final entry in redactedParams.entries) {
       developer.log(
@@ -191,7 +210,11 @@ class Logger {
     }
   }
 
-  static void performance(String operation, Duration duration, {Map<String, dynamic>? metadata}) {
+  static void performance(
+    String operation,
+    Duration duration, {
+    Map<String, dynamic>? metadata,
+  }) {
     developer.log(
       'Performance: $operation took ${duration.inMilliseconds}ms',
       name: '${_name}_Performance',

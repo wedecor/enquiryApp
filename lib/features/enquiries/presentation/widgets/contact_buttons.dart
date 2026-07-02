@@ -72,7 +72,9 @@ class ContactButtons extends ConsumerWidget {
           // Call Button
           Expanded(
             child: TapTarget(
-              onTap: enabled ? () => _handleCall(context, ref, contactLauncher) : null,
+              onTap: enabled
+                  ? () => _handleCall(context, ref, contactLauncher)
+                  : null,
               semanticLabel: 'Call $customerName',
               semanticHint: 'Opens phone dialer with customer number',
               enabled: enabled,
@@ -121,7 +123,9 @@ class ContactButtons extends ConsumerWidget {
           // WhatsApp Button
           Expanded(
             child: TapTarget(
-              onTap: enabled ? () => _handleWhatsApp(context, ref, contactLauncher) : null,
+              onTap: enabled
+                  ? () => _handleWhatsApp(context, ref, contactLauncher)
+                  : null,
               semanticLabel: 'Message $customerName on WhatsApp',
               semanticHint: 'Opens WhatsApp chat with customer',
               enabled: enabled,
@@ -155,7 +159,9 @@ class ContactButtons extends ConsumerWidget {
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: enabled
                             ? AppColorScheme.whatsApp
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.4,
+                              ),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -351,7 +357,10 @@ class ContactButtons extends ConsumerWidget {
   }
 
   /// Copy phone number to clipboard
-  Future<void> _copyToClipboard(BuildContext context, String phoneNumber) async {
+  Future<void> _copyToClipboard(
+    BuildContext context,
+    String phoneNumber,
+  ) async {
     try {
       await Clipboard.setData(ClipboardData(text: phoneNumber));
 

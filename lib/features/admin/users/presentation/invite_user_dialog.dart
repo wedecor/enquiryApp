@@ -91,8 +91,14 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                     prefixIcon: Icon(Icons.security),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'staff', child: Text('Staff Member')),
-                    DropdownMenuItem(value: 'admin', child: Text('Administrator')),
+                    DropdownMenuItem(
+                      value: 'staff',
+                      child: Text('Staff Member'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Administrator'),
+                    ),
                   ],
                   onChanged: (role) {
                     if (role != null) {
@@ -104,7 +110,11 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 ),
               ] else ...[
                 // Success state with reset link
-                const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess, size: 64),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColorScheme.snackSuccess,
+                  size: 64,
+                ),
 
                 const SizedBox(height: 16),
 
@@ -125,11 +135,18 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                     decoration: BoxDecoration(
                       color: AppColorScheme.successContainerLight,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColorScheme.successLight.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.email, color: AppColorScheme.onSuccessContainerLight),
+                        const Icon(
+                          Icons.email,
+                          color: AppColorScheme.onSuccessContainerLight,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -159,13 +176,19 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                   child: SelectableText(
                     _resetLink!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
 
@@ -206,7 +229,10 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 : const Text('Send Invite'),
           ),
         ] else ...[
-          ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
         ],
       ],
     );
@@ -258,7 +284,8 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
       if (e.toString().contains('memory limit')) {
         errorMessage = 'Server is busy. Please try again in a moment.';
       } else if (e.toString().contains('timeout')) {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
+        errorMessage =
+            'Request timed out. Please check your connection and try again.';
       } else if (e.toString().contains('permission-denied')) {
         errorMessage = 'You don\'t have permission to invite users.';
       } else if (e.toString().contains('invalid-argument')) {

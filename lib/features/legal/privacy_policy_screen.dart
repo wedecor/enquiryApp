@@ -28,7 +28,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Last updated: $_lastUpdated',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             SizedBox(height: 24),
 
@@ -93,7 +95,10 @@ class _SectionWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           Text(content, style: const TextStyle(fontSize: 14, height: 1.5)),
         ],

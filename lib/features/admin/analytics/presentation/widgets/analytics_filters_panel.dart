@@ -13,7 +13,8 @@ class AnalyticsFiltersPanel extends ConsumerStatefulWidget {
   final Future<void> Function(DateRange currentRange) onCustomDateRange;
 
   @override
-  ConsumerState<AnalyticsFiltersPanel> createState() => _AnalyticsFiltersPanelState();
+  ConsumerState<AnalyticsFiltersPanel> createState() =>
+      _AnalyticsFiltersPanelState();
 }
 
 class _AnalyticsFiltersPanelState extends ConsumerState<AnalyticsFiltersPanel> {
@@ -51,16 +52,24 @@ class _AnalyticsFiltersPanelState extends ConsumerState<AnalyticsFiltersPanel> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.filter_list_rounded, size: AppTokens.iconMedium, color: cs.primary),
+                    Icon(
+                      Icons.filter_list_rounded,
+                      size: AppTokens.iconMedium,
+                      color: cs.primary,
+                    ),
                     const SizedBox(width: AppTokens.space2),
                     Expanded(
                       child: Text(
                         'Filters',
-                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     Icon(
-                      _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                      _expanded
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
                       color: cs.onSurfaceVariant,
                     ),
                   ],
@@ -68,7 +77,10 @@ class _AnalyticsFiltersPanelState extends ConsumerState<AnalyticsFiltersPanel> {
               ),
             ),
             if (_expanded) ...[
-              Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.5)),
+              Divider(
+                height: 1,
+                color: cs.outlineVariant.withValues(alpha: 0.5),
+              ),
               Padding(
                 padding: const EdgeInsets.all(AppTokens.space4),
                 child: Column(
@@ -82,11 +94,14 @@ class _AnalyticsFiltersPanelState extends ConsumerState<AnalyticsFiltersPanel> {
                       ),
                     ),
                     const SizedBox(height: AppTokens.space2),
-                    _DateRangeChips(onCustomDateRange: widget.onCustomDateRange),
+                    _DateRangeChips(
+                      onCustomDateRange: widget.onCustomDateRange,
+                    ),
                     const SizedBox(height: AppTokens.space4),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final isMobile = constraints.maxWidth < AppTokens.breakpointTablet;
+                        final isMobile =
+                            constraints.maxWidth < AppTokens.breakpointTablet;
                         if (isMobile) {
                           return Column(
                             children: [
@@ -160,7 +175,9 @@ class _DateRangeChips extends ConsumerWidget {
                 color: isSelected ? cs.onPrimaryContainer : cs.onSurfaceVariant,
               ),
               selectedColor: cs.primaryContainer,
-              backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+              backgroundColor: cs.surfaceContainerHighest.withValues(
+                alpha: 0.5,
+              ),
               side: BorderSide(
                 color: isSelected
                     ? cs.primary.withValues(alpha: 0.4)
@@ -170,7 +187,9 @@ class _DateRangeChips extends ConsumerWidget {
                 if (preset == DateRangePreset.custom) {
                   await onCustomDateRange(state.filters.dateRange);
                 } else {
-                  ref.read(analyticsControllerProvider.notifier).updateDateRangePreset(preset);
+                  ref
+                      .read(analyticsControllerProvider.notifier)
+                      .updateDateRangePreset(preset);
                 }
               },
             );
@@ -220,16 +239,24 @@ class _EventTypeFilter extends ConsumerWidget {
           initialValue: currentEventType,
           decoration: _filterDecoration('Event Type'),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('All Event Types')),
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All Event Types'),
+            ),
             ...eventTypes.map((eventType) {
               final label =
                   dropdownLookup?.labelForEventType(eventType) ??
                   DropdownLookup.titleCase(eventType);
-              return DropdownMenuItem<String?>(value: eventType, child: Text(label));
+              return DropdownMenuItem<String?>(
+                value: eventType,
+                child: Text(label),
+              );
             }),
           ],
           onChanged: (eventType) {
-            ref.read(analyticsControllerProvider.notifier).updateEventTypeFilter(eventType);
+            ref
+                .read(analyticsControllerProvider.notifier)
+                .updateEventTypeFilter(eventType);
           },
         );
       },
@@ -264,15 +291,24 @@ class _StatusFilter extends ConsumerWidget {
           initialValue: currentStatus,
           decoration: _filterDecoration('Status'),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('All Statuses')),
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All Statuses'),
+            ),
             ...statuses.map((status) {
               final label =
-                  dropdownLookup?.labelForStatus(status) ?? DropdownLookup.titleCase(status);
-              return DropdownMenuItem<String?>(value: status, child: Text(label));
+                  dropdownLookup?.labelForStatus(status) ??
+                  DropdownLookup.titleCase(status);
+              return DropdownMenuItem<String?>(
+                value: status,
+                child: Text(label),
+              );
             }),
           ],
           onChanged: (status) {
-            ref.read(analyticsControllerProvider.notifier).updateStatusFilter(status);
+            ref
+                .read(analyticsControllerProvider.notifier)
+                .updateStatusFilter(status);
           },
         );
       },
@@ -307,15 +343,24 @@ class _PriorityFilter extends ConsumerWidget {
           initialValue: currentPriority,
           decoration: _filterDecoration('Priority'),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('All Priorities')),
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All Priorities'),
+            ),
             ...priorities.map((priority) {
               final label =
-                  dropdownLookup?.labelForPriority(priority) ?? DropdownLookup.titleCase(priority);
-              return DropdownMenuItem<String?>(value: priority, child: Text(label));
+                  dropdownLookup?.labelForPriority(priority) ??
+                  DropdownLookup.titleCase(priority);
+              return DropdownMenuItem<String?>(
+                value: priority,
+                child: Text(label),
+              );
             }),
           ],
           onChanged: (priority) {
-            ref.read(analyticsControllerProvider.notifier).updatePriorityFilter(priority);
+            ref
+                .read(analyticsControllerProvider.notifier)
+                .updatePriorityFilter(priority);
           },
         );
       },
@@ -350,15 +395,24 @@ class _SourceFilter extends ConsumerWidget {
           initialValue: currentSource,
           decoration: _filterDecoration('Source'),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('All Sources')),
+            const DropdownMenuItem<String?>(
+              value: null,
+              child: Text('All Sources'),
+            ),
             ...sources.map((source) {
               final label =
-                  dropdownLookup?.labelForSource(source) ?? DropdownLookup.titleCase(source);
-              return DropdownMenuItem<String?>(value: source, child: Text(label));
+                  dropdownLookup?.labelForSource(source) ??
+                  DropdownLookup.titleCase(source);
+              return DropdownMenuItem<String?>(
+                value: source,
+                child: Text(label),
+              );
             }),
           ],
           onChanged: (source) {
-            ref.read(analyticsControllerProvider.notifier).updateSourceFilter(source);
+            ref
+                .read(analyticsControllerProvider.notifier)
+                .updateSourceFilter(source);
           },
         );
       },

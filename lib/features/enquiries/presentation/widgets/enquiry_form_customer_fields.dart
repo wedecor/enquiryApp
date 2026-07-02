@@ -3,17 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/tokens.dart';
 import 'enquiry_form_section.dart';
 
-/// Customer name, phone, and location fields for the enquiry form.
+/// Customer name, phone, email, and location fields for the enquiry form.
 class EnquiryFormCustomerFields extends StatelessWidget {
   const EnquiryFormCustomerFields({
     super.key,
     required this.nameController,
     required this.phoneController,
+    required this.emailController,
     required this.locationController,
   });
 
   final TextEditingController nameController;
   final TextEditingController phoneController;
+  final TextEditingController emailController;
   final TextEditingController locationController;
 
   @override
@@ -55,6 +57,22 @@ class EnquiryFormCustomerFields extends StatelessWidget {
             if (digits.length > 15) {
               return 'Phone number is too long';
             }
+            return null;
+          },
+        ),
+        SizedBox(height: AppTokens.space4),
+        TextFormField(
+          controller: emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: 'Email (optional)',
+            prefixIcon: Icon(Icons.email_outlined),
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            final trimmed = value?.trim() ?? '';
+            if (trimmed.isEmpty) return null;
+            if (!trimmed.contains('@')) return 'Enter a valid email';
             return null;
           },
         ),

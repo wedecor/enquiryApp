@@ -1,6 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants/dropdown_defaults.dart';
 import '../core/services/firestore_service.dart';
+import '../core/utils/color_parsing.dart';
 
 class DropdownLookup {
   DropdownLookup(this._firestoreService);
@@ -12,6 +15,7 @@ class DropdownLookup {
   Map<String, String> paymentStatusMap = <String, String>{};
   Map<String, String> priorityMap = <String, String>{};
   Map<String, String> sourceMap = <String, String>{};
+  Map<String, Color> statusColorMap = <String, Color>{};
 
   bool _loaded = false;
 
@@ -26,11 +30,24 @@ class DropdownLookup {
       _firestoreService.fetchDropdownValueLabelMap('sources'),
     ]);
 
-    statusMap = results[0];
-    eventTypeMap = results[1];
-    paymentStatusMap = results[2];
-    priorityMap = results[3];
-    sourceMap = results[4];
+    statusMap = DropdownDefaults.resolveMap(results[0], 'statuses');
+    eventTypeMap = DropdownDefaults.resolveMap(results[1], 'event_types');
+    paymentStatusMap = DropdownDefaults.resolveMap(results[2], 'payment_statuses');
+    priorityMap = DropdownDefaults.resolveMap(results[3], 'priorities');
+    sourceMap = DropdownDefaults.resolveMap(results[4], 'sources');
+
+    final statusSnapshot = await _firestoreService.fetchActiveDropdownItems('statuses');
+    final colors = <String, Color>{};
+    for (final doc in statusSnapshot.docs) {
+      final data = doc.data();
+      final value = (data['value'] as String?)?.trim().toLowerCase();
+      final colorHex = data['color'] as String?;
+      if (value == null || value.isEmpty) continue;
+      final color = parseDropdownColor(colorHex);
+      if (color != null) colors[value] = color;
+    }
+    statusColorMap = colors;
+
     _loaded = true;
   }
 
@@ -66,6 +83,7 @@ class DropdownLookup {
     paymentStatusMap = <String, String>{};
     priorityMap = <String, String>{};
     sourceMap = <String, String>{};
+    statusColorMap = <String, Color>{};
   }
 }
 

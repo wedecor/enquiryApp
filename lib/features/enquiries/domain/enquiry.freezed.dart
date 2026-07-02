@@ -112,7 +112,8 @@ abstract class $EnquiryCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry> implements $EnquiryCopyWith<$Res> {
+class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry>
+    implements $EnquiryCopyWith<$Res> {
   _$EnquiryCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -304,8 +305,10 @@ class _$EnquiryCopyWithImpl<$Res, $Val extends Enquiry> implements $EnquiryCopyW
 
 /// @nodoc
 abstract class _$$EnquiryImplCopyWith<$Res> implements $EnquiryCopyWith<$Res> {
-  factory _$$EnquiryImplCopyWith(_$EnquiryImpl value, $Res Function(_$EnquiryImpl) then) =
-      __$$EnquiryImplCopyWithImpl<$Res>;
+  factory _$$EnquiryImplCopyWith(
+    _$EnquiryImpl value,
+    $Res Function(_$EnquiryImpl) then,
+  ) = __$$EnquiryImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({
@@ -347,10 +350,13 @@ abstract class _$$EnquiryImplCopyWith<$Res> implements $EnquiryCopyWith<$Res> {
 }
 
 /// @nodoc
-class __$$EnquiryImplCopyWithImpl<$Res> extends _$EnquiryCopyWithImpl<$Res, _$EnquiryImpl>
+class __$$EnquiryImplCopyWithImpl<$Res>
+    extends _$EnquiryCopyWithImpl<$Res, _$EnquiryImpl>
     implements _$$EnquiryImplCopyWith<$Res> {
-  __$$EnquiryImplCopyWithImpl(_$EnquiryImpl _value, $Res Function(_$EnquiryImpl) _then)
-    : super(_value, _then);
+  __$$EnquiryImplCopyWithImpl(
+    _$EnquiryImpl _value,
+    $Res Function(_$EnquiryImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -574,7 +580,8 @@ class _$EnquiryImpl extends _Enquiry {
   }) : _images = images,
        super._();
 
-  factory _$EnquiryImpl.fromJson(Map<String, dynamic> json) => _$$EnquiryImplFromJson(json);
+  factory _$EnquiryImpl.fromJson(Map<String, dynamic> json) =>
+      _$$EnquiryImplFromJson(json);
 
   @override
   final String id;
@@ -670,51 +677,68 @@ class _$EnquiryImpl extends _Enquiry {
         (other.runtimeType == runtimeType &&
             other is _$EnquiryImpl &&
             (identical(other.id, id) || other.id == id) &&
-            (identical(other.customerName, customerName) || other.customerName == customerName) &&
+            (identical(other.customerName, customerName) ||
+                other.customerName == customerName) &&
             (identical(other.customerEmail, customerEmail) ||
                 other.customerEmail == customerEmail) &&
             (identical(other.customerPhone, customerPhone) ||
                 other.customerPhone == customerPhone) &&
-            (identical(other.eventType, eventType) || other.eventType == eventType) &&
+            (identical(other.eventType, eventType) ||
+                other.eventType == eventType) &&
             (identical(other.eventTypeLabel, eventTypeLabel) ||
                 other.eventTypeLabel == eventTypeLabel) &&
-            (identical(other.eventDate, eventDate) || other.eventDate == eventDate) &&
+            (identical(other.eventDate, eventDate) ||
+                other.eventDate == eventDate) &&
             (identical(other.eventLocation, eventLocation) ||
                 other.eventLocation == eventLocation) &&
-            (identical(other.guestCount, guestCount) || other.guestCount == guestCount) &&
-            (identical(other.budgetRange, budgetRange) || other.budgetRange == budgetRange) &&
-            (identical(other.description, description) || other.description == description) &&
+            (identical(other.guestCount, guestCount) ||
+                other.guestCount == guestCount) &&
+            (identical(other.budgetRange, budgetRange) ||
+                other.budgetRange == budgetRange) &&
+            (identical(other.description, description) ||
+                other.description == description) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.statusLabel, statusLabel) || other.statusLabel == statusLabel) &&
+            (identical(other.statusLabel, statusLabel) ||
+                other.statusLabel == statusLabel) &&
             (identical(other.paymentStatus, paymentStatus) ||
                 other.paymentStatus == paymentStatus) &&
             (identical(other.paymentStatusLabel, paymentStatusLabel) ||
                 other.paymentStatusLabel == paymentStatusLabel) &&
-            (identical(other.totalCost, totalCost) || other.totalCost == totalCost) &&
-            (identical(other.advancePaid, advancePaid) || other.advancePaid == advancePaid) &&
-            (identical(other.assignedTo, assignedTo) || other.assignedTo == assignedTo) &&
-            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt) &&
-            (identical(other.createdBy, createdBy) || other.createdBy == createdBy) &&
-            (identical(other.priority, priority) || other.priority == priority) &&
+            (identical(other.totalCost, totalCost) ||
+                other.totalCost == totalCost) &&
+            (identical(other.advancePaid, advancePaid) ||
+                other.advancePaid == advancePaid) &&
+            (identical(other.assignedTo, assignedTo) ||
+                other.assignedTo == assignedTo) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
+            (identical(other.createdBy, createdBy) ||
+                other.createdBy == createdBy) &&
+            (identical(other.priority, priority) ||
+                other.priority == priority) &&
             (identical(other.priorityLabel, priorityLabel) ||
                 other.priorityLabel == priorityLabel) &&
             (identical(other.source, source) || other.source == source) &&
-            (identical(other.sourceLabel, sourceLabel) || other.sourceLabel == sourceLabel) &&
+            (identical(other.sourceLabel, sourceLabel) ||
+                other.sourceLabel == sourceLabel) &&
             (identical(other.notes, notes) || other.notes == notes) &&
             const DeepCollectionEquality().equals(other._images, _images) &&
             (identical(other.customerNameLower, customerNameLower) ||
                 other.customerNameLower == customerNameLower) &&
             (identical(other.phoneNormalized, phoneNormalized) ||
                 other.phoneNormalized == phoneNormalized) &&
-            (identical(other.assigneeName, assigneeName) || other.assigneeName == assigneeName) &&
+            (identical(other.assigneeName, assigneeName) ||
+                other.assigneeName == assigneeName) &&
             (identical(other.createdByName, createdByName) ||
                 other.createdByName == createdByName) &&
             (identical(other.statusUpdatedAt, statusUpdatedAt) ||
                 other.statusUpdatedAt == statusUpdatedAt) &&
             (identical(other.statusUpdatedBy, statusUpdatedBy) ||
                 other.statusUpdatedBy == statusUpdatedBy) &&
-            (identical(other.textIndex, textIndex) || other.textIndex == textIndex));
+            (identical(other.textIndex, textIndex) ||
+                other.textIndex == textIndex));
   }
 
   @JsonKey(ignore: true)
@@ -886,5 +910,6 @@ abstract class _Enquiry extends Enquiry {
   String? get textIndex;
   @override
   @JsonKey(ignore: true)
-  _$$EnquiryImplCopyWith<_$EnquiryImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$EnquiryImplCopyWith<_$EnquiryImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }

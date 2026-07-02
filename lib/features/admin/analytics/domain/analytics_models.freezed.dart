@@ -26,7 +26,8 @@ mixin _$DateRange {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $DateRangeCopyWith<DateRange> get copyWith => throw _privateConstructorUsedError;
+  $DateRangeCopyWith<DateRange> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -38,7 +39,8 @@ abstract class $DateRangeCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$DateRangeCopyWithImpl<$Res, $Val extends DateRange> implements $DateRangeCopyWith<$Res> {
+class _$DateRangeCopyWithImpl<$Res, $Val extends DateRange>
+    implements $DateRangeCopyWith<$Res> {
   _$DateRangeCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -66,19 +68,25 @@ class _$DateRangeCopyWithImpl<$Res, $Val extends DateRange> implements $DateRang
 }
 
 /// @nodoc
-abstract class _$$DateRangeImplCopyWith<$Res> implements $DateRangeCopyWith<$Res> {
-  factory _$$DateRangeImplCopyWith(_$DateRangeImpl value, $Res Function(_$DateRangeImpl) then) =
-      __$$DateRangeImplCopyWithImpl<$Res>;
+abstract class _$$DateRangeImplCopyWith<$Res>
+    implements $DateRangeCopyWith<$Res> {
+  factory _$$DateRangeImplCopyWith(
+    _$DateRangeImpl value,
+    $Res Function(_$DateRangeImpl) then,
+  ) = __$$DateRangeImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({DateTime start, DateTime end});
 }
 
 /// @nodoc
-class __$$DateRangeImplCopyWithImpl<$Res> extends _$DateRangeCopyWithImpl<$Res, _$DateRangeImpl>
+class __$$DateRangeImplCopyWithImpl<$Res>
+    extends _$DateRangeCopyWithImpl<$Res, _$DateRangeImpl>
     implements _$$DateRangeImplCopyWith<$Res> {
-  __$$DateRangeImplCopyWithImpl(_$DateRangeImpl _value, $Res Function(_$DateRangeImpl) _then)
-    : super(_value, _then);
+  __$$DateRangeImplCopyWithImpl(
+    _$DateRangeImpl _value,
+    $Res Function(_$DateRangeImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -103,7 +111,8 @@ class __$$DateRangeImplCopyWithImpl<$Res> extends _$DateRangeCopyWithImpl<$Res, 
 class _$DateRangeImpl implements _DateRange {
   const _$DateRangeImpl({required this.start, required this.end});
 
-  factory _$DateRangeImpl.fromJson(Map<String, dynamic> json) => _$$DateRangeImplFromJson(json);
+  factory _$DateRangeImpl.fromJson(Map<String, dynamic> json) =>
+      _$$DateRangeImplFromJson(json);
 
   @override
   final DateTime start;
@@ -141,10 +150,13 @@ class _$DateRangeImpl implements _DateRange {
 }
 
 abstract class _DateRange implements DateRange {
-  const factory _DateRange({required final DateTime start, required final DateTime end}) =
-      _$DateRangeImpl;
+  const factory _DateRange({
+    required final DateTime start,
+    required final DateTime end,
+  }) = _$DateRangeImpl;
 
-  factory _DateRange.fromJson(Map<String, dynamic> json) = _$DateRangeImpl.fromJson;
+  factory _DateRange.fromJson(Map<String, dynamic> json) =
+      _$DateRangeImpl.fromJson;
 
   @override
   DateTime get start;
@@ -152,7 +164,8 @@ abstract class _DateRange implements DateRange {
   DateTime get end;
   @override
   @JsonKey(ignore: true)
-  _$$DateRangeImplCopyWith<_$DateRangeImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$DateRangeImplCopyWith<_$DateRangeImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 KpiSummary _$KpiSummaryFromJson(Map<String, dynamic> json) {
@@ -171,13 +184,16 @@ mixin _$KpiSummary {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $KpiSummaryCopyWith<KpiSummary> get copyWith => throw _privateConstructorUsedError;
+  $KpiSummaryCopyWith<KpiSummary> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $KpiSummaryCopyWith<$Res> {
-  factory $KpiSummaryCopyWith(KpiSummary value, $Res Function(KpiSummary) then) =
-      _$KpiSummaryCopyWithImpl<$Res, KpiSummary>;
+  factory $KpiSummaryCopyWith(
+    KpiSummary value,
+    $Res Function(KpiSummary) then,
+  ) = _$KpiSummaryCopyWithImpl<$Res, KpiSummary>;
   @useResult
   $Res call({
     int totalEnquiries,
@@ -193,7 +209,8 @@ abstract class $KpiSummaryCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$KpiSummaryCopyWithImpl<$Res, $Val extends KpiSummary> implements $KpiSummaryCopyWith<$Res> {
+class _$KpiSummaryCopyWithImpl<$Res, $Val extends KpiSummary>
+    implements $KpiSummaryCopyWith<$Res> {
   _$KpiSummaryCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -257,9 +274,12 @@ class _$KpiSummaryCopyWithImpl<$Res, $Val extends KpiSummary> implements $KpiSum
 }
 
 /// @nodoc
-abstract class _$$KpiSummaryImplCopyWith<$Res> implements $KpiSummaryCopyWith<$Res> {
-  factory _$$KpiSummaryImplCopyWith(_$KpiSummaryImpl value, $Res Function(_$KpiSummaryImpl) then) =
-      __$$KpiSummaryImplCopyWithImpl<$Res>;
+abstract class _$$KpiSummaryImplCopyWith<$Res>
+    implements $KpiSummaryCopyWith<$Res> {
+  factory _$$KpiSummaryImplCopyWith(
+    _$KpiSummaryImpl value,
+    $Res Function(_$KpiSummaryImpl) then,
+  ) = __$$KpiSummaryImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({
@@ -277,10 +297,13 @@ abstract class _$$KpiSummaryImplCopyWith<$Res> implements $KpiSummaryCopyWith<$R
 }
 
 /// @nodoc
-class __$$KpiSummaryImplCopyWithImpl<$Res> extends _$KpiSummaryCopyWithImpl<$Res, _$KpiSummaryImpl>
+class __$$KpiSummaryImplCopyWithImpl<$Res>
+    extends _$KpiSummaryCopyWithImpl<$Res, _$KpiSummaryImpl>
     implements _$$KpiSummaryImplCopyWith<$Res> {
-  __$$KpiSummaryImplCopyWithImpl(_$KpiSummaryImpl _value, $Res Function(_$KpiSummaryImpl) _then)
-    : super(_value, _then);
+  __$$KpiSummaryImplCopyWithImpl(
+    _$KpiSummaryImpl _value,
+    $Res Function(_$KpiSummaryImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -341,7 +364,8 @@ class _$KpiSummaryImpl implements _KpiSummary {
     required this.deltas,
   });
 
-  factory _$KpiSummaryImpl.fromJson(Map<String, dynamic> json) => _$$KpiSummaryImplFromJson(json);
+  factory _$KpiSummaryImpl.fromJson(Map<String, dynamic> json) =>
+      _$$KpiSummaryImplFromJson(json);
 
   @override
   final int totalEnquiries;
@@ -372,7 +396,8 @@ class _$KpiSummaryImpl implements _KpiSummary {
                 other.totalEnquiries == totalEnquiries) &&
             (identical(other.activeEnquiries, activeEnquiries) ||
                 other.activeEnquiries == activeEnquiries) &&
-            (identical(other.wonEnquiries, wonEnquiries) || other.wonEnquiries == wonEnquiries) &&
+            (identical(other.wonEnquiries, wonEnquiries) ||
+                other.wonEnquiries == wonEnquiries) &&
             (identical(other.lostEnquiries, lostEnquiries) ||
                 other.lostEnquiries == lostEnquiries) &&
             (identical(other.conversionRate, conversionRate) ||
@@ -418,7 +443,8 @@ abstract class _KpiSummary implements KpiSummary {
     required final KpiDeltas deltas,
   }) = _$KpiSummaryImpl;
 
-  factory _KpiSummary.fromJson(Map<String, dynamic> json) = _$KpiSummaryImpl.fromJson;
+  factory _KpiSummary.fromJson(Map<String, dynamic> json) =
+      _$KpiSummaryImpl.fromJson;
 
   @override
   int get totalEnquiries;
@@ -436,7 +462,8 @@ abstract class _KpiSummary implements KpiSummary {
   KpiDeltas get deltas;
   @override
   @JsonKey(ignore: true)
-  _$$KpiSummaryImplCopyWith<_$KpiSummaryImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$KpiSummaryImplCopyWith<_$KpiSummaryImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 KpiDeltas _$KpiDeltasFromJson(Map<String, dynamic> json) {
@@ -454,7 +481,8 @@ mixin _$KpiDeltas {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $KpiDeltasCopyWith<KpiDeltas> get copyWith => throw _privateConstructorUsedError;
+  $KpiDeltasCopyWith<KpiDeltas> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -473,7 +501,8 @@ abstract class $KpiDeltasCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$KpiDeltasCopyWithImpl<$Res, $Val extends KpiDeltas> implements $KpiDeltasCopyWith<$Res> {
+class _$KpiDeltasCopyWithImpl<$Res, $Val extends KpiDeltas>
+    implements $KpiDeltasCopyWith<$Res> {
   _$KpiDeltasCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -524,9 +553,12 @@ class _$KpiDeltasCopyWithImpl<$Res, $Val extends KpiDeltas> implements $KpiDelta
 }
 
 /// @nodoc
-abstract class _$$KpiDeltasImplCopyWith<$Res> implements $KpiDeltasCopyWith<$Res> {
-  factory _$$KpiDeltasImplCopyWith(_$KpiDeltasImpl value, $Res Function(_$KpiDeltasImpl) then) =
-      __$$KpiDeltasImplCopyWithImpl<$Res>;
+abstract class _$$KpiDeltasImplCopyWith<$Res>
+    implements $KpiDeltasCopyWith<$Res> {
+  factory _$$KpiDeltasImplCopyWith(
+    _$KpiDeltasImpl value,
+    $Res Function(_$KpiDeltasImpl) then,
+  ) = __$$KpiDeltasImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({
@@ -540,10 +572,13 @@ abstract class _$$KpiDeltasImplCopyWith<$Res> implements $KpiDeltasCopyWith<$Res
 }
 
 /// @nodoc
-class __$$KpiDeltasImplCopyWithImpl<$Res> extends _$KpiDeltasCopyWithImpl<$Res, _$KpiDeltasImpl>
+class __$$KpiDeltasImplCopyWithImpl<$Res>
+    extends _$KpiDeltasCopyWithImpl<$Res, _$KpiDeltasImpl>
     implements _$$KpiDeltasImplCopyWith<$Res> {
-  __$$KpiDeltasImplCopyWithImpl(_$KpiDeltasImpl _value, $Res Function(_$KpiDeltasImpl) _then)
-    : super(_value, _then);
+  __$$KpiDeltasImplCopyWithImpl(
+    _$KpiDeltasImpl _value,
+    $Res Function(_$KpiDeltasImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -598,7 +633,8 @@ class _$KpiDeltasImpl implements _KpiDeltas {
     required this.estimatedRevenueChange,
   });
 
-  factory _$KpiDeltasImpl.fromJson(Map<String, dynamic> json) => _$$KpiDeltasImplFromJson(json);
+  factory _$KpiDeltasImpl.fromJson(Map<String, dynamic> json) =>
+      _$$KpiDeltasImplFromJson(json);
 
   @override
   final double totalEnquiriesChange;
@@ -671,7 +707,8 @@ abstract class _KpiDeltas implements KpiDeltas {
     required final double estimatedRevenueChange,
   }) = _$KpiDeltasImpl;
 
-  factory _KpiDeltas.fromJson(Map<String, dynamic> json) = _$KpiDeltasImpl.fromJson;
+  factory _KpiDeltas.fromJson(Map<String, dynamic> json) =
+      _$KpiDeltasImpl.fromJson;
 
   @override
   double get totalEnquiriesChange;
@@ -687,7 +724,8 @@ abstract class _KpiDeltas implements KpiDeltas {
   double get estimatedRevenueChange;
   @override
   @JsonKey(ignore: true)
-  _$$KpiDeltasImplCopyWith<_$KpiDeltasImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$KpiDeltasImplCopyWith<_$KpiDeltasImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 SeriesPoint _$SeriesPointFromJson(Map<String, dynamic> json) {
@@ -701,13 +739,16 @@ mixin _$SeriesPoint {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $SeriesPointCopyWith<SeriesPoint> get copyWith => throw _privateConstructorUsedError;
+  $SeriesPointCopyWith<SeriesPoint> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $SeriesPointCopyWith<$Res> {
-  factory $SeriesPointCopyWith(SeriesPoint value, $Res Function(SeriesPoint) then) =
-      _$SeriesPointCopyWithImpl<$Res, SeriesPoint>;
+  factory $SeriesPointCopyWith(
+    SeriesPoint value,
+    $Res Function(SeriesPoint) then,
+  ) = _$SeriesPointCopyWithImpl<$Res, SeriesPoint>;
   @useResult
   $Res call({DateTime x, int count});
 }
@@ -742,7 +783,8 @@ class _$SeriesPointCopyWithImpl<$Res, $Val extends SeriesPoint>
 }
 
 /// @nodoc
-abstract class _$$SeriesPointImplCopyWith<$Res> implements $SeriesPointCopyWith<$Res> {
+abstract class _$$SeriesPointImplCopyWith<$Res>
+    implements $SeriesPointCopyWith<$Res> {
   factory _$$SeriesPointImplCopyWith(
     _$SeriesPointImpl value,
     $Res Function(_$SeriesPointImpl) then,
@@ -756,8 +798,10 @@ abstract class _$$SeriesPointImplCopyWith<$Res> implements $SeriesPointCopyWith<
 class __$$SeriesPointImplCopyWithImpl<$Res>
     extends _$SeriesPointCopyWithImpl<$Res, _$SeriesPointImpl>
     implements _$$SeriesPointImplCopyWith<$Res> {
-  __$$SeriesPointImplCopyWithImpl(_$SeriesPointImpl _value, $Res Function(_$SeriesPointImpl) _then)
-    : super(_value, _then);
+  __$$SeriesPointImplCopyWithImpl(
+    _$SeriesPointImpl _value,
+    $Res Function(_$SeriesPointImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -782,7 +826,8 @@ class __$$SeriesPointImplCopyWithImpl<$Res>
 class _$SeriesPointImpl implements _SeriesPoint {
   const _$SeriesPointImpl({required this.x, required this.count});
 
-  factory _$SeriesPointImpl.fromJson(Map<String, dynamic> json) => _$$SeriesPointImplFromJson(json);
+  factory _$SeriesPointImpl.fromJson(Map<String, dynamic> json) =>
+      _$$SeriesPointImplFromJson(json);
 
   @override
   final DateTime x;
@@ -820,10 +865,13 @@ class _$SeriesPointImpl implements _SeriesPoint {
 }
 
 abstract class _SeriesPoint implements SeriesPoint {
-  const factory _SeriesPoint({required final DateTime x, required final int count}) =
-      _$SeriesPointImpl;
+  const factory _SeriesPoint({
+    required final DateTime x,
+    required final int count,
+  }) = _$SeriesPointImpl;
 
-  factory _SeriesPoint.fromJson(Map<String, dynamic> json) = _$SeriesPointImpl.fromJson;
+  factory _SeriesPoint.fromJson(Map<String, dynamic> json) =
+      _$SeriesPointImpl.fromJson;
 
   @override
   DateTime get x;
@@ -831,7 +879,8 @@ abstract class _SeriesPoint implements SeriesPoint {
   int get count;
   @override
   @JsonKey(ignore: true)
-  _$$SeriesPointImplCopyWith<_$SeriesPointImpl> get copyWith => throw _privateConstructorUsedError;
+  _$$SeriesPointImplCopyWith<_$SeriesPointImpl> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 CategoryCount _$CategoryCountFromJson(Map<String, dynamic> json) {
@@ -847,13 +896,16 @@ mixin _$CategoryCount {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $CategoryCountCopyWith<CategoryCount> get copyWith => throw _privateConstructorUsedError;
+  $CategoryCountCopyWith<CategoryCount> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $CategoryCountCopyWith<$Res> {
-  factory $CategoryCountCopyWith(CategoryCount value, $Res Function(CategoryCount) then) =
-      _$CategoryCountCopyWithImpl<$Res, CategoryCount>;
+  factory $CategoryCountCopyWith(
+    CategoryCount value,
+    $Res Function(CategoryCount) then,
+  ) = _$CategoryCountCopyWithImpl<$Res, CategoryCount>;
   @useResult
   $Res call({String key, int count, double percentage, String? label});
 }
@@ -901,7 +953,8 @@ class _$CategoryCountCopyWithImpl<$Res, $Val extends CategoryCount>
 }
 
 /// @nodoc
-abstract class _$$CategoryCountImplCopyWith<$Res> implements $CategoryCountCopyWith<$Res> {
+abstract class _$$CategoryCountImplCopyWith<$Res>
+    implements $CategoryCountCopyWith<$Res> {
   factory _$$CategoryCountImplCopyWith(
     _$CategoryCountImpl value,
     $Res Function(_$CategoryCountImpl) then,
@@ -985,7 +1038,8 @@ class _$CategoryCountImpl implements _CategoryCount {
             other is _$CategoryCountImpl &&
             (identical(other.key, key) || other.key == key) &&
             (identical(other.count, count) || other.count == count) &&
-            (identical(other.percentage, percentage) || other.percentage == percentage) &&
+            (identical(other.percentage, percentage) ||
+                other.percentage == percentage) &&
             (identical(other.label, label) || other.label == label));
   }
 
@@ -1013,7 +1067,8 @@ abstract class _CategoryCount implements CategoryCount {
     final String? label,
   }) = _$CategoryCountImpl;
 
-  factory _CategoryCount.fromJson(Map<String, dynamic> json) = _$CategoryCountImpl.fromJson;
+  factory _CategoryCount.fromJson(Map<String, dynamic> json) =
+      _$CategoryCountImpl.fromJson;
 
   @override
   String get key;
@@ -1046,13 +1101,16 @@ mixin _$RecentEnquiry {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $RecentEnquiryCopyWith<RecentEnquiry> get copyWith => throw _privateConstructorUsedError;
+  $RecentEnquiryCopyWith<RecentEnquiry> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $RecentEnquiryCopyWith<$Res> {
-  factory $RecentEnquiryCopyWith(RecentEnquiry value, $Res Function(RecentEnquiry) then) =
-      _$RecentEnquiryCopyWithImpl<$Res, RecentEnquiry>;
+  factory $RecentEnquiryCopyWith(
+    RecentEnquiry value,
+    $Res Function(RecentEnquiry) then,
+  ) = _$RecentEnquiryCopyWithImpl<$Res, RecentEnquiry>;
   @useResult
   $Res call({
     String id,
@@ -1129,7 +1187,8 @@ class _$RecentEnquiryCopyWithImpl<$Res, $Val extends RecentEnquiry>
 }
 
 /// @nodoc
-abstract class _$$RecentEnquiryImplCopyWith<$Res> implements $RecentEnquiryCopyWith<$Res> {
+abstract class _$$RecentEnquiryImplCopyWith<$Res>
+    implements $RecentEnquiryCopyWith<$Res> {
   factory _$$RecentEnquiryImplCopyWith(
     _$RecentEnquiryImpl value,
     $Res Function(_$RecentEnquiryImpl) then,
@@ -1254,12 +1313,16 @@ class _$RecentEnquiryImpl implements _RecentEnquiry {
             other is _$RecentEnquiryImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.date, date) || other.date == date) &&
-            (identical(other.customerName, customerName) || other.customerName == customerName) &&
-            (identical(other.eventType, eventType) || other.eventType == eventType) &&
+            (identical(other.customerName, customerName) ||
+                other.customerName == customerName) &&
+            (identical(other.eventType, eventType) ||
+                other.eventType == eventType) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.source, source) || other.source == source) &&
-            (identical(other.priority, priority) || other.priority == priority) &&
-            (identical(other.totalCost, totalCost) || other.totalCost == totalCost));
+            (identical(other.priority, priority) ||
+                other.priority == priority) &&
+            (identical(other.totalCost, totalCost) ||
+                other.totalCost == totalCost));
   }
 
   @JsonKey(ignore: true)
@@ -1300,7 +1363,8 @@ abstract class _RecentEnquiry implements RecentEnquiry {
     final double? totalCost,
   }) = _$RecentEnquiryImpl;
 
-  factory _RecentEnquiry.fromJson(Map<String, dynamic> json) = _$RecentEnquiryImpl.fromJson;
+  factory _RecentEnquiry.fromJson(Map<String, dynamic> json) =
+      _$RecentEnquiryImpl.fromJson;
 
   @override
   String get id;
@@ -1339,13 +1403,16 @@ mixin _$AnalyticsFilters {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AnalyticsFiltersCopyWith<AnalyticsFilters> get copyWith => throw _privateConstructorUsedError;
+  $AnalyticsFiltersCopyWith<AnalyticsFilters> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AnalyticsFiltersCopyWith<$Res> {
-  factory $AnalyticsFiltersCopyWith(AnalyticsFilters value, $Res Function(AnalyticsFilters) then) =
-      _$AnalyticsFiltersCopyWithImpl<$Res, AnalyticsFilters>;
+  factory $AnalyticsFiltersCopyWith(
+    AnalyticsFilters value,
+    $Res Function(AnalyticsFilters) then,
+  ) = _$AnalyticsFiltersCopyWithImpl<$Res, AnalyticsFilters>;
   @useResult
   $Res call({
     DateRange dateRange,
@@ -1420,7 +1487,8 @@ class _$AnalyticsFiltersCopyWithImpl<$Res, $Val extends AnalyticsFilters>
 }
 
 /// @nodoc
-abstract class _$$AnalyticsFiltersImplCopyWith<$Res> implements $AnalyticsFiltersCopyWith<$Res> {
+abstract class _$$AnalyticsFiltersImplCopyWith<$Res>
+    implements $AnalyticsFiltersCopyWith<$Res> {
   factory _$$AnalyticsFiltersImplCopyWith(
     _$AnalyticsFiltersImpl value,
     $Res Function(_$AnalyticsFiltersImpl) then,
@@ -1528,24 +1596,37 @@ class _$AnalyticsFiltersImpl implements _AnalyticsFilters {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$AnalyticsFiltersImpl &&
-            (identical(other.dateRange, dateRange) || other.dateRange == dateRange) &&
+            (identical(other.dateRange, dateRange) ||
+                other.dateRange == dateRange) &&
             (identical(other.preset, preset) || other.preset == preset) &&
-            (identical(other.eventType, eventType) || other.eventType == eventType) &&
+            (identical(other.eventType, eventType) ||
+                other.eventType == eventType) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.priority, priority) || other.priority == priority) &&
+            (identical(other.priority, priority) ||
+                other.priority == priority) &&
             (identical(other.source, source) || other.source == source));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, dateRange, preset, eventType, status, priority, source);
+  int get hashCode => Object.hash(
+    runtimeType,
+    dateRange,
+    preset,
+    eventType,
+    status,
+    priority,
+    source,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AnalyticsFiltersImplCopyWith<_$AnalyticsFiltersImpl> get copyWith =>
-      __$$AnalyticsFiltersImplCopyWithImpl<_$AnalyticsFiltersImpl>(this, _$identity);
+      __$$AnalyticsFiltersImplCopyWithImpl<_$AnalyticsFiltersImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -1563,7 +1644,8 @@ abstract class _AnalyticsFilters implements AnalyticsFilters {
     final String? source,
   }) = _$AnalyticsFiltersImpl;
 
-  factory _AnalyticsFilters.fromJson(Map<String, dynamic> json) = _$AnalyticsFiltersImpl.fromJson;
+  factory _AnalyticsFilters.fromJson(Map<String, dynamic> json) =
+      _$AnalyticsFiltersImpl.fromJson;
 
   @override
   DateRange get dateRange;
@@ -1593,7 +1675,8 @@ mixin _$AnalyticsState {
   KpiSummary? get kpiSummary => throw _privateConstructorUsedError;
   List<SeriesPoint> get timeSeries => throw _privateConstructorUsedError;
   List<CategoryCount> get statusBreakdown => throw _privateConstructorUsedError;
-  List<CategoryCount> get eventTypeBreakdown => throw _privateConstructorUsedError;
+  List<CategoryCount> get eventTypeBreakdown =>
+      throw _privateConstructorUsedError;
   List<CategoryCount> get sourceBreakdown => throw _privateConstructorUsedError;
   List<RecentEnquiry> get recentEnquiries => throw _privateConstructorUsedError;
   List<CategoryCount> get topEventTypes => throw _privateConstructorUsedError;
@@ -1604,13 +1687,16 @@ mixin _$AnalyticsState {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AnalyticsStateCopyWith<AnalyticsState> get copyWith => throw _privateConstructorUsedError;
+  $AnalyticsStateCopyWith<AnalyticsState> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AnalyticsStateCopyWith<$Res> {
-  factory $AnalyticsStateCopyWith(AnalyticsState value, $Res Function(AnalyticsState) then) =
-      _$AnalyticsStateCopyWithImpl<$Res, AnalyticsState>;
+  factory $AnalyticsStateCopyWith(
+    AnalyticsState value,
+    $Res Function(AnalyticsState) then,
+  ) = _$AnalyticsStateCopyWithImpl<$Res, AnalyticsState>;
   @useResult
   $Res call({
     AnalyticsFilters filters,
@@ -1734,7 +1820,8 @@ class _$AnalyticsStateCopyWithImpl<$Res, $Val extends AnalyticsState>
 }
 
 /// @nodoc
-abstract class _$$AnalyticsStateImplCopyWith<$Res> implements $AnalyticsStateCopyWith<$Res> {
+abstract class _$$AnalyticsStateImplCopyWith<$Res>
+    implements $AnalyticsStateCopyWith<$Res> {
   factory _$$AnalyticsStateImplCopyWith(
     _$AnalyticsStateImpl value,
     $Res Function(_$AnalyticsStateImpl) then,
@@ -1895,7 +1982,8 @@ class _$AnalyticsStateImpl implements _AnalyticsState {
   @override
   @JsonKey()
   List<CategoryCount> get eventTypeBreakdown {
-    if (_eventTypeBreakdown is EqualUnmodifiableListView) return _eventTypeBreakdown;
+    if (_eventTypeBreakdown is EqualUnmodifiableListView)
+      return _eventTypeBreakdown;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_eventTypeBreakdown);
   }
@@ -1956,16 +2044,40 @@ class _$AnalyticsStateImpl implements _AnalyticsState {
         (other.runtimeType == runtimeType &&
             other is _$AnalyticsStateImpl &&
             (identical(other.filters, filters) || other.filters == filters) &&
-            (identical(other.kpiSummary, kpiSummary) || other.kpiSummary == kpiSummary) &&
-            const DeepCollectionEquality().equals(other._timeSeries, _timeSeries) &&
-            const DeepCollectionEquality().equals(other._statusBreakdown, _statusBreakdown) &&
-            const DeepCollectionEquality().equals(other._eventTypeBreakdown, _eventTypeBreakdown) &&
-            const DeepCollectionEquality().equals(other._sourceBreakdown, _sourceBreakdown) &&
-            const DeepCollectionEquality().equals(other._recentEnquiries, _recentEnquiries) &&
-            const DeepCollectionEquality().equals(other._topEventTypes, _topEventTypes) &&
-            const DeepCollectionEquality().equals(other._topSources, _topSources) &&
-            (identical(other.isLoading, isLoading) || other.isLoading == isLoading) &&
-            (identical(other.isRefreshing, isRefreshing) || other.isRefreshing == isRefreshing) &&
+            (identical(other.kpiSummary, kpiSummary) ||
+                other.kpiSummary == kpiSummary) &&
+            const DeepCollectionEquality().equals(
+              other._timeSeries,
+              _timeSeries,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._statusBreakdown,
+              _statusBreakdown,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._eventTypeBreakdown,
+              _eventTypeBreakdown,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._sourceBreakdown,
+              _sourceBreakdown,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._recentEnquiries,
+              _recentEnquiries,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._topEventTypes,
+              _topEventTypes,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._topSources,
+              _topSources,
+            ) &&
+            (identical(other.isLoading, isLoading) ||
+                other.isLoading == isLoading) &&
+            (identical(other.isRefreshing, isRefreshing) ||
+                other.isRefreshing == isRefreshing) &&
             (identical(other.error, error) || other.error == error));
   }
 
@@ -1991,7 +2103,10 @@ class _$AnalyticsStateImpl implements _AnalyticsState {
   @override
   @pragma('vm:prefer-inline')
   _$$AnalyticsStateImplCopyWith<_$AnalyticsStateImpl> get copyWith =>
-      __$$AnalyticsStateImplCopyWithImpl<_$AnalyticsStateImpl>(this, _$identity);
+      __$$AnalyticsStateImplCopyWithImpl<_$AnalyticsStateImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -2015,7 +2130,8 @@ abstract class _AnalyticsState implements AnalyticsState {
     final String? error,
   }) = _$AnalyticsStateImpl;
 
-  factory _AnalyticsState.fromJson(Map<String, dynamic> json) = _$AnalyticsStateImpl.fromJson;
+  factory _AnalyticsState.fromJson(Map<String, dynamic> json) =
+      _$AnalyticsStateImpl.fromJson;
 
   @override
   AnalyticsFilters get filters;

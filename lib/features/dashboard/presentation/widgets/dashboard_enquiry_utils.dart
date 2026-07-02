@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
 
 DateTime? parseEnquiryDateTime(dynamic value) {
@@ -25,19 +26,27 @@ Color? colorFromDynamic(dynamic value) {
   return null;
 }
 
-int compareByCreatedDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
+int compareByCreatedDate(
+  QueryDocumentSnapshot<Object?> a,
+  QueryDocumentSnapshot<Object?> b,
+) {
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
   final aCreated =
-      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(aData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   final bCreated =
-      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(bData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
 
   return aCreated.compareTo(bCreated);
 }
 
-int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<Object?> b) {
+int compareByEventDate(
+  QueryDocumentSnapshot<Object?> a,
+  QueryDocumentSnapshot<Object?> b,
+) {
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
@@ -56,9 +65,11 @@ int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<O
   }
 
   final aCreated =
-      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(aData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   final bCreated =
-      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(bData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   return aCreated.compareTo(bCreated);
 }
 
@@ -85,8 +96,12 @@ int compareByNearestEventDate(
     return aIsFuture ? -1 : 1;
   }
 
-  final aMagnitude = aDiff != null ? aDiff.inMilliseconds.abs() : maxDiffMagnitude;
-  final bMagnitude = bDiff != null ? bDiff.inMilliseconds.abs() : maxDiffMagnitude;
+  final aMagnitude = aDiff != null
+      ? aDiff.inMilliseconds.abs()
+      : maxDiffMagnitude;
+  final bMagnitude = bDiff != null
+      ? bDiff.inMilliseconds.abs()
+      : maxDiffMagnitude;
 
   final magnitudeComparison = aMagnitude.compareTo(bMagnitude);
   if (magnitudeComparison != 0) {
@@ -105,9 +120,11 @@ int compareByNearestEventDate(
   }
 
   final aCreated =
-      parseEnquiryDateTime(aData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(aData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   final bCreated =
-      parseEnquiryDateTime(bData['createdAt']) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      parseEnquiryDateTime(bData['createdAt']) ??
+      DateTime.fromMillisecondsSinceEpoch(0);
   return bCreated.compareTo(aCreated);
 }
 
@@ -160,7 +177,11 @@ bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
   }
 
   final todayStart = DateTime(now.year, now.month, now.day);
-  final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
+  final eventDateStart = DateTime(
+    eventDate.year,
+    eventDate.month,
+    eventDate.day,
+  );
 
   if (eventDateStart.isBefore(todayStart)) {
     return false;
@@ -171,15 +192,7 @@ bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
 }
 
 bool shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
-  final statusValueRaw = enquiryData['statusValue'] as String?;
-  final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-      ? statusValueRaw!.trim().toLowerCase()
-      : 'new';
-
-  // quote_sent folds into In Talks (quotes managed externally via WhatsApp)
-  if (statusValue == 'quote_sent') return true;
-
-  if (statusValue != 'in_talks') {
+  if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
     return false;
   }
 
@@ -195,7 +208,11 @@ bool shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
   }
 
   final todayStart = DateTime(now.year, now.month, now.day);
-  final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
+  final eventDateStart = DateTime(
+    eventDate.year,
+    eventDate.month,
+    eventDate.day,
+  );
   return eventDateStart.compareTo(todayStart) >= 0;
 }
 
@@ -280,7 +297,9 @@ String buildReminderMessage(
     urgencyMessage = 'Your upcoming $eventType needs attention';
   }
 
-  final formattedDate = eventDate != null ? formatDateForMessage(eventDate) : '';
+  final formattedDate = eventDate != null
+      ? formatDateForMessage(eventDate)
+      : '';
   final dateText = formattedDate.isNotEmpty ? ' on $formattedDate' : '';
 
   return 'Hi $customerName!\n\n$urgencyMessage 🎉\n\nWe Decor is excited to be part of your $eventType$dateText and help make it absolutely magical.\n\nIf you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\nOtherwise, feel free to reply to this message - we\'re here to answer any questions and help bring your vision to life! ✨\n\nTeam We Decor - Bringing dreams to life 💫';

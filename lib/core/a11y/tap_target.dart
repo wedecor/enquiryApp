@@ -153,13 +153,18 @@ class TextTapTarget extends StatelessWidget {
       minSize: minSize,
       padding:
           padding ??
-          const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
+          const EdgeInsets.symmetric(
+            horizontal: AppTokens.space4,
+            vertical: AppTokens.space2,
+          ),
       semanticLabel: semanticLabel ?? text,
       semanticHint: semanticHint,
       enabled: enabled,
       child: Text(
         text,
-        style: style?.copyWith(color: enabled ? style?.color : theme.colorScheme.onSurfaceVariant),
+        style: style?.copyWith(
+          color: enabled ? style?.color : theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
@@ -205,7 +210,9 @@ class CardTapTarget extends StatelessWidget {
             BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: AppRadius.medium,
-              border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              ),
             ),
         semanticLabel: semanticLabel,
         semanticHint: semanticHint,
@@ -246,7 +253,10 @@ class ListItemTapTarget extends StatelessWidget {
       minSize: minSize,
       padding:
           padding ??
-          const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space3),
+          const EdgeInsets.symmetric(
+            horizontal: AppTokens.space4,
+            vertical: AppTokens.space3,
+          ),
       decoration: decoration,
       semanticLabel: semanticLabel,
       semanticHint: semanticHint,
@@ -345,23 +355,34 @@ class ToggleTapTarget extends StatelessWidget {
     final theme = Theme.of(context);
 
     final effectiveSelectedColor = selectedColor ?? theme.colorScheme.primary;
-    final effectiveUnselectedColor = unselectedColor ?? theme.colorScheme.surfaceContainerHighest;
+    final effectiveUnselectedColor =
+        unselectedColor ?? theme.colorScheme.surfaceContainerHighest;
 
     return TapTarget(
       onTap: enabled ? onPressed : null,
       minSize: minSize,
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3, vertical: AppTokens.space2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space3,
+        vertical: AppTokens.space2,
+      ),
       decoration: BoxDecoration(
         color: isSelected ? effectiveSelectedColor : effectiveUnselectedColor,
         borderRadius: AppRadius.medium,
-        border: Border.all(color: isSelected ? effectiveSelectedColor : theme.colorScheme.outline),
+        border: Border.all(
+          color: isSelected
+              ? effectiveSelectedColor
+              : theme.colorScheme.outline,
+        ),
       ),
       semanticLabel: semanticLabel,
-      semanticHint: semanticHint ?? 'Double tap to ${isSelected ? 'deselect' : 'select'}',
+      semanticHint:
+          semanticHint ?? 'Double tap to ${isSelected ? 'deselect' : 'select'}',
       enabled: enabled,
       child: DefaultTextStyle(
         style: TextStyle(
-          color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface,
+          color: isSelected
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurface,
         ),
         child: child,
       ),

@@ -69,8 +69,9 @@ class FiltersBar extends ConsumerWidget {
                     ...filters.statuses.map(
                       (status) => _FilterChip(
                         label: 'Status: $status',
-                        onDeleted: () =>
-                            ref.read(enquiryFiltersProvider.notifier).toggleStatusFilter(status),
+                        onDeleted: () => ref
+                            .read(enquiryFiltersProvider.notifier)
+                            .toggleStatusFilter(status),
                       ),
                     ),
                   ],
@@ -91,8 +92,9 @@ class FiltersBar extends ConsumerWidget {
                   if (filters.assigneeId != null) ...[
                     _FilterChip(
                       label: 'Assignee: ${filters.assigneeId}',
-                      onDeleted: () =>
-                          ref.read(enquiryFiltersProvider.notifier).updateAssigneeFilter(null),
+                      onDeleted: () => ref
+                          .read(enquiryFiltersProvider.notifier)
+                          .updateAssigneeFilter(null),
                     ),
                   ],
 
@@ -101,8 +103,9 @@ class FiltersBar extends ConsumerWidget {
                     _FilterChip(
                       label:
                           'Date: ${_formatDateRange(_convertToFlutterDateRange(filters.dateRange!))}',
-                      onDeleted: () =>
-                          ref.read(enquiryFiltersProvider.notifier).updateDateRangeFilter(null),
+                      onDeleted: () => ref
+                          .read(enquiryFiltersProvider.notifier)
+                          .updateDateRangeFilter(null),
                     ),
                   ],
 
@@ -110,8 +113,9 @@ class FiltersBar extends ConsumerWidget {
                   if (filters.searchQuery?.isNotEmpty ?? false) ...[
                     _FilterChip(
                       label: 'Search: "${filters.searchQuery}"',
-                      onDeleted: () =>
-                          ref.read(enquiryFiltersProvider.notifier).updateSearchQuery(null),
+                      onDeleted: () => ref
+                          .read(enquiryFiltersProvider.notifier)
+                          .updateSearchQuery(null),
                     ),
                   ],
                 ],
@@ -203,11 +207,17 @@ class FilterSummary extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.filter_list, size: AppTokens.iconMedium, color: theme.colorScheme.primary),
+              Icon(
+                Icons.filter_list,
+                size: AppTokens.iconMedium,
+                color: theme.colorScheme.primary,
+              ),
               const SizedBox(width: AppTokens.space2),
               Text(
                 'Active Filters',
-                style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
               ),
               const Spacer(),
               TextButton(
@@ -269,7 +279,9 @@ class QuickFilters extends ConsumerWidget {
               _QuickFilterButton(
                 label: 'New',
                 isActive: filters.statuses.contains('new'),
-                onTap: () => ref.read(enquiryFiltersProvider.notifier).toggleStatusFilter('new'),
+                onTap: () => ref
+                    .read(enquiryFiltersProvider.notifier)
+                    .toggleStatusFilter('new'),
               ),
               _QuickFilterButton(
                 label: 'Assigned to Me',
@@ -297,7 +309,11 @@ class QuickFilters extends ConsumerWidget {
     if (filters.dateRange == null) return false;
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final startOfWeekDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+    final startOfWeekDay = DateTime(
+      startOfWeek.year,
+      startOfWeek.month,
+      startOfWeek.day,
+    );
     final endOfWeek = startOfWeekDay.add(const Duration(days: 7));
 
     return filters.dateRange!.start.isAtSameMomentAs(startOfWeekDay) &&
@@ -317,12 +333,18 @@ class QuickFilters extends ConsumerWidget {
   void _applyThisWeekFilter(WidgetRef ref) {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final startOfWeekDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+    final startOfWeekDay = DateTime(
+      startOfWeek.year,
+      startOfWeek.month,
+      startOfWeek.day,
+    );
     final endOfWeek = startOfWeekDay.add(const Duration(days: 7));
 
     ref
         .read(enquiryFiltersProvider.notifier)
-        .updateDateRangeFilter(FilterDateRange(start: startOfWeekDay, end: endOfWeek));
+        .updateDateRangeFilter(
+          FilterDateRange(start: startOfWeekDay, end: endOfWeek),
+        );
   }
 
   void _toggleAssignedToMeFilter(WidgetRef ref) {
@@ -340,7 +362,11 @@ class QuickFilters extends ConsumerWidget {
 
 /// Individual quick filter button
 class _QuickFilterButton extends StatelessWidget {
-  const _QuickFilterButton({required this.label, required this.isActive, required this.onTap});
+  const _QuickFilterButton({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
 
   final String label;
   final bool isActive;

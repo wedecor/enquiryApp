@@ -38,7 +38,8 @@ class EnquiryListItem extends ConsumerWidget {
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
         ? statusValueRaw!.trim().toLowerCase()
         : 'new';
-    final eventTypeValueRaw = (data['eventTypeValue'] ?? data['eventType']) as String?;
+    final eventTypeValueRaw =
+        (data['eventTypeValue'] ?? data['eventType']) as String?;
     final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
         ? eventTypeValueRaw!.trim()
         : 'event';
@@ -53,7 +54,8 @@ class EnquiryListItem extends ConsumerWidget {
     final whatsapp = data['whatsappNumber'] as String? ?? phone;
     final createdAt = _parseDateTime(data['createdAt']) ?? DateTime.now();
     final eventDate = _parseDateTime(data['eventDate']);
-    final location = (data['eventLocation'] as String?) ?? (data['location'] as String?);
+    final location =
+        (data['eventLocation'] as String?) ?? (data['location'] as String?);
 
     void openDetails() {
       Navigator.of(context)

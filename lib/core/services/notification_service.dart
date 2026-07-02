@@ -65,7 +65,10 @@ class NotificationService {
       // Get assigned user details
       final assignedUser = await _getUserById(assignedTo);
       if (assignedUser == null) {
-        Log.w('NotificationService: assigned user not found', data: {'assignedTo': assignedTo});
+        Log.w(
+          'NotificationService: assigned user not found',
+          data: {'assignedTo': assignedTo},
+        );
         return;
       }
 
@@ -73,7 +76,8 @@ class NotificationService {
       await _sendNotificationToUser(
         userId: assignedTo,
         title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
+        body:
+            'You have been assigned an enquiry from $customerName for $eventType',
         data: {
           'type': 'enquiry_assigned',
           'enquiryId': enquiryId,
@@ -162,7 +166,9 @@ class NotificationService {
       }
 
       if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
+        debugPrint(
+          '✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users',
+        );
         for (var admin in adminUsers) {
           debugPrint('   - Admin: ${admin.email} (${admin.uid})');
         }
@@ -170,7 +176,10 @@ class NotificationService {
 
       Log.i(
         'NotificationService: sending status update notifications to admins',
-        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
+        data: {
+          'adminCount': adminUsers.length,
+          'adminIds': adminUsers.map((u) => u.uid).toList(),
+        },
       );
 
       // Send notification to all admins (excluding the updater)
@@ -179,7 +188,8 @@ class NotificationService {
           await _sendNotificationToUser(
             userId: admin.uid,
             title: 'Enquiry Status Updated',
-            body: 'Status changed from $oldStatus to $newStatus for $customerName',
+            body:
+                'Status changed from $oldStatus to $newStatus for $customerName',
             data: {
               'type': 'status_update',
               'enquiryId': enquiryId,
@@ -208,12 +218,15 @@ class NotificationService {
         final assignedUser = await _getUserById(assignedTo);
         if (assignedUser != null) {
           // Only send if they're not already an admin (to avoid duplicate)
-          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
+          final isAssignedUserAdmin = adminUsers.any(
+            (admin) => admin.uid == assignedTo,
+          );
           if (!isAssignedUserAdmin) {
             await _sendNotificationToUser(
               userId: assignedTo,
               title: 'Enquiry Status Updated',
-              body: 'Status changed from $oldStatus to $newStatus for $customerName',
+              body:
+                  'Status changed from $oldStatus to $newStatus for $customerName',
               data: {
                 'type': 'status_update',
                 'enquiryId': enquiryId,
@@ -299,7 +312,9 @@ class NotificationService {
       }
 
       if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
+        debugPrint(
+          '✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users',
+        );
         for (var admin in adminUsers) {
           debugPrint('   - Admin: ${admin.email} (${admin.uid})');
         }
@@ -307,7 +322,10 @@ class NotificationService {
 
       Log.i(
         'NotificationService: sending enquiry update notifications to admins',
-        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
+        data: {
+          'adminCount': adminUsers.length,
+          'adminIds': adminUsers.map((u) => u.uid).toList(),
+        },
       );
 
       // Send notification to all admins (excluding the updater)
@@ -344,12 +362,15 @@ class NotificationService {
         final assignedUser = await _getUserById(assignedTo);
         if (assignedUser != null) {
           // Only send if they're not already an admin (to avoid duplicate)
-          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
+          final isAssignedUserAdmin = adminUsers.any(
+            (admin) => admin.uid == assignedTo,
+          );
           if (!isAssignedUserAdmin) {
             await _sendNotificationToUser(
               userId: assignedTo,
               title: 'Enquiry Updated',
-              body: 'Enquiry from $customerName for $eventType has been updated',
+              body:
+                  'Enquiry from $customerName for $eventType has been updated',
               data: {
                 'type': 'enquiry_updated',
                 'enquiryId': enquiryId,
@@ -384,17 +405,22 @@ class NotificationService {
       }
 
       // Query for admin users - filter by isActive (backward compatible during migration)
-      final query = _firestore.collection('users').where('role', isEqualTo: 'admin');
+      final query = _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'admin');
 
       final snapshot = await query.get();
 
       if (kDebugMode) {
-        debugPrint('   Found ${snapshot.docs.length} total admin documents in Firestore');
+        debugPrint(
+          '   Found ${snapshot.docs.length} total admin documents in Firestore',
+        );
         for (var doc in snapshot.docs) {
           final data = doc.data();
           final isActive = data['isActive'] ?? data['active'] ?? true;
           final willInclude =
-              !(excludeUserId != null && doc.id == excludeUserId) && isActive != false;
+              !(excludeUserId != null && doc.id == excludeUserId) &&
+              isActive != false;
           debugPrint('   - Admin doc: ${doc.id}');
           debugPrint('     Email: ${data['email']}');
           debugPrint('     Role: ${data['role']}');
@@ -417,7 +443,9 @@ class NotificationService {
             // Exclude the specified user if provided
             if (excludeUserId != null && doc.id == excludeUserId) {
               if (kDebugMode) {
-                debugPrint('   ⏭️ Excluding admin: ${doc.id} (matches updatedBy)');
+                debugPrint(
+                  '   ⏭️ Excluding admin: ${doc.id} (matches updatedBy)',
+                );
               }
               return false;
             }
@@ -427,7 +455,9 @@ class NotificationService {
             final isActive = data['isActive'] ?? data['active'] ?? true;
             if (isActive == false) {
               if (kDebugMode) {
-                debugPrint('   ⏭️ Excluding admin: ${doc.id} (isActive = false)');
+                debugPrint(
+                  '   ⏭️ Excluding admin: ${doc.id} (isActive = false)',
+                );
               }
               return false;
             }
@@ -446,7 +476,9 @@ class NotificationService {
           .toList();
 
       if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users to notify');
+        debugPrint(
+          '✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users to notify',
+        );
         for (var admin in adminUsers) {
           debugPrint('   - ${admin.email} (${admin.uid})');
         }
@@ -466,7 +498,11 @@ class NotificationService {
       if (kDebugMode) {
         debugPrint('❌ NOTIFICATION DEBUG: ERROR getting admin users: $e');
       }
-      Log.e('NotificationService: error getting admin users', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error getting admin users',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -486,7 +522,11 @@ class NotificationService {
         role: data['role'] == 'admin' ? UserRole.admin : UserRole.staff,
       );
     } catch (e, st) {
-      Log.e('NotificationService: error getting user by ID', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error getting user by ID',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -547,7 +587,9 @@ class NotificationService {
             });
 
         if (kDebugMode) {
-          debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
+          debugPrint(
+            '✅ Notification stored in Firestore: ${notificationRef.id}',
+          );
         }
       } catch (firestoreError, stackTrace) {
         if (kDebugMode) {
@@ -598,12 +640,17 @@ class NotificationService {
           data: {
             'userId': userId,
             'notificationId': notificationRef.id,
-            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
+            'note':
+                'Cloud Function will attempt to send but may fail if no tokens exist',
           },
         );
       }
     } catch (e, st) {
-      Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error sending notification to user',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -616,7 +663,10 @@ class NotificationService {
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList(),
+        );
   }
 
   /// Real-time stream of unread notification count
@@ -640,7 +690,11 @@ class NotificationService {
           .doc(notificationId)
           .delete();
     } catch (e, st) {
-      Log.e('NotificationService: error deleting notification', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error deleting notification',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -660,13 +714,20 @@ class NotificationService {
         return {'id': doc.id, ...data};
       }).toList();
     } catch (e, st) {
-      Log.e('NotificationService: error getting user notifications', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error getting user notifications',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
 
   /// Mark notification as read
-  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+  Future<void> markNotificationAsRead(
+    String userId,
+    String notificationId,
+  ) async {
     try {
       await _firestore
           .collection('users')
@@ -675,7 +736,11 @@ class NotificationService {
           .doc(notificationId)
           .update({'read': true, 'readAt': FieldValue.serverTimestamp()});
     } catch (e, st) {
-      Log.e('NotificationService: error marking notification as read', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: error marking notification as read',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -691,7 +756,10 @@ class NotificationService {
           .get();
 
       for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+        batch.update(doc.reference, {
+          'read': true,
+          'readAt': FieldValue.serverTimestamp(),
+        });
       }
 
       await batch.commit();

@@ -28,27 +28,13 @@ void main() {
 
       final eventTypeBreakdown =
           eventTypeCounts.entries
-              .map(
-                (e) => CategoryCount(
-                  key: e.key,
-                  label: e.key,
-                  count: e.value,
-                  percentage: 0,
-                ),
-              )
+              .map((e) => CategoryCount(key: e.key, label: e.key, count: e.value, percentage: 0))
               .toList()
             ..sort((a, b) => b.count.compareTo(a.count));
 
       final statusBreakdown =
           statusCounts.entries
-              .map(
-                (e) => CategoryCount(
-                  key: e.key,
-                  label: e.key,
-                  count: e.value,
-                  percentage: 0,
-                ),
-              )
+              .map((e) => CategoryCount(key: e.key, label: e.key, count: e.value, percentage: 0))
               .toList()
             ..sort((a, b) => b.count.compareTo(a.count));
 
@@ -61,12 +47,24 @@ void main() {
       expect(topEventTypes.first.key, isNot(equals(wrongTopFromStatus.first.key)));
     });
 
-    test('scheduled enquiry also counts toward revenue', () {
+    test('legacy scheduled status counts toward revenue as approved', () {
+      expect(EnquiryStatus.fromValue('scheduled'), EnquiryStatus.approved);
       final raw = [
         {'statusValue': 'scheduled', 'totalCost': 15000},
         {'statusValue': 'completed', 'totalCost': 25000},
       ];
       expect(AnalyticsRepository.aggregateSumRevenue(raw), 40000);
+    });
+
+    test('staff can move approved directly to completed', () {
+      expect(
+        EnquiryStatus.isStaffTransitionAllowed('approved', 'completed'),
+        isTrue,
+      );
+      expect(
+        EnquiryStatus.isStaffTransitionAllowed('approved', 'scheduled'),
+        isFalse,
+      );
     });
   });
 }

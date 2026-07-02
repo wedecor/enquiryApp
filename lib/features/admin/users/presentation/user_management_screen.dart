@@ -19,7 +19,8 @@ class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
 
   @override
-  ConsumerState<UserManagementScreen> createState() => _UserManagementScreenState();
+  ConsumerState<UserManagementScreen> createState() =>
+      _UserManagementScreenState();
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
@@ -42,7 +43,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   void _onSearchChanged() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      ref.read(usersFilterProvider.notifier).updateSearch(_searchController.text);
+      ref
+          .read(usersFilterProvider.notifier)
+          .updateSearch(_searchController.text);
     });
   }
 
@@ -86,7 +89,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                       label: const Text('Add User'),
                       style: FilledButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
                       ),
                     ),
                   ),
@@ -124,7 +129,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -143,7 +150,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           hintText: 'Search by name or email...',
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                     ),
@@ -160,16 +170,30 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Role',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'All', child: Text('All Roles')),
-                          DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                          DropdownMenuItem(value: 'staff', child: Text('Staff')),
+                          DropdownMenuItem(
+                            value: 'All',
+                            child: Text('All Roles'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'admin',
+                            child: Text('Admin'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'staff',
+                            child: Text('Staff'),
+                          ),
                         ],
                         onChanged: (value) {
                           if (value != null) {
-                            ref.read(usersFilterProvider.notifier).updateRole(value);
+                            ref
+                                .read(usersFilterProvider.notifier)
+                                .updateRole(value);
                           }
                         },
                       ),
@@ -182,15 +206,29 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         decoration: const InputDecoration(
                           labelText: 'Status',
                           border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
                         items: const [
-                          DropdownMenuItem<bool?>(value: null, child: Text('All Status')),
-                          DropdownMenuItem<bool?>(value: true, child: Text('Active')),
-                          DropdownMenuItem<bool?>(value: false, child: Text('Inactive')),
+                          DropdownMenuItem<bool?>(
+                            value: null,
+                            child: Text('All Status'),
+                          ),
+                          DropdownMenuItem<bool?>(
+                            value: true,
+                            child: Text('Active'),
+                          ),
+                          DropdownMenuItem<bool?>(
+                            value: false,
+                            child: Text('Inactive'),
+                          ),
                         ],
                         onChanged: (value) {
-                          ref.read(usersFilterProvider.notifier).updateActive(value);
+                          ref
+                              .read(usersFilterProvider.notifier)
+                              .updateActive(value);
                         },
                       ),
                     ),
@@ -216,7 +254,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         SizedBox(height: 16),
                         Text(
                           'Access Denied',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         SizedBox(height: 8),
                         Text('Only administrators can access user management.'),
@@ -230,7 +271,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 builder: (context, ref, child) {
                   final usersAsync = ref.watch(usersStreamProvider(filter));
                   return Expanded(
-                    child: _buildUsersListArea(usersAsync, true, true, paginationState),
+                    child: _buildUsersListArea(
+                      usersAsync,
+                      true,
+                      true,
+                      paginationState,
+                    ),
                   );
                 },
               );
@@ -247,8 +293,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 ),
               ),
             ),
-            error: (error, stack) =>
-                Expanded(child: Center(child: Text('Error checking permissions: $error'))),
+            error: (error, stack) => Expanded(
+              child: Center(child: Text('Error checking permissions: $error')),
+            ),
           ),
         ],
       ),
@@ -262,7 +309,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     PaginationState paginationState,
   ) {
     return usersAsync.when(
-      data: (users) => _buildUsersList(users, isAdmin, roleKnown, paginationState),
+      data: (users) =>
+          _buildUsersList(users, isAdmin, roleKnown, paginationState),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => _buildErrorState(error),
     );
@@ -299,14 +347,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               isAdmin
                   ? 'No users found. Use "Add User" to create one.'
                   : 'No users to show or you lack permissions to modify.',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(color: mutedColor),
             ),
             const SizedBox(height: 8),
             Text(
               isAdmin
                   ? 'Start by adding your first user to the system.'
                   : 'Contact an admin to get access or check your role in Firestore.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: mutedColor),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: mutedColor),
               textAlign: TextAlign.center,
             ),
           ],
@@ -351,7 +403,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     (user) => DataRow(
                       cells: [
                         DataCell(Text(user.name)),
-                        DataCell(Text(user.email, style: const TextStyle(fontFamily: 'monospace'))),
+                        DataCell(
+                          Text(
+                            user.email,
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
+                        ),
                         DataCell(Text(user.phone ?? '')),
                         DataCell(_buildRoleChip(user.role)),
                         DataCell(_buildStatusChip(user.isActive)),
@@ -369,7 +426,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
-              onPressed: paginationState.isLoading ? null : () => _loadMore(users),
+              onPressed: paginationState.isLoading
+                  ? null
+                  : () => _loadMore(users),
               child: paginationState.isLoading
                   ? const SizedBox(
                       width: 16,
@@ -403,7 +462,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(user.email, style: const TextStyle(fontFamily: 'monospace')),
+                      Text(
+                        user.email,
+                        style: const TextStyle(fontFamily: 'monospace'),
+                      ),
                       if (user.phone != null) Text(user.phone!),
                       const SizedBox(height: 4),
                       Row(
@@ -416,7 +478,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     ],
                   ),
                   trailing: PopupMenuButton<String>(
-                    onSelected: isAdmin ? (action) => _handleUserAction(action, user) : null,
+                    onSelected: isAdmin
+                        ? (action) => _handleUserAction(action, user)
+                        : null,
                     enabled: isAdmin,
                     itemBuilder: (context) => [
                       PopupMenuItem(
@@ -434,10 +498,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                         enabled: isAdmin,
                         child: Row(
                           children: [
-                            Icon(user.isActive ? Icons.block : Icons.check_circle),
+                            Icon(
+                              user.isActive ? Icons.block : Icons.check_circle,
+                            ),
                             const SizedBox(width: 8),
                             Text(
-                              isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
+                              isAdmin
+                                  ? (user.isActive ? 'Deactivate' : 'Activate')
+                                  : 'Admin only',
                             ),
                           ],
                         ),
@@ -453,7 +521,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
-              onPressed: paginationState.isLoading ? null : () => _loadMore(users),
+              onPressed: paginationState.isLoading
+                  ? null
+                  : () => _loadMore(users),
               child: paginationState.isLoading
                   ? const SizedBox(
                       width: 16,
@@ -468,11 +538,17 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   Widget _buildRoleChip(String role) {
-    final color = role == 'admin' ? AppColorScheme.chartPurple : AppColorScheme.chartBlue;
+    final color = role == 'admin'
+        ? AppColorScheme.chartPurple
+        : AppColorScheme.chartBlue;
     return Chip(
       label: Text(
         role.toUpperCase(),
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       backgroundColor: color,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -483,9 +559,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return Chip(
       label: Text(
         active ? 'ACTIVE' : 'INACTIVE',
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
-      backgroundColor: active ? AppColorScheme.chartGreen : AppColorScheme.chartRed,
+      backgroundColor: active
+          ? AppColorScheme.chartGreen
+          : AppColorScheme.chartRed,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
@@ -502,7 +584,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         IconButton(
           icon: Icon(user.isActive ? Icons.block : Icons.check_circle),
           onPressed: isAdmin ? () => _toggleUserStatus(user) : null,
-          tooltip: isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
+          tooltip: isAdmin
+              ? (user.isActive ? 'Deactivate' : 'Activate')
+              : 'Admin only',
         ),
       ],
     );
@@ -516,13 +600,16 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         children: [
           Icon(Icons.error_outline, size: 64, color: colorScheme.error),
           const SizedBox(height: 16),
-          Text('Error loading users', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Error loading users',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -567,7 +654,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   }
 
   void _showAddUserDialog(BuildContext context) {
-    showDialog<void>(context: context, builder: (context) => const UserFormDialog());
+    showDialog<void>(
+      context: context,
+      builder: (context) => const UserFormDialog(),
+    );
   }
 
   void _showInviteUserDialog(BuildContext context) {
@@ -577,7 +667,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         'screen': 'user_management',
         'action_type': 'ui_access',
       });
-      showDialog<void>(context: context, builder: (context) => const InviteUserDialog());
+      showDialog<void>(
+        context: context,
+        builder: (context) => const InviteUserDialog(),
+      );
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -634,7 +727,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   _showSnackBar('User ${action}d successfully', isError: false);
                 })
                 .catchError((Object error) {
-                  _showSnackBar('Failed to $action user: $error', isError: true);
+                  _showSnackBar(
+                    'Failed to $action user: $error',
+                    isError: true,
+                  );
                 });
           },
         ),
@@ -650,8 +746,14 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
-        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
+        backgroundColor: isError
+            ? AppColorScheme.snackError
+            : AppColorScheme.snackSuccess,
+        action: SnackBarAction(
+          label: 'OK',
+          textColor: Colors.white,
+          onPressed: () {},
+        ),
       ),
     );
   }

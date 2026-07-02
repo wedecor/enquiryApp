@@ -149,14 +149,9 @@ class AppColorScheme {
     switch (canonical) {
       case 'new':
         return statusNew;
-      case 'contacted':
       case 'in_talks':
         return statusInTalks;
-      case 'quote_sent':
-        return statusQuoteSent;
-      case 'confirmed':
       case 'approved':
-      case 'scheduled':
         return statusConfirmed;
       case 'completed':
         return statusCompleted;

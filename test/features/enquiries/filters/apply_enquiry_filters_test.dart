@@ -23,10 +23,26 @@ void main() {
     expect(matchesEnquiryFilters(sample, match), isTrue);
   });
 
+  test('legacy status values match canonical filter slugs', () {
+    const legacyInTalks = {'statusValue': 'quote_sent'};
+    const filters = EnquiryFilters(statuses: ['in_talks']);
+    expect(matchesEnquiryFilters(legacyInTalks, filters), isTrue);
+
+    const legacyApproved = {'statusValue': 'scheduled'};
+    const approvedFilter = EnquiryFilters(statuses: ['approved']);
+    expect(matchesEnquiryFilters(legacyApproved, approvedFilter), isTrue);
+  });
+
   test('filters by assignee including current user alias', () {
     const filters = EnquiryFilters(assigneeId: 'current_user_id');
-    expect(matchesEnquiryFilters(sample, filters, currentUserId: 'user-2'), isFalse);
-    expect(matchesEnquiryFilters(sample, filters, currentUserId: 'user-1'), isTrue);
+    expect(
+      matchesEnquiryFilters(sample, filters, currentUserId: 'user-2'),
+      isFalse,
+    );
+    expect(
+      matchesEnquiryFilters(sample, filters, currentUserId: 'user-1'),
+      isTrue,
+    );
   });
 
   test('filters by search query', () {

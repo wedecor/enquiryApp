@@ -38,13 +38,16 @@ mixin _$PaginationState {
   String? get error => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $PaginationStateCopyWith<PaginationState> get copyWith => throw _privateConstructorUsedError;
+  $PaginationStateCopyWith<PaginationState> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $PaginationStateCopyWith<$Res> {
-  factory $PaginationStateCopyWith(PaginationState value, $Res Function(PaginationState) then) =
-      _$PaginationStateCopyWithImpl<$Res, PaginationState>;
+  factory $PaginationStateCopyWith(
+    PaginationState value,
+    $Res Function(PaginationState) then,
+  ) = _$PaginationStateCopyWithImpl<$Res, PaginationState>;
   @useResult
   $Res call({
     List<QueryDocumentSnapshot<Map<String, dynamic>>> documents,
@@ -109,7 +112,8 @@ class _$PaginationStateCopyWithImpl<$Res, $Val extends PaginationState>
 }
 
 /// @nodoc
-abstract class _$$PaginationStateImplCopyWith<$Res> implements $PaginationStateCopyWith<$Res> {
+abstract class _$$PaginationStateImplCopyWith<$Res>
+    implements $PaginationStateCopyWith<$Res> {
   factory _$$PaginationStateImplCopyWith(
     _$PaginationStateImpl value,
     $Res Function(_$PaginationStateImpl) then,
@@ -180,7 +184,8 @@ class __$$PaginationStateImplCopyWithImpl<$Res>
 
 class _$PaginationStateImpl implements _PaginationState {
   const _$PaginationStateImpl({
-    final List<QueryDocumentSnapshot<Map<String, dynamic>>> documents = const [],
+    final List<QueryDocumentSnapshot<Map<String, dynamic>>> documents =
+        const [],
     this.lastDocument,
     this.hasMore = false,
     this.isLoading = false,
@@ -233,10 +238,15 @@ class _$PaginationStateImpl implements _PaginationState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$PaginationStateImpl &&
-            const DeepCollectionEquality().equals(other._documents, _documents) &&
-            (identical(other.lastDocument, lastDocument) || other.lastDocument == lastDocument) &&
+            const DeepCollectionEquality().equals(
+              other._documents,
+              _documents,
+            ) &&
+            (identical(other.lastDocument, lastDocument) ||
+                other.lastDocument == lastDocument) &&
             (identical(other.hasMore, hasMore) || other.hasMore == hasMore) &&
-            (identical(other.isLoading, isLoading) || other.isLoading == isLoading) &&
+            (identical(other.isLoading, isLoading) ||
+                other.isLoading == isLoading) &&
             (identical(other.isLoadingMore, isLoadingMore) ||
                 other.isLoadingMore == isLoadingMore) &&
             (identical(other.error, error) || other.error == error));
@@ -257,7 +267,10 @@ class _$PaginationStateImpl implements _PaginationState {
   @override
   @pragma('vm:prefer-inline')
   _$$PaginationStateImplCopyWith<_$PaginationStateImpl> get copyWith =>
-      __$$PaginationStateImplCopyWithImpl<_$PaginationStateImpl>(this, _$identity);
+      __$$PaginationStateImplCopyWithImpl<_$PaginationStateImpl>(
+        this,
+        _$identity,
+      );
 }
 
 abstract class _PaginationState implements PaginationState {

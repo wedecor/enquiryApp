@@ -17,9 +17,9 @@ void main() {
       await tester.pumpWidget(const ProviderScope(child: MyApp()));
       await tester.pumpAndSettle();
 
-      // Starts at system mode
+      // Starts at light mode (default before async prefs load)
       MaterialApp app = tester.widget(find.byType(MaterialApp));
-      expect(app.themeMode, ThemeMode.system);
+      expect(app.themeMode, ThemeMode.light);
 
       // Get the provider container
       final container = ProviderScope.containerOf(tester.element(find.byType(MyApp)));
@@ -86,8 +86,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Initially should show system mode
-      expect(find.text('Current Mode: system'), findsOneWidget);
+      // Initially should show light mode
+      expect(find.text('Current Mode: light'), findsOneWidget);
 
       // Tap dark mode button
       await tester.tap(find.text('Set Dark'));
@@ -145,9 +145,9 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Initially system mode
-      expect(currentThemeMode, ThemeMode.system);
-      expect(find.text('Theme Mode: system'), findsOneWidget);
+      // Initially light mode
+      expect(currentThemeMode, ThemeMode.light);
+      expect(find.text('Theme Mode: light'), findsOneWidget);
 
       // Change to dark mode
       final container = ProviderScope.containerOf(tester.element(find.byType(Consumer)));
@@ -208,8 +208,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Initially should show system
-      expect(find.text('Selected: system'), findsOneWidget);
+      // Initially should show light
+      expect(find.text('Selected: light'), findsOneWidget);
 
       // Tap dark mode segment
       await tester.tap(find.text('Dark'));

@@ -7,10 +7,11 @@ import 'pagination_state.dart';
 
 /// Provider for paginated enquiries state
 final paginatedEnquiriesProvider =
-    StateNotifierProvider.family<PaginatedEnquiriesNotifier, PaginationState, PaginationParams>((
-      ref,
-      params,
-    ) {
+    StateNotifierProvider.family<
+      PaginatedEnquiriesNotifier,
+      PaginationState,
+      PaginationParams
+    >((ref, params) {
       final repository = ref.watch(enquiryRepositoryProvider);
       final currentUser = ref.watch(currentUserWithFirestoreProvider);
       final roleAsync = ref.watch(roleProvider);
@@ -32,7 +33,9 @@ class PaginationParams {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is PaginationParams && runtimeType == other.runtimeType && status == other.status;
+      other is PaginationParams &&
+          runtimeType == other.runtimeType &&
+          status == other.status;
 
   @override
   int get hashCode => status.hashCode;
@@ -55,7 +58,12 @@ class PaginatedEnquiriesNotifier extends StateNotifier<PaginationState> {
 
   /// Load first page (reset pagination)
   Future<void> loadFirstPage() async {
-    state = state.copyWith(isLoading: true, error: null, documents: [], lastDocument: null);
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      documents: [],
+      lastDocument: null,
+    );
 
     final result = await repository.getPaginatedEnquiries(
       isAdmin: isAdmin,

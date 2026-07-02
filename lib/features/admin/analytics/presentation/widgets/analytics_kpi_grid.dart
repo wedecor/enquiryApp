@@ -29,9 +29,10 @@ class AnalyticsKpiGrid extends ConsumerWidget {
             children: [
               Text(
                 'Key metrics',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
               ),
               const SizedBox(height: AppTokens.space3),
               _KpiGridBody(state: state),
@@ -40,7 +41,10 @@ class AnalyticsKpiGrid extends ConsumerWidget {
         );
       },
       loading: () => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space6),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppTokens.space4,
+          vertical: AppTokens.space6,
+        ),
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Padding(
@@ -52,9 +56,9 @@ class AnalyticsKpiGrid extends ConsumerWidget {
         ),
         child: Text(
           'Unable to load analytics summary',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
         ),
       ),
     );

@@ -6,10 +6,10 @@ import '../../features/dashboard/presentation/screens/calendar_view_screen.dart'
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/enquiries/presentation/screens/enquiries_list_screen.dart';
 import '../../features/enquiries/presentation/screens/enquiry_form_screen.dart';
-import '../../features/enquiries/presentation/screens/kanban_board_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../shared/models/user_model.dart';
+import '../../ui/components/brand_mark.dart';
 import '../providers/notification_provider.dart';
 import '../providers/role_provider.dart';
 import '../services/firebase_auth_service.dart';
@@ -29,6 +29,13 @@ class _AppShellState extends ConsumerState<AppShell> {
   // Calendar is always index 1 — used by DashboardScreen to navigate to it.
   static const int _calendarTabIndex = 1;
 
+  void _navigateToAnalytics(bool isAdmin) {
+    final idx = _destinations(
+      isAdmin,
+    ).indexWhere((d) => d.label == 'Analytics');
+    if (idx >= 0) setState(() => _selectedIndex = idx);
+  }
+
   List<_ShellDestination> _destinations(bool isAdmin) {
     return [
       _ShellDestination(
@@ -37,7 +44,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         selectedIcon: Icons.dashboard,
         body: DashboardScreen(
           embeddedInShell: true,
-          onNavigateToCalendar: () => setState(() => _selectedIndex = _calendarTabIndex),
+          onNavigateToCalendar: () =>
+              setState(() => _selectedIndex = _calendarTabIndex),
+          onNavigateToAnalytics: () => _navigateToAnalytics(isAdmin),
         ),
       ),
       const _ShellDestination(
@@ -51,12 +60,6 @@ class _AppShellState extends ConsumerState<AppShell> {
         icon: Icons.list_alt_outlined,
         selectedIcon: Icons.list_alt,
         body: EnquiriesListScreen(embeddedInShell: true),
-      ),
-      const _ShellDestination(
-        label: 'Board',
-        icon: Icons.view_kanban_outlined,
-        selectedIcon: Icons.view_kanban,
-        body: KanbanBoardScreen(embeddedInShell: true),
       ),
       if (isAdmin)
         const _ShellDestination(
@@ -77,7 +80,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _showFab(List<_ShellDestination> destinations) {
     if (_selectedIndex >= destinations.length) return false;
     final label = destinations[_selectedIndex].label;
-    return label == 'Dashboard' || label == 'Enquiries' || label == 'Board';
+    return label == 'Dashboard' || label == 'Enquiries';
   }
 
   Future<void> _signOut() async {
@@ -85,10 +88,18 @@ class _AppShellState extends ConsumerState<AppShell> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text('You will need to sign in again to access the app.'),
+        content: const Text(
+          'You will need to sign in again to access the app.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign out')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign out'),
+          ),
         ],
       ),
     );
@@ -99,15 +110,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _openNewEnquiry() {
-    Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final roleAsync = ref.watch(roleProvider);
     final isAdmin = roleAsync.valueOrNull == UserRole.admin;
+    final permissions = ref.watch(userPermissionsProvider);
     final destinations = _destinations(isAdmin);
 
     if (_selectedIndex >= destinations.length) {
@@ -125,10 +137,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(current.label),
+        title: _AppBarTitle(label: current.label),
         actions: [
           _NotificationBell(isAdmin: isAdmin),
-          IconButton(icon: const Icon(Icons.logout), tooltip: 'Sign Out', onPressed: _signOut),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+            onPressed: _signOut,
+          ),
         ],
       ),
       body: Row(
@@ -137,8 +153,20 @@ class _AppShellState extends ConsumerState<AppShell> {
             NavigationRail(
               extended: railExtended,
               selectedIndex: safeIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-              labelType: railExtended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              onDestinationSelected: (index) =>
+                  setState(() => _selectedIndex = index),
+              labelType: railExtended
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
+              leading: railExtended
+                  ? const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: BrandMark(compact: false),
+                    )
+                  : const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: BrandMark(compact: true),
+                    ),
               destinations: [
                 for (final d in destinations)
                   NavigationRailDestination(
@@ -151,14 +179,18 @@ class _AppShellState extends ConsumerState<AppShell> {
             const VerticalDivider(width: 1, thickness: 1),
           ],
           Expanded(
-            child: IndexedStack(index: safeIndex, children: [for (final d in destinations) d.body]),
+            child: IndexedStack(
+              index: safeIndex,
+              children: [for (final d in destinations) d.body],
+            ),
           ),
         ],
       ),
       bottomNavigationBar: useBottomNav
           ? NavigationBar(
               selectedIndex: safeIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+              onDestinationSelected: (index) =>
+                  setState(() => _selectedIndex = index),
               destinations: [
                 for (final d in destinations)
                   NavigationDestination(
@@ -169,7 +201,8 @@ class _AppShellState extends ConsumerState<AppShell> {
               ],
             )
           : null,
-      floatingActionButton: _showFab(destinations)
+      floatingActionButton:
+          _showFab(destinations) && permissions.canCreateEnquiries
           ? FloatingActionButton(
               onPressed: _openNewEnquiry,
               tooltip: 'Add New Enquiry',
@@ -198,9 +231,9 @@ class _NotificationBell extends ConsumerWidget {
 
     return IconButton(
       tooltip: 'Notifications',
-      onPressed: () => Navigator.of(
-        context,
-      ).push<void>(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())),
+      onPressed: () => Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+      ),
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(count > 99 ? '99+' : '$count'),
@@ -224,4 +257,22 @@ class _ShellDestination {
   final IconData icon;
   final IconData selectedIcon;
   final Widget body;
+}
+
+class _AppBarTitle extends StatelessWidget {
+  const _AppBarTitle({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const BrandMark(compact: true),
+        const SizedBox(width: 10),
+        Text(label),
+      ],
+    );
+  }
 }

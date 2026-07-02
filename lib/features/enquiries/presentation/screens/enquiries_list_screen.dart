@@ -26,7 +26,8 @@ class EnquiriesListScreen extends ConsumerStatefulWidget {
   final bool embeddedInShell;
 
   @override
-  ConsumerState<EnquiriesListScreen> createState() => _EnquiriesListScreenState();
+  ConsumerState<EnquiriesListScreen> createState() =>
+      _EnquiriesListScreenState();
 }
 
 class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
@@ -52,27 +53,39 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         if (_view == _EnquiriesView.board) {
           return Column(
             children: [
-              if (widget.embeddedInShell) _buildShellToolbar(context, userRole, user.uid),
-              Expanded(child: KanbanBoardScreen(embeddedInShell: true, filters: filters)),
+              if (widget.embeddedInShell)
+                _buildShellToolbar(context, userRole, user.uid),
+              Expanded(
+                child: KanbanBoardScreen(
+                  embeddedInShell: true,
+                  filters: filters,
+                ),
+              ),
             ],
           );
         }
 
         return Column(
           children: [
-            if (widget.embeddedInShell) _buildShellToolbar(context, userRole, user.uid),
+            if (widget.embeddedInShell)
+              _buildShellToolbar(context, userRole, user.uid),
             FiltersBar(
-              onClearFilters: () => ref.read(enquiryFiltersProvider.notifier).clearFilters(),
+              onClearFilters: () =>
+                  ref.read(enquiryFiltersProvider.notifier).clearFilters(),
             ),
             if (filters.searchQuery?.isNotEmpty ?? false)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Chip(
                     label: Text('Search: ${filters.searchQuery}'),
-                    onDeleted: () =>
-                        ref.read(enquiryFiltersProvider.notifier).updateSearchQuery(null),
+                    onDeleted: () => ref
+                        .read(enquiryFiltersProvider.notifier)
+                        .updateSearchQuery(null),
                   ),
                 ),
               ),
@@ -85,8 +98,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                       userRole: userRole,
                       filters: filters,
                       dropdownLookup: dropdownLookup,
-                      onClearFilters: () =>
-                          ref.read(enquiryFiltersProvider.notifier).clearFilters(),
+                      onClearFilters: () => ref
+                          .read(enquiryFiltersProvider.notifier)
+                          .clearFilters(),
                     )
                   : _EnquiriesPaginatedList(
                       key: ValueKey(
@@ -96,15 +110,17 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
                       userUid: user.uid,
                       filters: filters,
                       dropdownLookup: dropdownLookup,
-                      onClearFilters: () =>
-                          ref.read(enquiryFiltersProvider.notifier).clearFilters(),
+                      onClearFilters: () => ref
+                          .read(enquiryFiltersProvider.notifier)
+                          .clearFilters(),
                     ),
             ),
           ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error loading user data: $error')),
+      error: (error, stack) =>
+          Center(child: Text('Error loading user data: $error')),
     );
 
     if (widget.embeddedInShell) {
@@ -113,7 +129,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
+        title: Text(
+          userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries',
+        ),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -122,8 +140,13 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             onPressed: () => _showFiltersSheet(context),
           ),
           PopupMenuButton<String>(
-            onSelected: (action) =>
-                _handleAction(context, ref, action, userRole, currentUser.value?.uid),
+            onSelected: (action) => _handleAction(
+              context,
+              ref,
+              action,
+              userRole,
+              currentUser.value?.uid,
+            ),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'export',
@@ -150,7 +173,11 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     );
   }
 
-  Widget _buildShellToolbar(BuildContext context, UserRole? userRole, String userId) {
+  Widget _buildShellToolbar(
+    BuildContext context,
+    UserRole? userRole,
+    String userId,
+  ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       child: Row(
@@ -180,7 +207,8 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             onPressed: () => _showFiltersSheet(context),
           ),
           PopupMenuButton<String>(
-            onSelected: (action) => _handleAction(context, ref, action, userRole, userId),
+            onSelected: (action) =>
+                _handleAction(context, ref, action, userRole, userId),
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: 'export',
@@ -208,7 +236,10 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Filter Enquiries', style: Theme.of(sheetContext).textTheme.titleLarge),
+              Text(
+                'Filter Enquiries',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
               const SizedBox(height: 12),
               const QuickFilters(),
               const FilterSummary(),
@@ -242,14 +273,24 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
       case 'add':
         if (userRole != UserRole.admin) return;
         Navigator.of(context)
-            .push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()))
+            .push<void>(
+              MaterialPageRoute<void>(
+                builder: (context) => const EnquiryFormScreen(),
+              ),
+            )
             .then((_) {
               if (_view == _EnquiriesView.list) {
                 final filters = ref.read(enquiryFiltersProvider);
                 if (filters.searchQuery?.isNotEmpty ?? false) return;
-                final status = filters.statuses.length == 1 ? filters.statuses.first : null;
+                final status = filters.statuses.length == 1
+                    ? filters.statuses.first
+                    : null;
                 ref
-                    .read(paginatedEnquiriesProvider(PaginationParams(status: status)).notifier)
+                    .read(
+                      paginatedEnquiriesProvider(
+                        PaginationParams(status: status),
+                      ).notifier,
+                    )
                     .refresh();
               }
             });
@@ -345,7 +386,10 @@ class _EnquiriesStreamList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: firestoreService.watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userUid),
+      stream: firestoreService.watchEnquiriesForRole(
+        isAdmin: isAdmin,
+        assignedToUid: userUid,
+      ),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
@@ -414,21 +458,27 @@ class _EnquiriesPaginatedList extends ConsumerStatefulWidget {
   final VoidCallback onClearFilters;
 
   @override
-  ConsumerState<_EnquiriesPaginatedList> createState() => _EnquiriesPaginatedListState();
+  ConsumerState<_EnquiriesPaginatedList> createState() =>
+      _EnquiriesPaginatedListState();
 }
 
-class _EnquiriesPaginatedListState extends ConsumerState<_EnquiriesPaginatedList> {
+class _EnquiriesPaginatedListState
+    extends ConsumerState<_EnquiriesPaginatedList> {
   late final ScrollController _scrollController;
 
   PaginationParams get _params => PaginationParams(
-    status: widget.filters.statuses.length == 1 ? widget.filters.statuses.first : null,
+    status: widget.filters.statuses.length == 1
+        ? widget.filters.statuses.first
+        : null,
   );
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadFirstPageIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _loadFirstPageIfNeeded(),
+    );
   }
 
   @override
@@ -476,12 +526,17 @@ class _EnquiriesPaginatedListState extends ConsumerState<_EnquiriesPaginatedList
 
     final enquiries = pagination.documents.where((doc) {
       final data = doc.data();
-      return matchesEnquiryFilters(data, widget.filters, currentUserId: widget.userUid);
+      return matchesEnquiryFilters(
+        data,
+        widget.filters,
+        currentUserId: widget.userUid,
+      );
     }).toList();
 
     if (enquiries.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () => ref.read(paginatedEnquiriesProvider(_params).notifier).refresh(),
+        onRefresh: () =>
+            ref.read(paginatedEnquiriesProvider(_params).notifier).refresh(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -501,7 +556,8 @@ class _EnquiriesPaginatedListState extends ConsumerState<_EnquiriesPaginatedList
     final showBottomLoader = pagination.isLoadingMore && pagination.hasMore;
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(paginatedEnquiriesProvider(_params).notifier).refresh(),
+      onRefresh: () =>
+          ref.read(paginatedEnquiriesProvider(_params).notifier).refresh(),
       child: ListView.builder(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -523,7 +579,8 @@ class _EnquiriesPaginatedListState extends ConsumerState<_EnquiriesPaginatedList
             enquiryId: enquiry.id,
             data: enquiryData,
             dropdownLookup: widget.dropdownLookup,
-            showAssignee: widget.userRole == UserRole.admin && assignedTo != null,
+            showAssignee:
+                widget.userRole == UserRole.admin && assignedTo != null,
             onReturnFromDetail: _refreshPagination,
           );
         },
@@ -570,7 +627,10 @@ class _EnquiriesEmptyState extends StatelessWidget {
           ),
           if (hasFilters) ...[
             const SizedBox(height: 12),
-            TextButton(onPressed: onClearFilters, child: const Text('Clear filters')),
+            TextButton(
+              onPressed: onClearFilters,
+              child: const Text('Clear filters'),
+            ),
           ],
         ],
       ),

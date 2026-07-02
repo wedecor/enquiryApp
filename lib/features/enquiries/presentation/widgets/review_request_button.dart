@@ -36,8 +36,12 @@ class ReviewRequestButton extends ConsumerWidget {
         final googleReviewLink = config.googleReviewLink.isNotEmpty
             ? config.googleReviewLink
             : null;
-        final instagramHandle = config.instagramHandle.isNotEmpty ? config.instagramHandle : null;
-        final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
+        final instagramHandle = config.instagramHandle.isNotEmpty
+            ? config.instagramHandle
+            : null;
+        final websiteUrl = config.websiteUrl.isNotEmpty
+            ? config.websiteUrl
+            : null;
 
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
@@ -58,7 +62,9 @@ class ReviewRequestButton extends ConsumerWidget {
               backgroundColor: Colors.amber.shade600,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         );
@@ -120,7 +126,9 @@ class ReviewRequestButton extends ConsumerWidget {
         case ContactLaunchStatus.notInstalled:
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('WhatsApp not installed. Opened in browser instead.'),
+              content: Text(
+                'WhatsApp not installed. Opened in browser instead.',
+              ),
               backgroundColor: AppColorScheme.snackWarning,
             ),
           );

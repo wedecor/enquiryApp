@@ -30,13 +30,16 @@ mixin _$UserSettings {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $UserSettingsCopyWith<UserSettings> get copyWith => throw _privateConstructorUsedError;
+  $UserSettingsCopyWith<UserSettings> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $UserSettingsCopyWith<$Res> {
-  factory $UserSettingsCopyWith(UserSettings value, $Res Function(UserSettings) then) =
-      _$UserSettingsCopyWithImpl<$Res, UserSettings>;
+  factory $UserSettingsCopyWith(
+    UserSettings value,
+    $Res Function(UserSettings) then,
+  ) = _$UserSettingsCopyWithImpl<$Res, UserSettings>;
   @useResult
   $Res call({
     String theme,
@@ -120,7 +123,8 @@ class _$UserSettingsCopyWithImpl<$Res, $Val extends UserSettings>
 }
 
 /// @nodoc
-abstract class _$$UserSettingsImplCopyWith<$Res> implements $UserSettingsCopyWith<$Res> {
+abstract class _$$UserSettingsImplCopyWith<$Res>
+    implements $UserSettingsCopyWith<$Res> {
   factory _$$UserSettingsImplCopyWith(
     _$UserSettingsImpl value,
     $Res Function(_$UserSettingsImpl) then,
@@ -236,18 +240,29 @@ class _$UserSettingsImpl implements _UserSettings {
         (other.runtimeType == runtimeType &&
             other is _$UserSettingsImpl &&
             (identical(other.theme, theme) || other.theme == theme) &&
-            (identical(other.language, language) || other.language == language) &&
-            (identical(other.timezone, timezone) || other.timezone == timezone) &&
-            (identical(other.dashboard, dashboard) || other.dashboard == dashboard) &&
+            (identical(other.language, language) ||
+                other.language == language) &&
+            (identical(other.timezone, timezone) ||
+                other.timezone == timezone) &&
+            (identical(other.dashboard, dashboard) ||
+                other.dashboard == dashboard) &&
             (identical(other.notifications, notifications) ||
                 other.notifications == notifications) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, theme, language, timezone, dashboard, notifications, updatedAt);
+  int get hashCode => Object.hash(
+    runtimeType,
+    theme,
+    language,
+    timezone,
+    dashboard,
+    notifications,
+    updatedAt,
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -271,7 +286,8 @@ abstract class _UserSettings implements UserSettings {
     final DateTime? updatedAt,
   }) = _$UserSettingsImpl;
 
-  factory _UserSettings.fromJson(Map<String, dynamic> json) = _$UserSettingsImpl.fromJson;
+  factory _UserSettings.fromJson(Map<String, dynamic> json) =
+      _$UserSettingsImpl.fromJson;
 
   @override
   String get theme;
@@ -303,7 +319,8 @@ mixin _$DashboardSettings {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $DashboardSettingsCopyWith<DashboardSettings> get copyWith => throw _privateConstructorUsedError;
+  $DashboardSettingsCopyWith<DashboardSettings> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -313,7 +330,11 @@ abstract class $DashboardSettingsCopyWith<$Res> {
     $Res Function(DashboardSettings) then,
   ) = _$DashboardSettingsCopyWithImpl<$Res, DashboardSettings>;
   @useResult
-  $Res call({String dateRange, List<String> statusTabs, List<ColumnSettings> columns});
+  $Res call({
+    String dateRange,
+    List<String> statusTabs,
+    List<ColumnSettings> columns,
+  });
 }
 
 /// @nodoc
@@ -328,7 +349,11 @@ class _$DashboardSettingsCopyWithImpl<$Res, $Val extends DashboardSettings>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? dateRange = null, Object? statusTabs = null, Object? columns = null}) {
+  $Res call({
+    Object? dateRange = null,
+    Object? statusTabs = null,
+    Object? columns = null,
+  }) {
     return _then(
       _value.copyWith(
             dateRange: null == dateRange
@@ -350,14 +375,19 @@ class _$DashboardSettingsCopyWithImpl<$Res, $Val extends DashboardSettings>
 }
 
 /// @nodoc
-abstract class _$$DashboardSettingsImplCopyWith<$Res> implements $DashboardSettingsCopyWith<$Res> {
+abstract class _$$DashboardSettingsImplCopyWith<$Res>
+    implements $DashboardSettingsCopyWith<$Res> {
   factory _$$DashboardSettingsImplCopyWith(
     _$DashboardSettingsImpl value,
     $Res Function(_$DashboardSettingsImpl) then,
   ) = __$$DashboardSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String dateRange, List<String> statusTabs, List<ColumnSettings> columns});
+  $Res call({
+    String dateRange,
+    List<String> statusTabs,
+    List<ColumnSettings> columns,
+  });
 }
 
 /// @nodoc
@@ -371,7 +401,11 @@ class __$$DashboardSettingsImplCopyWithImpl<$Res>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? dateRange = null, Object? statusTabs = null, Object? columns = null}) {
+  $Res call({
+    Object? dateRange = null,
+    Object? statusTabs = null,
+    Object? columns = null,
+  }) {
     return _then(
       _$DashboardSettingsImpl(
         dateRange: null == dateRange
@@ -396,7 +430,7 @@ class __$$DashboardSettingsImplCopyWithImpl<$Res>
 class _$DashboardSettingsImpl implements _DashboardSettings {
   const _$DashboardSettingsImpl({
     this.dateRange = '30d',
-    final List<String> statusTabs = const ['new', 'in_talks', 'quote_sent'],
+    final List<String> statusTabs = const ['new', 'in_talks', 'approved'],
     final List<ColumnSettings> columns = const [
       ColumnSettings(id: 'customer', visible: true, order: 0),
       ColumnSettings(id: 'eventType', visible: true, order: 1),
@@ -441,8 +475,12 @@ class _$DashboardSettingsImpl implements _DashboardSettings {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$DashboardSettingsImpl &&
-            (identical(other.dateRange, dateRange) || other.dateRange == dateRange) &&
-            const DeepCollectionEquality().equals(other._statusTabs, _statusTabs) &&
+            (identical(other.dateRange, dateRange) ||
+                other.dateRange == dateRange) &&
+            const DeepCollectionEquality().equals(
+              other._statusTabs,
+              _statusTabs,
+            ) &&
             const DeepCollectionEquality().equals(other._columns, _columns));
   }
 
@@ -459,7 +497,10 @@ class _$DashboardSettingsImpl implements _DashboardSettings {
   @override
   @pragma('vm:prefer-inline')
   _$$DashboardSettingsImplCopyWith<_$DashboardSettingsImpl> get copyWith =>
-      __$$DashboardSettingsImplCopyWithImpl<_$DashboardSettingsImpl>(this, _$identity);
+      __$$DashboardSettingsImplCopyWithImpl<_$DashboardSettingsImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -474,7 +515,8 @@ abstract class _DashboardSettings implements DashboardSettings {
     final List<ColumnSettings> columns,
   }) = _$DashboardSettingsImpl;
 
-  factory _DashboardSettings.fromJson(Map<String, dynamic> json) = _$DashboardSettingsImpl.fromJson;
+  factory _DashboardSettings.fromJson(Map<String, dynamic> json) =
+      _$DashboardSettingsImpl.fromJson;
 
   @override
   String get dateRange;
@@ -500,13 +542,16 @@ mixin _$ColumnSettings {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $ColumnSettingsCopyWith<ColumnSettings> get copyWith => throw _privateConstructorUsedError;
+  $ColumnSettingsCopyWith<ColumnSettings> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $ColumnSettingsCopyWith<$Res> {
-  factory $ColumnSettingsCopyWith(ColumnSettings value, $Res Function(ColumnSettings) then) =
-      _$ColumnSettingsCopyWithImpl<$Res, ColumnSettings>;
+  factory $ColumnSettingsCopyWith(
+    ColumnSettings value,
+    $Res Function(ColumnSettings) then,
+  ) = _$ColumnSettingsCopyWithImpl<$Res, ColumnSettings>;
   @useResult
   $Res call({String id, bool visible, int order});
 }
@@ -545,7 +590,8 @@ class _$ColumnSettingsCopyWithImpl<$Res, $Val extends ColumnSettings>
 }
 
 /// @nodoc
-abstract class _$$ColumnSettingsImplCopyWith<$Res> implements $ColumnSettingsCopyWith<$Res> {
+abstract class _$$ColumnSettingsImplCopyWith<$Res>
+    implements $ColumnSettingsCopyWith<$Res> {
   factory _$$ColumnSettingsImplCopyWith(
     _$ColumnSettingsImpl value,
     $Res Function(_$ColumnSettingsImpl) then,
@@ -589,7 +635,11 @@ class __$$ColumnSettingsImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$ColumnSettingsImpl implements _ColumnSettings {
-  const _$ColumnSettingsImpl({required this.id, this.visible = true, this.order = 0});
+  const _$ColumnSettingsImpl({
+    required this.id,
+    this.visible = true,
+    this.order = 0,
+  });
 
   factory _$ColumnSettingsImpl.fromJson(Map<String, dynamic> json) =>
       _$$ColumnSettingsImplFromJson(json);
@@ -626,7 +676,10 @@ class _$ColumnSettingsImpl implements _ColumnSettings {
   @override
   @pragma('vm:prefer-inline')
   _$$ColumnSettingsImplCopyWith<_$ColumnSettingsImpl> get copyWith =>
-      __$$ColumnSettingsImplCopyWithImpl<_$ColumnSettingsImpl>(this, _$identity);
+      __$$ColumnSettingsImplCopyWithImpl<_$ColumnSettingsImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -635,10 +688,14 @@ class _$ColumnSettingsImpl implements _ColumnSettings {
 }
 
 abstract class _ColumnSettings implements ColumnSettings {
-  const factory _ColumnSettings({required final String id, final bool visible, final int order}) =
-      _$ColumnSettingsImpl;
+  const factory _ColumnSettings({
+    required final String id,
+    final bool visible,
+    final int order,
+  }) = _$ColumnSettingsImpl;
 
-  factory _ColumnSettings.fromJson(Map<String, dynamic> json) = _$ColumnSettingsImpl.fromJson;
+  factory _ColumnSettings.fromJson(Map<String, dynamic> json) =
+      _$ColumnSettingsImpl.fromJson;
 
   @override
   String get id;
@@ -675,13 +732,20 @@ abstract class $NotificationSettingsCopyWith<$Res> {
     $Res Function(NotificationSettings) then,
   ) = _$NotificationSettingsCopyWithImpl<$Res, NotificationSettings>;
   @useResult
-  $Res call({bool pushEnabled, bool emailEnabled, NotificationChannels channels});
+  $Res call({
+    bool pushEnabled,
+    bool emailEnabled,
+    NotificationChannels channels,
+  });
 
   $NotificationChannelsCopyWith<$Res> get channels;
 }
 
 /// @nodoc
-class _$NotificationSettingsCopyWithImpl<$Res, $Val extends NotificationSettings>
+class _$NotificationSettingsCopyWithImpl<
+  $Res,
+  $Val extends NotificationSettings
+>
     implements $NotificationSettingsCopyWith<$Res> {
   _$NotificationSettingsCopyWithImpl(this._value, this._then);
 
@@ -692,7 +756,11 @@ class _$NotificationSettingsCopyWithImpl<$Res, $Val extends NotificationSettings
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? pushEnabled = null, Object? emailEnabled = null, Object? channels = null}) {
+  $Res call({
+    Object? pushEnabled = null,
+    Object? emailEnabled = null,
+    Object? channels = null,
+  }) {
     return _then(
       _value.copyWith(
             pushEnabled: null == pushEnabled
@@ -730,7 +798,11 @@ abstract class _$$NotificationSettingsImplCopyWith<$Res>
   ) = __$$NotificationSettingsImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({bool pushEnabled, bool emailEnabled, NotificationChannels channels});
+  $Res call({
+    bool pushEnabled,
+    bool emailEnabled,
+    NotificationChannels channels,
+  });
 
   @override
   $NotificationChannelsCopyWith<$Res> get channels;
@@ -747,7 +819,11 @@ class __$$NotificationSettingsImplCopyWithImpl<$Res>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? pushEnabled = null, Object? emailEnabled = null, Object? channels = null}) {
+  $Res call({
+    Object? pushEnabled = null,
+    Object? emailEnabled = null,
+    Object? channels = null,
+  }) {
     return _then(
       _$NotificationSettingsImpl(
         pushEnabled: null == pushEnabled
@@ -799,20 +875,28 @@ class _$NotificationSettingsImpl implements _NotificationSettings {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$NotificationSettingsImpl &&
-            (identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled) &&
-            (identical(other.emailEnabled, emailEnabled) || other.emailEnabled == emailEnabled) &&
-            (identical(other.channels, channels) || other.channels == channels));
+            (identical(other.pushEnabled, pushEnabled) ||
+                other.pushEnabled == pushEnabled) &&
+            (identical(other.emailEnabled, emailEnabled) ||
+                other.emailEnabled == emailEnabled) &&
+            (identical(other.channels, channels) ||
+                other.channels == channels));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, pushEnabled, emailEnabled, channels);
+  int get hashCode =>
+      Object.hash(runtimeType, pushEnabled, emailEnabled, channels);
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
-  _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl> get copyWith =>
-      __$$NotificationSettingsImplCopyWithImpl<_$NotificationSettingsImpl>(this, _$identity);
+  _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl>
+  get copyWith =>
+      __$$NotificationSettingsImplCopyWithImpl<_$NotificationSettingsImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -838,8 +922,8 @@ abstract class _NotificationSettings implements NotificationSettings {
   NotificationChannels get channels;
   @override
   @JsonKey(ignore: true)
-  _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$NotificationSettingsImplCopyWith<_$NotificationSettingsImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 NotificationChannels _$NotificationChannelsFromJson(Map<String, dynamic> json) {
@@ -870,7 +954,10 @@ abstract class $NotificationChannelsCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$NotificationChannelsCopyWithImpl<$Res, $Val extends NotificationChannels>
+class _$NotificationChannelsCopyWithImpl<
+  $Res,
+  $Val extends NotificationChannels
+>
     implements $NotificationChannelsCopyWith<$Res> {
   _$NotificationChannelsCopyWithImpl(this._value, this._then);
 
@@ -999,21 +1086,29 @@ class _$NotificationChannelsImpl implements _NotificationChannels {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$NotificationChannelsImpl &&
-            (identical(other.assignment, assignment) || other.assignment == assignment) &&
-            (identical(other.statusChange, statusChange) || other.statusChange == statusChange) &&
+            (identical(other.assignment, assignment) ||
+                other.assignment == assignment) &&
+            (identical(other.statusChange, statusChange) ||
+                other.statusChange == statusChange) &&
             (identical(other.payment, payment) || other.payment == payment) &&
-            (identical(other.reminders, reminders) || other.reminders == reminders));
+            (identical(other.reminders, reminders) ||
+                other.reminders == reminders));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, assignment, statusChange, payment, reminders);
+  int get hashCode =>
+      Object.hash(runtimeType, assignment, statusChange, payment, reminders);
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
-  _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl> get copyWith =>
-      __$$NotificationChannelsImplCopyWithImpl<_$NotificationChannelsImpl>(this, _$identity);
+  _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl>
+  get copyWith =>
+      __$$NotificationChannelsImplCopyWithImpl<_$NotificationChannelsImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -1042,6 +1137,6 @@ abstract class _NotificationChannels implements NotificationChannels {
   bool get reminders;
   @override
   @JsonKey(ignore: true)
-  _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$NotificationChannelsImplCopyWith<_$NotificationChannelsImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }

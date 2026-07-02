@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/constants/status_vocabulary.dart';
 import 'filters_state.dart';
 
 /// Client-side filter for enquiry documents (avoids composite Firestore indexes).
@@ -9,19 +10,34 @@ bool matchesEnquiryFilters(
   String? currentUserId,
 }) {
   if (filters.statuses.isNotEmpty) {
-    final status = _fieldString(data, 'statusValue', 'status');
-    if (!filters.statuses.contains(status)) return false;
+    final rawStatus = _fieldString(data, 'statusValue', 'status');
+    final canonical =
+        EnquiryStatus.canonicalValue(rawStatus) ?? rawStatus.toLowerCase();
+    final matches = filters.statuses.any((filter) {
+      final filterCanonical =
+          EnquiryStatus.canonicalValue(filter) ?? filter.toLowerCase();
+      return filterCanonical == canonical;
+    });
+    if (!matches) return false;
   }
 
   if (filters.eventTypes.isNotEmpty) {
-    final eventType = _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase();
-    final matchesType = filters.eventTypes.any((t) => t.toLowerCase() == eventType);
+    final eventType = _fieldString(
+      data,
+      'eventTypeValue',
+      'eventType',
+    ).toLowerCase();
+    final matchesType = filters.eventTypes.any(
+      (t) => t.toLowerCase() == eventType,
+    );
     if (!matchesType) return false;
   }
 
   if (filters.assigneeId != null) {
     final assignee = data['assignedTo'] as String?;
-    final targetId = filters.assigneeId == 'current_user_id' ? currentUserId : filters.assigneeId;
+    final targetId = filters.assigneeId == 'current_user_id'
+        ? currentUserId
+        : filters.assigneeId;
     if (targetId == null || assignee != targetId) return false;
   }
 
@@ -40,6 +56,7 @@ bool matchesEnquiryFilters(
       data['customerPhone'],
       data['customerEmail'],
       data['notes'],
+      data['description'],
       data['eventTypeLabel'],
       data['eventType'],
     ].whereType<String>().join(' ').toLowerCase();
@@ -49,7 +66,11 @@ bool matchesEnquiryFilters(
   return true;
 }
 
-String _fieldString(Map<String, dynamic> data, String primary, String fallback) {
+String _fieldString(
+  Map<String, dynamic> data,
+  String primary,
+  String fallback,
+) {
   final value = data[primary] ?? data[fallback];
   if (value == null) return '';
   return value.toString().trim();

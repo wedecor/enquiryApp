@@ -44,7 +44,7 @@ void main() {
         expect(find.text('WhatsApp'), findsOneWidget);
 
         // Verify icons are present
-        expect(find.byIcon(Icons.call), findsOneWidget);
+        expect(find.byIcon(Icons.call_outlined), findsOneWidget);
         expect(find.byIcon(Icons.chat), findsOneWidget);
       });
 

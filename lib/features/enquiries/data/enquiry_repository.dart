@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/status_vocabulary.dart';
 import '../../../core/providers/audit_provider.dart';
 import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
@@ -113,14 +114,20 @@ class EnquiryRepository {
     }
 
     final oldEnquiryData = oldEnquiryDoc.data()!;
-    final oldStatusValue = oldEnquiryData['statusValue'] as String? ?? 'new';
+    final oldStatusValue =
+        EnquiryStatus.canonicalValue(
+          oldEnquiryData['statusValue'] as String?,
+        ) ??
+        (oldEnquiryData['statusValue'] as String? ?? 'new');
+    final canonicalNext =
+        EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
 
-    if (oldStatusValue == nextStatus) {
+    if (oldStatusValue == canonicalNext) {
       return;
     }
 
     final lookup = await _dropdownLookupFuture;
-    final statusLabel = lookup.labelForStatus(nextStatus);
+    final statusLabel = lookup.labelForStatus(canonicalNext);
     final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
     final customerName =
@@ -128,7 +135,7 @@ class EnquiryRepository {
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
     await _enquiries.doc(id).update({
-      'statusValue': nextStatus,
+      'statusValue': canonicalNext,
       'statusLabel': statusLabel,
       'statusUpdatedAt': FieldValue.serverTimestamp(),
       'statusUpdatedBy': userId,
@@ -142,7 +149,7 @@ class EnquiryRepository {
       enquiryId: id,
       fieldChanged: 'statusValue',
       oldValue: oldStatusValue,
-      newValue: nextStatus,
+      newValue: canonicalNext,
       userId: userId,
     );
 

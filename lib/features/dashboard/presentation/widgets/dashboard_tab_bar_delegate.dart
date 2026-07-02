@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Pinned sliver header that combines the status [TabBar] with an always-visible
-/// search field below it.
-///
-/// Keeping the search pinned (not in the scrollable welcome header) means users
-/// can filter enquiries without first scrolling back to the top.
+import '../../../../core/theme/tokens.dart';
+
+/// Pinned sliver header combining pill-style status tabs with a search field.
 class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
   DashboardTabBarDelegate(
     this._tabBar, {
@@ -18,9 +16,9 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
   final String searchQuery;
   final VoidCallback? onClearSearch;
 
-  static const double _searchFieldHeight = 40.0;
-  // 4 (top pad) + field + 8 (bottom pad); +8 buffer for Material 3 dense fields on phone
-  static const double _searchRowHeight = 4.0 + _searchFieldHeight + 8.0 + 8.0;
+  static const double _searchFieldHeight = 44.0;
+  static const double _searchRowHeight =
+      AppTokens.space2 + _searchFieldHeight + AppTokens.space3;
 
   @override
   double get minExtent => _tabBar.preferredSize.height + _searchRowHeight;
@@ -29,57 +27,95 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height + _searchRowHeight;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final tabHeight = _tabBar.preferredSize.height;
+
     return Material(
-      elevation: overlapsContent ? 2 : 0,
-      color: theme.colorScheme.surface,
-      child: SizedBox(
-        height: minExtent,
-        child: Column(
-          children: [
-            SizedBox(height: tabHeight, child: _tabBar),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-                child: SizedBox(
-                  height: _searchFieldHeight,
-                  child: TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search by name or phone…',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: searchQuery.isNotEmpty
-                          ? IconButton(
-                              tooltip: 'Clear search',
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: onClearSearch,
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+      elevation: overlapsContent ? AppTokens.elevation1 : 0,
+      color: cs.surface,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          border: Border(
+            top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+            bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
+          ),
+          boxShadow: overlapsContent ? AppShadows.elevation1 : null,
+        ),
+        child: SizedBox(
+          height: minExtent,
+          child: Column(
+            children: [
+              SizedBox(height: tabHeight, child: _tabBar),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTokens.space4,
+                    AppTokens.space1,
+                    AppTokens.space4,
+                    AppTokens.space3,
+                  ),
+                  child: SizedBox(
+                    height: _searchFieldHeight,
+                    child: TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search by name or phone…',
+                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.search_rounded,
+                          size: AppTokens.iconMedium,
+                          color: cs.onSurfaceVariant,
+                        ),
+                        suffixIcon: searchQuery.isNotEmpty
+                            ? IconButton(
+                                tooltip: 'Clear search',
+                                icon: const Icon(
+                                  Icons.clear_rounded,
+                                  size: AppTokens.iconSmall,
+                                ),
+                                onPressed: onClearSearch,
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: AppRadius.full,
+                          borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: AppRadius.full,
+                          borderSide: BorderSide(
+                            color: cs.outlineVariant.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: AppRadius.full,
+                          borderSide: BorderSide(color: cs.primary, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0,
+                          horizontal: AppTokens.space3,
+                        ),
+                        filled: true,
+                        fillColor: cs.surfaceContainerHighest.withValues(
+                          alpha: 0.45,
+                        ),
+                        isDense: true,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      isDense: true,
+                      textInputAction: TextInputAction.search,
                     ),
-                    textInputAction: TextInputAction.search,
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

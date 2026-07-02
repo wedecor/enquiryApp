@@ -22,10 +22,12 @@ class EnquiryAssignmentSection extends ConsumerStatefulWidget {
   final String currentUserId;
 
   @override
-  ConsumerState<EnquiryAssignmentSection> createState() => _EnquiryAssignmentSectionState();
+  ConsumerState<EnquiryAssignmentSection> createState() =>
+      _EnquiryAssignmentSectionState();
 }
 
-class _EnquiryAssignmentSectionState extends ConsumerState<EnquiryAssignmentSection> {
+class _EnquiryAssignmentSectionState
+    extends ConsumerState<EnquiryAssignmentSection> {
   final Map<String, String> _userDisplayCache = <String, String>{};
 
   @override
@@ -81,7 +83,10 @@ class _EnquiryAssignmentSectionState extends ConsumerState<EnquiryAssignmentSect
       }
       final name = (data['name'] as String?)?.trim();
       final phone = (data['phone'] as String?)?.trim();
-      final display = [name, phone].where((e) => e != null && e.isNotEmpty).join(' · ');
+      final display = [
+        name,
+        phone,
+      ].where((e) => e != null && e.isNotEmpty).join(' · ');
       final result = display.isNotEmpty ? display : 'Unknown';
       _userDisplayCache[userId] = result;
       return result;
@@ -137,7 +142,11 @@ class _AsyncUserRow extends StatelessWidget {
 }
 
 class _UserDisplay extends StatelessWidget {
-  const _UserDisplay({required this.userId, required this.getUserDisplayName, this.currentUserId});
+  const _UserDisplay({
+    required this.userId,
+    required this.getUserDisplayName,
+    this.currentUserId,
+  });
 
   final String? userId;
   final String? currentUserId;
@@ -156,7 +165,10 @@ class _UserDisplay extends StatelessWidget {
       future: getUserDisplayName(userId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 12, child: LinearProgressIndicator(minHeight: 2));
+          return const SizedBox(
+            height: 12,
+            child: LinearProgressIndicator(minHeight: 2),
+          );
         }
         final value = snapshot.data ?? 'Unknown';
         return Text(value, style: const TextStyle(fontSize: 16));

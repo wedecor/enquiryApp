@@ -23,7 +23,10 @@ class AccountTab extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Profile Information', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Profile Information',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 16),
 
             currentUserAsync.when(
@@ -34,19 +37,27 @@ class AccountTab extends ConsumerWidget {
 
             const SizedBox(height: 32),
 
-            Text('Role Information', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Role Information',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 16),
 
             currentUserRole.when(
-              data: (role) =>
-                  _buildRoleSection(context, role == UserRole.admin ? 'admin' : 'staff'),
+              data: (role) => _buildRoleSection(
+                context,
+                role == UserRole.admin ? 'admin' : 'staff',
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => _buildRoleSection(context, 'staff'),
             ),
 
             const SizedBox(height: 32),
 
-            Text('Account Actions', style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              'Account Actions',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             const SizedBox(height: 16),
 
             _buildActionsSection(context),
@@ -83,8 +94,12 @@ class AccountTab extends ConsumerWidget {
 
   Widget _buildRoleSection(BuildContext context, String role) {
     final theme = Theme.of(context);
-    final roleIcon = role == 'admin' ? Icons.admin_panel_settings : Icons.person;
-    final roleColor = role == 'admin' ? theme.colorScheme.tertiary : theme.colorScheme.primary;
+    final roleIcon = role == 'admin'
+        ? Icons.admin_panel_settings
+        : Icons.person;
+    final roleColor = role == 'admin'
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.primary;
 
     return Card(
       child: Padding(
@@ -98,9 +113,10 @@ class AccountTab extends ConsumerWidget {
               children: [
                 Text(
                   role.toUpperCase(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: roleColor, fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: roleColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   role == 'admin'
@@ -185,7 +201,9 @@ class AccountTab extends ConsumerWidget {
               color: (value.trim().isEmpty)
                   ? theme.colorScheme.onSurfaceVariant
                   : theme.colorScheme.onSurface,
-              fontStyle: (value.trim().isEmpty) ? FontStyle.italic : FontStyle.normal,
+              fontStyle: (value.trim().isEmpty)
+                  ? FontStyle.italic
+                  : FontStyle.normal,
             ),
           ),
         ),
@@ -197,7 +215,11 @@ class AccountTab extends ConsumerWidget {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user?.email == null) {
-        _showSnackBar(context, 'No email found for current user', isError: true);
+        _showSnackBar(
+          context,
+          'No email found for current user',
+          isError: true,
+        );
         return;
       }
 
@@ -218,7 +240,11 @@ class AccountTab extends ConsumerWidget {
       });
 
       if (context.mounted) {
-        _showSnackBar(context, 'Failed to send password reset email', isError: true);
+        _showSnackBar(
+          context,
+          'Failed to send password reset email',
+          isError: true,
+        );
       }
     }
   }
@@ -252,7 +278,11 @@ class AccountTab extends ConsumerWidget {
       if (updateInfo != null) {
         // Update available - show update dialog
         if (context.mounted) {
-          await UpdateService.showUpdateDialog(context, updateInfo, bypassCooldown: true);
+          await UpdateService.showUpdateDialog(
+            context,
+            updateInfo,
+            bypassCooldown: true,
+          );
         }
       } else {
         // No updates available - show current version info
@@ -263,7 +293,10 @@ class AccountTab extends ConsumerWidget {
             builder: (context) => AlertDialog(
               title: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColorScheme.snackSuccess,
+                  ),
                   const SizedBox(width: 8),
                   const Text('Up to Date'),
                 ],
@@ -276,12 +309,17 @@ class AccountTab extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ],
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
               ],
             ),
           );
@@ -305,7 +343,11 @@ class AccountTab extends ConsumerWidget {
       });
 
       if (context.mounted) {
-        _showSnackBar(context, 'Failed to check for updates. Please try again.', isError: true);
+        _showSnackBar(
+          context,
+          'Failed to check for updates. Please try again.',
+          isError: true,
+        );
       }
     }
   }
@@ -316,10 +358,15 @@ class AccountTab extends ConsumerWidget {
       safeLog('user_signed_out', {'method': 'settings_account_tab'});
 
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
-      safeLog('sign_out_error', {'error': e.toString(), 'errorType': e.runtimeType.toString()});
+      safeLog('sign_out_error', {
+        'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
+      });
 
       if (context.mounted) {
         _showSnackBar(context, 'Failed to sign out', isError: true);
@@ -327,11 +374,17 @@ class AccountTab extends ConsumerWidget {
     }
   }
 
-  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+  void _showSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? AppColorScheme.snackError : AppColorScheme.snackSuccess,
+        backgroundColor: isError
+            ? AppColorScheme.snackError
+            : AppColorScheme.snackSuccess,
         action: SnackBarAction(
           label: 'OK',
           textColor: Theme.of(context).colorScheme.onPrimary,

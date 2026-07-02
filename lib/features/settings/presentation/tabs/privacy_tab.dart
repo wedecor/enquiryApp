@@ -59,11 +59,16 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text('Privacy & Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        const Text(
+          'Privacy & Data',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         Text(
           'Manage your privacy preferences and data sharing settings.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -134,7 +139,10 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
         const SizedBox(height: 32),
 
         // Legal Documents
-        const Text('Legal Documents', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        const Text(
+          'Legal Documents',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 12),
 
         Card(
@@ -145,9 +153,11 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 title: const Text('Privacy Policy'),
                 subtitle: const Text('How we handle your personal information'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute<void>(builder: (context) => const PrivacyPolicyScreen())),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const PrivacyPolicyScreen(),
+                  ),
+                ),
               ),
               const Divider(height: 1),
               ListTile(
@@ -155,9 +165,11 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                 title: const Text('Terms of Service'),
                 subtitle: const Text('Terms and conditions for using this app'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen())),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const TermsOfServiceScreen(),
+                  ),
+                ),
               ),
             ],
           ),
@@ -166,7 +178,10 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
         const SizedBox(height: 24),
 
         // Help & Support
-        const Text('Help & Support', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        const Text(
+          'Help & Support',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 12),
 
         Card(
@@ -193,11 +208,17 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
-                Text('Version: ${_versionDisplay ?? (_isLoadingVersion ? "Loading…" : "Unknown")}'),
+                Text(
+                  'Version: ${_versionDisplay ?? (_isLoadingVersion ? "Loading…" : "Unknown")}',
+                ),
                 const Text('Environment: ${AppConfig.env}'),
-                const Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
+                const Text(
+                  'Build: ${kReleaseMode ? "Production" : "Development"}',
+                ),
                 const SizedBox(height: 8),
-                Text('© ${DateTime.now().year} We Decor Enquiries. All rights reserved.'),
+                Text(
+                  '© ${DateTime.now().year} We Decor Enquiries. All rights reserved.',
+                ),
               ],
             ),
           ),

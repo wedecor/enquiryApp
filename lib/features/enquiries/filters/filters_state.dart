@@ -16,16 +16,20 @@ class EnquiryFilters with _$EnquiryFilters {
     @Default(SortOrder.descending) SortOrder sortOrder,
   }) = _EnquiryFilters;
 
-  factory EnquiryFilters.fromJson(Map<String, dynamic> json) => _$EnquiryFiltersFromJson(json);
+  factory EnquiryFilters.fromJson(Map<String, dynamic> json) =>
+      _$EnquiryFiltersFromJson(json);
 }
 
 /// Date range for filtering enquiries
 @freezed
 class FilterDateRange with _$FilterDateRange {
-  const factory FilterDateRange({required DateTime start, required DateTime end}) =
-      _FilterDateRange;
+  const factory FilterDateRange({
+    required DateTime start,
+    required DateTime end,
+  }) = _FilterDateRange;
 
-  factory FilterDateRange.fromJson(Map<String, dynamic> json) => _$FilterDateRangeFromJson(json);
+  factory FilterDateRange.fromJson(Map<String, dynamic> json) =>
+      _$FilterDateRangeFromJson(json);
 }
 
 /// Sort options for enquiries
@@ -65,7 +69,8 @@ class SavedView with _$SavedView {
     required DateTime updatedAt,
   }) = _SavedView;
 
-  factory SavedView.fromJson(Map<String, dynamic> json) => _$SavedViewFromJson(json);
+  factory SavedView.fromJson(Map<String, dynamic> json) =>
+      _$SavedViewFromJson(json);
 }
 
 /// State for saved views management
@@ -113,7 +118,10 @@ extension EnquiryFiltersExtension on EnquiryFilters {
 
   /// Create a copy with reset to default sorting
   EnquiryFilters resetSorting() {
-    return copyWith(sortBy: EnquirySortBy.createdAt, sortOrder: SortOrder.descending);
+    return copyWith(
+      sortBy: EnquirySortBy.createdAt,
+      sortOrder: SortOrder.descending,
+    );
   }
 
   /// Get display text for active filters

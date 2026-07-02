@@ -32,14 +32,20 @@ class EmptyState extends StatelessWidget {
           children: [
             // Icon
             if (icon != null) ...[
-              Icon(icon, size: AppTokens.iconXLarge * 2, color: colorScheme.onSurfaceVariant),
+              Icon(
+                icon,
+                size: AppTokens.iconXLarge * 2,
+                color: colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: AppTokens.space6),
             ],
 
             // Message
             Text(
               message,
-              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
 
@@ -82,7 +88,8 @@ class FilteredEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.search_off,
-      message: 'No enquiries match your current filters.\nTry adjusting your search criteria.',
+      message:
+          'No enquiries match your current filters.\nTry adjusting your search criteria.',
       action: onClearFilters,
       actionText: 'Clear Filters',
     );
@@ -99,7 +106,8 @@ class SavedViewsEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.bookmark_outline,
-      message: 'No saved views yet.\nCreate custom views to quickly filter your enquiries.',
+      message:
+          'No saved views yet.\nCreate custom views to quickly filter your enquiries.',
       action: onCreateView,
       actionText: 'Create View',
     );
@@ -164,7 +172,8 @@ class AnalyticsEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.analytics_outlined,
-      message: 'No analytics data available.\nData will appear as enquiries are created.',
+      message:
+          'No analytics data available.\nData will appear as enquiries are created.',
       action: onRefresh,
       actionText: 'Refresh',
     );

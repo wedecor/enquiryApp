@@ -33,13 +33,16 @@ mixin _$AppGeneralConfig {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AppGeneralConfigCopyWith<AppGeneralConfig> get copyWith => throw _privateConstructorUsedError;
+  $AppGeneralConfigCopyWith<AppGeneralConfig> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AppGeneralConfigCopyWith<$Res> {
-  factory $AppGeneralConfigCopyWith(AppGeneralConfig value, $Res Function(AppGeneralConfig) then) =
-      _$AppGeneralConfigCopyWithImpl<$Res, AppGeneralConfig>;
+  factory $AppGeneralConfigCopyWith(
+    AppGeneralConfig value,
+    $Res Function(AppGeneralConfig) then,
+  ) = _$AppGeneralConfigCopyWithImpl<$Res, AppGeneralConfig>;
   @useResult
   $Res call({
     String companyName,
@@ -122,7 +125,8 @@ class _$AppGeneralConfigCopyWithImpl<$Res, $Val extends AppGeneralConfig>
 }
 
 /// @nodoc
-abstract class _$$AppGeneralConfigImplCopyWith<$Res> implements $AppGeneralConfigCopyWith<$Res> {
+abstract class _$$AppGeneralConfigImplCopyWith<$Res>
+    implements $AppGeneralConfigCopyWith<$Res> {
   factory _$$AppGeneralConfigImplCopyWith(
     _$AppGeneralConfigImpl value,
     $Res Function(_$AppGeneralConfigImpl) then,
@@ -261,17 +265,23 @@ class _$AppGeneralConfigImpl implements _AppGeneralConfig {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$AppGeneralConfigImpl &&
-            (identical(other.companyName, companyName) || other.companyName == companyName) &&
+            (identical(other.companyName, companyName) ||
+                other.companyName == companyName) &&
             (identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl) &&
-            (identical(other.currency, currency) || other.currency == currency) &&
-            (identical(other.timezone, timezone) || other.timezone == timezone) &&
-            (identical(other.vatPercent, vatPercent) || other.vatPercent == vatPercent) &&
+            (identical(other.currency, currency) ||
+                other.currency == currency) &&
+            (identical(other.timezone, timezone) ||
+                other.timezone == timezone) &&
+            (identical(other.vatPercent, vatPercent) ||
+                other.vatPercent == vatPercent) &&
             (identical(other.googleReviewLink, googleReviewLink) ||
                 other.googleReviewLink == googleReviewLink) &&
             (identical(other.instagramHandle, instagramHandle) ||
                 other.instagramHandle == instagramHandle) &&
-            (identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+            (identical(other.websiteUrl, websiteUrl) ||
+                other.websiteUrl == websiteUrl) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
@@ -293,7 +303,10 @@ class _$AppGeneralConfigImpl implements _AppGeneralConfig {
   @override
   @pragma('vm:prefer-inline')
   _$$AppGeneralConfigImplCopyWith<_$AppGeneralConfigImpl> get copyWith =>
-      __$$AppGeneralConfigImplCopyWithImpl<_$AppGeneralConfigImpl>(this, _$identity);
+      __$$AppGeneralConfigImplCopyWithImpl<_$AppGeneralConfigImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -314,7 +327,8 @@ abstract class _AppGeneralConfig implements AppGeneralConfig {
     final DateTime? updatedAt,
   }) = _$AppGeneralConfigImpl;
 
-  factory _AppGeneralConfig.fromJson(Map<String, dynamic> json) = _$AppGeneralConfigImpl.fromJson;
+  factory _AppGeneralConfig.fromJson(Map<String, dynamic> json) =
+      _$AppGeneralConfigImpl.fromJson;
 
   @override
   String get companyName;
@@ -340,7 +354,9 @@ abstract class _AppGeneralConfig implements AppGeneralConfig {
       throw _privateConstructorUsedError;
 }
 
-AppNotificationConfig _$AppNotificationConfigFromJson(Map<String, dynamic> json) {
+AppNotificationConfig _$AppNotificationConfigFromJson(
+  Map<String, dynamic> json,
+) {
   return _AppNotificationConfig.fromJson(json);
 }
 
@@ -373,7 +389,10 @@ abstract class $AppNotificationConfigCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$AppNotificationConfigCopyWithImpl<$Res, $Val extends AppNotificationConfig>
+class _$AppNotificationConfigCopyWithImpl<
+  $Res,
+  $Val extends AppNotificationConfig
+>
     implements $AppNotificationConfigCopyWith<$Res> {
   _$AppNotificationConfigCopyWithImpl(this._value, this._then);
 
@@ -433,7 +452,8 @@ abstract class _$$AppNotificationConfigImplCopyWith<$Res>
 
 /// @nodoc
 class __$$AppNotificationConfigImplCopyWithImpl<$Res>
-    extends _$AppNotificationConfigCopyWithImpl<$Res, _$AppNotificationConfigImpl>
+    extends
+        _$AppNotificationConfigCopyWithImpl<$Res, _$AppNotificationConfigImpl>
     implements _$$AppNotificationConfigImplCopyWith<$Res> {
   __$$AppNotificationConfigImplCopyWithImpl(
     _$AppNotificationConfigImpl _value,
@@ -508,22 +528,33 @@ class _$AppNotificationConfigImpl implements _AppNotificationConfig {
             other is _$AppNotificationConfigImpl &&
             (identical(other.emailInvitesEnabled, emailInvitesEnabled) ||
                 other.emailInvitesEnabled == emailInvitesEnabled) &&
-            (identical(other.replyToEmail, replyToEmail) || other.replyToEmail == replyToEmail) &&
+            (identical(other.replyToEmail, replyToEmail) ||
+                other.replyToEmail == replyToEmail) &&
             (identical(other.reminderDaysDefault, reminderDaysDefault) ||
                 other.reminderDaysDefault == reminderDaysDefault) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, emailInvitesEnabled, replyToEmail, reminderDaysDefault, updatedAt);
+  int get hashCode => Object.hash(
+    runtimeType,
+    emailInvitesEnabled,
+    replyToEmail,
+    reminderDaysDefault,
+    updatedAt,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
-  _$$AppNotificationConfigImplCopyWith<_$AppNotificationConfigImpl> get copyWith =>
-      __$$AppNotificationConfigImplCopyWithImpl<_$AppNotificationConfigImpl>(this, _$identity);
+  _$$AppNotificationConfigImplCopyWith<_$AppNotificationConfigImpl>
+  get copyWith =>
+      __$$AppNotificationConfigImplCopyWithImpl<_$AppNotificationConfigImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -552,8 +583,8 @@ abstract class _AppNotificationConfig implements AppNotificationConfig {
   DateTime? get updatedAt;
   @override
   @JsonKey(ignore: true)
-  _$$AppNotificationConfigImplCopyWith<_$AppNotificationConfigImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$AppNotificationConfigImplCopyWith<_$AppNotificationConfigImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 AppSecurityConfig _$AppSecurityConfigFromJson(Map<String, dynamic> json) {
@@ -568,7 +599,8 @@ mixin _$AppSecurityConfig {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AppSecurityConfigCopyWith<AppSecurityConfig> get copyWith => throw _privateConstructorUsedError;
+  $AppSecurityConfigCopyWith<AppSecurityConfig> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -578,7 +610,11 @@ abstract class $AppSecurityConfigCopyWith<$Res> {
     $Res Function(AppSecurityConfig) then,
   ) = _$AppSecurityConfigCopyWithImpl<$Res, AppSecurityConfig>;
   @useResult
-  $Res call({List<String> allowedDomains, bool requireFirstLoginReset, DateTime? updatedAt});
+  $Res call({
+    List<String> allowedDomains,
+    bool requireFirstLoginReset,
+    DateTime? updatedAt,
+  });
 }
 
 /// @nodoc
@@ -619,14 +655,19 @@ class _$AppSecurityConfigCopyWithImpl<$Res, $Val extends AppSecurityConfig>
 }
 
 /// @nodoc
-abstract class _$$AppSecurityConfigImplCopyWith<$Res> implements $AppSecurityConfigCopyWith<$Res> {
+abstract class _$$AppSecurityConfigImplCopyWith<$Res>
+    implements $AppSecurityConfigCopyWith<$Res> {
   factory _$$AppSecurityConfigImplCopyWith(
     _$AppSecurityConfigImpl value,
     $Res Function(_$AppSecurityConfigImpl) then,
   ) = __$$AppSecurityConfigImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({List<String> allowedDomains, bool requireFirstLoginReset, DateTime? updatedAt});
+  $Res call({
+    List<String> allowedDomains,
+    bool requireFirstLoginReset,
+    DateTime? updatedAt,
+  });
 }
 
 /// @nodoc
@@ -701,10 +742,14 @@ class _$AppSecurityConfigImpl implements _AppSecurityConfig {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$AppSecurityConfigImpl &&
-            const DeepCollectionEquality().equals(other._allowedDomains, _allowedDomains) &&
+            const DeepCollectionEquality().equals(
+              other._allowedDomains,
+              _allowedDomains,
+            ) &&
             (identical(other.requireFirstLoginReset, requireFirstLoginReset) ||
                 other.requireFirstLoginReset == requireFirstLoginReset) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
@@ -720,7 +765,10 @@ class _$AppSecurityConfigImpl implements _AppSecurityConfig {
   @override
   @pragma('vm:prefer-inline')
   _$$AppSecurityConfigImplCopyWith<_$AppSecurityConfigImpl> get copyWith =>
-      __$$AppSecurityConfigImplCopyWithImpl<_$AppSecurityConfigImpl>(this, _$identity);
+      __$$AppSecurityConfigImplCopyWithImpl<_$AppSecurityConfigImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -735,7 +783,8 @@ abstract class _AppSecurityConfig implements AppSecurityConfig {
     final DateTime? updatedAt,
   }) = _$AppSecurityConfigImpl;
 
-  factory _AppSecurityConfig.fromJson(Map<String, dynamic> json) = _$AppSecurityConfigImpl.fromJson;
+  factory _AppSecurityConfig.fromJson(Map<String, dynamic> json) =
+      _$AppSecurityConfigImpl.fromJson;
 
   @override
   List<String> get allowedDomains;

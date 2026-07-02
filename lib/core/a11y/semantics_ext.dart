@@ -13,8 +13,18 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic button role to a widget
-  Widget withButtonSemantics({String? label, String? hint, VoidCallback? onTap}) {
-    return Semantics(button: true, label: label, hint: hint, onTap: onTap, child: this);
+  Widget withButtonSemantics({
+    String? label,
+    String? hint,
+    VoidCallback? onTap,
+  }) {
+    return Semantics(
+      button: true,
+      label: label,
+      hint: hint,
+      onTap: onTap,
+      child: this,
+    );
   }
 
   /// Add semantic header role to a widget
@@ -29,11 +39,21 @@ extension SemanticsExtension on Widget {
 
   /// Add semantic text field role to a widget
   Widget withTextFieldSemantics({String? label, String? hint, String? value}) {
-    return Semantics(textField: true, label: label, hint: hint, value: value, child: this);
+    return Semantics(
+      textField: true,
+      label: label,
+      hint: hint,
+      value: value,
+      child: this,
+    );
   }
 
   /// Add semantic switch role to a widget
-  Widget withSwitchSemantics({String? label, bool? value, VoidCallback? onTap}) {
+  Widget withSwitchSemantics({
+    String? label,
+    bool? value,
+    VoidCallback? onTap,
+  }) {
     return Semantics(
       button: true,
       label: label,
@@ -45,7 +65,11 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic checkbox role to a widget
-  Widget withCheckboxSemantics({String? label, bool? value, VoidCallback? onTap}) {
+  Widget withCheckboxSemantics({
+    String? label,
+    bool? value,
+    VoidCallback? onTap,
+  }) {
     return Semantics(
       button: true,
       label: label,
@@ -92,12 +116,18 @@ extension SemanticsExtension on Widget {
   }
 
   /// Add semantic tab role to a widget
-  Widget withTabSemantics({String? label, bool? selected, VoidCallback? onTap}) {
+  Widget withTabSemantics({
+    String? label,
+    bool? selected,
+    VoidCallback? onTap,
+  }) {
     return Semantics(
       button: true,
       label: label,
       selected: selected ?? false,
-      hint: selected == true ? 'Currently selected tab' : 'Double tap to select tab',
+      hint: selected == true
+          ? 'Currently selected tab'
+          : 'Double tap to select tab',
       onTap: onTap,
       child: this,
     );
@@ -178,16 +208,30 @@ class A11yHelper {
     String? value,
     Widget? child,
   }) {
-    return Semantics(textField: true, label: label, hint: hint, value: value, child: child);
+    return Semantics(
+      textField: true,
+      label: label,
+      hint: hint,
+      value: value,
+      child: child,
+    );
   }
 
   /// Create a semantic card with proper labeling
-  static Widget semanticCard({required String label, String? hint, Widget? child}) {
+  static Widget semanticCard({
+    required String label,
+    String? hint,
+    Widget? child,
+  }) {
     return Semantics(button: true, label: label, hint: hint, child: child);
   }
 
   /// Create a semantic list item with proper labeling
-  static Widget semanticListItem({required String label, String? hint, Widget? child}) {
+  static Widget semanticListItem({
+    required String label,
+    String? hint,
+    Widget? child,
+  }) {
     return Semantics(button: true, label: label, hint: hint, child: child);
   }
 
@@ -202,12 +246,20 @@ class A11yHelper {
   }
 
   /// Create a semantic progress indicator with proper labeling
-  static Widget semanticProgress({required String label, double? value, Widget? child}) {
+  static Widget semanticProgress({
+    required String label,
+    double? value,
+    Widget? child,
+  }) {
     return Semantics(label: label, value: value?.toString(), child: child);
   }
 
   /// Create a semantic tab with proper labeling
-  static Widget semanticTab({required String label, bool selected = false, Widget? child}) {
+  static Widget semanticTab({
+    required String label,
+    bool selected = false,
+    Widget? child,
+  }) {
     return Semantics(
       button: true,
       label: label,
@@ -219,11 +271,20 @@ class A11yHelper {
 
   /// Create a semantic menu with proper labeling
   static Widget semanticMenu({required String label, Widget? child}) {
-    return Semantics(button: true, label: label, hint: 'Double tap to open menu', child: child);
+    return Semantics(
+      button: true,
+      label: label,
+      hint: 'Double tap to open menu',
+      child: child,
+    );
   }
 
   /// Create a semantic link with proper labeling
-  static Widget semanticLink({required String label, String? hint, Widget? child}) {
+  static Widget semanticLink({
+    required String label,
+    String? hint,
+    Widget? child,
+  }) {
     return Semantics(
       link: true,
       label: label,
@@ -246,7 +307,12 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// Add semantic button role to a widget
-  Widget asButton(Widget child, {String? label, String? hint, VoidCallback? onTap}) {
+  Widget asButton(
+    Widget child, {
+    String? label,
+    String? hint,
+    VoidCallback? onTap,
+  }) {
     return child.withButtonSemantics(label: label, hint: hint, onTap: onTap);
   }
 
@@ -261,22 +327,46 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// Add semantic text field role to a widget
-  Widget asTextField(Widget child, {String? label, String? hint, String? value}) {
+  Widget asTextField(
+    Widget child, {
+    String? label,
+    String? hint,
+    String? value,
+  }) {
     return child.withTextFieldSemantics(label: label, hint: hint, value: value);
   }
 
   /// Add semantic switch role to a widget
-  Widget asSwitch(Widget child, {String? label, bool? value, VoidCallback? onTap}) {
+  Widget asSwitch(
+    Widget child, {
+    String? label,
+    bool? value,
+    VoidCallback? onTap,
+  }) {
     return child.withSwitchSemantics(label: label, value: value, onTap: onTap);
   }
 
   /// Add semantic checkbox role to a widget
-  Widget asCheckbox(Widget child, {String? label, bool? value, VoidCallback? onTap}) {
-    return child.withCheckboxSemantics(label: label, value: value, onTap: onTap);
+  Widget asCheckbox(
+    Widget child, {
+    String? label,
+    bool? value,
+    VoidCallback? onTap,
+  }) {
+    return child.withCheckboxSemantics(
+      label: label,
+      value: value,
+      onTap: onTap,
+    );
   }
 
   /// Add semantic radio button role to a widget
-  Widget asRadio(Widget child, {String? label, bool? value, VoidCallback? onTap}) {
+  Widget asRadio(
+    Widget child, {
+    String? label,
+    bool? value,
+    VoidCallback? onTap,
+  }) {
     return child.withRadioSemantics(label: label, value: value, onTap: onTap);
   }
 
@@ -289,7 +379,13 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
     double? max,
     VoidCallback? onTap,
   }) {
-    return child.withSliderSemantics(label: label, value: value, min: min, max: max, onTap: onTap);
+    return child.withSliderSemantics(
+      label: label,
+      value: value,
+      min: min,
+      max: max,
+      onTap: onTap,
+    );
   }
 
   /// Add semantic progress indicator role to a widget
@@ -298,8 +394,17 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// Add semantic tab role to a widget
-  Widget asTab(Widget child, {String? label, bool? selected, VoidCallback? onTap}) {
-    return child.withTabSemantics(label: label, selected: selected, onTap: onTap);
+  Widget asTab(
+    Widget child, {
+    String? label,
+    bool? selected,
+    VoidCallback? onTap,
+  }) {
+    return child.withTabSemantics(
+      label: label,
+      selected: selected,
+      onTap: onTap,
+    );
   }
 
   /// Add semantic menu role to a widget
@@ -308,7 +413,12 @@ mixin AccessibilityMixin<T extends StatefulWidget> on State<T> {
   }
 
   /// Add semantic link role to a widget
-  Widget asLink(Widget child, {String? label, String? hint, VoidCallback? onTap}) {
+  Widget asLink(
+    Widget child, {
+    String? label,
+    String? hint,
+    VoidCallback? onTap,
+  }) {
     return child.withLinkSemantics(label: label, hint: hint, onTap: onTap);
   }
 }

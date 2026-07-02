@@ -6,7 +6,9 @@ import 'redaction.dart';
 
 /// Safely logs a map by redacting sensitive fields and embedded PII.
 void safeLog(String label, Map<String, Object?> data) {
-  final redacted = data.map((key, value) => MapEntry(key, redactMapEntry(key, value)));
+  final redacted = data.map(
+    (key, value) => MapEntry(key, redactMapEntry(key, value)),
+  );
   Log.i(label, data: redacted);
 }
 

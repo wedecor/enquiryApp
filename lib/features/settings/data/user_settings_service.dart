@@ -9,7 +9,8 @@ class UserSettingsService {
 
   final FirestoreService _firestoreService;
 
-  CollectionReference get _usersCollection => _firestoreService.firestore.collection('users');
+  CollectionReference get _usersCollection =>
+      _firestoreService.firestore.collection('users');
 
   DocumentReference _settingsDoc(String uid) =>
       _usersCollection.doc(uid).collection('settings').doc('preferences');
@@ -65,7 +66,9 @@ class UserSettingsService {
       });
 
       // Try Firestore first
-      await _settingsDoc(uid).set(settings.toFirestore(), SetOptions(merge: true));
+      await _settingsDoc(
+        uid,
+      ).set(settings.toFirestore(), SetOptions(merge: true));
 
       // Also save to SharedPreferences as backup
       await _saveToSharedPreferences(uid, settings);
@@ -107,7 +110,10 @@ class UserSettingsService {
   }
 
   /// Save settings to SharedPreferences as backup
-  Future<void> _saveToSharedPreferences(String uid, UserSettings settings) async {
+  Future<void> _saveToSharedPreferences(
+    String uid,
+    UserSettings settings,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'user_settings_$uid';
     final json = settings.toJson();
@@ -120,7 +126,10 @@ class UserSettingsService {
       final doc = await _settingsDoc(uid).get();
       if (!doc.exists) {
         await _settingsDoc(uid).set(defaults.toFirestore());
-        safeLog('user_settings_initialized', {'uid': uid, 'theme': defaults.theme});
+        safeLog('user_settings_initialized', {
+          'uid': uid,
+          'theme': defaults.theme,
+        });
       }
     } catch (e, stackTrace) {
       safeLog('user_settings_init_error', {

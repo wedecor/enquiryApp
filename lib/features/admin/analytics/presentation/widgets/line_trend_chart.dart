@@ -11,7 +11,12 @@ class LineTrendChart extends StatelessWidget {
   final String title;
   final String? subtitle;
 
-  const LineTrendChart({super.key, required this.data, required this.title, this.subtitle});
+  const LineTrendChart({
+    super.key,
+    required this.data,
+    required this.title,
+    this.subtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,13 +41,20 @@ class LineTrendChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1);
+            return FlLine(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              strokeWidth: 1,
+            );
           },
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -66,7 +78,9 @@ class LineTrendChart extends StatelessWidget {
         ),
         borderData: FlBorderData(
           show: true,
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
         ),
         minX: 0,
         maxX: (data.length - 1).toDouble(),
@@ -76,14 +90,19 @@ class LineTrendChart extends StatelessWidget {
           LineChartBarData(
             spots: _getSpots(),
             isCurved: true,
-            gradient: LinearGradient(colors: [primary, primary.withValues(alpha: 0.7)]),
+            gradient: LinearGradient(
+              colors: [primary, primary.withValues(alpha: 0.7)],
+            ),
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [primary.withValues(alpha: 0.3), primary.withValues(alpha: 0.1)],
+                colors: [
+                  primary.withValues(alpha: 0.3),
+                  primary.withValues(alpha: 0.1),
+                ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -100,20 +119,24 @@ class LineTrendChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.show_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            Icons.show_chart,
+            size: 48,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             'Select a different date range or filters',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -128,7 +151,9 @@ class LineTrendChart extends StatelessWidget {
 
   double _getMaxY() {
     if (data.isEmpty) return 10;
-    final maxCount = data.map((point) => point.count).reduce((a, b) => a > b ? a : b);
+    final maxCount = data
+        .map((point) => point.count)
+        .reduce((a, b) => a > b ? a : b);
     return (maxCount * 1.1).ceilToDouble();
   }
 
@@ -155,7 +180,10 @@ class LineTrendChart extends StatelessWidget {
         axisSide: meta.axisSide,
         child: Text(
           _formatDate(point.x),
-          style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
+          style: const TextStyle(
+            fontSize: 10,
+            color: AppColorScheme.neutralGrey,
+          ),
         ),
       );
     }
@@ -217,18 +245,26 @@ class MiniTrendChart extends StatelessWidget {
           minX: 0,
           maxX: (data.length - 1).toDouble(),
           minY: 0,
-          maxY: data.map((p) => p.count.toDouble()).reduce((a, b) => a > b ? a : b),
+          maxY: data
+              .map((p) => p.count.toDouble())
+              .reduce((a, b) => a > b ? a : b),
           lineBarsData: [
             LineChartBarData(
               spots: data.asMap().entries.map((entry) {
-                return FlSpot(entry.key.toDouble(), entry.value.count.toDouble());
+                return FlSpot(
+                  entry.key.toDouble(),
+                  entry.value.count.toDouble(),
+                );
               }).toList(),
               isCurved: true,
               color: color,
               barWidth: 2,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(show: true, color: color.withValues(alpha: 0.1)),
+              belowBarData: BarAreaData(
+                show: true,
+                color: color.withValues(alpha: 0.1),
+              ),
             ),
           ],
           lineTouchData: const LineTouchData(enabled: false),

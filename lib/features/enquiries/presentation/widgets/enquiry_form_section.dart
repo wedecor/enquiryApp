@@ -4,7 +4,11 @@ import '../../../../core/theme/tokens.dart';
 
 /// Section header + optional card wrapper for the enquiry form.
 class EnquiryFormSection extends StatelessWidget {
-  const EnquiryFormSection({super.key, required this.title, required this.children});
+  const EnquiryFormSection({
+    super.key,
+    required this.title,
+    required this.children,
+  });
 
   final String title;
   final List<Widget> children;
@@ -19,7 +23,9 @@ class EnquiryFormSection extends StatelessWidget {
           padding: AppSpacing.vertical2,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+              border: Border(
+                bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
             ),
             child: Padding(
               padding: AppSpacing.bottom2,

@@ -58,7 +58,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     {'label': 'New', 'value': 'new'},
     {'label': 'In Talks', 'value': 'in_talks'},
     {'label': 'Follow Up', 'value': 'reminders'},
-    {'label': 'Confirmed', 'value': 'confirmed'},
+    {'label': 'Approved', 'value': 'approved'},
     {'label': 'Completed', 'value': 'completed'},
     {'label': 'Closed', 'value': 'closed'},
   ];
@@ -350,7 +350,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  /// Jump to the tab matching [bucket] key ('new', 'reminders', 'this_week', 'quote_sent').
+  /// Jump to the tab matching [bucket] key ('new', 'reminders', 'this_week').
+  /// Legacy bucket `quote_sent` maps to the In Talks tab.
   void _jumpToTab(String bucket) {
     if (bucket == 'this_week') {
       // Navigate to Calendar shell tab if possible, else fall through to All

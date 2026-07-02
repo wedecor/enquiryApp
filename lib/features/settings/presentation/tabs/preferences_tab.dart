@@ -35,7 +35,8 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         return _buildPreferencesContent(context, settings);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error loading preferences: $error')),
+      error: (error, stack) =>
+          Center(child: Text('Error loading preferences: $error')),
     );
   }
 
@@ -82,10 +83,14 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
                 labelText: 'Language',
                 border: OutlineInputBorder(),
               ),
-              items: const [DropdownMenuItem(value: 'en', child: Text('English'))],
+              items: const [
+                DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
               onChanged: (newLanguage) {
                 if (newLanguage != null) {
-                  _updateSettings(_currentSettings!.copyWith(language: newLanguage));
+                  _updateSettings(
+                    _currentSettings!.copyWith(language: newLanguage),
+                  );
                 }
               },
             ),
@@ -104,7 +109,10 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
           children: [
             Text('Timezone', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text('Used for date and time display', style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Used for date and time display',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _currentSettings?.timezone ?? 'Asia/Kolkata',
@@ -113,14 +121,25 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(value: 'Asia/Kolkata', child: Text('Asia/Kolkata (IST)')),
+                DropdownMenuItem(
+                  value: 'Asia/Kolkata',
+                  child: Text('Asia/Kolkata (IST)'),
+                ),
                 DropdownMenuItem(value: 'UTC', child: Text('UTC')),
-                DropdownMenuItem(value: 'America/New_York', child: Text('America/New_York (EST)')),
-                DropdownMenuItem(value: 'Europe/London', child: Text('Europe/London (GMT)')),
+                DropdownMenuItem(
+                  value: 'America/New_York',
+                  child: Text('America/New_York (EST)'),
+                ),
+                DropdownMenuItem(
+                  value: 'Europe/London',
+                  child: Text('Europe/London (GMT)'),
+                ),
               ],
               onChanged: (newTimezone) {
                 if (newTimezone != null) {
-                  _updateSettings(_currentSettings!.copyWith(timezone: newTimezone));
+                  _updateSettings(
+                    _currentSettings!.copyWith(timezone: newTimezone),
+                  );
                 }
               },
             ),
@@ -154,7 +173,10 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
             ),
           ),
           const SizedBox(width: 16),
-          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
+          TextButton(
+            onPressed: _isSaving ? null : _discardChanges,
+            child: const Text('Discard'),
+          ),
         ],
       ),
     );
@@ -215,7 +237,10 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       });
 
       Log.e('Preferences save failed', error: e);
-      Log.d('Preferences save failure details', data: {'errorType': e.runtimeType.toString()});
+      Log.d(
+        'Preferences save failure details',
+        data: {'errorType': e.runtimeType.toString()},
+      );
 
       safeLog('preferences_save_error', {
         'error': e.toString(),
@@ -224,7 +249,10 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       });
 
       if (mounted) {
-        _showSnackBar('Failed to save preferences: ${e.toString()}', isError: true);
+        _showSnackBar(
+          'Failed to save preferences: ${e.toString()}',
+          isError: true,
+        );
       }
     }
   }

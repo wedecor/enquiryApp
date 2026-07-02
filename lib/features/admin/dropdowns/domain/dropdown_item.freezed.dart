@@ -31,13 +31,16 @@ mixin _$DropdownItem {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $DropdownItemCopyWith<DropdownItem> get copyWith => throw _privateConstructorUsedError;
+  $DropdownItemCopyWith<DropdownItem> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $DropdownItemCopyWith<$Res> {
-  factory $DropdownItemCopyWith(DropdownItem value, $Res Function(DropdownItem) then) =
-      _$DropdownItemCopyWithImpl<$Res, DropdownItem>;
+  factory $DropdownItemCopyWith(
+    DropdownItem value,
+    $Res Function(DropdownItem) then,
+  ) = _$DropdownItemCopyWithImpl<$Res, DropdownItem>;
   @useResult
   $Res call({
     String value,
@@ -108,7 +111,8 @@ class _$DropdownItemCopyWithImpl<$Res, $Val extends DropdownItem>
 }
 
 /// @nodoc
-abstract class _$$DropdownItemImplCopyWith<$Res> implements $DropdownItemCopyWith<$Res> {
+abstract class _$$DropdownItemImplCopyWith<$Res>
+    implements $DropdownItemCopyWith<$Res> {
   factory _$$DropdownItemImplCopyWith(
     _$DropdownItemImpl value,
     $Res Function(_$DropdownItemImpl) then,
@@ -227,14 +231,24 @@ class _$DropdownItemImpl implements _DropdownItem {
             (identical(other.order, order) || other.order == order) &&
             (identical(other.active, active) || other.active == active) &&
             (identical(other.color, color) || other.color == color) &&
-            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, value, label, order, active, color, createdAt, updatedAt);
+  int get hashCode => Object.hash(
+    runtimeType,
+    value,
+    label,
+    order,
+    active,
+    color,
+    createdAt,
+    updatedAt,
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -259,7 +273,8 @@ abstract class _DropdownItem implements DropdownItem {
     required final DateTime updatedAt,
   }) = _$DropdownItemImpl;
 
-  factory _DropdownItem.fromJson(Map<String, dynamic> json) = _$DropdownItemImpl.fromJson;
+  factory _DropdownItem.fromJson(Map<String, dynamic> json) =
+      _$DropdownItemImpl.fromJson;
 
   @override
   String get value;
@@ -289,7 +304,8 @@ mixin _$DropdownItemInput {
   bool get active => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $DropdownItemInputCopyWith<DropdownItemInput> get copyWith => throw _privateConstructorUsedError;
+  $DropdownItemInputCopyWith<DropdownItemInput> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -345,7 +361,8 @@ class _$DropdownItemInputCopyWithImpl<$Res, $Val extends DropdownItemInput>
 }
 
 /// @nodoc
-abstract class _$$DropdownItemInputImplCopyWith<$Res> implements $DropdownItemInputCopyWith<$Res> {
+abstract class _$$DropdownItemInputImplCopyWith<$Res>
+    implements $DropdownItemInputCopyWith<$Res> {
   factory _$$DropdownItemInputImplCopyWith(
     _$DropdownItemInputImpl value,
     $Res Function(_$DropdownItemInputImpl) then,
@@ -438,7 +455,10 @@ class _$DropdownItemInputImpl implements _DropdownItemInput {
   @override
   @pragma('vm:prefer-inline')
   _$$DropdownItemInputImplCopyWith<_$DropdownItemInputImpl> get copyWith =>
-      __$$DropdownItemInputImplCopyWithImpl<_$DropdownItemInputImpl>(this, _$identity);
+      __$$DropdownItemInputImplCopyWithImpl<_$DropdownItemInputImpl>(
+        this,
+        _$identity,
+      );
 }
 
 abstract class _DropdownItemInput implements DropdownItemInput {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/dropdown_defaults.dart';
+import '../../core/constants/status_vocabulary.dart';
 import '../../core/logging/logger.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/providers/role_provider.dart';
@@ -78,7 +79,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       // Fallback to default values if Firestore is not available
       Log.w(
         'StatusDropdown fallback values',
-        data: {'collection': widget.collectionName, 'error': e.runtimeType.toString()},
+        data: {
+          'collection': widget.collectionName,
+          'error': e.runtimeType.toString(),
+        },
       );
       Log.d('StatusDropdown fallback stack', data: st);
       setState(() {
@@ -92,12 +96,15 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   void _syncFieldValueAfterLoad() {
     final value = widget.value;
     if (value == null) return;
-    if (!_statuses.any((status) => status['value'] == value)) return;
+    final canonical = widget.collectionName == 'statuses'
+        ? EnquiryStatus.canonicalValue(value) ?? value
+        : value;
+    if (!_statuses.any((status) => status['value'] == canonical)) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_fieldKey.currentState?.value == null) {
-        _fieldKey.currentState?.didChange(value);
+        _fieldKey.currentState?.didChange(canonical);
       }
     });
   }
@@ -108,12 +115,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
     if (_statuses.isEmpty) return null;
 
-    // Check if the value exists in the current statuses list
-    final exists = _statuses.any((status) => status['value'] == value);
-    if (exists) return value;
+    final canonical = widget.collectionName == 'statuses'
+        ? EnquiryStatus.fromValue(value)?.value ?? value
+        : value;
 
-    // If value doesn't exist in the list, return null to show hint text
-    // This prevents assertion errors while still showing the field
+    final exists = _statuses.any((status) => status['value'] == canonical);
+    if (exists) return canonical;
+
     return null;
   }
 
@@ -123,7 +131,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
+          content: Text(
+            'Only admins can add new ${widget.label.toLowerCase()}',
+          ),
           backgroundColor: AppColorScheme.snackError,
         ),
       );
@@ -163,7 +173,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             label: newStatus,
             value: newValue,
             order: _statuses.length + 1,
-            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
+            createdBy:
+                ref.read(currentUserWithFirestoreProvider).value?.uid ??
+                'unknown',
           );
 
       // Refresh the list
@@ -205,7 +217,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
+          content: Text(
+            'Only admins can add new ${widget.label.toLowerCase()}',
+          ),
           backgroundColor: AppColorScheme.snackError,
         ),
       );
@@ -259,14 +273,18 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 // CRITICAL: Always ensure value is valid or null
                 initialValue: _getValidValue(widget.value),
                 decoration: InputDecoration(
-                  labelText: widget.required ? '${widget.label} *' : widget.label,
+                  labelText: widget.required
+                      ? '${widget.label} *'
+                      : widget.label,
                   prefixIcon: Icon(_getIconForStatus()),
                   border: const OutlineInputBorder(),
                   hintText:
                       widget.value != null &&
                           !_isLoading &&
                           _statuses.isNotEmpty &&
-                          !_statuses.any((status) => status['value'] == widget.value)
+                          !_statuses.any(
+                            (status) => status['value'] == widget.value,
+                          )
                       ? 'Current: ${widget.value}'
                       : null,
                   suffixIcon: _isLoading
@@ -297,7 +315,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _showAddDialog,
-                      icon: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: AppColorScheme.snackSuccess,
+                      ),
                       tooltip: 'Add new ${widget.label.toLowerCase()}',
                     ),
                   ],

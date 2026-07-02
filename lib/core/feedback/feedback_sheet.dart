@@ -94,7 +94,10 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                     const SizedBox(width: 12),
                     const Text(
                       'Send Feedback',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Spacer(),
                     IconButton(
@@ -199,12 +202,17 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                 children: [
                                   const Text(
                                     'Device Information (Preview)',
-                                    style: TextStyle(fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     _deviceInfo,
-                                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
                                   ),
                                 ],
                               ),
@@ -232,7 +240,9 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                         height: 16,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary),
+                                          valueColor: AlwaysStoppedAnimation(
+                                            colorScheme.onPrimary,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -241,7 +251,10 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                                   )
                                 : const Text(
                                     'Submit Feedback',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                           ),
                         ),
@@ -255,7 +268,11 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                             padding: const EdgeInsets.all(12),
                             child: Row(
                               children: [
-                                Icon(Icons.privacy_tip, color: colorScheme.primary, size: 20),
+                                Icon(
+                                  Icons.privacy_tip,
+                                  color: colorScheme.primary,
+                                  size: 20,
+                                ),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -431,11 +448,15 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
     buffer.writeln();
 
     buffer.writeln('## ✅ Expected Behavior');
-    buffer.writeln(feedback['expected_behavior'] ?? 'No expected behavior provided');
+    buffer.writeln(
+      feedback['expected_behavior'] ?? 'No expected behavior provided',
+    );
     buffer.writeln();
 
     buffer.writeln('## ❌ Actual Behavior');
-    buffer.writeln(feedback['actual_behavior'] ?? 'No actual behavior provided');
+    buffer.writeln(
+      feedback['actual_behavior'] ?? 'No actual behavior provided',
+    );
     buffer.writeln();
 
     buffer.writeln('## 📱 Environment');

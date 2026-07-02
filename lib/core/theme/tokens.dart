@@ -144,14 +144,16 @@ class AppSpacing {
   static EdgeInsets get space8 => const EdgeInsets.all(AppTokens.space8);
 
   /// Returns EdgeInsets with horizontal spacing
-  static EdgeInsets horizontal(double spacing) => EdgeInsets.symmetric(horizontal: spacing);
+  static EdgeInsets horizontal(double spacing) =>
+      EdgeInsets.symmetric(horizontal: spacing);
   static EdgeInsets get horizontal2 => horizontal(AppTokens.space2);
   static EdgeInsets get horizontal4 => horizontal(AppTokens.space4);
   static EdgeInsets get horizontal6 => horizontal(AppTokens.space6);
   static EdgeInsets get horizontal8 => horizontal(AppTokens.space8);
 
   /// Returns EdgeInsets with vertical spacing
-  static EdgeInsets vertical(double spacing) => EdgeInsets.symmetric(vertical: spacing);
+  static EdgeInsets vertical(double spacing) =>
+      EdgeInsets.symmetric(vertical: spacing);
   static EdgeInsets get vertical2 => vertical(AppTokens.space2);
   static EdgeInsets get vertical4 => vertical(AppTokens.space4);
   static EdgeInsets get vertical6 => vertical(AppTokens.space6);
@@ -191,10 +193,13 @@ class AppRadius {
   AppRadius._();
 
   static BorderRadius get small => BorderRadius.circular(AppTokens.radiusSmall);
-  static BorderRadius get medium => BorderRadius.circular(AppTokens.radiusMedium);
+  static BorderRadius get medium =>
+      BorderRadius.circular(AppTokens.radiusMedium);
   static BorderRadius get large => BorderRadius.circular(AppTokens.radiusLarge);
-  static BorderRadius get xLarge => BorderRadius.circular(AppTokens.radiusXLarge);
-  static BorderRadius get xxLarge => BorderRadius.circular(AppTokens.radiusXXLarge);
+  static BorderRadius get xLarge =>
+      BorderRadius.circular(AppTokens.radiusXLarge);
+  static BorderRadius get xxLarge =>
+      BorderRadius.circular(AppTokens.radiusXXLarge);
   static BorderRadius get full => BorderRadius.circular(AppTokens.radiusFull);
 
   static BorderRadius only({
@@ -217,22 +222,42 @@ class AppShadows {
   AppShadows._();
 
   static List<BoxShadow> get elevation1 => [
-    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 1, offset: const Offset(0, 1)),
+    BoxShadow(
+      color: Colors.black.withOpacity(0.1),
+      blurRadius: 1,
+      offset: const Offset(0, 1),
+    ),
   ];
 
   static List<BoxShadow> get elevation2 => [
-    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 3, offset: const Offset(0, 2)),
+    BoxShadow(
+      color: Colors.black.withOpacity(0.1),
+      blurRadius: 3,
+      offset: const Offset(0, 2),
+    ),
   ];
 
   static List<BoxShadow> get elevation3 => [
-    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 4)),
+    BoxShadow(
+      color: Colors.black.withOpacity(0.1),
+      blurRadius: 6,
+      offset: const Offset(0, 4),
+    ),
   ];
 
   static List<BoxShadow> get elevation4 => [
-    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 6)),
+    BoxShadow(
+      color: Colors.black.withOpacity(0.1),
+      blurRadius: 8,
+      offset: const Offset(0, 6),
+    ),
   ];
 
   static List<BoxShadow> get elevation5 => [
-    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 12, offset: const Offset(0, 8)),
+    BoxShadow(
+      color: Colors.black.withOpacity(0.1),
+      blurRadius: 12,
+      offset: const Offset(0, 8),
+    ),
   ];
 }

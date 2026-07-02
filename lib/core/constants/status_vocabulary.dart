@@ -1,13 +1,13 @@
-/// Canonical enquiry status vocabulary (D1).
+/// Canonical enquiry status vocabulary — simplified for We Decor workflow.
+///
+/// Flow: New → In Talks → Approved → Completed
+/// ("Approved" = customer confirmed / booking locked — event date lives on the enquiry.)
 enum StatusCategory { active, won, lost }
 
 enum EnquiryStatus {
   newEnquiry('new', 'New', StatusCategory.active),
-  contacted('contacted', 'Contacted', StatusCategory.active),
   inTalks('in_talks', 'In Talks', StatusCategory.active),
-  quoteSent('quote_sent', 'Quote Sent', StatusCategory.active),
   approved('approved', 'Approved', StatusCategory.won),
-  scheduled('scheduled', 'Scheduled', StatusCategory.won),
   completed('completed', 'Completed', StatusCategory.won),
   notInterested('not_interested', 'Not Interested', StatusCategory.lost),
   closedLost('closed_lost', 'Closed Lost', StatusCategory.lost),
@@ -19,12 +19,16 @@ enum EnquiryStatus {
   final String label;
   final StatusCategory category;
 
+  /// Legacy Firestore values → canonical slug (tolerant reads + migration).
   static const Map<String, String> legacyAliases = {
+    'contacted': 'in_talks',
+    'quote_sent': 'in_talks',
+    'quoted': 'in_talks',
     'in_progress': 'in_talks',
-    'confirmed': 'approved',
-    'quoted': 'quote_sent',
-    'enquired': 'new',
     'assigned': 'in_talks',
+    'confirmed': 'approved',
+    'scheduled': 'approved',
+    'enquired': 'new',
   };
 
   /// Resolves raw Firestore value (incl. legacy) to canonical, or null.
@@ -40,28 +44,17 @@ enum EnquiryStatus {
 
   static final Map<EnquiryStatus, Set<EnquiryStatus>> staffTransitions = {
     EnquiryStatus.newEnquiry: {
-      EnquiryStatus.contacted,
       EnquiryStatus.inTalks,
-      EnquiryStatus.cancelled,
       EnquiryStatus.notInterested,
-    },
-    EnquiryStatus.contacted: {
-      EnquiryStatus.inTalks,
       EnquiryStatus.cancelled,
-      EnquiryStatus.notInterested,
     },
     EnquiryStatus.inTalks: {
-      EnquiryStatus.quoteSent,
-      EnquiryStatus.cancelled,
-      EnquiryStatus.notInterested,
-    },
-    EnquiryStatus.quoteSent: {
       EnquiryStatus.approved,
-      EnquiryStatus.closedLost,
       EnquiryStatus.notInterested,
+      EnquiryStatus.closedLost,
+      EnquiryStatus.cancelled,
     },
-    EnquiryStatus.approved: {EnquiryStatus.scheduled, EnquiryStatus.cancelled},
-    EnquiryStatus.scheduled: {EnquiryStatus.completed, EnquiryStatus.cancelled},
+    EnquiryStatus.approved: {EnquiryStatus.completed, EnquiryStatus.cancelled},
     EnquiryStatus.completed: {},
     EnquiryStatus.cancelled: {},
     EnquiryStatus.closedLost: {},
@@ -80,4 +73,26 @@ enum EnquiryStatus {
     if (current == null) return {};
     return staffTransitions[current]?.map((s) => s.value).toSet() ?? {};
   }
+
+  /// Canonical slug for reads/filters, or null if unknown.
+  static String? canonicalValue(String? raw) => fromValue(raw)?.value;
+
+  /// True when [a] and [b] resolve to the same canonical status.
+  static bool statusesMatch(String? a, String? b) {
+    final ca = canonicalValue(a);
+    final cb = canonicalValue(b);
+    if (ca == null || cb == null) return false;
+    return ca == cb;
+  }
+
+  /// Booked enquiries (incl. legacy confirmed/scheduled).
+  static bool isApproved(String? raw) =>
+      fromValue(raw) == EnquiryStatus.approved;
+
+  /// Active pipeline discussion (incl. legacy contacted/quote_sent).
+  static bool isInTalks(String? raw) => fromValue(raw) == EnquiryStatus.inTalks;
+
+  /// Terminal lost states.
+  static bool isLost(String? raw) =>
+      fromValue(raw)?.category == StatusCategory.lost;
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
-import 'enquiry_status_control.dart';
 
-/// Header card for enquiry details with ID, customer name, and status control.
+/// Header card for enquiry details with ID and read-only status.
 class EnquiryDetailsHeader extends StatelessWidget {
   const EnquiryDetailsHeader({
     super.key,
@@ -25,76 +25,61 @@ class EnquiryDetailsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
+    final theme = Theme.of(context);
+    final statusColor = AppColorScheme.statusColorFor(statusValue);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: AppRadius.large,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
       child: Padding(
         padding: AppSpacing.space4,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
-                    'Enquiry #${enquiryId.substring(0, 8)}',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    (enquiryData['customerName'] as String?) ?? 'Customer',
+                    style: theme.textTheme.titleLarge,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (userRole == UserRole.admin)
-                  EnquiryStatusControl(
-                    enquiryId: enquiryId,
-                    enquiryData: enquiryData,
-                    currentStatusValue: statusValue,
-                    currentStatusLabel: statusLabel,
-                    isAdmin: true,
-                  )
-                else if (userRole == UserRole.staff)
-                  EnquiryStatusControl(
-                    enquiryId: enquiryId,
-                    enquiryData: enquiryData,
-                    currentStatusValue: statusValue,
-                    currentStatusLabel: statusLabel,
-                    isAdmin: false,
-                    isAssignee: (enquiryData['assignedTo'] as String?) == currentUserId,
-                  )
-                else
-                  _ReadOnlyStatusChip(label: statusLabel, statusValue: statusValue),
+                const SizedBox(width: AppTokens.space2),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: AppRadius.full,
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.28),
+                    ),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppTokens.space2),
             Text(
-              'Customer: ${(enquiryData['customerName'] as String?) ?? 'N/A'}',
-              style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              'Enquiry #${enquiryId.substring(0, 8)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReadOnlyStatusChip extends StatelessWidget {
-  const _ReadOnlyStatusChip({required this.label, required this.statusValue});
-
-  final String label;
-  final String statusValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.horizontal(
-        AppTokens.space3,
-      ).copyWith(top: AppTokens.space1 + 2, bottom: AppTokens.space1 + 2),
-      decoration: BoxDecoration(
-        color: statusColorFor(context, statusValue),
-        borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onPrimary,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/dropdown_defaults.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -62,29 +63,23 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
           );
         }
 
-        List<Map<String, dynamic>> statuses;
+        List<Map<String, String>> statuses;
         if (snapshot.hasError ||
             !snapshot.hasData ||
             snapshot.data!.docs.isEmpty) {
-          statuses = EnquiryStatus.values
-              .map(
-                (s) => {
-                  'value': s.value,
-                  'label': s.label,
-                  'order': s.index + 1,
-                },
-              )
-              .toList();
+          statuses = DropdownDefaults.statuses;
         } else {
-          statuses = snapshot.data!.docs
-              .map((doc) => doc.data() as Map<String, dynamic>)
-              .toList();
+          statuses = DropdownDefaults.resolveStatusOptions(
+            FirestoreService.parseDropdownOptions(
+              snapshot.data!.docs.cast<QueryDocumentSnapshot<Map<String, dynamic>>>(),
+            ),
+          );
         }
 
-        final currentStatus = (_selectedStatus ?? widget.currentStatusValue);
-        final values = statuses
-            .map((s) => (s['value'] as String?) ?? '')
-            .toList();
+        final rawCurrent = (_selectedStatus ?? widget.currentStatusValue);
+        final currentStatus =
+            EnquiryStatus.canonicalValue(rawCurrent) ?? rawCurrent;
+        final values = statuses.map((s) => s['value'] ?? '').toList();
         if (!values.contains(currentStatus)) {
           return _ReadOnlyStatusChip(
             label: widget.currentStatusLabel.isNotEmpty
@@ -94,11 +89,11 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
           );
         }
 
-        final nextOptions = <Map<String, dynamic>>[...statuses];
+        final nextOptions = <Map<String, String>>[...statuses];
         if (!widget.isAdmin) {
-          final allowed = EnquiryStatus.staffAllowedNextValues(currentStatus);
+          final allowed = EnquiryStatus.staffAllowedNextValues(rawCurrent);
           nextOptions.retainWhere((s) {
-            final v = (s['value'] as String?) ?? '';
+            final v = s['value'] ?? '';
             return v == currentStatus || allowed.contains(v);
           });
         }
@@ -114,8 +109,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
               key: const Key('statusDropdown'),
               value: currentStatus,
               items: nextOptions.map((status) {
-                final value = (status['value'] as String?) ?? '';
-                final label = (status['label'] as String?) ?? value;
+                final value = status['value'] ?? '';
+                final label = status['label'] ?? value;
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(label),
@@ -123,8 +118,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
               }).toList(),
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
-                  : (value) =>
-                        _handleStatusChange(value, widget.currentStatusValue),
+                  : (value) => _handleStatusChange(value, rawCurrent),
             ),
             if (_isUpdatingStatus) ...[
               const SizedBox(width: AppTokens.space2),

@@ -26,12 +26,16 @@ class NetworkService {
     _isOnline = !result.contains(ConnectivityResult.none);
 
     // Listen for connectivity changes
-    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
+    _connectivitySubscription = _connectivity.onConnectivityChanged.listen((
+      result,
+    ) {
       final wasOnline = _isOnline;
       _isOnline = !result.contains(ConnectivityResult.none);
 
       if (wasOnline != _isOnline) {
-        Logger.info('Network status changed: ${_isOnline ? "Online" : "Offline"}');
+        Logger.info(
+          'Network status changed: ${_isOnline ? "Online" : "Offline"}',
+        );
 
         if (_isOnline) {
           for (final callback in _onlineCallbacks) {
@@ -117,7 +121,9 @@ class NetworkAwareQueue {
           _queue.insert(0, operation);
 
           // Wait before retry with exponential backoff
-          final delay = Duration(seconds: pow(2, 3 - operation.retryCount).toInt());
+          final delay = Duration(
+            seconds: pow(2, 3 - operation.retryCount).toInt(),
+          );
           await Future<void>.delayed(delay);
         }
       }
@@ -168,5 +174,9 @@ class QueuedOperation {
   final Future<void> Function() execute;
   int retryCount;
 
-  QueuedOperation({required this.description, required this.execute, this.retryCount = 3});
+  QueuedOperation({
+    required this.description,
+    required this.execute,
+    this.retryCount = 3,
+  });
 }

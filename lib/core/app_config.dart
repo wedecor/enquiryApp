@@ -4,13 +4,22 @@
 /// flutter build apk --dart-define=APP_ENV=prod --dart-define=ENABLE_CRASHLYTICS=true
 class AppConfig {
   /// Current environment (dev, staging, prod)
-  static const String env = String.fromEnvironment('APP_ENV', defaultValue: 'dev');
+  static const String env = String.fromEnvironment(
+    'APP_ENV',
+    defaultValue: 'dev',
+  );
 
   /// API base URL for backend services
-  static const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
 
   /// Feature flags
-  static const bool enableAnalytics = bool.fromEnvironment('ENABLE_ANALYTICS', defaultValue: false);
+  static const bool enableAnalytics = bool.fromEnvironment(
+    'ENABLE_ANALYTICS',
+    defaultValue: false,
+  );
   static const bool enableCrashlytics = bool.fromEnvironment(
     'ENABLE_CRASHLYTICS',
     defaultValue: false,
@@ -21,7 +30,10 @@ class AppConfig {
   );
 
   /// Debug features
-  static const bool enableDebugLogs = bool.fromEnvironment('ENABLE_DEBUG_LOGS', defaultValue: true);
+  static const bool enableDebugLogs = bool.fromEnvironment(
+    'ENABLE_DEBUG_LOGS',
+    defaultValue: true,
+  );
 
   /// Environment helpers
   static bool get isDev => env == 'dev';

@@ -52,10 +52,17 @@ class ConsentService {
 
       if (enabled) {
         // Set user properties for analytics
-        await FirebaseAnalytics.instance.setUserProperty(name: 'user_type', value: 'business_user');
-        await FirebaseAnalytics.instance.logEvent(name: 'analytics_consent_granted');
+        await FirebaseAnalytics.instance.setUserProperty(
+          name: 'user_type',
+          value: 'business_user',
+        );
+        await FirebaseAnalytics.instance.logEvent(
+          name: 'analytics_consent_granted',
+        );
       } else {
-        await FirebaseAnalytics.instance.logEvent(name: 'analytics_consent_revoked');
+        await FirebaseAnalytics.instance.logEvent(
+          name: 'analytics_consent_revoked',
+        );
       }
     }
   }
@@ -82,7 +89,10 @@ class ConsentService {
       // Log app open event
       await FirebaseAnalytics.instance.logEvent(
         name: 'app_open',
-        parameters: {'environment': AppConfig.env, 'platform': defaultTargetPlatform.name},
+        parameters: {
+          'environment': AppConfig.env,
+          'platform': defaultTargetPlatform.name,
+        },
       );
     }
   }
@@ -90,7 +100,10 @@ class ConsentService {
   /// Log analytics event (only if consented)
   Future<void> logEvent(String name, [Map<String, Object>? parameters]) async {
     if (AppConfig.enableAnalytics && hasAnalyticsConsent) {
-      await FirebaseAnalytics.instance.logEvent(name: name, parameters: parameters);
+      await FirebaseAnalytics.instance.logEvent(
+        name: name,
+        parameters: parameters,
+      );
     }
   }
 

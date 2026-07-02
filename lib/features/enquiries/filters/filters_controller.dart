@@ -4,11 +4,10 @@ import '../../../core/logging/logger.dart';
 import 'filters_state.dart';
 
 /// Provider for the current enquiry filters
-final enquiryFiltersProvider = StateNotifierProvider<EnquiryFiltersController, EnquiryFilters>((
-  ref,
-) {
-  return EnquiryFiltersController();
-});
+final enquiryFiltersProvider =
+    StateNotifierProvider<EnquiryFiltersController, EnquiryFilters>((ref) {
+      return EnquiryFiltersController();
+    });
 
 /// Simplified controller for managing enquiry filters
 /// This is a placeholder implementation for the advanced filtering feature
@@ -48,7 +47,10 @@ class EnquiryFiltersController extends StateNotifier<EnquiryFilters> {
   /// Update sort options
   void updateSort(EnquirySortBy sortBy, SortOrder sortOrder) {
     state = state.copyWith(sortBy: sortBy, sortOrder: sortOrder);
-    Logger.info('Updated sort: ${sortBy.field} ${sortOrder.name}', tag: 'Filters');
+    Logger.info(
+      'Updated sort: ${sortBy.field} ${sortOrder.name}',
+      tag: 'Filters',
+    );
   }
 
   /// Clear all filters

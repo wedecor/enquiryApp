@@ -27,7 +27,10 @@ class SavedViewsSheet extends ConsumerWidget {
             children: [
               const Icon(Icons.bookmark),
               const SizedBox(width: AppTokens.space3),
-              Text('Saved Views', style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'Saved Views',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const Spacer(),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -64,7 +67,11 @@ class SavedViewsSheet extends ConsumerWidget {
     );
   }
 
-  Widget _buildViewsList(BuildContext context, WidgetRef ref, List<SavedView> views) {
+  Widget _buildViewsList(
+    BuildContext context,
+    WidgetRef ref,
+    List<SavedView> views,
+  ) {
     if (views.isEmpty) {
       return _buildEmptyState(context, ref);
     }
@@ -105,9 +112,9 @@ class SavedViewsSheet extends ConsumerWidget {
           Text(
             'Save your current filters as a view\nto quickly access them later.',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppTokens.space6),
           ElevatedButton.icon(
@@ -125,13 +132,17 @@ class SavedViewsSheet extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: Theme.of(context).colorScheme.error,
+          ),
           const SizedBox(height: AppTokens.space4),
           Text(
             'Failed to load saved views',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.error),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
           ),
           const SizedBox(height: AppTokens.space2),
           Text(
@@ -160,16 +171,21 @@ class SavedViewsSheet extends ConsumerWidget {
         title: const Text('Delete Saved View'),
         content: Text('Are you sure you want to delete "${view.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
               try {
-                await ref.read(savedViewsRepositoryProvider).deleteView(view.id);
+                await ref
+                    .read(savedViewsRepositoryProvider)
+                    .deleteView(view.id);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Deleted "${view.name}"')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Deleted "${view.name}"')),
+                  );
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -196,7 +212,11 @@ class SavedViewsSheet extends ConsumerWidget {
     Logger.info('Set default view: ${view.name}', tag: 'SavedViews');
   }
 
-  void _showSaveViewDialog(BuildContext context, WidgetRef ref, {SavedView? existingView}) {
+  void _showSaveViewDialog(
+    BuildContext context,
+    WidgetRef ref, {
+    SavedView? existingView,
+  }) {
     showDialog<void>(
       context: context,
       builder: (context) => _SaveViewDialog(
@@ -257,7 +277,9 @@ class _SavedViewTile extends StatelessWidget {
             const SizedBox(height: AppTokens.space1),
             Text(
               'Created ${_formatDate(view.createdAt)}',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -307,8 +329,14 @@ class _SavedViewTile extends StatelessWidget {
             PopupMenuItem(
               value: 'delete',
               child: ListTile(
-                leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-                title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                leading: Icon(
+                  Icons.delete,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  'Delete',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
                 contentPadding: EdgeInsets.zero,
               ),
             ),
@@ -399,7 +427,9 @@ class _SaveViewDialogState extends ConsumerState<_SaveViewDialog> {
             const SizedBox(height: AppTokens.space4),
             CheckboxListTile(
               title: const Text('Set as default view'),
-              subtitle: const Text('This view will be applied when the app starts'),
+              subtitle: const Text(
+                'This view will be applied when the app starts',
+              ),
               value: _isDefault,
               onChanged: (value) {
                 setState(() {
@@ -418,11 +448,18 @@ class _SaveViewDialogState extends ConsumerState<_SaveViewDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Current Filters:', style: theme.textTheme.labelMedium),
+                    Text(
+                      'Current Filters:',
+                      style: theme.textTheme.labelMedium,
+                    ),
                     const SizedBox(height: AppTokens.space2),
-                    if (widget.currentFilters.activeFilterDescriptions.isNotEmpty) ...[
+                    if (widget
+                        .currentFilters
+                        .activeFilterDescriptions
+                        .isNotEmpty) ...[
                       ...widget.currentFilters.activeFilterDescriptions.map(
-                        (desc) => Text('• $desc', style: theme.textTheme.bodySmall),
+                        (desc) =>
+                            Text('• $desc', style: theme.textTheme.bodySmall),
                       ),
                     ] else ...[
                       Text(
@@ -490,7 +527,9 @@ class _SaveViewDialogState extends ConsumerState<_SaveViewDialog> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.existingView != null ? 'Updated "$name"' : 'Saved "$name"'),
+            content: Text(
+              widget.existingView != null ? 'Updated "$name"' : 'Saved "$name"',
+            ),
           ),
         );
       }

@@ -34,9 +34,12 @@ void main() {
     test('legacy aliases map to expected canonical values', () {
       expect(EnquiryStatus.fromValue('in_progress'), EnquiryStatus.inTalks);
       expect(EnquiryStatus.fromValue('confirmed'), EnquiryStatus.approved);
-      expect(EnquiryStatus.fromValue('quoted'), EnquiryStatus.quoteSent);
+      expect(EnquiryStatus.fromValue('quoted'), EnquiryStatus.inTalks);
+      expect(EnquiryStatus.fromValue('contacted'), EnquiryStatus.inTalks);
+      expect(EnquiryStatus.fromValue('quote_sent'), EnquiryStatus.inTalks);
       expect(EnquiryStatus.fromValue('enquired'), EnquiryStatus.newEnquiry);
       expect(EnquiryStatus.fromValue('assigned'), EnquiryStatus.inTalks);
+      expect(EnquiryStatus.fromValue('scheduled'), EnquiryStatus.approved);
     });
 
     test('terminal statuses have empty transition sets', () {

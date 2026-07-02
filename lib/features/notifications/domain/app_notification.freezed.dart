@@ -34,13 +34,16 @@ mixin _$AppNotification {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $AppNotificationCopyWith<AppNotification> get copyWith => throw _privateConstructorUsedError;
+  $AppNotificationCopyWith<AppNotification> get copyWith =>
+      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $AppNotificationCopyWith<$Res> {
-  factory $AppNotificationCopyWith(AppNotification value, $Res Function(AppNotification) then) =
-      _$AppNotificationCopyWithImpl<$Res, AppNotification>;
+  factory $AppNotificationCopyWith(
+    AppNotification value,
+    $Res Function(AppNotification) then,
+  ) = _$AppNotificationCopyWithImpl<$Res, AppNotification>;
   @useResult
   $Res call({
     String id,
@@ -129,7 +132,8 @@ class _$AppNotificationCopyWithImpl<$Res, $Val extends AppNotification>
 }
 
 /// @nodoc
-abstract class _$$AppNotificationImplCopyWith<$Res> implements $AppNotificationCopyWith<$Res> {
+abstract class _$$AppNotificationImplCopyWith<$Res>
+    implements $AppNotificationCopyWith<$Res> {
   factory _$$AppNotificationImplCopyWith(
     _$AppNotificationImpl value,
     $Res Function(_$AppNotificationImpl) then,
@@ -283,11 +287,14 @@ class _$AppNotificationImpl implements _AppNotification {
             (identical(other.type, type) || other.type == type) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.body, body) || other.body == body) &&
-            (identical(other.enquiryId, enquiryId) || other.enquiryId == enquiryId) &&
+            (identical(other.enquiryId, enquiryId) ||
+                other.enquiryId == enquiryId) &&
             (identical(other.userId, userId) || other.userId == userId) &&
-            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt) &&
             (identical(other.read, read) || other.read == read) &&
-            (identical(other.archived, archived) || other.archived == archived) &&
+            (identical(other.archived, archived) ||
+                other.archived == archived) &&
             const DeepCollectionEquality().equals(other._metadata, _metadata));
   }
 
@@ -311,7 +318,10 @@ class _$AppNotificationImpl implements _AppNotification {
   @override
   @pragma('vm:prefer-inline')
   _$$AppNotificationImplCopyWith<_$AppNotificationImpl> get copyWith =>
-      __$$AppNotificationImplCopyWithImpl<_$AppNotificationImpl>(this, _$identity);
+      __$$AppNotificationImplCopyWithImpl<_$AppNotificationImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
@@ -333,7 +343,8 @@ abstract class _AppNotification implements AppNotification {
     final Map<String, dynamic>? metadata,
   }) = _$AppNotificationImpl;
 
-  factory _AppNotification.fromJson(Map<String, dynamic> json) = _$AppNotificationImpl.fromJson;
+  factory _AppNotification.fromJson(Map<String, dynamic> json) =
+      _$AppNotificationImpl.fromJson;
 
   @override
   String get id;

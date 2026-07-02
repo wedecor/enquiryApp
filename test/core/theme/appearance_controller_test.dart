@@ -10,14 +10,13 @@ void main() {
       TestWidgetsFlutterBinding.ensureInitialized();
     });
 
-    test('loads default as system mode', () {
+    test('loads default as light mode', () {
       SharedPreferences.setMockInitialValues({});
 
       final container = ProviderContainer();
-      final controller = container.read(appearanceControllerProvider.notifier);
       final mode = container.read(appearanceControllerProvider);
 
-      expect(mode, AppearanceMode.system);
+      expect(mode, AppearanceMode.light);
       container.dispose();
     });
 
@@ -61,9 +60,9 @@ void main() {
       // Allow async loading to complete
       await Future.delayed(const Duration(milliseconds: 10));
 
-      // Should fallback to system mode
+      // Should fallback to light mode
       final mode = container.read(appearanceControllerProvider);
-      expect(mode, AppearanceMode.system);
+      expect(mode, AppearanceMode.light);
 
       container.dispose();
     });

@@ -84,7 +84,11 @@ bool canConfigureSystem(WidgetRef ref) {
 }
 
 /// Helper to log admin actions for audit trail
-Future<void> logAdminAction(WidgetRef ref, String action, Map<String, Object?> data) async {
+Future<void> logAdminAction(
+  WidgetRef ref,
+  String action,
+  Map<String, Object?> data,
+) async {
   try {
     final currentUser = ref.read(currentUserWithFirestoreProvider);
     final userId = currentUser.valueOrNull?.uid;

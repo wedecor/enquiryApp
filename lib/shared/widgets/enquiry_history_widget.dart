@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/audit_provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../features/admin/users/presentation/users_providers.dart' as users_providers;
+import '../../features/admin/users/presentation/users_providers.dart'
+    as users_providers;
 import '../../services/dropdown_lookup.dart';
 
 /// Widget to display enquiry change history
@@ -31,7 +32,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history, size: 48, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.history,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No changes recorded',
@@ -44,7 +49,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     'Changes to this enquiry will appear here',
-                    style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -107,7 +115,11 @@ class EnquiryHistoryWidget extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.info_outline, size: 48, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.info_outline,
+                  size: 48,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Change history not available',
@@ -120,7 +132,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   'This feature requires additional setup',
-                  style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -162,7 +177,10 @@ class EnquiryHistoryWidget extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     _getFieldDisplayName(fieldChanged),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
                 if (timestamp != null) ...[
@@ -377,9 +395,13 @@ class _ValueChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bgColor = isNew ? AppColorScheme.successContainerLight : colorScheme.errorContainer;
+    final bgColor = isNew
+        ? AppColorScheme.successContainerLight
+        : colorScheme.errorContainer;
     final borderColor = isNew ? AppColorScheme.successLight : colorScheme.error;
-    final textColor = isNew ? AppColorScheme.onSuccessContainerLight : colorScheme.onErrorContainer;
+    final textColor = isNew
+        ? AppColorScheme.onSuccessContainerLight
+        : colorScheme.onErrorContainer;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -417,12 +439,18 @@ class _ValueText extends ConsumerWidget {
 
     // For assignment field, null means "was unassigned" — show that specifically
     if (value == null) {
-      return Text(fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set', style: style);
+      return Text(
+        fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set',
+        style: style,
+      );
     }
     if (value is String) {
       final normalized = (value as String).trim();
       if (normalized.isEmpty || normalized.toLowerCase() == 'not set') {
-        return Text(fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set', style: style);
+        return Text(
+          fieldKey == 'assignedto' ? 'Unassigned' : 'Not Set',
+          style: style,
+        );
       }
     }
 
@@ -439,9 +467,12 @@ class _ValueText extends ConsumerWidget {
         if (stringValue.isEmpty || stringValue.toLowerCase() == 'unassigned') {
           return Text('Unassigned', style: style);
         }
-        final asyncName = ref.watch(users_providers.userDisplayNameProvider(stringValue));
+        final asyncName = ref.watch(
+          users_providers.userDisplayNameProvider(stringValue),
+        );
         return asyncName.when(
-          data: (name) => Text(name == 'Unknown' ? 'Unassigned' : name, style: style),
+          data: (name) =>
+              Text(name == 'Unknown' ? 'Unassigned' : name, style: style),
           loading: () => Text('Loading...', style: style),
           error: (err, _) => Text('Unassigned', style: style),
         );
@@ -449,17 +480,20 @@ class _ValueText extends ConsumerWidget {
       case 'eventstatus':
       case 'statusvalue': // camelCase key stored in audit trail
         final statusLabel =
-            dropdownLookup?.labelForStatus(stringValue) ?? DropdownLookup.titleCase(stringValue);
+            dropdownLookup?.labelForStatus(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
         return Text(statusLabel, style: style);
       case 'eventtype':
       case 'eventtypevalue':
         final eventTypeLabel =
-            dropdownLookup?.labelForEventType(stringValue) ?? DropdownLookup.titleCase(stringValue);
+            dropdownLookup?.labelForEventType(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
         return Text(eventTypeLabel, style: style);
       case 'priority':
       case 'priorityvalue':
         final priorityLabel =
-            dropdownLookup?.labelForPriority(stringValue) ?? DropdownLookup.titleCase(stringValue);
+            dropdownLookup?.labelForPriority(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
         return Text(priorityLabel, style: style);
       case 'paymentstatus':
       case 'paymentstatusvalue':
@@ -469,10 +503,14 @@ class _ValueText extends ConsumerWidget {
         return Text(paymentStatusLabel, style: style);
       case 'source':
         final sourceLabel =
-            dropdownLookup?.labelForSource(stringValue) ?? DropdownLookup.titleCase(stringValue);
+            dropdownLookup?.labelForSource(stringValue) ??
+            DropdownLookup.titleCase(stringValue);
         return Text(sourceLabel, style: style);
       default:
-        return Text(stringValue.isEmpty ? 'Not Set' : stringValue, style: style);
+        return Text(
+          stringValue.isEmpty ? 'Not Set' : stringValue,
+          style: style,
+        );
     }
   }
 }

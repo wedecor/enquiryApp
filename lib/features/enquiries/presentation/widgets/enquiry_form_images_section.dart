@@ -35,7 +35,9 @@ class EnquiryFormImagesSection extends StatelessWidget {
           onPressed: onPickImages,
           icon: const Icon(Icons.upload),
           label: const Text('Upload Images'),
-          style: ElevatedButton.styleFrom(padding: AppSpacing.vertical(AppTokens.space4)),
+          style: ElevatedButton.styleFrom(
+            padding: AppSpacing.vertical(AppTokens.space4),
+          ),
         ),
         const SizedBox(height: AppTokens.space4),
         if (selectedImages.isNotEmpty) ...[
@@ -59,24 +61,37 @@ class EnquiryFormImagesSection extends StatelessWidget {
                         height: 100,
                         decoration: BoxDecoration(
                           border: Border.all(color: colorScheme.outline),
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMedium,
+                          ),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMedium,
+                          ),
                           child: kIsWeb
                               ? FutureBuilder<Uint8List>(
                                   future: selectedImages[index].readAsBytes(),
                                   builder: (context, snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const Center(child: CircularProgressIndicator());
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
                                     }
                                     if (snapshot.hasData) {
-                                      return Image.memory(snapshot.data!, fit: BoxFit.cover);
+                                      return Image.memory(
+                                        snapshot.data!,
+                                        fit: BoxFit.cover,
+                                      );
                                     }
                                     return const Icon(Icons.error);
                                   },
                                 )
-                              : Image.file(File(selectedImages[index].path), fit: BoxFit.cover),
+                              : Image.file(
+                                  File(selectedImages[index].path),
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
                       Positioned(
@@ -90,7 +105,11 @@ class EnquiryFormImagesSection extends StatelessWidget {
                               color: colorScheme.error,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.close, color: colorScheme.onError, size: 16),
+                            child: Icon(
+                              Icons.close,
+                              color: colorScheme.onError,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -111,7 +130,10 @@ class EnquiryFormImagesSection extends StatelessWidget {
             padding: AppSpacing.space2,
             child: Text(
               'No existing images found',
-              style: TextStyle(color: colorScheme.onSurfaceVariant, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ] else ...[
@@ -132,16 +154,22 @@ class EnquiryFormImagesSection extends StatelessWidget {
                         height: 100,
                         decoration: BoxDecoration(
                           border: Border.all(color: colorScheme.outline),
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMedium,
+                          ),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
+                          borderRadius: BorderRadius.circular(
+                            AppTokens.radiusMedium,
+                          ),
                           child: Image.network(
                             url,
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
-                              return const Center(child: CircularProgressIndicator());
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
                             },
                             errorBuilder: (context, error, stackTrace) {
                               return const Icon(Icons.error);
@@ -160,7 +188,11 @@ class EnquiryFormImagesSection extends StatelessWidget {
                               color: colorScheme.error,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.close, color: colorScheme.onError, size: 16),
+                            child: Icon(
+                              Icons.close,
+                              color: colorScheme.onError,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),

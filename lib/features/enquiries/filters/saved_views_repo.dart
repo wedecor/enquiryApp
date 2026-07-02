@@ -28,11 +28,16 @@ class SavedViewsRepository {
     try {
       final collection = _collectionForCurrentUser();
       if (collection == null) {
-        Logger.error('No authenticated user for saved views', tag: 'SavedViews');
+        Logger.error(
+          'No authenticated user for saved views',
+          tag: 'SavedViews',
+        );
         return [];
       }
 
-      final doc = await collection.orderBy('createdAt', descending: false).get();
+      final doc = await collection
+          .orderBy('createdAt', descending: false)
+          .get();
       return doc.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
     } catch (e) {
       Logger.error('Failed to get saved views', error: e, tag: 'SavedViews');
@@ -56,7 +61,11 @@ class SavedViewsRepository {
 
       return SavedView.fromJson(doc.data()!);
     } catch (e) {
-      Logger.error('Failed to get saved view: $id', error: e, tag: 'SavedViews');
+      Logger.error(
+        'Failed to get saved view: $id',
+        error: e,
+        tag: 'SavedViews',
+      );
       rethrow;
     }
   }
@@ -80,7 +89,11 @@ class SavedViewsRepository {
       Logger.info('Saved view: ${view.name}', tag: 'SavedViews');
       return viewToSave;
     } catch (e) {
-      Logger.error('Failed to save view: ${view.name}', error: e, tag: 'SavedViews');
+      Logger.error(
+        'Failed to save view: ${view.name}',
+        error: e,
+        tag: 'SavedViews',
+      );
       rethrow;
     }
   }
@@ -98,7 +111,9 @@ class SavedViewsRepository {
       }
 
       final existingViews = await getSavedViews();
-      if (existingViews.any((view) => view.name.toLowerCase() == name.toLowerCase())) {
+      if (existingViews.any(
+        (view) => view.name.toLowerCase() == name.toLowerCase(),
+      )) {
         throw Exception('A view with this name already exists');
       }
 
@@ -136,7 +151,8 @@ class SavedViewsRepository {
 
       final existingViews = await getSavedViews();
       if (existingViews.any(
-        (v) => v.id != view.id && v.name.toLowerCase() == view.name.toLowerCase(),
+        (v) =>
+            v.id != view.id && v.name.toLowerCase() == view.name.toLowerCase(),
       )) {
         throw Exception('A view with this name already exists');
       }
@@ -151,7 +167,11 @@ class SavedViewsRepository {
       Logger.info('Updated view: ${view.name}', tag: 'SavedViews');
       return updatedView;
     } catch (e) {
-      Logger.error('Failed to update view: ${view.name}', error: e, tag: 'SavedViews');
+      Logger.error(
+        'Failed to update view: ${view.name}',
+        error: e,
+        tag: 'SavedViews',
+      );
       rethrow;
     }
   }
@@ -189,7 +209,11 @@ class SavedViewsRepository {
 
       Logger.info('Set default view: $id', tag: 'SavedViews');
     } catch (e) {
-      Logger.error('Failed to set default view: $id', error: e, tag: 'SavedViews');
+      Logger.error(
+        'Failed to set default view: $id',
+        error: e,
+        tag: 'SavedViews',
+      );
       rethrow;
     }
   }
@@ -199,7 +223,9 @@ class SavedViewsRepository {
     if (collection == null) return;
 
     final batch = _firestoreService.startBatch();
-    final defaultViews = await collection.where('isDefault', isEqualTo: true).get();
+    final defaultViews = await collection
+        .where('isDefault', isEqualTo: true)
+        .get();
 
     for (final doc in defaultViews.docs) {
       if (excludeId == null || doc.id != excludeId) {
@@ -225,7 +251,11 @@ class SavedViewsRepository {
     return collection
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => SavedView.fromJson(doc.data())).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => SavedView.fromJson(doc.data()))
+              .toList(),
+        );
   }
 }
 
@@ -236,11 +266,10 @@ final savedViewsProvider = StreamProvider<List<SavedView>>((ref) {
 });
 
 /// Provider for saved views state management
-final savedViewsStateProvider = StateNotifierProvider<SavedViewsStateController, SavedViewsState>((
-  ref,
-) {
-  return SavedViewsStateController(ref);
-});
+final savedViewsStateProvider =
+    StateNotifierProvider<SavedViewsStateController, SavedViewsState>((ref) {
+      return SavedViewsStateController(ref);
+    });
 
 /// Controller for managing saved views state
 class SavedViewsStateController extends StateNotifier<SavedViewsState> {
@@ -289,7 +318,9 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
       final repository = ref.read(savedViewsRepositoryProvider);
       final updatedView = await repository.updateView(view);
 
-      final updatedViews = state.views.map((v) => v.id == view.id ? updatedView : v).toList();
+      final updatedViews = state.views
+          .map((v) => v.id == view.id ? updatedView : v)
+          .toList();
       state = state.copyWith(views: updatedViews);
     } catch (e) {
       state = state.copyWith(error: e.toString());
@@ -316,7 +347,9 @@ class SavedViewsStateController extends StateNotifier<SavedViewsState> {
       await repository.setDefaultView(id);
 
       final updatedViews = state.views.map((v) {
-        return v.id == id ? v.copyWith(isDefault: true) : v.copyWith(isDefault: false);
+        return v.id == id
+            ? v.copyWith(isDefault: true)
+            : v.copyWith(isDefault: false);
       }).toList();
       state = state.copyWith(views: updatedViews);
     } catch (e) {

@@ -33,7 +33,8 @@ class FCMService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         Log.i('FCM permission granted', data: {'status': 'authorized'});
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
         Log.i('FCM permission granted', data: {'status': 'provisional'});
       } else {
         Log.w(
@@ -62,13 +63,16 @@ class FCMService {
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
       // Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
       // Handle notification taps when app is opened from background
       FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
 
       // Handle notification tap when app is terminated
-      final RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+      final RemoteMessage? initialMessage = await _messaging
+          .getInitialMessage();
       if (initialMessage != null) {
         _handleMessageOpenedApp(initialMessage);
       }
@@ -111,7 +115,10 @@ class FCMService {
       // Subscribe to role-based topics
       final currentUser = _auth.currentUser;
       if (currentUser != null) {
-        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
 
         if (userDoc.exists) {
           final userData = userDoc.data() as Map<String, dynamic>;
@@ -152,15 +159,25 @@ class FCMService {
         await _messaging.subscribeToTopic('user_${user.uid}');
       }
 
-      Log.i('FCM: updated topic subscriptions', data: {'uid': user.uid, 'role': user.role.name});
+      Log.i(
+        'FCM: updated topic subscriptions',
+        data: {'uid': user.uid, 'role': user.role.name},
+      );
     } catch (e, st) {
-      Log.e('FCM: error updating topic subscriptions', error: e, stackTrace: st);
+      Log.e(
+        'FCM: error updating topic subscriptions',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
   /// Handle foreground messages
   void _handleForegroundMessage(RemoteMessage message) {
-    Log.d('FCM: received foreground message', data: {'messageId': message.messageId});
+    Log.d(
+      'FCM: received foreground message',
+      data: {'messageId': message.messageId},
+    );
 
     // Show local notification for foreground messages
     _showLocalNotification(message);
@@ -168,7 +185,10 @@ class FCMService {
 
   /// Handle message when app is opened from background
   void _handleMessageOpenedApp(RemoteMessage message) {
-    Log.d('FCM: app opened from notification', data: {'messageId': message.messageId});
+    Log.d(
+      'FCM: app opened from notification',
+      data: {'messageId': message.messageId},
+    );
 
     // Handle navigation based on message data
     _handleNotificationNavigation(message);
@@ -177,7 +197,10 @@ class FCMService {
   /// Show local notification for foreground messages
   void _showLocalNotification(RemoteMessage message) {
     // TODO: Implement local notification display using flutter_local_notifications
-    Log.d('FCM: would show local notification', data: {'title': message.notification?.title});
+    Log.d(
+      'FCM: would show local notification',
+      data: {'title': message.notification?.title},
+    );
   }
 
   /// Handle navigation based on notification data
@@ -188,15 +211,24 @@ class FCMService {
     switch (data['type']) {
       case 'new_enquiry':
         // Navigate to enquiry details
-        Log.d('FCM: navigate to enquiry', data: {'enquiryId': data['enquiryId']});
+        Log.d(
+          'FCM: navigate to enquiry',
+          data: {'enquiryId': data['enquiryId']},
+        );
         break;
       case 'enquiry_assigned':
         // Navigate to assigned enquiry
-        Log.d('FCM: navigate to assigned enquiry', data: {'enquiryId': data['enquiryId']});
+        Log.d(
+          'FCM: navigate to assigned enquiry',
+          data: {'enquiryId': data['enquiryId']},
+        );
         break;
       case 'status_update':
         // Navigate to updated enquiry
-        Log.d('FCM: navigate to updated enquiry', data: {'enquiryId': data['enquiryId']});
+        Log.d(
+          'FCM: navigate to updated enquiry',
+          data: {'enquiryId': data['enquiryId']},
+        );
         break;
       default:
         // Navigate to dashboard or general area
@@ -258,7 +290,10 @@ class FCMService {
 /// Background message handler (must be top-level function)
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  Log.d('FCM: handling background message', data: {'messageId': message.messageId});
+  Log.d(
+    'FCM: handling background message',
+    data: {'messageId': message.messageId},
+  );
 
   // Handle background message processing
   // This could include updating local storage, triggering sync, etc.

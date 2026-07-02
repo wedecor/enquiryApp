@@ -46,7 +46,8 @@ final roleProvider = StreamProvider<UserRole>((ref) {
 
       return firestoreService.watchUser(user.uid).map((snap) {
         final data = snap.data();
-        final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
+        final roleString =
+            (data != null ? (data['role'] as String?) : null) ?? 'staff';
         return roleString == 'admin' ? UserRole.admin : UserRole.staff;
       });
     },
@@ -187,18 +188,19 @@ final currentUserUidProvider = Provider<String?>((ref) {
   return ref.watch(currentUserProvider).valueOrNull?.uid;
 });
 
-final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
-  final authAsync = ref.watch(currentUserProvider);
-  final firestoreService = ref.watch(firestoreServiceProvider);
-  return authAsync.when(
-    data: (auth) {
-      if (auth == null) return const Stream.empty();
-      return firestoreService.watchUser(auth.uid);
-    },
-    loading: () => const Stream.empty(),
-    error: (_, __) => const Stream.empty(),
-  );
-});
+final currentUserDocProvider =
+    StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
+      final authAsync = ref.watch(currentUserProvider);
+      final firestoreService = ref.watch(firestoreServiceProvider);
+      return authAsync.when(
+        data: (auth) {
+          if (auth == null) return const Stream.empty();
+          return firestoreService.watchUser(auth.uid);
+        },
+        loading: () => const Stream.empty(),
+        error: (_, __) => const Stream.empty(),
+      );
+    });
 
 final currentUserRoleProvider = Provider<String?>((ref) {
   return ref
@@ -272,7 +274,7 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
 
   return UserPermissions(
     canViewEnquiries: isAdmin || isStaff,
-    canCreateEnquiries: isAdmin || isStaff,
+    canCreateEnquiries: isAdmin,
     canEditEnquiries: isAdmin,
     canDeleteEnquiries: isAdmin,
     canViewAnalytics: isAdmin,
@@ -289,7 +291,7 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
 ///
 /// Permissions are determined based on the user's role:
 /// - **Admin users** have all permissions enabled
-/// - **Staff users** have limited permissions (view/create enquiries only)
+/// - **Staff users** have limited permissions (view assigned enquiries, update status)
 /// - **Unauthenticated users** have no permissions
 ///
 /// Example usage:
@@ -350,7 +352,7 @@ class UserPermissions {
   /// - Fill out enquiry forms
   /// - Submit enquiry data to the system
   ///
-  /// Typically granted to both admin and staff users.
+  /// Typically restricted to admin users (matches Firestore create rules).
   final bool canCreateEnquiries;
 
   /// Whether the user can modify existing enquiries.

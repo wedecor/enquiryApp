@@ -6,7 +6,9 @@ final RegExp _secretLike = RegExp(
   caseSensitive: false,
 );
 
-final RegExp _emailLike = RegExp(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}');
+final RegExp _emailLike = RegExp(
+  r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}',
+);
 
 final RegExp _phoneLike = RegExp(r'\b(?:\+?\d[\d -]{7,}\d)\b');
 
@@ -41,9 +43,18 @@ String maskSensitiveValue(String value) {
 /// Redacts emails, phone numbers, and secret-like substrings from free text.
 String redactSensitiveText(String value) {
   var sanitized = value;
-  sanitized = sanitized.replaceAllMapped(_secretLike, (m) => maskSensitiveValue(m.group(0) ?? ''));
-  sanitized = sanitized.replaceAllMapped(_emailLike, (m) => maskSensitiveValue(m.group(0) ?? ''));
-  sanitized = sanitized.replaceAllMapped(_phoneLike, (m) => maskSensitiveValue(m.group(0) ?? ''));
+  sanitized = sanitized.replaceAllMapped(
+    _secretLike,
+    (m) => maskSensitiveValue(m.group(0) ?? ''),
+  );
+  sanitized = sanitized.replaceAllMapped(
+    _emailLike,
+    (m) => maskSensitiveValue(m.group(0) ?? ''),
+  );
+  sanitized = sanitized.replaceAllMapped(
+    _phoneLike,
+    (m) => maskSensitiveValue(m.group(0) ?? ''),
+  );
   return sanitized;
 }
 

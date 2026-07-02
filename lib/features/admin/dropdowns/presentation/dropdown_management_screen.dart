@@ -13,10 +13,12 @@ class DropdownManagementScreen extends ConsumerStatefulWidget {
   const DropdownManagementScreen({super.key});
 
   @override
-  ConsumerState<DropdownManagementScreen> createState() => _DropdownManagementScreenState();
+  ConsumerState<DropdownManagementScreen> createState() =>
+      _DropdownManagementScreenState();
 }
 
-class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScreen>
+class _DropdownManagementScreenState
+    extends ConsumerState<DropdownManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -24,7 +26,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: DropdownGroup.values.length, vsync: this);
+    _tabController = TabController(
+      length: DropdownGroup.values.length,
+      vsync: this,
+    );
     _tabController.addListener(_onTabChanged);
     _searchController.addListener(_onSearchChanged);
   }
@@ -71,7 +76,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                 ),
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.1),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               style: const TextStyle(color: Colors.white),
             ),
@@ -109,13 +117,20 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           controller: _tabController,
           isScrollable: true,
           tabs: DropdownGroup.values
-              .map((group) => Tab(text: group.displayName, icon: Icon(_getGroupIcon(group))))
+              .map(
+                (group) => Tab(
+                  text: group.displayName,
+                  icon: Icon(_getGroupIcon(group)),
+                ),
+              )
               .toList(),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: DropdownGroup.values.map((group) => _buildGroupContent(group)).toList(),
+        children: DropdownGroup.values
+            .map((group) => _buildGroupContent(group))
+            .toList(),
       ),
     );
   }
@@ -161,9 +176,17 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           children: [
             _buildStatCard('Total', stats['total']!, AppColorScheme.chartBlue),
             const SizedBox(width: 16),
-            _buildStatCard('Active', stats['active']!, AppColorScheme.chartGreen),
+            _buildStatCard(
+              'Active',
+              stats['active']!,
+              AppColorScheme.chartGreen,
+            ),
             const SizedBox(width: 16),
-            _buildStatCard('Inactive', stats['inactive']!, AppColorScheme.chartAmber),
+            _buildStatCard(
+              'Inactive',
+              stats['inactive']!,
+              AppColorScheme.chartAmber,
+            ),
           ],
         ),
         loading: () => const SizedBox(height: 80),
@@ -185,11 +208,18 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           children: [
             Text(
               value.toString(),
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
             Text(
               label,
-              style: TextStyle(color: color.withOpacity(0.8), fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: color.withOpacity(0.8),
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -207,7 +237,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           const SizedBox(height: 16),
           Text(
             'No ${group.displayName.toLowerCase()} found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: mutedColor),
           ),
           const SizedBox(height: 8),
           Text(
@@ -231,7 +263,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
           const SizedBox(height: 16),
           Text(
             'Error loading dropdowns',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colorScheme.error),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(color: colorScheme.error),
           ),
           const SizedBox(height: 8),
           Text(
@@ -252,7 +286,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Widget _buildDropdownsList(DropdownGroup group, List<DropdownItem> items, bool isAdmin) {
+  Widget _buildDropdownsList(
+    DropdownGroup group,
+    List<DropdownItem> items,
+    bool isAdmin,
+  ) {
     return ReorderableListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
@@ -266,7 +304,12 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  Widget _buildDropdownItem(DropdownGroup group, DropdownItem item, int index, bool isAdmin) {
+  Widget _buildDropdownItem(
+    DropdownGroup group,
+    DropdownItem item,
+    int index,
+    bool isAdmin,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       key: ValueKey(item.value),
@@ -278,7 +321,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             if (isAdmin) ...[
               ReorderableDragStartListener(
                 index: index,
-                child: Icon(Icons.drag_handle, color: colorScheme.onSurfaceVariant),
+                child: Icon(
+                  Icons.drag_handle,
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(width: 8),
             ],
@@ -287,7 +333,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                 width: 20,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(item.color!.replaceFirst('#', '0xFF'))),
+                  color: Color(
+                    int.parse(item.color!.replaceFirst('#', '0xFF')),
+                  ),
                   shape: BoxShape.circle,
                   border: Border.all(color: colorScheme.outlineVariant),
                 ),
@@ -296,10 +344,16 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
             ],
           ],
         ),
-        title: Text(item.label, style: const TextStyle(fontWeight: FontWeight.w500)),
+        title: Text(
+          item.label,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         subtitle: Text(
           item.value,
-          style: TextStyle(fontFamily: 'monospace', color: colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontFamily: 'monospace',
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -326,13 +380,21 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'edit',
-                  child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')]),
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit),
+                      SizedBox(width: 8),
+                      Text('Edit'),
+                    ],
+                  ),
                 ),
                 PopupMenuItem(
                   value: item.active ? 'deactivate' : 'activate',
                   child: Row(
                     children: [
-                      Icon(item.active ? Icons.visibility_off : Icons.visibility),
+                      Icon(
+                        item.active ? Icons.visibility_off : Icons.visibility,
+                      ),
                       const SizedBox(width: 8),
                       Text(item.active ? 'Deactivate' : 'Activate'),
                     ],
@@ -354,7 +416,10 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                     children: [
                       Icon(Icons.delete, color: colorScheme.error),
                       const SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: colorScheme.error)),
+                      Text(
+                        'Delete',
+                        style: TextStyle(color: colorScheme.error),
+                      ),
                     ],
                   ),
                 ),
@@ -383,7 +448,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     final orderedValues = reorderedItems.map((item) => item.value).toList();
 
     try {
-      await ref.read(dropdownFormControllerProvider.notifier).reorderItems(group, orderedValues);
+      await ref
+          .read(dropdownFormControllerProvider.notifier)
+          .reorderItems(group, orderedValues);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -405,7 +472,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     }
   }
 
-  Future<void> _handleItemAction(String action, DropdownGroup group, DropdownItem item) async {
+  Future<void> _handleItemAction(
+    String action,
+    DropdownGroup group,
+    DropdownItem item,
+  ) async {
     switch (action) {
       case 'edit':
         _showEditDialog(context, group, item);
@@ -430,7 +501,11 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     );
   }
 
-  void _showEditDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
+  void _showEditDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) {
     showDialog<void>(
       context: context,
       builder: (context) => DropdownFormDialog(group: group, item: item),
@@ -447,7 +522,9 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              item.active ? 'Item deactivated successfully' : 'Item activated successfully',
+              item.active
+                  ? 'Item deactivated successfully'
+                  : 'Item activated successfully',
             ),
             backgroundColor: AppColorScheme.snackSuccess,
           ),
@@ -465,11 +542,18 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     }
   }
 
-  void _showReplaceDialog(BuildContext context, DropdownGroup group, DropdownItem item) {
+  void _showReplaceDialog(
+    BuildContext context,
+    DropdownGroup group,
+    DropdownItem item,
+  ) {
     showDialog<void>(
       context: context,
-      builder: (context) =>
-          DropdownReplaceDialog(group: group, oldValue: item.value, oldLabel: item.label),
+      builder: (context) => DropdownReplaceDialog(
+        group: group,
+        oldValue: item.value,
+        oldLabel: item.label,
+      ),
     );
   }
 
@@ -478,13 +562,18 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     DropdownGroup group,
     DropdownItem item,
   ) async {
-    final hasReferences = await ref.read(isDropdownReferencedProvider((group, item.value)).future);
+    final hasReferences = await ref.read(
+      isDropdownReferencedProvider((group, item.value)).future,
+    );
 
     if (mounted) {
       showDialog<void>(
         context: context,
-        builder: (context) =>
-            DropdownDeleteDialog(group: group, item: item, hasReferences: hasReferences),
+        builder: (context) => DropdownDeleteDialog(
+          group: group,
+          item: item,
+          hasReferences: hasReferences,
+        ),
       );
     }
   }

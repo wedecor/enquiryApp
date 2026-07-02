@@ -9,13 +9,19 @@ class FcmTokenManager {
   static bool _registered = false;
   static StreamSubscription<String>? _tokenRefreshSubscription;
 
-  static Future<void> ensureFcmRegistered(FirestoreService firestoreService) async {
+  static Future<void> ensureFcmRegistered(
+    FirestoreService firestoreService,
+  ) async {
     if (_registered) return;
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     const vapidKey = String.fromEnvironment(
       'VAPID_PUBLIC_KEY',
@@ -33,16 +39,23 @@ class FcmTokenManager {
     });
 
     await _tokenRefreshSubscription?.cancel();
-    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return;
-      await firestoreService.saveFcmToken(currentUser.uid, newToken, refreshed: true);
-    });
+    _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+        .listen((newToken) async {
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser == null) return;
+          await firestoreService.saveFcmToken(
+            currentUser.uid,
+            newToken,
+            refreshed: true,
+          );
+        });
 
     _registered = true;
   }
 
-  static Future<void> removeCurrentToken(FirestoreService firestoreService) async {
+  static Future<void> removeCurrentToken(
+    FirestoreService firestoreService,
+  ) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;

@@ -75,7 +75,11 @@ class UsersRepository {
           return users;
         })
         .handleError((Object error, StackTrace stackTrace) {
-          Log.e('UsersRepository: users stream error', error: error, stackTrace: stackTrace);
+          Log.e(
+            'UsersRepository: users stream error',
+            error: error,
+            stackTrace: stackTrace,
+          );
           return <UserModel>[]; // Return empty list on stream error
         });
   }

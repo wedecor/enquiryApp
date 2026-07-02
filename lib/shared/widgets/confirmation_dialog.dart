@@ -64,7 +64,11 @@ class ConfirmationDialog extends StatelessWidget {
 
     return AlertDialog(
       icon: icon != null
-          ? Icon(icon, color: isDestructive ? colorScheme.error : colorScheme.primary, size: 48)
+          ? Icon(
+              icon,
+              color: isDestructive ? colorScheme.error : colorScheme.primary,
+              size: 48,
+            )
           : null,
       title: Text(title),
       content: Text(message),
@@ -75,8 +79,12 @@ class ConfirmationDialog extends StatelessWidget {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isDestructive ? colorScheme.error : colorScheme.primary,
-            foregroundColor: isDestructive ? colorScheme.onError : colorScheme.onPrimary,
+            backgroundColor: isDestructive
+                ? colorScheme.error
+                : colorScheme.primary,
+            foregroundColor: isDestructive
+                ? colorScheme.onError
+                : colorScheme.onPrimary,
           ),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(confirmText ?? (isDestructive ? 'Delete' : 'Confirm')),

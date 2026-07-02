@@ -38,7 +38,10 @@ class PerfTraces {
   }
 
   /// Stop a performance trace and check against budget
-  static Future<void> stopTrace(String traceName, {Map<String, String>? attributes}) async {
+  static Future<void> stopTrace(
+    String traceName, {
+    Map<String, String>? attributes,
+  }) async {
     final startTime = _startTimes[traceName];
     if (startTime == null) {
       Logger.warn('Attempted to stop non-existent trace: $traceName');
@@ -52,7 +55,9 @@ class PerfTraces {
     _checkPerformanceBudget(traceName, durationMs);
 
     if (!AppConfig.enablePerformance || !kReleaseMode) {
-      Logger.debug('Performance trace stopped (debug): $traceName - ${durationMs}ms');
+      Logger.debug(
+        'Performance trace stopped (debug): $traceName - ${durationMs}ms',
+      );
       _startTimes.remove(traceName);
       return;
     }
@@ -114,7 +119,10 @@ class PerfTraces {
   static void putMetric(String traceName, String metricName, int value) {
     // Note: putMetric is not available in current Firebase Performance API
     // Log the metric for debugging purposes
-    Logger.info('Performance metric: $traceName.$metricName = $value', tag: 'Performance');
+    Logger.info(
+      'Performance metric: $traceName.$metricName = $value',
+      tag: 'Performance',
+    );
   }
 
   /// Convenience method for timing a future operation
@@ -143,7 +151,10 @@ class PerfTraces {
   static Future<void> completeAppStartTrace() async {
     await stopTrace(
       'app_start',
-      attributes: {'environment': AppConfig.env, 'platform': defaultTargetPlatform.name},
+      attributes: {
+        'environment': AppConfig.env,
+        'platform': defaultTargetPlatform.name,
+      },
     );
   }
 
@@ -165,7 +176,10 @@ class PerfTraces {
   }
 
   static Future<void> completeLoginTrace({bool? success}) async {
-    await stopTrace('user_login', attributes: {'success': success?.toString() ?? 'unknown'});
+    await stopTrace(
+      'user_login',
+      attributes: {'success': success?.toString() ?? 'unknown'},
+    );
   }
 
   /// Image upload trace

@@ -38,7 +38,8 @@ class Enquiry with _$Enquiry {
     @JsonKey(name: 'sourceValue') String? source,
     String? sourceLabel,
     String? notes,
-    @Default([]) List<String> images, // Reference image URLs from Firebase Storage
+    @Default([])
+    List<String> images, // Reference image URLs from Firebase Storage
     // New denormalized and search fields (optional for back-compat)
     String? customerNameLower,
     String? phoneNormalized,
@@ -49,7 +50,8 @@ class Enquiry with _$Enquiry {
     String? textIndex,
   }) = _Enquiry;
 
-  factory Enquiry.fromJson(Map<String, dynamic> json) => _$EnquiryFromJson(json);
+  factory Enquiry.fromJson(Map<String, dynamic> json) =>
+      _$EnquiryFromJson(json);
 
   factory Enquiry.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
@@ -59,17 +61,22 @@ class Enquiry with _$Enquiry {
       customerName: data['customerName'] as String? ?? '',
       customerEmail: data['customerEmail'] as String?,
       customerPhone: data['customerPhone'] as String?,
-      eventType: (data['eventTypeValue'] as String?) ?? (data['eventType'] as String?) ?? '',
+      eventType:
+          (data['eventTypeValue'] as String?) ??
+          (data['eventType'] as String?) ??
+          '',
       eventTypeLabel: data['eventTypeLabel'] as String?,
       eventDate:
-          (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0),
+          (data['eventDate'] as Timestamp?)?.toDate() ??
+          DateTime.fromMillisecondsSinceEpoch(0),
       eventLocation: data['eventLocation'] as String?,
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
       description: enquiryNotesFrom(data),
       status: (data['statusValue'] as String?) ?? 'new', // Only use statusValue
       statusLabel: data['statusLabel'] as String?,
-      paymentStatus: (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
+      paymentStatus:
+          (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
       paymentStatusLabel: data['paymentStatusLabel'] as String?,
       totalCost: (data['totalCost'] as num?)?.toDouble(),
       advancePaid: (data['advancePaid'] as num?)?.toDouble(),

@@ -18,25 +18,52 @@ class DashboardEmptyEnquiries extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     if (searchQuery != null && searchQuery!.isNotEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: theme.colorScheme.onSurfaceVariant),
-            SizedBox(height: AppTokens.space4),
-            Text(
-              'No enquiries match "$searchQuery"',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+        child: Padding(
+          padding: AppSpacing.horizontal6,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.search_off_rounded,
+                  size: 32,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
-            ),
-            if (onClearSearch != null) ...[
-              SizedBox(height: AppTokens.space3),
-              TextButton(onPressed: onClearSearch, child: const Text('Clear search')),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                'No matches found',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppTokens.space2),
+              Text(
+                'Nothing matches "$searchQuery"',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              if (onClearSearch != null) ...[
+                const SizedBox(height: AppTokens.space4),
+                OutlinedButton(
+                  onPressed: onClearSearch,
+                  child: const Text('Clear search'),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       );
     }
@@ -45,25 +72,47 @@ class DashboardEmptyEnquiries extends StatelessWidget {
       'All' => 'No enquiries found',
       'reminders' => 'No upcoming follow-ups in the next 21 days',
       'closed' => 'No closed enquiries yet',
+      'approved' => 'No approved enquiries',
       _ => 'No $status enquiries',
     };
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.sentiment_dissatisfied, size: 64, color: theme.colorScheme.onSurfaceVariant),
-          SizedBox(height: AppTokens.space4),
-          Text(
-            message,
-            style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-          ),
-          SizedBox(height: AppTokens.space2),
-          Text(
-            'Tap the + button to create a new enquiry',
-            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
-          ),
-        ],
+      child: Padding(
+        padding: AppSpacing.horizontal6,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withValues(alpha: 0.45),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.inbox_outlined,
+                size: 32,
+                color: cs.onPrimaryContainer,
+              ),
+            ),
+            const SizedBox(height: AppTokens.space4),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppTokens.space2),
+            Text(
+              'Tap + to create a new enquiry',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
