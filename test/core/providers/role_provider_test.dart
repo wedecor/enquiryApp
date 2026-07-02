@@ -100,7 +100,7 @@ void main() {
         // Staff should have limited permissions
         const staffPermissions = UserPermissions(
           canViewEnquiries: true,
-          canCreateEnquiries: true,
+          canCreateEnquiries: false,
           canEditEnquiries: false,
           canDeleteEnquiries: false,
           canViewAnalytics: false,
@@ -108,7 +108,7 @@ void main() {
         );
 
         expect(staffPermissions.canViewEnquiries, isTrue);
-        expect(staffPermissions.canCreateEnquiries, isTrue);
+        expect(staffPermissions.canCreateEnquiries, isFalse);
         expect(staffPermissions.canEditEnquiries, isFalse);
         expect(staffPermissions.canDeleteEnquiries, isFalse);
         expect(staffPermissions.canViewAnalytics, isFalse);
@@ -119,7 +119,7 @@ void main() {
         // Test that staff cannot perform admin-only actions
         const staffPermissions = UserPermissions(
           canViewEnquiries: true,
-          canCreateEnquiries: true,
+          canCreateEnquiries: false,
           canEditEnquiries: false,
           canDeleteEnquiries: false,
           canViewAnalytics: false,
@@ -155,7 +155,7 @@ void main() {
         // Staff role - limited access
         const staffPermissions = UserPermissions(
           canViewEnquiries: true,
-          canCreateEnquiries: true,
+          canCreateEnquiries: false,
           canEditEnquiries: false,
           canDeleteEnquiries: false,
           canViewAnalytics: false,
