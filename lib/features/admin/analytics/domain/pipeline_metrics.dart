@@ -387,7 +387,7 @@ List<PerformanceRow> _groupPerformance(
       stale: g.where((r) => isStale(r, now)).length,
       bookedValue: g
           .where(isWon)
-          .fold<double>(0, (sum, r) => sum + (metricNum(r['totalCost']) ?? 0)),
+          .fold<double>(0, (total, r) => total + (metricNum(r['totalCost']) ?? 0)),
       medianResponse: percentileDuration(times, 0.5),
     );
   }).toList()..sort((a, b) => b.leads.compareTo(a.leads));
@@ -701,7 +701,7 @@ FollowUpReport computeFollowUp({
     avgContactsBeforeLoss: avgContacts(periodRows.where(isLostRow)),
     remindersSent: periodRows.fold<int>(
       0,
-      (sum, r) => sum + (metricNum(r['reminderClickCount'])?.toInt() ?? 0),
+      (total, r) => total + (metricNum(r['reminderClickCount'])?.toInt() ?? 0),
     ),
   );
 }
@@ -771,6 +771,6 @@ PipelineReport buildPipelineReport({
     followUp: computeFollowUp(openRows: allRows, periodRows: period, now: now),
     bookedValueInPeriod: period
         .where(isWon)
-        .fold<double>(0, (sum, r) => sum + (metricNum(r['totalCost']) ?? 0)),
+        .fold<double>(0, (total, r) => total + (metricNum(r['totalCost']) ?? 0)),
   );
 }

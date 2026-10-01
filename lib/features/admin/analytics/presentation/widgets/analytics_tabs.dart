@@ -11,8 +11,8 @@ import 'analytics_format.dart';
 import 'analytics_state_views.dart';
 import 'breakdown_charts.dart';
 import 'line_trend_chart.dart';
-import 'recent_enquiries_table.dart';
 import 'pipeline_sections.dart';
+import 'recent_enquiries_table.dart';
 import 'top_list_table.dart';
 
 /// Bottom room so the last section clears the floating nav pill.
