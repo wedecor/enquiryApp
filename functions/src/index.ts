@@ -373,7 +373,8 @@ export const sendNotificationToUser = onDocumentWritten(
       if (dead.length > 0) {
         const tokenDocs = tokensSnap.docs.filter((d) => dead.includes((d.get("token") as string | undefined) || d.id));
         await Promise.all(tokenDocs.map((d) => d.ref.delete()));
-        logger.info("Removed dead FCM tokens", { userId, removed: tokenDocs.length });
+        const removed = tokenDocs.length;
+        logger.info("Removed dead FCM device registrations", { userId, removed });
       }
 
       logger.info("FCM notification sent to user", {
