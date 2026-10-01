@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -18,10 +16,13 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/components/sticky_bottom_bar.dart';
+import '../../data/enquiry_image_uploader.dart';
+import '../../domain/enquiry_change_set.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
 import '../widgets/enquiry_form_images_section.dart';
+import '../widgets/enquiry_form_progress.dart';
 import '../widgets/enquiry_form_section.dart';
 
 /// Screen for creating and editing enquiries
@@ -435,29 +436,12 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       final isAdmin = roleAsync.valueOrNull == UserRole.admin;
 
       if (isAdmin) {
-        final costChanged = oldTotalCost != newTotalCost;
-        final advanceChanged = oldAdvancePaid != newAdvancePaid;
-
-        String message = 'You are about to update financial information:\n\n';
-        if (costChanged) {
-          final oldCostStr = oldTotalCost != null
-              ? '₹${oldTotalCost.toStringAsFixed(0)}'
-              : 'Not set';
-          final newCostStr = newTotalCost != null
-              ? '₹${newTotalCost.toStringAsFixed(0)}'
-              : 'Not set';
-          message += '• Total Cost: $oldCostStr → $newCostStr\n';
-        }
-        if (advanceChanged) {
-          final oldAdvanceStr = oldAdvancePaid != null
-              ? '₹${oldAdvancePaid.toStringAsFixed(0)}'
-              : 'Not set';
-          final newAdvanceStr = newAdvancePaid != null
-              ? '₹${newAdvancePaid.toStringAsFixed(0)}'
-              : 'Not set';
-          message += '• Advance Paid: $oldAdvanceStr → $newAdvanceStr\n';
-        }
-        message += '\nContinue with this change?';
+        final message = buildFinancialChangeMessage(
+          oldTotalCost: oldTotalCost,
+          newTotalCost: newTotalCost,
+          oldAdvancePaid: oldAdvancePaid,
+          newAdvancePaid: newAdvancePaid,
+        );
 
         final confirmed = await ConfirmationDialog.show(
           context: context,
@@ -575,80 +559,21 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Record audit trail for individual field changes
     final auditService = ref.read(auditServiceProvider);
-    final changes = <String, Map<String, dynamic>>{};
-
-    // Track status change (store VALUES, not labels)
-    // Only use statusValue - standard field
     final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
-    if (oldStatusValue != statusValue) {
-      changes['statusValue'] = {'old_value': oldStatusValue, 'new_value': statusValue};
-    }
-
-    // Track assignment change
-    final oldAssignedTo = oldEnquiryData['assignedTo'] as String?;
-    if (oldAssignedTo != _selectedAssignedTo) {
-      changes['assignedTo'] = {
-        'old_value':
-            oldAssignedTo, // null = previously unassigned; display layer shows "Unassigned"
-        'new_value': _selectedAssignedTo, // null = clearing the assignment
-      };
-    }
-
-    // Track priority change
-    final oldPriorityValue = oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
-    if (oldPriorityValue != priorityValue) {
-      changes['priority'] = {
-        'old_value': oldPriorityValue ?? 'Not Set',
-        'new_value': priorityValue ?? 'Not Set',
-      };
-    }
-
-    // Track payment status change
-    final oldPaymentStatusValue =
-        oldEnquiryData['paymentStatusValue'] ?? oldEnquiryData['paymentStatus'];
-    if (oldPaymentStatusValue != paymentStatusValue) {
-      changes['paymentStatus'] = {
-        'old_value': oldPaymentStatusValue ?? 'Not Set',
-        'new_value': paymentStatusValue ?? 'Not Set',
-      };
-    }
-
-    // Track customer name change
-    final oldCustomerName = oldEnquiryData['customerName'] as String? ?? '';
-    if (oldCustomerName != newCustomerName) {
-      changes['customerName'] = {
-        'old_value': oldCustomerName.isEmpty ? 'Not Set' : oldCustomerName,
-        'new_value': newCustomerName.isEmpty ? 'Not Set' : newCustomerName,
-      };
-    }
-
-    // Track customer phone change
-    final oldCustomerPhone = oldEnquiryData['customerPhone'] as String? ?? '';
-    if (oldCustomerPhone != newCustomerPhone) {
-      changes['customerPhone'] = {
-        'old_value': oldCustomerPhone.isEmpty ? 'Not Set' : oldCustomerPhone,
-        'new_value': newCustomerPhone.isEmpty ? 'Not Set' : newCustomerPhone,
-      };
-    }
-
-    // Track event location change
-    final oldEventLocation = oldEnquiryData['eventLocation'] as String? ?? '';
-    if (oldEventLocation != newEventLocation) {
-      changes['eventLocation'] = {
-        'old_value': oldEventLocation.isEmpty ? 'Not Set' : oldEventLocation,
-        'new_value': newEventLocation.isEmpty ? 'Not Set' : newEventLocation,
-      };
-    }
-
-    // Track total cost change (oldTotalCost already declared above)
-    if (oldTotalCost != newTotalCost) {
-      changes['totalCost'] = {'old_value': oldTotalCost ?? 0, 'new_value': newTotalCost ?? 0};
-    }
-
-    // Track advance paid change (oldAdvancePaid already declared above)
-    if (oldAdvancePaid != newAdvancePaid) {
-      changes['advancePaid'] = {'old_value': oldAdvancePaid ?? 0, 'new_value': newAdvancePaid ?? 0};
-    }
+    final changes = buildEnquiryAuditChanges(
+      oldEnquiryData: oldEnquiryData,
+      statusValue: statusValue,
+      assignedTo: _selectedAssignedTo,
+      priorityValue: priorityValue,
+      paymentStatusValue: paymentStatusValue,
+      newCustomerName: newCustomerName,
+      newCustomerPhone: newCustomerPhone,
+      newEventLocation: newEventLocation,
+      oldTotalCost: oldTotalCost,
+      newTotalCost: newTotalCost,
+      oldAdvancePaid: oldAdvancePaid,
+      newAdvancePaid: newAdvancePaid,
+    );
 
     // Record all changes at once
     if (changes.isNotEmpty) {
@@ -702,85 +627,18 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
   }
 
-  Future<List<String>> _uploadImages(String enquiryId) async {
-    final storage = FirebaseStorage.instance;
-    final List<String> downloadUrls = [];
-
-    for (final xfile in _selectedImages) {
-      try {
-        if (kIsWeb) {
-          // For web, use Uint8List for putData
-          final bytes = await xfile.readAsBytes();
-          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
-          final ref = storage
-              .ref()
-              .child('enquiries')
-              .child(enquiryId)
-              .child('images')
-              .child(fileName);
-
-          // Set content type based on file extension
-          final contentType = _getContentType(fileName);
-
-          // Upload with metadata - ensure bytes are Uint8List
-          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
-
-          // Convert to Uint8List if needed
-          final uint8List = bytes;
-
-          final task = await ref.putData(uint8List, metadata);
-          final url = await task.ref.getDownloadURL();
-          downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
-        } else {
-          // For mobile, use File
-          final file = File(xfile.path);
-          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
-          final ref = storage
-              .ref()
-              .child('enquiries')
-              .child(enquiryId)
-              .child('images')
-              .child(fileName);
-
-          // Set content type
-          final contentType = _getContentType(fileName);
-          final metadata = SettableMetadata(contentType: contentType);
-
-          final task = await ref.putFile(file, metadata);
-          final url = await task.ref.getDownloadURL();
-          downloadUrls.add(url);
-          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
-        }
-      } catch (e) {
-        Log.e('Error uploading image ${xfile.name}', error: e);
+  Future<List<String>> _uploadImages(String enquiryId) {
+    return const EnquiryImageUploader().upload(
+      enquiryId,
+      _selectedImages,
+      onError: (xfile, e) {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text('Error uploading ${xfile.name}: $e')));
         }
-        // Continue with other images
-      }
-    }
-
-    return downloadUrls;
-  }
-
-  String _getContentType(String fileName) {
-    final extension = fileName.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      default:
-        return 'image/jpeg'; // Default fallback
-    }
+      },
+    );
   }
 
   Future<void> _removeExistingImage(int index) async {
@@ -827,13 +685,13 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     if (widget.mode == 'create' && !isAdmin) {
       return Scaffold(
         appBar: AppBar(title: const Text('New Enquiry')),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: AppSpacing.space6,
             child: Text(
               'Only admins can create enquiries',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
         ),
@@ -857,8 +715,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (widget.mode == 'create') ...[
-                            _FormSectionProgress(
-                              sections: const ['Customer', 'Event', 'Financial', 'Notes & Images'],
+                            const EnquiryFormProgress(
+                              sections: ['Customer', 'Event', 'Financial', 'Notes & Images'],
                             ),
                             const SizedBox(height: AppTokens.space4),
                           ],
@@ -934,8 +792,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       onPressed: (_isLoading || !_hydrated) ? null : _submitForm,
                       child: _isLoading
                           ? SizedBox(
-                              height: 20,
-                              width: 20,
+                              height: AppTokens.space5,
+                              width: AppTokens.space5,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
@@ -947,53 +805,6 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                 ],
               ),
             ),
-    );
-  }
-}
-
-// ── Form section progress indicator ──────────────────────────────────────────
-
-class _FormSectionProgress extends StatelessWidget {
-  const _FormSectionProgress({required this.sections});
-
-  final List<String> sections;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          for (int i = 0; i < sections.length; i++) ...[
-            Expanded(
-              child: Column(
-                children: [
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    sections[i],
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-            if (i < sections.length - 1) const SizedBox(width: 4),
-          ],
-        ],
-      ),
     );
   }
 }
