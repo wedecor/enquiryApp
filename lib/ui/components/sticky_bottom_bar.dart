@@ -11,7 +11,11 @@ class StickyBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
+    // Always span the full width, even inside a Column with centred children,
+    // so the bar reads as a bar and the action stretches edge to edge.
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
       elevation: 0,
       color: theme.colorScheme.surface,
       child: SafeArea(
@@ -27,9 +31,10 @@ class StickyBottomBar extends StatelessWidget {
               AppTokens.space4,
               AppTokens.space3,
             ),
-            child: child,
+            child: SizedBox(width: double.infinity, child: child),
           ),
         ),
+      ),
       ),
     );
   }

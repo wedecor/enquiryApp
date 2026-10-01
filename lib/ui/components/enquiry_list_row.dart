@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
 import '../../core/utils/status_colors.dart';
-import '../../utils/event_colors.dart';
 
 /// The single shared enquiry list item ("EnquiryCard") — used by the dashboard,
 /// the enquiries list/search results and the calendar day view. Do not build an
 /// enquiry row layout anywhere else; wrap this widget instead.
 ///
-/// Scannable row — left status strip, event badge, icon meta. Separated by a 1px
-/// hairline border rather than a shadow.
+/// Dense, table-like row: flat on the surface, separated from its neighbours by
+/// a 1px bottom hairline. One colour signal per row — the status dot.
+///
+///   Customer name                              12 Oct 2026
+///   Baby Shower · Whitefield                       ● New
+///   16m old · mohammed zakir
 ///
 /// Pass [location], [ageLabel], [assigneeLabel] separately for structured display.
-/// Set [compact] to hide the meta row (e.g. in Kanban or condensed lists).
+/// Set [compact] to hide the meta line. Set [bordered] where rows sit on a tinted
+/// background as separate cards (Kanban columns).
 class EnquiryListRow extends StatelessWidget {
   const EnquiryListRow({
     super.key,
@@ -37,6 +41,7 @@ class EnquiryListRow extends StatelessWidget {
     this.compact = false,
     this.showStatusChip = true,
     this.showChevron = true,
+    this.bordered = false,
   });
 
   final String customerName;
@@ -63,126 +68,126 @@ class EnquiryListRow extends StatelessWidget {
   /// Hide where the status is already implied (e.g. inside a Kanban status column).
   final bool showStatusChip;
 
-  /// Hide when the row is also a drag handle (Kanban) rather than a pure link.
+  /// Kept for call-site compatibility; the dense row has no chevron.
   final bool showChevron;
+
+  /// Render as a separate bordered card instead of a flat divided row.
+  final bool bordered;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final accentColor =
+    final statusDotColor =
         statusColor ??
         resolveStatusColor(context, statusValue, firestoreColors: firestoreStatusColors);
     final chipLabel = statusLabel ?? _formatStatusLabel(statusValue);
-    final cardColor = theme.cardTheme.color ?? cs.surface;
 
-    // Event type color for the inline badge.
-    final eventColor = EventColors.accentFor(eventTypeValue ?? eventTypeLabel);
+    final secondary = theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
+    final tertiary = theme.textTheme.labelSmall?.copyWith(
+      color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+      fontWeight: FontWeight.w400,
+    );
 
-    // Whether the structured meta row has anything to show
-    final hasStructuredMeta = location != null || ageLabel != null || assigneeLabel != null;
-    final hasLegacyMeta = secondaryMeta != null && secondaryMeta!.trim().isNotEmpty;
-    final showMeta = !compact && (hasStructuredMeta || hasLegacyMeta);
+    final line2 = [
+      eventTypeLabel.trim(),
+      if (location != null && location!.trim().isNotEmpty) location!.trim(),
+    ].where((s) => s.isNotEmpty).join(' · ');
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTokens.space2),
-      child: Material(
-        color: cardColor,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.medium,
-          side: BorderSide(color: cs.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── Status strip ───────────────────────────────────────
-                  ColoredBox(color: accentColor, child: const SizedBox(width: AppTokens.space1)),
+    final hasStructuredMeta =
+        (ageLabel?.trim().isNotEmpty ?? false) || (assigneeLabel?.trim().isNotEmpty ?? false);
+    final line3 = hasStructuredMeta
+        ? [
+            ageLabel?.trim() ?? '',
+            assigneeLabel?.trim() ?? '',
+          ].where((s) => s.isNotEmpty).join(' · ')
+        : (secondaryMeta?.trim() ?? '');
+    final showMeta = !compact && line3.isNotEmpty;
 
-                  // ── Content ────────────────────────────────────────────
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTokens.space3,
-                        vertical: AppTokens.space3,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Name
-                                Text(
-                                  customerName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-
-                                const SizedBox(height: AppTokens.space1),
-
-                                // Event type badge (event color) + date
-                                _EventLine(
-                                  eventTypeLabel: eventTypeLabel,
-                                  eventDateLabel: eventDateLabel,
-                                  eventColor: eventColor,
-                                  cs: cs,
-                                  theme: theme,
-                                ),
-
-                                // Meta row — structured fields or legacy fallback
-                                if (showMeta) ...[
-                                  const SizedBox(height: AppTokens.space1),
-                                  if (hasStructuredMeta)
-                                    _StructuredMeta(
-                                      location: location,
-                                      ageLabel: ageLabel,
-                                      assigneeLabel: assigneeLabel,
-                                      cs: cs,
-                                      theme: theme,
-                                    )
-                                  else
-                                    Text(
-                                      secondaryMeta!.trim(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: cs.onSurfaceVariant.withValues(alpha: 0.8),
-                                        fontSize: AppTokens.fontSizeSmall,
-                                      ),
-                                    ),
-                                ],
-                              ],
-                            ),
-                          ),
-
-                          if (showStatusChip) ...[
-                            const SizedBox(width: AppTokens.space2),
-                            _StatusChip(label: chipLabel, color: accentColor),
-                          ],
-                          if (showChevron)
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: AppTokens.iconMedium,
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                            ),
-                        ],
-                      ),
-                    ),
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTokens.space4,
+        vertical: AppTokens.space3,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  customerName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
                   ),
-                ],
+                ),
               ),
+              const SizedBox(width: AppTokens.space3),
+              Text(
+                eventDateLabel.trim(),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppTokens.space1),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  line2,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: secondary,
+                ),
+              ),
+              if (showStatusChip) ...[
+                const SizedBox(width: AppTokens.space3),
+                _StatusLabel(label: chipLabel, color: statusDotColor),
+              ],
+            ],
+          ),
+          if (showMeta) ...[
+            const SizedBox(height: AppTokens.space1 / 2),
+            Text(line3, maxLines: 1, overflow: TextOverflow.ellipsis, style: tertiary),
+          ],
+        ],
+      ),
+    );
+
+    if (bordered) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: AppTokens.space2),
+        child: Material(
+          color: theme.cardTheme.color ?? cs.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: AppRadius.medium,
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(onTap: onTap, onLongPress: onLongPress, child: content),
+        ),
+      );
+    }
+
+    return Material(
+      color: cs.surface,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: cs.outlineVariant)),
+          ),
+          child: content,
         ),
       ),
     );
@@ -198,164 +203,38 @@ class EnquiryListRow extends StatelessWidget {
   }
 }
 
-// ─── Event line ──────────────────────────────────────────────────────────────
-
-/// Shows event type as a small colored badge followed by the event date.
-/// The badge uses [eventColor] so each event type has its own visual identity.
-class _EventLine extends StatelessWidget {
-  const _EventLine({
-    required this.eventTypeLabel,
-    required this.eventDateLabel,
-    required this.eventColor,
-    required this.cs,
-    required this.theme,
-  });
-
-  final String eventTypeLabel;
-  final String eventDateLabel;
-  final Color eventColor;
-  final ColorScheme cs;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasType = eventTypeLabel.trim().isNotEmpty;
-    final hasDate = eventDateLabel.trim().isNotEmpty;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (hasType)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space1, vertical: 1),
-            decoration: BoxDecoration(
-              color: eventColor.withValues(alpha: 0.12),
-              borderRadius: AppRadius.small,
-              border: Border.all(color: eventColor.withValues(alpha: 0.30)),
-            ),
-            child: Text(
-              eventTypeLabel.trim(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: eventColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        if (hasType && hasDate) const SizedBox(width: AppTokens.space2),
-        if (hasDate) ...[
-          Icon(
-            Icons.calendar_today_outlined,
-            size: AppTokens.fontSizeSmall,
-            color: cs.onSurfaceVariant.withValues(alpha: 0.75),
-          ),
-          const SizedBox(width: AppTokens.space1),
-          Flexible(
-            child: Text(
-              eventDateLabel.trim(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-// ─── Structured meta ─────────────────────────────────────────────────────────
-
-/// Location, age, and assignee — each with a distinct icon, laid out in a Wrap.
-class _StructuredMeta extends StatelessWidget {
-  const _StructuredMeta({
-    this.location,
-    this.ageLabel,
-    this.assigneeLabel,
-    required this.cs,
-    required this.theme,
-  });
-
-  final String? location;
-  final String? ageLabel;
-  final String? assigneeLabel;
-  final ColorScheme cs;
-  final ThemeData theme;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <_MetaItem>[];
-    if (location != null && location!.trim().isNotEmpty) {
-      items.add(_MetaItem(icon: Icons.location_on_outlined, label: location!.trim()));
-    }
-    if (ageLabel != null && ageLabel!.trim().isNotEmpty) {
-      items.add(_MetaItem(icon: Icons.access_time_outlined, label: ageLabel!.trim()));
-    }
-    if (assigneeLabel != null && assigneeLabel!.trim().isNotEmpty) {
-      items.add(_MetaItem(icon: Icons.person_outline, label: assigneeLabel!.trim()));
-    }
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: AppTokens.space3,
-      runSpacing: AppTokens.space1 / 2,
-      children: items
-          .map(
-            (item) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  item.icon,
-                  size: AppTokens.fontSizeSmall,
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.65),
-                ),
-                const SizedBox(width: AppTokens.space1),
-                Text(
-                  item.label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.82),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _MetaItem {
-  const _MetaItem({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-}
-
-// ─── Status chip ─────────────────────────────────────────────────────────────
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
+/// Status as a coloured dot + plain label — the row's only colour signal.
+class _StatusLabel extends StatelessWidget {
+  const _StatusLabel({required this.label, required this.color});
 
   final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 96),
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.small,
-        border: Border.all(color: color.withValues(alpha: 0.28)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+    final theme = Theme.of(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 112),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: const SizedBox(width: AppTokens.space2, height: AppTokens.space2),
+          ),
+          const SizedBox(width: AppTokens.space1 + 2),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

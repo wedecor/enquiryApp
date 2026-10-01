@@ -146,7 +146,8 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(AppTokens.space4, AppTokens.space1, AppTokens.space4, 0),
+        // Flat, full-width rows separated by hairlines (see EnquiryListRow).
+        padding: EdgeInsets.zero,
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) => DashboardEnquiryListRow(
@@ -154,6 +155,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
               actions: actions,
               dropdownLookup: dropdownLookup,
               isReminderTab: isReminderTab,
+              showStatus: isReminderTab || status == 'closed' || status == 'All',
             ),
             childCount: filteredEnquiries.length,
           ),
@@ -293,30 +295,31 @@ class _SortSummaryBar extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppTokens.space4,
-        AppTokens.space3,
-        AppTokens.space2,
-        AppTokens.space2,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
-      child: Row(
-        children: [
-          Text(
-            '$count result${count == 1 ? '' : 's'}',
-            style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const Spacer(),
-          IconButton(
-            tooltip: 'Sort enquiries',
-            onPressed: () => _showSortSheet(context),
-            icon: const Icon(Icons.sort_rounded),
-            style: IconButton.styleFrom(
-              backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
-              foregroundColor: cs.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.only(left: AppTokens.space4, right: AppTokens.space1),
+        child: Row(
+          children: [
+            Text(
+              '$count enquir${count == 1 ? 'y' : 'ies'}',
+              style: theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
-          ),
-        ],
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () => _showSortSheet(context),
+              style: TextButton.styleFrom(
+                foregroundColor: cs.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.swap_vert_rounded, size: AppTokens.iconSmall),
+              label: Text(current.label),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import 'dashboard_enquiry_utils.dart';
 
-/// "Needs Attention" — surfaces the most actionable buckets from live data.
+/// Summary counters (New · Follow-ups · This week) computed from live data.
+/// Each counter is tappable and jumps to the matching tab / Calendar.
 class DashboardTodaySection extends ConsumerWidget {
   const DashboardTodaySection({
     super.key,
@@ -64,113 +64,44 @@ class DashboardTodaySection extends ConsumerWidget {
           }
         }
 
-        String thisWeekSublabel = 'Happening this week';
+        String? thisWeekSublabel;
         if (nearestEventDate != null) {
           final diff = nearestEventDate.difference(now);
+          final name = nearestEventName ?? 'Event';
           if (diff.inDays == 0) {
-            thisWeekSublabel = '${nearestEventName ?? 'Event'} — today!';
+            thisWeekSublabel = '$name today';
           } else if (diff.inDays == 1) {
-            thisWeekSublabel = '${nearestEventName ?? 'Event'} — tomorrow';
+            thisWeekSublabel = '$name tomorrow';
           } else {
-            thisWeekSublabel = '${nearestEventName ?? 'Event'} in ${diff.inDays}d';
+            thisWeekSublabel = '$name in ${diff.inDays}d';
           }
         }
 
-        final buckets = <_PriorityBucket>[
-          if (newUncontacted > 0)
-            _PriorityBucket(
+        final cs = Theme.of(context).colorScheme;
+        return _StatStrip(
+          cells: [
+            _StatCell(
               bucket: 'new',
-              icon: Icons.person_add_outlined,
-              label: '$newUncontacted new',
-              sublabel: staleNew > 0 ? '$staleNew waiting 3+ days' : 'Need first contact',
-              urgency: staleNew > 0 ? _Urgency.critical : _Urgency.high,
+              value: newUncontacted,
+              label: 'New',
+              note: staleNew > 0 ? '$staleNew waiting 3d+' : null,
+              valueColor: staleNew > 0 ? cs.error : null,
               onTap: onBucketTap,
             ),
-          if (pendingReminders > 0)
-            _PriorityBucket(
+            _StatCell(
               bucket: 'reminders',
-              icon: Icons.notifications_active_outlined,
-              label: '$pendingReminders follow-up${pendingReminders == 1 ? '' : 's'}',
-              sublabel: 'Event within 21 days',
-              urgency: _Urgency.medium,
+              value: pendingReminders,
+              label: 'Follow-ups',
+              note: pendingReminders > 0 ? 'Event within 21d' : null,
               onTap: onBucketTap,
             ),
-          if (eventsThisWeek > 0)
-            _PriorityBucket(
+            _StatCell(
               bucket: 'this_week',
-              icon: Icons.event_outlined,
-              label: '$eventsThisWeek event${eventsThisWeek == 1 ? '' : 's'}',
-              sublabel: thisWeekSublabel,
-              urgency: _Urgency.high,
+              value: eventsThisWeek,
+              label: 'This week',
+              note: thisWeekSublabel,
               onTap: onBucketTap,
             ),
-        ];
-
-        if (buckets.isEmpty) return const _AllClearBanner();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTokens.space4,
-                AppTokens.space2,
-                AppTokens.space4,
-                AppTokens.space3,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    'Needs Attention',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(width: AppTokens.space2),
-                  Text(
-                    '· tap to jump',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth >= AppTokens.breakpointTablet;
-
-                if (isWide) {
-                  return Padding(
-                    padding: AppSpacing.horizontal4,
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: AppTokens.space3,
-                      mainAxisSpacing: AppTokens.space3,
-                      childAspectRatio: 2.6,
-                      children: buckets,
-                    ),
-                  );
-                }
-
-                return SizedBox(
-                  height: 108,
-                  child: ListView.separated(
-                    padding: AppSpacing.horizontal4,
-                    scrollDirection: Axis.horizontal,
-                    itemCount: buckets.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: AppTokens.space3),
-                    itemBuilder: (context, i) => SizedBox(width: 172, child: buckets[i]),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppTokens.space2),
           ],
         );
       },
@@ -178,186 +109,102 @@ class DashboardTodaySection extends ConsumerWidget {
   }
 }
 
-enum _Urgency { critical, high, medium, low }
+/// Three counters in one hairline-divided row — the dashboard's summary line.
+class _StatStrip extends StatelessWidget {
+  const _StatStrip({required this.cells});
 
-class _PriorityBucket extends StatelessWidget {
-  const _PriorityBucket({
-    required this.bucket,
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.urgency,
-    this.onTap,
-  });
-
-  final String bucket;
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final _Urgency urgency;
-  final void Function(String)? onTap;
+  final List<_StatCell> cells;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    final Color accentColor;
-    final Color accentSurface;
-    switch (urgency) {
-      case _Urgency.critical:
-        accentColor = cs.error;
-        accentSurface = cs.errorContainer.withValues(alpha: 0.35);
-      case _Urgency.high:
-        accentColor = AppColorScheme.warning;
-        accentSurface = cs.secondaryContainer.withValues(alpha: 0.45);
-      case _Urgency.medium:
-        accentColor = cs.primary;
-        accentSurface = cs.primaryContainer.withValues(alpha: 0.5);
-      case _Urgency.low:
-        accentColor = cs.secondary;
-        accentSurface = cs.secondaryContainer.withValues(alpha: 0.4);
-    }
-
-    return Semantics(
-      button: true,
-      label: '$label. $sublabel',
-      child: Material(
-        color: cs.surface,
-        elevation: 0,
-        borderRadius: AppRadius.medium,
-        child: InkWell(
-          onTap: onTap != null ? () => onTap!(bucket) : null,
-          borderRadius: AppRadius.medium,
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.medium,
-              border: Border.all(color: cs.outlineVariant),
-            ),
-            child: ClipRRect(
-              borderRadius: AppRadius.medium,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(width: AppTokens.space1, color: accentColor),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppTokens.space3),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: accentSurface,
-                              borderRadius: AppRadius.medium,
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(icon, color: accentColor, size: AppTokens.iconMedium),
-                          ),
-                          const SizedBox(width: AppTokens.space3),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  label,
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: cs.onSurface,
-                                  ),
-                                ),
-                                const SizedBox(height: AppTokens.space1),
-                                Text(
-                                  sublabel,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    final cs = Theme.of(context).colorScheme;
+    final divider = VerticalDivider(width: 1, thickness: 1, color: cs.outlineVariant);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant),
+          bottom: BorderSide(color: cs.outlineVariant),
+        ),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (int i = 0; i < cells.length; i++) ...[
+              if (i > 0) divider,
+              Expanded(child: cells[i]),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _AllClearBanner extends StatelessWidget {
-  const _AllClearBanner();
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    required this.bucket,
+    required this.value,
+    required this.label,
+    this.note,
+    this.valueColor,
+    this.onTap,
+  });
+
+  final String bucket;
+  final int value;
+  final String label;
+  final String? note;
+  final Color? valueColor;
+  final void Function(String)? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppTokens.space4,
-        AppTokens.space3,
-        AppTokens.space4,
-        AppTokens.space2,
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppTokens.space4,
-          vertical: AppTokens.space3,
-        ),
-        decoration: BoxDecoration(
-          color: cs.tertiaryContainer.withValues(alpha: 0.45),
-          borderRadius: AppRadius.medium,
-          border: Border.all(color: cs.tertiary.withValues(alpha: 0.25)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: cs.tertiary.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
+    return Semantics(
+      button: onTap != null,
+      label: '$value $label${note != null ? '. $note' : ''}',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap != null ? () => onTap!(bucket) : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTokens.space4,
+            vertical: AppTokens.space3,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
               ),
-              child: Icon(Icons.celebration_outlined, color: cs.tertiary, size: 20),
-            ),
-            const SizedBox(width: AppTokens.space3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'All caught up!',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.onTertiaryContainer,
-                    ),
-                  ),
-                  Text(
-                    'Nothing needs your attention right now.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.onTertiaryContainer.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: AppTokens.space1 / 2),
+              Text(
+                '$value',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? cs.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  height: 1.1,
+                ),
               ),
-            ),
-          ],
+              if (note != null) ...[
+                const SizedBox(height: AppTokens.space1 / 2),
+                Text(
+                  note!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

@@ -22,7 +22,6 @@ import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
 import '../widgets/enquiry_form_images_section.dart';
-import '../widgets/enquiry_form_progress.dart';
 import '../widgets/enquiry_form_section.dart';
 
 /// Screen for creating and editing enquiries
@@ -714,12 +713,6 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (widget.mode == 'create') ...[
-                            const EnquiryFormProgress(
-                              sections: ['Customer', 'Event', 'Financial', 'Notes & Images'],
-                            ),
-                            const SizedBox(height: AppTokens.space4),
-                          ],
                           EnquiryFormCustomerFields(
                             nameController: _nameController,
                             phoneController: _phoneController,
@@ -747,6 +740,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                             guestCountController: _guestCountController,
                             budgetController: _budgetController,
                             showLeadSource: true,
+                            // New enquiries are always created as 'new' (see _createEnquiry),
+                            // so the status picker only appears when editing.
+                            showStatus: widget.mode == 'edit',
                           ),
 
                           EnquiryFormFinancialFields(

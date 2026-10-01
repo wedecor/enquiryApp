@@ -5,7 +5,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import 'dashboard_today_section.dart';
 
-/// Welcome header and priority section for the dashboard.
+/// Dashboard summary: date line + counter strip.
 ///
 /// The search bar lives in [DashboardTabBarDelegate] so it stays pinned.
 class DashboardWelcomePanel extends StatelessWidget {
@@ -30,123 +30,46 @@ class DashboardWelcomePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final todayLabel = DateFormat('EEEE, d MMMM').format(DateTime.now());
+    final todayLabel = DateFormat('EEE, d MMM yyyy').format(DateTime.now());
 
-    // Flat surface separated by a hairline — no gradient wash.
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
-      ),
+    // One slim context line + the counter strip. No greeting, avatar or role
+    // badge — the app bar already says where you are.
+    return ColoredBox(
+      color: cs.surface,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppTokens.space4,
-              AppTokens.space4,
-              AppTokens.space4,
-              AppTokens.space3,
+              AppTokens.space2,
+              AppTokens.space2,
+              AppTokens.space2,
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: cs.primary,
-                  child: Text(
-                    user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: cs.onPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppTokens.space3),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _greeting(user?.name),
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppTokens.space1),
-                      Text(
-                        todayLabel,
-                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                      ),
-                      const SizedBox(height: AppTokens.space2),
-                      _RoleBadge(isAdmin: isAdmin),
-                    ],
+                  child: Text(
+                    isAdmin ? todayLabel : '$todayLabel · My enquiries',
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ),
                 if (isAdmin && onViewAnalytics != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: AppTokens.space2),
-                    child: OutlinedButton.icon(
-                      onPressed: onViewAnalytics,
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTokens.space3,
-                          vertical: AppTokens.space2,
-                        ),
-                      ),
-                      icon: const Icon(Icons.insights_outlined, size: AppTokens.iconSmall),
-                      label: const Text('Analytics'),
-                    ),
+                  TextButton.icon(
+                    onPressed: onViewAnalytics,
+                    style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.insights_outlined, size: AppTokens.iconSmall),
+                    label: const Text('Analytics'),
                   ),
               ],
             ),
           ),
-
           DashboardTodaySection(
             isAdmin: isAdmin,
             userId: user?.uid,
             onBucketTap: onPriorityBucketTap,
           ),
-
-          const SizedBox(height: AppTokens.space3),
         ],
-      ),
-    );
-  }
-
-  String _greeting(String? name) {
-    final hour = DateTime.now().hour;
-    final salutation = name?.isNotEmpty == true ? ', ${name!.split(' ').first}' : '';
-    if (hour < 12) return 'Good morning$salutation';
-    if (hour < 17) return 'Good afternoon$salutation';
-    return 'Good evening$salutation';
-  }
-}
-
-class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.isAdmin});
-
-  final bool isAdmin;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
-      decoration: BoxDecoration(
-        color: isAdmin ? cs.secondaryContainer : cs.tertiaryContainer,
-        borderRadius: AppRadius.small,
-      ),
-      child: Text(
-        isAdmin ? 'Administrator' : 'Staff',
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: isAdmin ? cs.onSecondaryContainer : cs.onTertiaryContainer,
-        ),
       ),
     );
   }

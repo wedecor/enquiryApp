@@ -5,6 +5,7 @@ import '../../core/constants/dropdown_defaults.dart';
 import '../../core/constants/status_vocabulary.dart';
 import '../../core/logging/logger.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/tokens.dart';
 import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
 import '../../shared/models/user_model.dart';
@@ -299,11 +300,17 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(width: 8),
-                    IconButton(
+                    const SizedBox(width: AppTokens.space2),
+                    // Neutral secondary action — not a coloured call-to-action.
+                    IconButton.outlined(
                       onPressed: _showAddDialog,
-                      icon: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
+                      icon: const Icon(Icons.add, size: AppTokens.iconMedium),
                       tooltip: 'Add new ${widget.label.toLowerCase()}',
+                      style: IconButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+                        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+                      ),
                     ),
                   ],
                 );

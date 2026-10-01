@@ -332,10 +332,13 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
+        leading: Icon(Icons.add, color: Theme.of(context).colorScheme.tertiary),
         title: Text(
           'Add "${_controller.text.trim()}" as new event type',
-          style: const TextStyle(color: AppColorScheme.snackSuccess, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.tertiary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         subtitle: const Text('Admin only'),
         onTap: () => _addNewEventType(_controller.text),

@@ -445,6 +445,7 @@ class _KanbanCard extends StatelessWidget {
       onTap: onTap,
       showStatusChip: false,
       showChevron: false,
+      bordered: true,
     );
 
     // Wrap in LongPressDraggable

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/role_provider.dart';
@@ -28,6 +29,7 @@ class EnquiryFormEventFields extends ConsumerWidget {
     this.guestCountController,
     this.budgetController,
     this.showLeadSource = false,
+    this.showStatus = true,
   });
 
   final DateTime? selectedDate;
@@ -45,36 +47,29 @@ class EnquiryFormEventFields extends ConsumerWidget {
   final TextEditingController? guestCountController;
   final TextEditingController? budgetController;
   final bool showLeadSource;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final roleAsync = ref.watch(roleProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return EnquiryFormSection(
       title: 'Event Details',
       children: [
+        // Styled exactly like the text fields around it.
         InkWell(
           onTap: onSelectDate,
-          child: Container(
-            padding: AppSpacing.space4,
-            decoration: BoxDecoration(
-              border: Border.all(color: colorScheme.outline),
-              borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+          borderRadius: AppRadius.medium,
+          child: InputDecorator(
+            isEmpty: selectedDate == null,
+            decoration: const InputDecoration(
+              labelText: 'Event Date *',
+              prefixIcon: Icon(Icons.calendar_today_outlined),
+              suffixIcon: Icon(Icons.arrow_drop_down),
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today),
-                const SizedBox(width: AppTokens.space4),
-                Text(
-                  selectedDate == null
-                      ? 'Select Event Date *'
-                      : 'Event Date: ${selectedDate!.toString().split(' ')[0]}',
-                  style: TextStyle(
-                    color: selectedDate == null ? colorScheme.onSurfaceVariant : null,
-                  ),
-                ),
-              ],
+            child: Text(
+              selectedDate == null ? '' : DateFormat('EEE, d MMM yyyy').format(selectedDate!),
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
           ),
         ),
@@ -96,6 +91,7 @@ class EnquiryFormEventFields extends ConsumerWidget {
             return null;
           },
         ),
+        if (showStatus) ...[
         const SizedBox(height: AppTokens.space4),
         StatusDropdown(
           collectionName: 'statuses',
@@ -113,6 +109,7 @@ class EnquiryFormEventFields extends ConsumerWidget {
             return null;
           },
         ),
+        ],
         const SizedBox(height: AppTokens.space4),
         StatusDropdown(
           collectionName: 'priorities',

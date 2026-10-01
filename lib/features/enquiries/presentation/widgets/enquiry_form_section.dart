@@ -25,15 +25,15 @@ class EnquiryFormSection extends StatelessWidget {
               padding: AppSpacing.bottom2,
               child: Text(
                 title,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: AppTokens.space4),
+        const SizedBox(height: AppTokens.space3),
         ...children,
         const SizedBox(height: AppTokens.space6),
       ],

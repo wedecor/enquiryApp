@@ -18,12 +18,16 @@ class DashboardEnquiryListRow extends ConsumerWidget {
     required this.actions,
     required this.dropdownLookup,
     this.isReminderTab = false,
+    this.showStatus = true,
   });
 
   final QueryDocumentSnapshot<Object?> enquiry;
   final DashboardEnquiryTabActions actions;
   final DropdownLookup? dropdownLookup;
   final bool isReminderTab;
+
+  /// False on single-status tabs, where every row would repeat the tab name.
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -95,6 +99,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
       location: location?.trim(),
       ageLabel: formatAgeLabel(createdAt),
       assigneeLabel: assigneeLabel?.trim(),
+      showStatusChip: showStatus,
       onTap: () => actions.onView(enquiryId),
       onLongPress: sheetActions.isEmpty
           ? null
