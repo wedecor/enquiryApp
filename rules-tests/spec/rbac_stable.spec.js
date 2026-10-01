@@ -259,6 +259,123 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('🔀 Staff Status Transitions', () => {
+    const seedStatus = async (id, statusValue, assignedTo = STAFF_UID) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc(id).set({
+          customerName: 'Transition Test',
+          eventType: 'Wedding',
+          eventDate: new Date('2026-12-01'),
+          statusValue,
+          assignedTo,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+        });
+      });
+    };
+
+    const updateStatus = (uid, role, id, statusValue) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('enquiries')
+        .doc(id)
+        .update({ statusValue, updatedAt: new Date() });
+
+    test.each([
+      ['new', 'in_talks'],
+      ['new', 'not_interested'],
+      ['new', 'cancelled'],
+      ['in_talks', 'approved'],
+      ['in_talks', 'closed_lost'],
+      ['approved', 'completed'],
+      ['approved', 'cancelled'],
+    ])('✅ Staff can move %s → %s', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertSucceeds(updateStatus(STAFF_UID, 'staff', 'transition-doc', to));
+    });
+
+    test.each([
+      ['new', 'approved'],
+      ['new', 'completed'],
+      ['in_talks', 'new'],
+      ['in_talks', 'completed'],
+      ['approved', 'in_talks'],
+      ['completed', 'in_talks'],
+      ['cancelled', 'new'],
+      ['not_interested', 'in_talks'],
+      ['closed_lost', 'approved'],
+      ['new', 'quote_sent'],
+      ['new', 'bogus'],
+    ])('❌ Staff cannot move %s → %s', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertFails(updateStatus(STAFF_UID, 'staff', 'transition-doc', to));
+    });
+
+    test.each([
+      ['quote_sent', 'approved'],
+      ['quote_sent', 'in_talks'],
+      ['contacted', 'not_interested'],
+      ['in_progress', 'closed_lost'],
+      ['confirmed', 'completed'],
+      ['scheduled', 'approved'],
+      ['enquired', 'in_talks'],
+    ])('✅ Staff can move legacy %s → %s', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertSucceeds(updateStatus(STAFF_UID, 'staff', 'transition-doc', to));
+    });
+
+    test.each([
+      ['quote_sent', 'new'],
+      ['quote_sent', 'completed'],
+      ['confirmed', 'in_talks'],
+    ])('❌ Staff cannot move legacy %s → %s', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertFails(updateStatus(STAFF_UID, 'staff', 'transition-doc', to));
+    });
+
+    test('✅ Staff can edit other fields on a terminal enquiry', async () => {
+      await seedStatus('transition-doc', 'completed');
+      const firestore = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+
+      await assertSucceeds(
+        firestore.collection('enquiries').doc('transition-doc').update({
+          notes: 'Follow-up done',
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Staff cannot remove statusValue', async () => {
+      await seedStatus('transition-doc', 'in_talks');
+      const firebase = require('firebase/compat/app').default;
+      const firestore = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+
+      await assertFails(
+        firestore.collection('enquiries').doc('transition-doc').update({
+          statusValue: firebase.firestore.FieldValue.delete(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Staff cannot change status of enquiries assigned to others', async () => {
+      await seedStatus('transition-doc', 'new', OTHER_STAFF_UID);
+      await assertFails(updateStatus(STAFF_UID, 'staff', 'transition-doc', 'in_talks'));
+    });
+
+    test.each([
+      ['completed', 'new'],
+      ['new', 'completed'],
+      ['cancelled', 'in_talks'],
+      ['quote_sent', 'closed_lost'],
+    ])('✅ Admin can move %s → %s', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertSucceeds(updateStatus(ADMIN_UID, 'admin', 'transition-doc', to));
+    });
+  });
+
   describe('👑 Admin Full Access', () => {
     test('✅ Admin can read any enquiry', async () => {
       const adminContext = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' });

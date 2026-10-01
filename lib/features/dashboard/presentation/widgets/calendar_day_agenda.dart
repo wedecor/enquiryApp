@@ -231,7 +231,7 @@ class _ConflictNotice extends StatelessWidget {
             const SizedBox(width: AppTokens.space3 - 2),
             Expanded(
               child: Text(
-                'Conflict: Multiple events on this date',
+                'Conflict: Multiple approved bookings on this date',
                 style: t.labelLarge?.copyWith(color: error, fontWeight: FontWeight.w700),
               ),
             ),

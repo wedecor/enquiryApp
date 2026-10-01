@@ -209,7 +209,7 @@ class _KanbanBoard extends StatelessWidget {
         final col = columns[i];
         return KanbanLane(
           status: col.status,
-          label: col.label,
+          label: dropdownLookup?.labelForStatus(col.status) ?? col.label,
           cards: buckets[col.status] ?? [],
           isHovered: hoverColumn == col.status,
           dropdownLookup: dropdownLookup,

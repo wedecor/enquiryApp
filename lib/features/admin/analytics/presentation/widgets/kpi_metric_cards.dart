@@ -170,7 +170,7 @@ class EstimatedRevenueCard extends StatelessWidget {
       deltaPercentage: deltaPercentage,
       icon: Icons.payments_outlined,
       color: AppColorScheme.chartCyan,
-      subtitle: 'Total Cost Sum',
+      subtitle: 'Booked value of enquiries created in this period',
       isLoading: isLoading,
     );
   }

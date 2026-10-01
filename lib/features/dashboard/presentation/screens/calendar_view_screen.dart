@@ -21,7 +21,7 @@ import '../widgets/calendar_month_panel.dart';
 export '../widgets/calendar_event.dart';
 
 /// Calendar View Screen - Shows relevant enquiries on a calendar
-/// Filters out cancelled and not_interested events
+/// Filters out lost events (cancelled, not_interested, closed_lost)
 /// Shows: new, in_talks, approved, and recent completed events
 class CalendarViewScreen extends ConsumerStatefulWidget {
   const CalendarViewScreen({super.key, this.embeddedInShell = false});
@@ -240,10 +240,9 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       final rawStatus = ((data['statusValue'] as String?) ?? 'new').toLowerCase();
       final status = EnquiryStatus.fromValue(rawStatus)?.value ?? rawStatus;
 
-      // Filter out irrelevant statuses for calendar view
       // Only show: new, in_talks, approved, completed
-      // Exclude: cancelled, not_interested
-      if (status == 'cancelled' || status == 'not_interested') {
+      // Exclude lost statuses: cancelled, not_interested, closed_lost
+      if (EnquiryStatus.isLost(status)) {
         continue;
       }
 
@@ -287,12 +286,15 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           .update(status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
     }
 
-    // Identify conflicts (multiple events on same day) and store status counts
+    // A day is a conflict only when 2+ confirmed bookings (approved) share it
     dayEvents.forEach((day, events) {
       _events[day] = events;
       _statusCounts[day] = dayStatusCounts[day] ?? {};
-      if (events.length > 1) {
-        _conflicts[day] = events;
+      final approved = events
+          .where((e) => e.status == EnquiryStatus.approved.value)
+          .toList(growable: false);
+      if (approved.length > 1) {
+        _conflicts[day] = approved;
       }
     });
   }

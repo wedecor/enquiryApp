@@ -30,6 +30,35 @@ service cloud.firestore {
       return !modifiedFields.hasAny(protectedFields);
     }
 
+    // Mirrors EnquiryStatus.staffTransitions (lib/core/constants/status_vocabulary.dart).
+    // Legacy alias keys allow the same targets as their canonical status, plus the canonical
+    // status itself so re-saving a legacy doc can normalise it. Terminal statuses
+    // (completed, cancelled, closed_lost, not_interested) are absent: staff cannot move them.
+    function staffStatusTransitions() {
+      return {
+        'new': ['in_talks', 'not_interested', 'cancelled'],
+        'enquired': ['new', 'in_talks', 'not_interested', 'cancelled'],
+        'in_talks': ['approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'contacted': ['in_talks', 'approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'quote_sent': ['in_talks', 'approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'quoted': ['in_talks', 'approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'in_progress': ['in_talks', 'approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'assigned': ['in_talks', 'approved', 'not_interested', 'closed_lost', 'cancelled'],
+        'approved': ['completed', 'cancelled'],
+        'confirmed': ['approved', 'completed', 'cancelled'],
+        'scheduled': ['approved', 'completed', 'cancelled']
+      };
+    }
+
+    function isAllowedStaffStatusChange() {
+      let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let oldStatus = resource.data.get('statusValue', '');
+      let newStatus = request.resource.data.get('statusValue', '');
+      return !modifiedFields.hasAny(['statusValue'])
+        || (oldStatus is string
+          && newStatus in staffStatusTransitions().get(oldStatus, []));
+    }
+
     // Public-ish profile (NO tokens here)
     // D6: signed-in users may read colleague profiles (name/email/phone) — accepted 2026-07
     match /users/{uid} {
@@ -68,9 +97,11 @@ service cloud.firestore {
           // Staff can update if:
           // 1. They are assigned to the enquiry
           // 2. They are NOT modifying financial fields
+          // 3. Any statusValue change follows the staff transition table
           isStaff()
           && resource.data.assignedTo == request.auth.uid
           && isModifyingOnlyStaffEditableFields()
+          && isAllowedStaffStatusChange()
         );
       
       // Enquiry History - same permissions as parent enquiry
