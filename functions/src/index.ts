@@ -7,6 +7,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 // Removed deprecated config import for Firebase Functions v2
 import { createEmailTransporter, getSmtpFromAddress, SMTP_SECRET_NAMES } from "./smtp";
+import { canonicalStatus, statusLabel } from "./statusVocabulary";
 
 setGlobalOptions({
   region: "asia-south1",
@@ -25,7 +26,8 @@ const ACTION_CODE_SETTINGS = {
 
 type Enquiry = {
   assignedTo?: string | null;
-  eventStatus?: string | null;
+  statusValue?: string | null;
+  paymentStatusValue?: string | null;
   paymentStatus?: string | null;
   customerName?: string | null;
 };
@@ -311,9 +313,16 @@ export const notifyOnEnquiryChange = onDocumentWritten(
       return;
     }
 
+    // Canonical comparison: legacy aliases (e.g. quote_sent → in_talks) and deletion of
+    // legacy fields (eventStatus / status) must not count as a status change.
+    const beforeStatus = canonicalStatus(before?.statusValue);
+    const afterStatus = canonicalStatus(after.statusValue);
+    const beforePayment = before?.paymentStatusValue ?? before?.paymentStatus ?? null;
+    const afterPayment = after.paymentStatusValue ?? after.paymentStatus ?? null;
+
     const changedAssigned = (before?.assignedTo ?? null) !== (after.assignedTo ?? null);
-    const changedStatus   = (before?.eventStatus ?? null) !== (after.eventStatus ?? null);
-    const changedPayment  = (before?.paymentStatus ?? null) !== (after.paymentStatus ?? null);
+    const changedStatus   = beforeStatus !== afterStatus;
+    const changedPayment  = beforePayment !== afterPayment;
 
     if (!(changedAssigned || changedStatus || changedPayment)) {
       logger.debug("No meaningful change; skipping push", { id: event.params.id });
@@ -348,16 +357,18 @@ export const notifyOnEnquiryChange = onDocumentWritten(
 
     const titleParts: string[] = [];
     if (changedAssigned) titleParts.push("Assigned");
-    if (changedStatus)   titleParts.push(`Status: ${after.eventStatus ?? ""}`);
-    if (changedPayment)  titleParts.push(`Payment: ${after.paymentStatus ?? ""}`);
+    if (changedStatus)   titleParts.push(`Status: ${afterStatus ? statusLabel(afterStatus) : ""}`);
+    if (changedPayment)  titleParts.push(`Payment: ${afterPayment ?? ""}`);
     const title = titleParts.join(" • ") || "Enquiry Updated";
 
     const body  = after.customerName ? `Customer: ${after.customerName}` : "Open the app for details";
     const data  = {
       type: "enquiry_update",
       enquiryId: event.params.id,
-      eventStatus: after.eventStatus ?? "",
-      paymentStatus: after.paymentStatus ?? ""
+      statusValue: afterStatus ?? "",
+      // Kept for older app builds; carries the canonical status value.
+      eventStatus: afterStatus ?? "",
+      paymentStatus: afterPayment ?? ""
     };
 
     const res = await getMessaging().sendEachForMulticast({
@@ -380,8 +391,9 @@ export const notifyOnEnquiryChange = onDocumentWritten(
       enquiryId: event.params.id,
       title,
       body,
-      eventStatus: after.eventStatus ?? null,
-      paymentStatus: after.paymentStatus ?? null,
+      statusValue: afterStatus,
+      eventStatus: afterStatus,
+      paymentStatus: afterPayment,
       createdAt: FieldValue.serverTimestamp(),
       read: false,
       archived: false

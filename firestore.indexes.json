@@ -91,6 +91,22 @@
       ]
     },
     {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "eventDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
+        { "fieldPath": "eventDate", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [

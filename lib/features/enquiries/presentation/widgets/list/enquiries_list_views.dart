@@ -136,20 +136,12 @@ class _EnquiriesPaginatedListState extends ConsumerState<EnquiriesPaginatedList>
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadFirstPageIfNeeded());
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _loadFirstPageIfNeeded() {
-    final state = ref.read(paginatedEnquiriesProvider(_params));
-    if (state.documents.isEmpty && !state.isLoading && state.error == null) {
-      ref.read(paginatedEnquiriesProvider(_params).notifier).loadFirstPage();
-    }
   }
 
   void _onScroll() {

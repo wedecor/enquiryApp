@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/status_vocabulary.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../primitives/primitives.dart';
@@ -212,7 +213,13 @@ List<EnquiryRowAction> contactEnquiryRowActions({
   required Future<void> Function(String phone) onWhatsApp,
   VoidCallback? onView,
   VoidCallback? onUpdateStatus,
+  String? statusValue,
+  Future<void> Function()? onAddNote,
+  Future<void> Function()? onShare,
+  Future<void> Function()? onMarkNotInterested,
+  Future<void> Function(String phone)? onRequestReview,
 }) {
+  final status = EnquiryStatus.fromValue(statusValue);
   final actions = <EnquiryRowAction>[];
 
   if (onView != null) {
@@ -259,6 +266,40 @@ List<EnquiryRowAction> contactEnquiryRowActions({
         onSelected: () async {
           onUpdateStatus();
         },
+      ),
+    );
+  }
+
+  if (onAddNote != null) {
+    actions.add(
+      EnquiryRowAction(label: 'Add note', icon: Icons.note_add_outlined, onSelected: onAddNote),
+    );
+  }
+
+  if (onShare != null) {
+    actions.add(EnquiryRowAction(label: 'Share', icon: Icons.share_outlined, onSelected: onShare));
+  }
+
+  if (onMarkNotInterested != null &&
+      (status == EnquiryStatus.newEnquiry || status == EnquiryStatus.inTalks)) {
+    actions.add(
+      EnquiryRowAction(
+        label: 'Mark not interested',
+        icon: Icons.block,
+        onSelected: onMarkNotInterested,
+      ),
+    );
+  }
+
+  if (onRequestReview != null &&
+      status == EnquiryStatus.completed &&
+      callNumber != null &&
+      callNumber.isNotEmpty) {
+    actions.add(
+      EnquiryRowAction(
+        label: 'Request review',
+        icon: Icons.star_outline_rounded,
+        onSelected: () => onRequestReview(callNumber),
       ),
     );
   }

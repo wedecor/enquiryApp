@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
@@ -81,6 +82,15 @@ class DashboardEnquiryListRow extends ConsumerWidget {
           : actions.onWhatsApp(p, customerName, enquiryId),
       onView: () => actions.onView(enquiryId),
       onUpdateStatus: () => actions.onUpdateStatus(enquiryModel),
+      statusValue: statusValue,
+      onAddNote: () => actions.onAddNote(enquiryModel),
+      onShare: () => actions.onShare(enquiryModel),
+      onMarkNotInterested: () async {
+        final userId = ref.read(currentUserWithFirestoreProvider).valueOrNull?.uid;
+        if (userId == null) return;
+        await actions.onMarkNotInterested(enquiryId, userId);
+      },
+      onRequestReview: (p) => actions.onReviewRequest(p, customerName, enquiryId),
     );
 
     final statusLabel = DropdownLookup.statusLabelOf(dropdownLookup, statusValue);
