@@ -34,6 +34,7 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
     required this.isAdmin,
     this.isAssignee = true,
     this.layout = EnquiryStatusLayout.compact,
+    this.onStatusChanged,
   });
 
   final String enquiryId;
@@ -43,6 +44,9 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
   final bool isAdmin;
   final bool isAssignee;
   final EnquiryStatusLayout layout;
+
+  /// Called after a status change has been saved.
+  final VoidCallback? onStatusChanged;
 
   @override
   ConsumerState<EnquiryStatusControl> createState() => _EnquiryStatusControlState();
@@ -253,6 +257,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
+        widget.onStatusChanged?.call();
       }
     } catch (e) {
       setState(() {
