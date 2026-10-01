@@ -9,6 +9,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/components/enquiry_list_row.dart';
 import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
@@ -298,14 +299,12 @@ class _ColumnWidget extends StatelessWidget {
                         itemCount: cards.length,
                         itemBuilder: (context, i) {
                           final doc = cards[i];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: AppTokens.space2),
-                            child: _KanbanCard(
-                              doc: doc,
-                              statusColor: statusColor,
-                              dropdownLookup: dropdownLookup,
-                              onTap: () => onTap(doc.id),
-                            ),
+                          // EnquiryListRow adds its own bottom spacing.
+                          return _KanbanCard(
+                            doc: doc,
+                            statusColor: statusColor,
+                            dropdownLookup: dropdownLookup,
+                            onTap: () => onTap(doc.id),
                           );
                         },
                       ),
@@ -431,131 +430,21 @@ class _KanbanCard extends StatelessWidget {
     final createdAt = _ts(data['createdAt']) ?? DateTime.now();
     final countdown = _countdownLabel(eventDate);
     final ageLabel = _ageLabel(createdAt);
-    final phone = data['customerPhone'] as String?;
+    final statusValue = (data['statusValue'] as String?) ?? '';
 
-    final card = Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
-        side: BorderSide(color: statusColor.withValues(alpha: 0.3)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Status strip
-            Container(
-              height: 3,
-              decoration: BoxDecoration(
-                color: statusColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppTokens.radiusSmall),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppTokens.space2 + 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name + event type
-                  Text(
-                    customerName,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.celebration_outlined,
-                        size: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          eventTypeLabel,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (location != null && location.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            location,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: AppTokens.space2),
-                  // Bottom row: event countdown + age
-                  Row(
-                    children: [
-                      if (countdown != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            countdown,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                      ],
-                      if (phone != null)
-                        Icon(
-                          Icons.phone_outlined,
-                          size: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      const Spacer(),
-                      Text(
-                        ageLabel,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    // Same shared row used everywhere else; status chip is implied by the column.
+    final card = EnquiryListRow(
+      customerName: customerName,
+      statusValue: statusValue,
+      statusColor: statusColor,
+      eventTypeLabel: eventTypeLabel,
+      eventTypeValue: eventTypeValue,
+      eventDateLabel: countdown ?? '',
+      location: (location != null && location.isNotEmpty) ? location : null,
+      ageLabel: ageLabel,
+      onTap: onTap,
+      showStatusChip: false,
+      showChevron: false,
     );
 
     // Wrap in LongPressDraggable
@@ -564,8 +453,8 @@ class _KanbanCard extends StatelessWidget {
       hapticFeedbackOnStart: true,
       delay: const Duration(milliseconds: 300),
       feedback: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(AppTokens.radiusSmall),
+        elevation: AppTokens.elevation4,
+        borderRadius: AppRadius.medium,
         child: SizedBox(
           width: _kCardWidth,
           child: Opacity(opacity: 0.9, child: card),
