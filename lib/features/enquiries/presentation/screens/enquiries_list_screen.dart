@@ -114,7 +114,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(userRole == UserRole.admin ? 'All Enquiries' : 'My Enquiries'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 
-/// Terracotta dot + optional “We Decor” wordmark.
+/// Gold accent mark + optional “WE DECOR” wordmark set in Marcellus, matching
+/// the brand toolkit (wordmark is set as type, never baked into an image).
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.compact = false, this.showSubtitle = false});
 
@@ -21,13 +24,20 @@ class BrandMark extends StatelessWidget {
             Container(
               width: 10,
               height: 10,
-              decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: AppColorScheme.accent,
+                shape: BoxShape.circle,
+              ),
             ),
             if (!compact) ...[
               const SizedBox(width: AppTokens.space2),
               Text(
-                'We Decor',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                'WE DECOR',
+                style: GoogleFonts.marcellus(
+                  textStyle: theme.textTheme.titleMedium,
+                  color: theme.colorScheme.onSurface,
+                  letterSpacing: 2,
+                ),
               ),
             ],
           ],

@@ -225,23 +225,21 @@ class _PriorityBucket extends StatelessWidget {
       child: Material(
         color: cs.surface,
         elevation: 0,
-        shadowColor: cs.shadow.withValues(alpha: 0.08),
-        borderRadius: AppRadius.xLarge,
+        borderRadius: AppRadius.medium,
         child: InkWell(
           onTap: onTap != null ? () => onTap!(bucket) : null,
-          borderRadius: AppRadius.xLarge,
+          borderRadius: AppRadius.medium,
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: AppRadius.xLarge,
+              borderRadius: AppRadius.medium,
               border: Border.all(color: cs.outlineVariant),
-              boxShadow: AppShadows.elevation1,
             ),
             child: ClipRRect(
-              borderRadius: AppRadius.xLarge,
+              borderRadius: AppRadius.medium,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(width: 4, color: accentColor),
+                  Container(width: AppTokens.space1, color: accentColor),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(AppTokens.space3),
@@ -324,7 +322,7 @@ class _AllClearBanner extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: cs.tertiaryContainer.withValues(alpha: 0.45),
-          borderRadius: AppRadius.xLarge,
+          borderRadius: AppRadius.medium,
           border: Border.all(color: cs.tertiary.withValues(alpha: 0.25)),
         ),
         child: Row(

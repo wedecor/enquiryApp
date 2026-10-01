@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../settings/providers/settings_providers.dart';
 
 /// Button widget for requesting reviews from customers for completed enquiries
@@ -40,7 +41,7 @@ class ReviewRequestButton extends ConsumerWidget {
         final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
 
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: AppTokens.space2),
           child: ElevatedButton.icon(
             onPressed: enabled
                 ? () => _handleReviewRequest(
@@ -55,10 +56,13 @@ class ReviewRequestButton extends ConsumerWidget {
             icon: const Icon(Icons.star_rate_rounded),
             label: const Text('Request Review'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.amber.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              backgroundColor: Theme.of(context).colorScheme.tertiary,
+              foregroundColor: Theme.of(context).colorScheme.onTertiary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTokens.space6,
+                vertical: AppTokens.space3,
+              ),
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
             ),
           ),
         );

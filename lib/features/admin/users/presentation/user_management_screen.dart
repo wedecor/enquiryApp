@@ -56,7 +56,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('User Management'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           roleAsync.when(
             data: (role) {

@@ -4,7 +4,12 @@ import '../../core/theme/tokens.dart';
 import '../../core/utils/status_colors.dart';
 import '../../utils/event_colors.dart';
 
-/// Scannable enquiry row — left status strip, event badge, icon meta.
+/// The single shared enquiry list item ("EnquiryCard") — used by the dashboard,
+/// the enquiries list/search results and the calendar day view. Do not build an
+/// enquiry row layout anywhere else; wrap this widget instead.
+///
+/// Scannable row — left status strip, event badge, icon meta. Separated by a 1px
+/// hairline border rather than a shadow.
 ///
 /// Pass [location], [ageLabel], [assigneeLabel] separately for structured display.
 /// Set [compact] to hide the meta row (e.g. in Kanban or condensed lists).
@@ -30,6 +35,8 @@ class EnquiryListRow extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.compact = false,
+    this.showStatusChip = true,
+    this.showChevron = true,
   });
 
   final String customerName;
@@ -53,6 +60,12 @@ class EnquiryListRow extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool compact;
 
+  /// Hide where the status is already implied (e.g. inside a Kanban status column).
+  final bool showStatusChip;
+
+  /// Hide when the row is also a drag handle (Kanban) rather than a pure link.
+  final bool showChevron;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,12 +74,7 @@ class EnquiryListRow extends StatelessWidget {
         statusColor ??
         resolveStatusColor(context, statusValue, firestoreColors: firestoreStatusColors);
     final chipLabel = statusLabel ?? _formatStatusLabel(statusValue);
-    final isLight = cs.brightness == Brightness.light;
-
-    // Subtle status-tinted card background — makes each status group scannable at a glance.
-    final cardColor = isLight
-        ? Color.alphaBlend(accentColor.withValues(alpha: 0.035), cs.surface)
-        : cs.surfaceContainerHighest.withValues(alpha: 0.45);
+    final cardColor = theme.cardTheme.color ?? cs.surface;
 
     // Event type color for the inline badge.
     final eventColor = EventColors.accentFor(eventTypeValue ?? eventTypeLabel);
@@ -81,23 +89,20 @@ class EnquiryListRow extends StatelessWidget {
       child: Material(
         color: cardColor,
         elevation: 0,
-        shadowColor: cs.shadow.withValues(alpha: 0.06),
         shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.large,
-          side: BorderSide(color: cs.outlineVariant.withValues(alpha: isLight ? 0.75 : 0.5)),
+          borderRadius: AppRadius.medium,
+          side: BorderSide(color: cs.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           onLongPress: onLongPress,
-          child: DecoratedBox(
-            decoration: BoxDecoration(boxShadow: isLight ? AppShadows.elevation1 : null),
-            child: IntrinsicHeight(
+          child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Status strip ───────────────────────────────────────
-                  ColoredBox(color: accentColor, child: const SizedBox(width: 5)),
+                  ColoredBox(color: accentColor, child: const SizedBox(width: AppTokens.space1)),
 
                   // ── Content ────────────────────────────────────────────
                   Expanded(
@@ -161,20 +166,22 @@ class EnquiryListRow extends StatelessWidget {
                             ),
                           ),
 
-                          const SizedBox(width: AppTokens.space2),
-                          _StatusChip(label: chipLabel, color: accentColor),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 20,
-                            color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                          ),
+                          if (showStatusChip) ...[
+                            const SizedBox(width: AppTokens.space2),
+                            _StatusChip(label: chipLabel, color: accentColor),
+                          ],
+                          if (showChevron)
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: AppTokens.iconMedium,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
                         ],
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),
@@ -220,10 +227,10 @@ class _EventLine extends StatelessWidget {
       children: [
         if (hasType)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space1, vertical: 1),
             decoration: BoxDecoration(
               color: eventColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: AppRadius.small,
               border: Border.all(color: eventColor.withValues(alpha: 0.30)),
             ),
             child: Text(
@@ -234,14 +241,14 @@ class _EventLine extends StatelessWidget {
               ),
             ),
           ),
-        if (hasType && hasDate) const SizedBox(width: 6),
+        if (hasType && hasDate) const SizedBox(width: AppTokens.space2),
         if (hasDate) ...[
           Icon(
             Icons.calendar_today_outlined,
-            size: 12,
+            size: AppTokens.fontSizeSmall,
             color: cs.onSurfaceVariant.withValues(alpha: 0.75),
           ),
-          const SizedBox(width: 3),
+          const SizedBox(width: AppTokens.space1),
           Flexible(
             child: Text(
               eventDateLabel.trim(),
@@ -289,15 +296,19 @@ class _StructuredMeta extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: 10,
-      runSpacing: 2,
+      spacing: AppTokens.space3,
+      runSpacing: AppTokens.space1 / 2,
       children: items
           .map(
             (item) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(item.icon, size: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.65)),
-                const SizedBox(width: 3),
+                Icon(
+                  item.icon,
+                  size: AppTokens.fontSizeSmall,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.65),
+                ),
+                const SizedBox(width: AppTokens.space1),
                 Text(
                   item.label,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -334,7 +345,7 @@ class _StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.full,
+        borderRadius: AppRadius.small,
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Text(

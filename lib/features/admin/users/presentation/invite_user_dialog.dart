@@ -177,7 +177,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                   label: const Text('Copy Link'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
               ],
@@ -195,7 +195,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
             onPressed: _isLoading ? null : _inviteUser,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: _isLoading
                 ? const SizedBox(

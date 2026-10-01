@@ -222,7 +222,7 @@ class _DashboardStatisticsSectionState extends ConsumerState<DashboardStatistics
                               ? colorScheme.primary.withValues(alpha: 0.4)
                               : colorScheme.outlineVariant,
                         ),
-                        shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.small),
                       ),
                     );
                   }).toList(),

@@ -17,7 +17,7 @@ class EnquiryDetailSection extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: AppRadius.large,
+          borderRadius: AppRadius.medium,
           border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         child: Padding(

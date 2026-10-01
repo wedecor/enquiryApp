@@ -156,7 +156,7 @@ class _UserDisplay extends StatelessWidget {
       future: getUserDisplayName(userId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 12, child: LinearProgressIndicator(minHeight: 2));
+          return const SizedBox(height: AppTokens.space3, child: LinearProgressIndicator(minHeight: 2));
         }
         final value = snapshot.data ?? 'Unknown';
         return Text(value, style: const TextStyle(fontSize: 16));

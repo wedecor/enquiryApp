@@ -37,7 +37,7 @@ class StatsCard extends StatelessWidget {
       color: cardColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.large,
+        borderRadius: AppRadius.medium,
         side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       clipBehavior: Clip.hardEdge,

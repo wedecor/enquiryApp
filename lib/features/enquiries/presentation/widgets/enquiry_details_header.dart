@@ -31,7 +31,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: AppRadius.large,
+        borderRadius: AppRadius.medium,
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Padding(
@@ -51,10 +51,13 @@ class EnquiryDetailsHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: AppTokens.space2),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTokens.space2,
+                    vertical: AppTokens.space1,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.full,
+                    borderRadius: AppRadius.small,
                     border: Border.all(color: statusColor.withValues(alpha: 0.28)),
                   ),
                   child: Text(

@@ -32,16 +32,11 @@ class DashboardWelcomePanel extends StatelessWidget {
     final cs = theme.colorScheme;
     final todayLabel = DateFormat('EEEE, d MMMM').format(DateTime.now());
 
+    // Flat surface separated by a hairline — no gradient wash.
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: theme.brightness == Brightness.dark
-              ? [cs.surfaceContainerHighest.withValues(alpha: 0.45), cs.surface]
-              : [cs.primaryContainer.withValues(alpha: 0.55), cs.surface],
-          stops: const [0.0, 0.72],
-        ),
+        color: cs.surface,
+        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,7 +139,7 @@ class _RoleBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
       decoration: BoxDecoration(
         color: isAdmin ? cs.secondaryContainer : cs.tertiaryContainer,
-        borderRadius: AppRadius.full,
+        borderRadius: AppRadius.small,
       ),
       child: Text(
         isAdmin ? 'Administrator' : 'Staff',

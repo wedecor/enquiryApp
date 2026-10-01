@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/tokens.dart';
 
 /// Quick actions for an enquiry list row (long-press or overflow).
 class EnquiryRowAction {
@@ -35,7 +36,12 @@ Future<void> showEnquiryRowActionsSheet(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.space5,
+                AppTokens.space1,
+                AppTokens.space5,
+                AppTokens.space3,
+              ),
               child: Text(
                 customerName,
                 style: theme.textTheme.titleMedium,

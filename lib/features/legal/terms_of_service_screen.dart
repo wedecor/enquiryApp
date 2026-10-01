@@ -9,11 +9,7 @@ class TermsOfServiceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Terms of Service'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      appBar: const AppBar(title: Text('Terms of Service')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

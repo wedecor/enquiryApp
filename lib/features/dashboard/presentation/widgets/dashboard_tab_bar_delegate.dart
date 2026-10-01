@@ -32,7 +32,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
     final tabHeight = _tabBar.preferredSize.height;
 
     return Material(
-      elevation: overlapsContent ? AppTokens.elevation1 : 0,
+      elevation: 0,
       color: cs.surface,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -41,7 +41,6 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
             top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
             bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
           ),
-          boxShadow: overlapsContent ? AppShadows.elevation1 : null,
         ),
         child: SizedBox(
           height: minExtent,
@@ -76,15 +75,15 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
                               )
                             : null,
                         border: OutlineInputBorder(
-                          borderRadius: AppRadius.full,
+                          borderRadius: AppRadius.medium,
                           borderSide: BorderSide.none,
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.full,
+                          borderRadius: AppRadius.medium,
                           borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.full,
+                          borderRadius: AppRadius.medium,
                           borderSide: BorderSide(color: cs.primary, width: 1.5),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
