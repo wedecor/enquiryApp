@@ -33,22 +33,16 @@ DateTime? _cutoffFor(_DateFilter filter) {
 
 /// Dashboard KPI statistics section with date-range toggle.
 class DashboardStatisticsSection extends ConsumerStatefulWidget {
-  const DashboardStatisticsSection({
-    super.key,
-    required this.isAdmin,
-    required this.userId,
-  });
+  const DashboardStatisticsSection({super.key, required this.isAdmin, required this.userId});
 
   final bool isAdmin;
   final String? userId;
 
   @override
-  ConsumerState<DashboardStatisticsSection> createState() =>
-      _DashboardStatisticsSectionState();
+  ConsumerState<DashboardStatisticsSection> createState() => _DashboardStatisticsSectionState();
 }
 
-class _DashboardStatisticsSectionState
-    extends ConsumerState<DashboardStatisticsSection> {
+class _DashboardStatisticsSectionState extends ConsumerState<DashboardStatisticsSection> {
   _DateFilter _filter = _DateFilter.thisMonth;
 
   @override
@@ -59,14 +53,10 @@ class _DashboardStatisticsSectionState
     return StreamBuilder<QuerySnapshot>(
       stream: ref
           .read(firestoreServiceProvider)
-          .watchEnquiriesForRole(
-            isAdmin: widget.isAdmin,
-            assignedToUid: widget.userId,
-          ),
+          .watchEnquiriesForRole(isAdmin: widget.isAdmin, assignedToUid: widget.userId),
       builder: (context, snapshot) {
         if (snapshot.hasError) return const Text('Error loading statistics');
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const Padding(
             padding: EdgeInsets.all(AppTokens.space6),
             child: Center(child: CircularProgressIndicator()),
@@ -101,8 +91,7 @@ class _DashboardStatisticsSectionState
             case 'new':
               newCount++;
               final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-              if (createdAt != null && now.difference(createdAt).inDays > 3)
-                staleNew++;
+              if (createdAt != null && now.difference(createdAt).inDays > 3) staleNew++;
             case 'in_talks':
               activeLeads++;
               if (shouldShowReminder(data, now)) followUps++;
@@ -121,13 +110,10 @@ class _DashboardStatisticsSectionState
 
         final won = approved + completed;
         final lost = notInterested;
-        final conversionPct = (won + lost) > 0
-            ? ((won / (won + lost)) * 100).round()
-            : 0;
+        final conversionPct = (won + lost) > 0 ? ((won / (won + lost)) * 100).round() : 0;
 
         String formatCurrency(double amount) {
-          if (amount >= 100000)
-            return '₹${(amount / 100000).toStringAsFixed(1)}L';
+          if (amount >= 100000) return '₹${(amount / 100000).toStringAsFixed(1)}L';
           if (amount >= 1000) return '₹${(amount / 1000).toStringAsFixed(1)}K';
           return '₹${amount.toStringAsFixed(0)}';
         }
@@ -151,15 +137,9 @@ class _DashboardStatisticsSectionState
             icon: Icons.forum_outlined,
             value: activeLeads.toString(),
             label: 'Active Leads',
-            trendLabel: followUps > 0
-                ? '$followUps events within 21d'
-                : 'In progress',
-            trendIcon: followUps > 0
-                ? Icons.notifications_active_outlined
-                : Icons.check,
-            trendColor: followUps > 0
-                ? colorScheme.primary
-                : colorScheme.tertiary,
+            trendLabel: followUps > 0 ? '$followUps events within 21d' : 'In progress',
+            trendIcon: followUps > 0 ? Icons.notifications_active_outlined : Icons.check,
+            trendColor: followUps > 0 ? colorScheme.primary : colorScheme.tertiary,
           ),
           StatsCard(
             icon: Icons.check_circle_outline,
@@ -181,15 +161,9 @@ class _DashboardStatisticsSectionState
             icon: Icons.trending_up,
             value: (won + lost) > 0 ? '$conversionPct%' : '0%',
             label: 'Conversion',
-            trendLabel: (won + lost) > 0
-                ? '${won}W · ${lost}L'
-                : 'No closed cases yet',
-            trendIcon: conversionPct >= 50
-                ? Icons.trending_up
-                : Icons.trending_flat,
-            trendColor: conversionPct >= 50
-                ? colorScheme.tertiary
-                : colorScheme.onSurfaceVariant,
+            trendLabel: (won + lost) > 0 ? '${won}W · ${lost}L' : 'No closed cases yet',
+            trendIcon: conversionPct >= 50 ? Icons.trending_up : Icons.trending_flat,
+            trendColor: conversionPct >= 50 ? colorScheme.tertiary : colorScheme.onSurfaceVariant,
           ),
           StatsCard(
             icon: Icons.currency_rupee,
@@ -201,9 +175,7 @@ class _DashboardStatisticsSectionState
           ),
           StatsCard(
             icon: Icons.payments_outlined,
-            value: advancesCollected > 0
-                ? formatCurrency(advancesCollected)
-                : '₹0',
+            value: advancesCollected > 0 ? formatCurrency(advancesCollected) : '₹0',
             label: 'Advances',
             trendLabel: 'Collected so far',
             trendIcon: Icons.check_circle_outline,
@@ -236,24 +208,21 @@ class _DashboardStatisticsSectionState
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,
                         labelStyle: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                           color: selected
                               ? colorScheme.onPrimaryContainer
                               : colorScheme.onSurfaceVariant,
                         ),
                         selectedColor: colorScheme.primaryContainer,
-                        backgroundColor: colorScheme.surfaceContainerHighest
-                            .withValues(alpha: 0.35),
+                        backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.35,
+                        ),
                         side: BorderSide(
                           color: selected
                               ? colorScheme.primary.withValues(alpha: 0.4)
                               : colorScheme.outlineVariant,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.full,
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.full),
                       ),
                     );
                   }).toList(),

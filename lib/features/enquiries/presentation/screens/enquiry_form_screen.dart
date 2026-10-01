@@ -89,10 +89,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   }
 
   Future<void> _loadEnquiryData() async {
-    Log.d(
-      'EnquiryFormScreen load start',
-      data: {'enquiryId': widget.enquiryId?.substring(0, 6)},
-    );
+    Log.d('EnquiryFormScreen load start', data: {'enquiryId': widget.enquiryId?.substring(0, 6)});
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
       final data = await firestoreService.getEnquiry(widget.enquiryId!);
@@ -113,30 +110,23 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           }
 
           // Set dropdown values from database
-          _selectedEventType =
-              (data['eventTypeValue'] ?? data['eventType']) as String?;
-          Log.d(
-            'EnquiryFormScreen loaded event type',
-            data: {'eventType': _selectedEventType},
-          );
+          _selectedEventType = (data['eventTypeValue'] ?? data['eventType']) as String?;
+          Log.d('EnquiryFormScreen loaded event type', data: {'eventType': _selectedEventType});
 
           // Safely set dropdown values - ensure they exist in valid options
           // Only use statusValue - standard field
           final statusValue = data['statusValue'] as String?;
           _selectedStatus = statusValue;
 
-          final priority =
-              (data['priorityValue'] ?? data['priority']) as String?;
+          final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
 
-          final paymentStatus =
-              (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
+          final paymentStatus = (data['paymentStatusValue'] ?? data['paymentStatus']) as String?;
           _selectedPaymentStatus = paymentStatus;
 
           _selectedAssignedTo = data['assignedTo'] as String?;
 
-          final sourceValue =
-              (data['sourceValue'] ?? data['source']) as String?;
+          final sourceValue = (data['sourceValue'] ?? data['source']) as String?;
           if (sourceValue != null && sourceValue.trim().isNotEmpty) {
             _selectedSource = sourceValue.trim();
           }
@@ -186,9 +176,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading enquiry data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading enquiry data: $e')));
         Navigator.of(context).maybePop();
       }
     }
@@ -247,15 +237,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event date')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event date')));
       return;
     }
     if (_selectedEventType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an event type')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
       return;
     }
 
@@ -280,9 +270,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e',
-            ),
+            content: Text('Error ${widget.mode == 'edit' ? 'updating' : 'creating'} enquiry: $e'),
           ),
         );
       }
@@ -309,9 +297,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final priorityLabel = dropdownLookup.labelForPriority(priorityValue);
 
     final paymentStatusValue = _selectedPaymentStatus ?? 'pending';
-    final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(
-      paymentStatusValue,
-    );
+    final paymentStatusLabel = dropdownLookup.labelForPaymentStatus(paymentStatusValue);
 
     final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
@@ -395,9 +381,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry created successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry created successfully!')));
       Navigator.of(context).pop();
     }
   }
@@ -407,8 +393,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
     // Fetch old enquiry data to compare changes
-    final oldEnquiryData =
-        await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
+    final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
 
     final statusValue = _selectedStatus ?? 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
@@ -442,8 +427,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Check if financial fields are being changed (admin only)
     final oldTotalCost = oldEnquiryData['totalCost'] as num?;
     final oldAdvancePaid = oldEnquiryData['advancePaid'] as num?;
-    final isFinancialChange =
-        (oldTotalCost != newTotalCost) || (oldAdvancePaid != newAdvancePaid);
+    final isFinancialChange = (oldTotalCost != newTotalCost) || (oldAdvancePaid != newAdvancePaid);
 
     // Show confirmation for financial changes (admin only)
     if (isFinancialChange) {
@@ -499,11 +483,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         if (urls.isNotEmpty) {
           Log.d(
             'EnquiryFormScreen uploaded new images',
-            data: {
-              'enquiryId': widget.enquiryId,
-              'urlCount': urls.length,
-              'urls': urls,
-            },
+            data: {'enquiryId': widget.enquiryId, 'urlCount': urls.length, 'urls': urls},
           );
           newImageUrls = urls;
           // Clear selected images after successful upload
@@ -545,24 +525,21 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     );
 
     // Determine if status changed (needed for statusUpdatedAt below)
-    final oldStatusValueForUpdate =
-        (oldEnquiryData['statusValue'] as String?) ?? 'new';
+    final oldStatusValueForUpdate = (oldEnquiryData['statusValue'] as String?) ?? 'new';
     final statusDidChange = oldStatusValueForUpdate != statusValue;
 
     // Update the enquiry document — include images field with complete list
     await firestoreService.updateEnquiry(widget.enquiryId!, {
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
-      if (newCustomerEmail.isNotEmpty)
-        'customerEmail': newCustomerEmail.toLowerCase(),
+      if (newCustomerEmail.isNotEmpty) 'customerEmail': newCustomerEmail.toLowerCase(),
       'eventLocation': newEventLocation,
       ...enquiryNotesFields(newDescription),
       'eventType': eventTypeValue,
       'eventTypeValue': eventTypeValue,
       'eventTypeLabel': eventTypeLabel,
       'eventDate': Timestamp.fromDate(_selectedDate!),
-      if (newGuestCount != null && newGuestCount >= 0)
-        'guestCount': newGuestCount,
+      if (newGuestCount != null && newGuestCount >= 0) 'guestCount': newGuestCount,
       if (newBudgetRange.isNotEmpty) 'budgetRange': newBudgetRange,
       'source': sourceValue,
       'sourceValue': sourceValue,
@@ -604,10 +581,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     // Only use statusValue - standard field
     final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
     if (oldStatusValue != statusValue) {
-      changes['statusValue'] = {
-        'old_value': oldStatusValue,
-        'new_value': statusValue,
-      };
+      changes['statusValue'] = {'old_value': oldStatusValue, 'new_value': statusValue};
     }
 
     // Track assignment change
@@ -621,8 +595,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     // Track priority change
-    final oldPriorityValue =
-        oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
+    final oldPriorityValue = oldEnquiryData['priorityValue'] ?? oldEnquiryData['priority'];
     if (oldPriorityValue != priorityValue) {
       changes['priority'] = {
         'old_value': oldPriorityValue ?? 'Not Set',
@@ -669,26 +642,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
 
     // Track total cost change (oldTotalCost already declared above)
     if (oldTotalCost != newTotalCost) {
-      changes['totalCost'] = {
-        'old_value': oldTotalCost ?? 0,
-        'new_value': newTotalCost ?? 0,
-      };
+      changes['totalCost'] = {'old_value': oldTotalCost ?? 0, 'new_value': newTotalCost ?? 0};
     }
 
     // Track advance paid change (oldAdvancePaid already declared above)
     if (oldAdvancePaid != newAdvancePaid) {
-      changes['advancePaid'] = {
-        'old_value': oldAdvancePaid ?? 0,
-        'new_value': newAdvancePaid ?? 0,
-      };
+      changes['advancePaid'] = {'old_value': oldAdvancePaid ?? 0, 'new_value': newAdvancePaid ?? 0};
     }
 
     // Record all changes at once
     if (changes.isNotEmpty) {
-      await auditService.recordMultipleChanges(
-        enquiryId: widget.enquiryId!,
-        changes: changes,
-      );
+      await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
     // Send notifications
@@ -731,9 +695,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enquiry updated successfully!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Enquiry updated successfully!')));
       Navigator.of(context).pop();
     }
   }
@@ -747,8 +711,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
         if (kIsWeb) {
           // For web, use Uint8List for putData
           final bytes = await xfile.readAsBytes();
-          final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
           final ref = storage
               .ref()
               .child('enquiries')
@@ -760,10 +723,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final contentType = _getContentType(fileName);
 
           // Upload with metadata - ensure bytes are Uint8List
-          final metadata = SettableMetadata(
-            contentType: contentType,
-            cacheControl: 'max-age=3600',
-          );
+          final metadata = SettableMetadata(contentType: contentType, cacheControl: 'max-age=3600');
 
           // Convert to Uint8List if needed
           final uint8List = bytes;
@@ -771,15 +731,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final task = await ref.putData(uint8List, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d(
-            'EnquiryFormScreen image uploaded',
-            data: {'fileName': fileName, 'url': url},
-          );
+          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
         } else {
           // For mobile, use File
           final file = File(xfile.path);
-          final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}_${xfile.name}';
           final ref = storage
               .ref()
               .child('enquiries')
@@ -794,17 +750,14 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
           final task = await ref.putFile(file, metadata);
           final url = await task.ref.getDownloadURL();
           downloadUrls.add(url);
-          Log.d(
-            'EnquiryFormScreen image uploaded',
-            data: {'fileName': fileName, 'url': url},
-          );
+          Log.d('EnquiryFormScreen image uploaded', data: {'fileName': fileName, 'url': url});
         }
       } catch (e) {
         Log.e('Error uploading image ${xfile.name}', error: e);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error uploading ${xfile.name}: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error uploading ${xfile.name}: $e')));
         }
         // Continue with other images
       }
@@ -850,18 +803,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     }
 
     try {
-      await ref.read(firestoreServiceProvider).updateEnquiry(
-        widget.enquiryId!,
-        {'images': _existingImageUrls},
-      );
+      await ref.read(firestoreServiceProvider).updateEnquiry(widget.enquiryId!, {
+        'images': _existingImageUrls,
+      });
     } catch (e) {
       Log.e('Failed to update enquiry images after removal', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Image removed locally but failed to save — try saving the form',
-            ),
+            content: Text('Image removed locally but failed to save — try saving the form'),
           ),
         );
       }
@@ -893,9 +843,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
     final isEditLoading = widget.mode == 'edit' && !_hydrated;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry'),
-      ),
+      appBar: AppBar(title: Text(widget.mode == 'edit' ? 'Edit Enquiry' : 'New Enquiry')),
       body: isEditLoading
           ? const Center(child: CircularProgressIndicator())
           : Form(
@@ -910,12 +858,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                         children: [
                           if (widget.mode == 'create') ...[
                             _FormSectionProgress(
-                              sections: const [
-                                'Customer',
-                                'Event',
-                                'Financial',
-                                'Notes & Images',
-                              ],
+                              sections: const ['Customer', 'Event', 'Financial', 'Notes & Images'],
                             ),
                             const SizedBox(height: AppTokens.space4),
                           ],
@@ -933,18 +876,15 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                             onEventTypeChanged: (value) =>
                                 setState(() => _selectedEventType = value),
                             selectedStatus: _selectedStatus,
-                            onStatusChanged: (value) =>
-                                setState(() => _selectedStatus = value),
+                            onStatusChanged: (value) => setState(() => _selectedStatus = value),
                             selectedPriority: _selectedPriority,
-                            onPriorityChanged: (value) =>
-                                setState(() => _selectedPriority = value),
+                            onPriorityChanged: (value) => setState(() => _selectedPriority = value),
                             selectedAssignedTo: _selectedAssignedTo,
                             onAssignedToChanged: (value) =>
                                 setState(() => _selectedAssignedTo = value),
                             selectedSource: _selectedSource,
                             onSourceChanged: (value) {
-                              if (value != null)
-                                setState(() => _selectedSource = value);
+                              if (value != null) setState(() => _selectedSource = value);
                             },
                             guestCountController: _guestCountController,
                             budgetController: _budgetController,
@@ -991,25 +931,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen> {
                   ),
                   StickyBottomBar(
                     child: FilledButton(
-                      onPressed: (_isLoading || !_hydrated)
-                          ? null
-                          : _submitForm,
+                      onPressed: (_isLoading || !_hydrated) ? null : _submitForm,
                       child: _isLoading
                           ? SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  colorScheme.onPrimary,
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                               ),
                             )
-                          : Text(
-                              widget.mode == 'edit'
-                                  ? 'Update enquiry'
-                                  : 'Create enquiry',
-                            ),
+                          : Text(widget.mode == 'edit' ? 'Update enquiry' : 'Create enquiry'),
                     ),
                   ),
                 ],
@@ -1053,9 +985,7 @@ class _FormSectionProgress extends StatelessWidget {
                   Text(
                     sections[i],
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
               ),

@@ -5,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
-import '../../../admin/users/presentation/users_providers.dart'
-    as users_providers;
+import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../enquiries/domain/enquiry.dart';
 import 'dashboard_enquiry_tab_actions.dart';
 import 'dashboard_enquiry_utils.dart';
@@ -39,8 +38,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
         ? statusValueRaw!.trim().toLowerCase()
         : 'new';
-    final eventTypeValueRaw =
-        (data['eventTypeValue'] ?? data['eventType']) as String?;
+    final eventTypeValueRaw = (data['eventTypeValue'] ?? data['eventType']) as String?;
     final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
         ? eventTypeValueRaw!.trim()
         : 'event';
@@ -52,18 +50,13 @@ class DashboardEnquiryListRow extends ConsumerWidget {
 
     final createdAt = parseEnquiryDateTime(data['createdAt']) ?? DateTime.now();
     final eventDate = parseEnquiryDateTime(data['eventDate']);
-    final location =
-        (data['eventLocation'] as String?) ?? (data['location'] as String?);
+    final location = (data['eventLocation'] as String?) ?? (data['location'] as String?);
     final assignedUserId = data['assignedTo'] as String?;
     final assigneeLabel = assignedUserId == null
         ? null
         : ref
               .watch(users_providers.userDisplayNameProvider(assignedUserId))
-              .when(
-                data: (v) => v,
-                loading: () => '…',
-                error: (_, __) => 'Unknown',
-              );
+              .when(data: (v) => v, loading: () => '…', error: (_, __) => 'Unknown');
 
     final sheetActions = contactEnquiryRowActions(
       customerName: customerName,

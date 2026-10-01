@@ -17,9 +17,7 @@ Color? parseDropdownColor(String? input) {
     final g = clampChannel(match.group(2)!);
     final b = clampChannel(match.group(3)!);
     final rawAlpha = match.group(4);
-    final alpha = rawAlpha != null
-        ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0)
-        : 1.0;
+    final alpha = rawAlpha != null ? (double.tryParse(rawAlpha) ?? 1).clamp(0.0, 1.0) : 1.0;
     return Color.fromRGBO(r, g, b, alpha);
   }
 

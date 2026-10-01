@@ -34,33 +34,22 @@ class DashboardEmptyEnquiries extends StatelessWidget {
                   color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.search_off_rounded,
-                  size: 32,
-                  color: cs.onSurfaceVariant,
-                ),
+                child: Icon(Icons.search_off_rounded, size: 32, color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: AppTokens.space4),
               Text(
                 'No matches found',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: AppTokens.space2),
               Text(
                 'Nothing matches "$searchQuery"',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               ),
               if (onClearSearch != null) ...[
                 const SizedBox(height: AppTokens.space4),
-                OutlinedButton(
-                  onPressed: onClearSearch,
-                  child: const Text('Clear search'),
-                ),
+                OutlinedButton(onPressed: onClearSearch, child: const Text('Clear search')),
               ],
             ],
           ),
@@ -89,27 +78,19 @@ class DashboardEmptyEnquiries extends StatelessWidget {
                 color: cs.primaryContainer.withValues(alpha: 0.45),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.inbox_outlined,
-                size: 32,
-                color: cs.onPrimaryContainer,
-              ),
+              child: Icon(Icons.inbox_outlined, size: 32, color: cs.onPrimaryContainer),
             ),
             const SizedBox(height: AppTokens.space4),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: AppTokens.space2),
             Text(
               'Tap + to create a new enquiry',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),

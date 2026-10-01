@@ -8,9 +8,7 @@ import '../../features/enquiries/data/enquiry_repository.dart';
 import '../services/firestore_service.dart';
 
 /// Provider for PastEnquiryCleanupService
-final pastEnquiryCleanupServiceProvider = Provider<PastEnquiryCleanupService>((
-  ref,
-) {
+final pastEnquiryCleanupServiceProvider = Provider<PastEnquiryCleanupService>((ref) {
   final enquiryRepository = ref.watch(enquiryRepositoryProvider);
   final firestoreService = ref.watch(firestoreServiceProvider);
   return PastEnquiryCleanupService(enquiryRepository, firestoreService);
@@ -48,11 +46,7 @@ class PastEnquiryCleanupService {
         if (eventDateTime == null) continue;
 
         final localEvent = eventDateTime.toLocal();
-        final eventDay = DateTime(
-          localEvent.year,
-          localEvent.month,
-          localEvent.day,
-        );
+        final eventDay = DateTime(localEvent.year, localEvent.month, localEvent.day);
 
         if (eventDay.isBefore(todayStart)) {
           await _enquiryRepository.updateStatus(
@@ -90,14 +84,9 @@ class PastEnquiryCleanupService {
         }
       }
 
-      final updatedCount = await markPastEnquiriesAsNotInterested(
-        userId: userId,
-      );
+      final updatedCount = await markPastEnquiriesAsNotInterested(userId: userId);
       await prefs.setInt(lastRunKey, DateTime.now().millisecondsSinceEpoch);
-      Log.i(
-        'Past enquiry cleanup completed',
-        data: {'updatedCount': updatedCount},
-      );
+      Log.i('Past enquiry cleanup completed', data: {'updatedCount': updatedCount});
       return updatedCount;
     } catch (e) {
       Log.e('Error in automatic cleanup', error: e);
@@ -122,11 +111,7 @@ class PastEnquiryCleanupService {
         final eventDateTime = _parseEventDate(data['eventDate']);
         if (eventDateTime == null) continue;
 
-        final eventDay = DateTime(
-          eventDateTime.year,
-          eventDateTime.month,
-          eventDateTime.day,
-        );
+        final eventDay = DateTime(eventDateTime.year, eventDateTime.month, eventDateTime.day);
 
         if (eventDay.isBefore(todayStart)) {
           count++;

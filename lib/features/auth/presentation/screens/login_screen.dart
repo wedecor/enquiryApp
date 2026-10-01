@@ -181,16 +181,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             color: theme.colorScheme.errorContainer,
                             borderRadius: AppRadius.medium,
                             border: Border.all(
-                              color: theme.colorScheme.error.withValues(
-                                alpha: 0.3,
-                              ),
+                              color: theme.colorScheme.error.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(
-                              color: theme.colorScheme.onErrorContainer,
-                            ),
+                            style: TextStyle(color: theme.colorScheme.onErrorContainer),
                             textAlign: TextAlign.center,
                           ),
                         ),

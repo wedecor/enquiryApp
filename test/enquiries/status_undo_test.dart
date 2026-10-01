@@ -26,13 +26,13 @@ void main() {
     testWidgets('non-assignee staff sees read-only status chip', (tester) async {
       final repo = MockEnquiryRepository();
       final firestore = MockFirestoreService();
-      when(() => firestore.watchActiveStatusDropdownItems()).thenAnswer(
-        (_) => Stream.value(_emptyStatusQuerySnapshot()),
-      );
+      when(
+        () => firestore.watchActiveStatusDropdownItems(),
+      ).thenAnswer((_) => Stream.value(_emptyStatusQuerySnapshot()));
       when(() => firestore.fetchDropdownValueLabelMap(any())).thenAnswer((_) async => {});
-      when(() => firestore.fetchActiveDropdownItems(any())).thenAnswer(
-        (_) async => _emptyStatusQuerySnapshot(),
-      );
+      when(
+        () => firestore.fetchActiveDropdownItems(any()),
+      ).thenAnswer((_) async => _emptyStatusQuerySnapshot());
 
       final enquiry = Enquiry(
         id: 'E1',
@@ -69,13 +69,13 @@ void main() {
     testWidgets('assigned staff can change status to allowed next step', (tester) async {
       final repo = MockEnquiryRepository();
       final firestore = MockFirestoreService();
-      when(() => firestore.watchActiveStatusDropdownItems()).thenAnswer(
-        (_) => Stream.value(_emptyStatusQuerySnapshot()),
-      );
+      when(
+        () => firestore.watchActiveStatusDropdownItems(),
+      ).thenAnswer((_) => Stream.value(_emptyStatusQuerySnapshot()));
       when(() => firestore.fetchDropdownValueLabelMap(any())).thenAnswer((_) async => {});
-      when(() => firestore.fetchActiveDropdownItems(any())).thenAnswer(
-        (_) async => _emptyStatusQuerySnapshot(),
-      );
+      when(
+        () => firestore.fetchActiveDropdownItems(any()),
+      ).thenAnswer((_) async => _emptyStatusQuerySnapshot());
       when(
         () => repo.updateStatus(
           id: any(named: 'id'),
@@ -124,15 +124,12 @@ void main() {
       await tester.tap(find.widgetWithText(ElevatedButton, 'Change Status'));
       await tester.pumpAndSettle();
 
-      verify(
-        () => repo.updateStatus(id: 'E2', nextStatus: 'approved', userId: 'staff1'),
-      ).called(1);
+      verify(() => repo.updateStatus(id: 'E2', nextStatus: 'approved', userId: 'staff1')).called(1);
     });
   });
 }
 
-QuerySnapshot<Map<String, dynamic>> _emptyStatusQuerySnapshot() =>
-    _FakeQuerySnapshot([]);
+QuerySnapshot<Map<String, dynamic>> _emptyStatusQuerySnapshot() => _FakeQuerySnapshot([]);
 
 class _FakeQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
   _FakeQuerySnapshot(this._docs);

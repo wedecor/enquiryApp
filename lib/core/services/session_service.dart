@@ -32,8 +32,7 @@ class SessionService {
   User? _lastUser;
 
   /// Stream of session states with debouncing and profile fetching.
-  Stream<SessionState> get sessionStream =>
-      _sessionStream ??= _bindSessionStream();
+  Stream<SessionState> get sessionStream => _sessionStream ??= _bindSessionStream();
 
   Stream<SessionState> _bindSessionStream() {
     _sessionController = StreamController<SessionState>.broadcast();
@@ -56,10 +55,7 @@ class SessionService {
     if (user == null) {
       _lastUser = null;
       _emitSessionState(const SessionState.unauthenticated());
-      safeLog('session_transition', {
-        'outcome': 'unauthenticated',
-        'reason': 'auth_user_null',
-      });
+      safeLog('session_transition', {'outcome': 'unauthenticated', 'reason': 'auth_user_null'});
       return;
     }
 
@@ -118,9 +114,7 @@ class SessionService {
         return;
       }
 
-      _emitSessionState(
-        SessionState.authenticated(user: userLite, profile: profile),
-      );
+      _emitSessionState(SessionState.authenticated(user: userLite, profile: profile));
 
       safeLog('session_transition', {
         'outcome': 'authenticated',
@@ -129,9 +123,7 @@ class SessionService {
         'uid': user.uid,
       });
     } catch (e, stackTrace) {
-      _emitSessionState(
-        SessionState.error(message: 'Failed to load user profile', cause: e),
-      );
+      _emitSessionState(SessionState.error(message: 'Failed to load user profile', cause: e));
 
       safeLog('session_transition_error', {
         'outcome': 'error',
@@ -143,8 +135,9 @@ class SessionService {
   }
 
   /// Fetch user profile with exponential backoff
-  Future<({UserModel? profile, Map<String, dynamic>? rawData})>
-  _fetchProfileWithBackoff(String uid) async {
+  Future<({UserModel? profile, Map<String, dynamic>? rawData})> _fetchProfileWithBackoff(
+    String uid,
+  ) async {
     const delays = [250, 500, 1000, 2000, 4000]; // ~7.75s total
 
     for (int attempt = 0; attempt < delays.length; attempt++) {
@@ -158,10 +151,7 @@ class SessionService {
         if (doc.exists) {
           final data = doc.data();
           if (data != null) {
-            return (
-              profile: UserModel.fromJson({'uid': uid, ...data}),
-              rawData: data,
-            );
+            return (profile: UserModel.fromJson({'uid': uid, ...data}), rawData: data);
           }
         }
 
@@ -208,9 +198,7 @@ class SessionService {
     if (email == null || email.isEmpty) return 'unknown';
     final parts = email.split('@');
     if (parts.length != 2) return 'invalid';
-    final prefix = parts[0].length > 3
-        ? '${parts[0].substring(0, 3)}***'
-        : '***';
+    final prefix = parts[0].length > 3 ? '${parts[0].substring(0, 3)}***' : '***';
     return '$prefix@${parts[1]}';
   }
 

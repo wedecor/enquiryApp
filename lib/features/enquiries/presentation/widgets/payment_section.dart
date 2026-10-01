@@ -26,18 +26,9 @@ class PaymentSection extends StatelessWidget {
     return EnquiryDetailSection(
       title: 'Financial Information',
       children: [
-        EnquiryDetailInfoRow(
-          label: 'Total Cost',
-          value: _formatCurrency(totalCost),
-        ),
-        EnquiryDetailInfoRow(
-          label: 'Advance Paid',
-          value: _formatCurrency(advancePaid),
-        ),
-        EnquiryDetailInfoRow(
-          label: 'Payment Status',
-          value: paymentStatusLabel,
-        ),
+        EnquiryDetailInfoRow(label: 'Total Cost', value: _formatCurrency(totalCost)),
+        EnquiryDetailInfoRow(label: 'Advance Paid', value: _formatCurrency(advancePaid)),
+        EnquiryDetailInfoRow(label: 'Payment Status', value: paymentStatusLabel),
       ],
     );
   }

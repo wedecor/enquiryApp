@@ -45,10 +45,7 @@ Future<void> showEnquiryRowActionsSheet(
             ),
             for (final action in actions)
               ListTile(
-                leading: Icon(
-                  action.icon,
-                  color: action.tint ?? theme.colorScheme.onSurface,
-                ),
+                leading: Icon(action.icon, color: action.tint ?? theme.colorScheme.onSurface),
                 title: Text(action.label),
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -56,10 +53,7 @@ Future<void> showEnquiryRowActionsSheet(
                 },
               ),
             ListTile(
-              leading: Icon(
-                Icons.close,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              leading: Icon(Icons.close, color: theme.colorScheme.onSurfaceVariant),
               title: const Text('Cancel'),
               onTap: () => Navigator.pop(ctx),
             ),

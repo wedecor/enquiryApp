@@ -79,10 +79,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       // Fallback to default values if Firestore is not available
       Log.w(
         'StatusDropdown fallback values',
-        data: {
-          'collection': widget.collectionName,
-          'error': e.runtimeType.toString(),
-        },
+        data: {'collection': widget.collectionName, 'error': e.runtimeType.toString()},
       );
       Log.d('StatusDropdown fallback stack', data: st);
       setState(() {
@@ -131,9 +128,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Only admins can add new ${widget.label.toLowerCase()}',
-          ),
+          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
           backgroundColor: AppColorScheme.snackError,
         ),
       );
@@ -173,9 +168,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             label: newStatus,
             value: newValue,
             order: _statuses.length + 1,
-            createdBy:
-                ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                'unknown',
+            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
           );
 
       // Refresh the list
@@ -217,9 +210,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     if (role != UserRole.admin) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Only admins can add new ${widget.label.toLowerCase()}',
-          ),
+          content: Text('Only admins can add new ${widget.label.toLowerCase()}'),
           backgroundColor: AppColorScheme.snackError,
         ),
       );
@@ -273,18 +264,14 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 // CRITICAL: Always ensure value is valid or null
                 initialValue: _getValidValue(widget.value),
                 decoration: InputDecoration(
-                  labelText: widget.required
-                      ? '${widget.label} *'
-                      : widget.label,
+                  labelText: widget.required ? '${widget.label} *' : widget.label,
                   prefixIcon: Icon(_getIconForStatus()),
                   border: const OutlineInputBorder(),
                   hintText:
                       widget.value != null &&
                           !_isLoading &&
                           _statuses.isNotEmpty &&
-                          !_statuses.any(
-                            (status) => status['value'] == widget.value,
-                          )
+                          !_statuses.any((status) => status['value'] == widget.value)
                       ? 'Current: ${widget.value}'
                       : null,
                   suffixIcon: _isLoading
@@ -315,10 +302,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _showAddDialog,
-                      icon: const Icon(
-                        Icons.add_circle,
-                        color: AppColorScheme.snackSuccess,
-                      ),
+                      icon: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
                       tooltip: 'Add new ${widget.label.toLowerCase()}',
                     ),
                   ],

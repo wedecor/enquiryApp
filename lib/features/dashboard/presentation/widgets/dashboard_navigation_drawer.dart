@@ -46,9 +46,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (context) => const EnquiriesListScreen(),
-                        ),
+                        MaterialPageRoute<void>(builder: (context) => const EnquiriesListScreen()),
                       );
                     },
                   ),
@@ -58,9 +56,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (context) => const CalendarViewScreen(),
-                        ),
+                        MaterialPageRoute<void>(builder: (context) => const CalendarViewScreen()),
                       );
                     },
                   ),
@@ -71,9 +67,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const EnquiryFormScreen(),
-                          ),
+                          MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
                         );
                       },
                     ),
@@ -97,9 +91,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (context) => const AnalyticsScreen(),
-                          ),
+                          MaterialPageRoute<void>(builder: (context) => const AnalyticsScreen()),
                         );
                       },
                     ),
@@ -110,8 +102,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                         Navigator.pop(context);
                         Navigator.of(context).push<void>(
                           MaterialPageRoute<void>(
-                            builder: (context) =>
-                                const DropdownManagementScreen(),
+                            builder: (context) => const DropdownManagementScreen(),
                           ),
                         );
                       },
@@ -125,9 +116,7 @@ class DashboardNavigationDrawer extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (context) => const SettingsScreen(),
-                        ),
+                        MaterialPageRoute<void>(builder: (context) => const SettingsScreen()),
                       );
                     },
                   ),
@@ -166,10 +155,7 @@ class _DrawerHeader extends StatelessWidget {
       padding: AppSpacing.space5,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            theme.colorScheme.primary,
-            theme.colorScheme.primary.withValues(alpha: 0.8),
-          ],
+          colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -180,12 +166,9 @@ class _DrawerHeader extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: theme.colorScheme.onPrimary.withValues(
-                alpha: 0.2,
-              ),
+              backgroundColor: theme.colorScheme.onPrimary.withValues(alpha: 0.2),
               child: Text(
-                (user?.name.isNotEmpty == true ? user!.name[0] : 'U')
-                    .toUpperCase(),
+                (user?.name.isNotEmpty == true ? user!.name[0] : 'U').toUpperCase(),
                 style: TextStyle(
                   color: theme.colorScheme.onPrimary,
                   fontWeight: FontWeight.bold,
@@ -212,16 +195,10 @@ class _DrawerHeader extends StatelessWidget {
         ),
         loading: () => SizedBox(
           height: 40,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: theme.colorScheme.onPrimary,
-            ),
-          ),
+          child: Center(child: CircularProgressIndicator(color: theme.colorScheme.onPrimary)),
         ),
-        error: (_, __) => Text(
-          'Error loading user',
-          style: TextStyle(color: theme.colorScheme.onPrimary),
-        ),
+        error: (_, __) =>
+            Text('Error loading user', style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
     );
   }
@@ -269,10 +246,7 @@ class _DrawerTile extends StatelessWidget {
         : theme.colorScheme.onSurface.withValues(alpha: 0.85);
     return ListTile(
       leading: Icon(icon, color: color),
-      title: Text(
-        label,
-        style: theme.textTheme.bodyMedium?.copyWith(color: color),
-      ),
+      title: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: color)),
       onTap: onTap,
     );
   }

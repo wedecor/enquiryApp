@@ -38,9 +38,7 @@ class StatsCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.large,
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
-        ),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       clipBehavior: Clip.hardEdge,
       child: Padding(
@@ -57,13 +55,10 @@ class StatsCard extends StatelessWidget {
               color: colorScheme.onSurfaceVariant,
             );
             final valueStyle =
-                (compact
-                        ? theme.textTheme.titleLarge
-                        : theme.textTheme.headlineSmall)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onSurface,
-                    );
+                (compact ? theme.textTheme.titleLarge : theme.textTheme.headlineSmall)?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onSurface,
+                );
             final subtitleStyle = theme.textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             );
@@ -79,12 +74,7 @@ class StatsCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    _iconBox(
-                      iconBackground,
-                      iconForeground,
-                      iconSize,
-                      glyphSize,
-                    ),
+                    _iconBox(iconBackground, iconForeground, iconSize, glyphSize),
                     const SizedBox(width: AppTokens.space2),
                     Expanded(
                       child: Text(
@@ -107,13 +97,8 @@ class StatsCard extends StatelessWidget {
                   Row(
                     children: [
                       if (trendIcon != null)
-                        Icon(
-                          trendIcon,
-                          size: 12,
-                          color: trendColor ?? colorScheme.primary,
-                        ),
-                      if (trendIcon != null)
-                        const SizedBox(width: AppTokens.space1),
+                        Icon(trendIcon, size: 12, color: trendColor ?? colorScheme.primary),
+                      if (trendIcon != null) const SizedBox(width: AppTokens.space1),
                       Expanded(
                         child: Text(
                           trendLabel!,

@@ -17,8 +17,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback? onClearSearch;
 
   static const double _searchFieldHeight = 44.0;
-  static const double _searchRowHeight =
-      AppTokens.space2 + _searchFieldHeight + AppTokens.space3;
+  static const double _searchRowHeight = AppTokens.space2 + _searchFieldHeight + AppTokens.space3;
 
   @override
   double get minExtent => _tabBar.preferredSize.height + _searchRowHeight;
@@ -27,11 +26,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height + _searchRowHeight;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final tabHeight = _tabBar.preferredSize.height;
@@ -67,9 +62,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
                       controller: searchController,
                       decoration: InputDecoration(
                         hintText: 'Search by name or phone…',
-                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                        hintStyle: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                         prefixIcon: Icon(
                           Icons.search_rounded,
                           size: AppTokens.iconMedium,
@@ -78,10 +71,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
                         suffixIcon: searchQuery.isNotEmpty
                             ? IconButton(
                                 tooltip: 'Clear search',
-                                icon: const Icon(
-                                  Icons.clear_rounded,
-                                  size: AppTokens.iconSmall,
-                                ),
+                                icon: const Icon(Icons.clear_rounded, size: AppTokens.iconSmall),
                                 onPressed: onClearSearch,
                               )
                             : null,
@@ -91,9 +81,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: AppRadius.full,
-                          borderSide: BorderSide(
-                            color: cs.outlineVariant.withValues(alpha: 0.6),
-                          ),
+                          borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: AppRadius.full,
@@ -104,9 +92,7 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
                           horizontal: AppTokens.space3,
                         ),
                         filled: true,
-                        fillColor: cs.surfaceContainerHighest.withValues(
-                          alpha: 0.45,
-                        ),
+                        fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
                         isDense: true,
                       ),
                       textInputAction: TextInputAction.search,

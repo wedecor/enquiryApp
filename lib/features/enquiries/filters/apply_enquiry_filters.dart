@@ -11,33 +11,23 @@ bool matchesEnquiryFilters(
 }) {
   if (filters.statuses.isNotEmpty) {
     final rawStatus = _fieldString(data, 'statusValue', 'status');
-    final canonical =
-        EnquiryStatus.canonicalValue(rawStatus) ?? rawStatus.toLowerCase();
+    final canonical = EnquiryStatus.canonicalValue(rawStatus) ?? rawStatus.toLowerCase();
     final matches = filters.statuses.any((filter) {
-      final filterCanonical =
-          EnquiryStatus.canonicalValue(filter) ?? filter.toLowerCase();
+      final filterCanonical = EnquiryStatus.canonicalValue(filter) ?? filter.toLowerCase();
       return filterCanonical == canonical;
     });
     if (!matches) return false;
   }
 
   if (filters.eventTypes.isNotEmpty) {
-    final eventType = _fieldString(
-      data,
-      'eventTypeValue',
-      'eventType',
-    ).toLowerCase();
-    final matchesType = filters.eventTypes.any(
-      (t) => t.toLowerCase() == eventType,
-    );
+    final eventType = _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase();
+    final matchesType = filters.eventTypes.any((t) => t.toLowerCase() == eventType);
     if (!matchesType) return false;
   }
 
   if (filters.assigneeId != null) {
     final assignee = data['assignedTo'] as String?;
-    final targetId = filters.assigneeId == 'current_user_id'
-        ? currentUserId
-        : filters.assigneeId;
+    final targetId = filters.assigneeId == 'current_user_id' ? currentUserId : filters.assigneeId;
     if (targetId == null || assignee != targetId) return false;
   }
 
@@ -66,11 +56,7 @@ bool matchesEnquiryFilters(
   return true;
 }
 
-String _fieldString(
-  Map<String, dynamic> data,
-  String primary,
-  String fallback,
-) {
+String _fieldString(Map<String, dynamic> data, String primary, String fallback) {
   final value = data[primary] ?? data[fallback];
   if (value == null) return '';
   return value.toString().trim();

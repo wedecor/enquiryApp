@@ -32,8 +32,7 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
   final bool isAssignee;
 
   @override
-  ConsumerState<EnquiryStatusControl> createState() =>
-      _EnquiryStatusControlState();
+  ConsumerState<EnquiryStatusControl> createState() => _EnquiryStatusControlState();
 }
 
 class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
@@ -50,12 +49,9 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: ref
-          .read(firestoreServiceProvider)
-          .watchActiveStatusDropdownItems(),
+      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const SizedBox(
             width: 20,
             height: 20,
@@ -64,9 +60,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         }
 
         List<Map<String, String>> statuses;
-        if (snapshot.hasError ||
-            !snapshot.hasData ||
-            snapshot.data!.docs.isEmpty) {
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
           statuses = DropdownDefaults.statuses;
         } else {
           statuses = DropdownDefaults.resolveStatusOptions(
@@ -77,14 +71,11 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         }
 
         final rawCurrent = (_selectedStatus ?? widget.currentStatusValue);
-        final currentStatus =
-            EnquiryStatus.canonicalValue(rawCurrent) ?? rawCurrent;
+        final currentStatus = EnquiryStatus.canonicalValue(rawCurrent) ?? rawCurrent;
         final values = statuses.map((s) => s['value'] ?? '').toList();
         if (!values.contains(currentStatus)) {
           return _ReadOnlyStatusChip(
-            label: widget.currentStatusLabel.isNotEmpty
-                ? widget.currentStatusLabel
-                : currentStatus,
+            label: widget.currentStatusLabel.isNotEmpty ? widget.currentStatusLabel : currentStatus,
             statusValue: currentStatus,
           );
         }
@@ -98,8 +89,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
           });
         }
 
-        final canChange =
-            widget.isAdmin || (!widget.isAdmin && widget.isAssignee);
+        final canChange = widget.isAdmin || (!widget.isAdmin && widget.isAssignee);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -111,10 +101,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
               items: nextOptions.map((status) {
                 final value = status['value'] ?? '';
                 final label = status['label'] ?? value;
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(label),
-                );
+                return DropdownMenuItem<String>(value: value, child: Text(label));
               }).toList(),
               onChanged: (!canChange || _isUpdatingStatus)
                   ? null
@@ -141,10 +128,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     );
   }
 
-  Future<void> _handleStatusChange(
-    String? value,
-    String currentStatusValue,
-  ) async {
+  Future<void> _handleStatusChange(String? value, String currentStatusValue) async {
     if (value == null || value == currentStatusValue) return;
 
     final safeValue = (_selectedStatus ?? widget.currentStatusValue);
@@ -190,17 +174,12 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     });
 
     try {
-      final userId =
-          ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown';
+      final userId = ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown';
       // Route through repository — handles audit history, statusLabel,
       // statusUpdatedBy, notifications, and legacy field cleanup in one place.
       await ref
           .read(enquiryRepositoryProvider)
-          .updateStatus(
-            id: widget.enquiryId,
-            nextStatus: value,
-            userId: userId,
-          );
+          .updateStatus(id: widget.enquiryId, nextStatus: value, userId: userId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

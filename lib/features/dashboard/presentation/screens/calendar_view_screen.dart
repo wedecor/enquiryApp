@@ -69,14 +69,12 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
 
     final body = currentUser.when(
       data: (user) => roleAsync.when(
-        data: (role) =>
-            _buildCalendarContent(context, user, role == UserRole.admin),
+        data: (role) => _buildCalendarContent(context, user, role == UserRole.admin),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) => _buildCalendarContent(context, user, false),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object error, StackTrace stack) =>
-          Center(child: Text('Error: $error')),
+      error: (Object error, StackTrace stack) => Center(child: Text('Error: $error')),
     );
 
     if (widget.embeddedInShell) {
@@ -92,9 +90,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
               icon: const Icon(Icons.add),
               onPressed: () {
                 Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (context) => const EnquiryFormScreen(),
-                  ),
+                  MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
                 );
               },
               tooltip: 'Add New Enquiry',
@@ -105,11 +101,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     );
   }
 
-  Widget _buildCalendarContent(
-    BuildContext context,
-    UserModel? user,
-    bool isAdmin,
-  ) {
+  Widget _buildCalendarContent(BuildContext context, UserModel? user, bool isAdmin) {
     final userId = user?.uid;
     if (userId == null) {
       return const Center(child: Text('User not found'));
@@ -140,10 +132,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                 children: [
                   _buildLegendItem('Approved', AppColorScheme.statusConfirmed),
                   _buildLegendItem('In Talks', AppColorScheme.statusInTalks),
-                  _buildLegendItem(
-                    'Quote Sent',
-                    AppColorScheme.statusQuoteSent,
-                  ),
+                  _buildLegendItem('Quote Sent', AppColorScheme.statusQuoteSent),
                   _buildLegendItem('New', AppColorScheme.statusNew),
                   _buildLegendItem('Completed', AppColorScheme.statusCompleted),
                 ],
@@ -172,9 +161,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                   shape: BoxShape.circle,
                 ),
                 outsideDaysVisible: false,
-                weekendTextStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                weekendTextStyle: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               headerStyle: HeaderStyle(
                 formatButtonVisible: true,
@@ -223,29 +210,25 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Show colored dots for each status type
-                        if (statusCounts['approved'] != null &&
-                            statusCounts['approved']! > 0)
+                        if (statusCounts['approved'] != null && statusCounts['approved']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusConfirmed,
                             statusCounts['approved']!,
                             hasConflict,
                           ),
-                        if (statusCounts['in_talks'] != null &&
-                            statusCounts['in_talks']! > 0)
+                        if (statusCounts['in_talks'] != null && statusCounts['in_talks']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusInTalks,
                             statusCounts['in_talks']!,
                             hasConflict,
                           ),
-                        if (statusCounts['new'] != null &&
-                            statusCounts['new']! > 0)
+                        if (statusCounts['new'] != null && statusCounts['new']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusNew,
                             statusCounts['new']!,
                             hasConflict,
                           ),
-                        if (statusCounts['completed'] != null &&
-                            statusCounts['completed']! > 0)
+                        if (statusCounts['completed'] != null && statusCounts['completed']! > 0)
                           _buildStatusIndicator(
                             AppColorScheme.statusCompleted,
                             statusCounts['completed']!,
@@ -255,16 +238,11 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                         if (totalEvents > 1)
                           Container(
                             margin: const EdgeInsets.only(left: 2),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 1,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                             decoration: BoxDecoration(
                               color: hasConflict
                                   ? Theme.of(context).colorScheme.error
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -293,11 +271,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
 
   Widget _buildEventsList(BuildContext context) {
     final selectedDayEvents = _getEventsForDay(_selectedDay);
-    final selectedDayKey = DateTime(
-      _selectedDay.year,
-      _selectedDay.month,
-      _selectedDay.day,
-    );
+    final selectedDayKey = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
     final hasConflict = _conflicts.containsKey(selectedDayKey);
 
     if (selectedDayEvents.isEmpty) {
@@ -305,17 +279,13 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.event_busy,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            Icon(Icons.event_busy, size: 64, color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: 16),
             Text(
               'No events on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.outline),
             ),
           ],
         ),
@@ -363,11 +333,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                         statusCounts['in_talks']!,
                       ),
                     if (statusCounts['new'] != null)
-                      _buildStatusChip(
-                        'New',
-                        AppColorScheme.statusNew,
-                        statusCounts['new']!,
-                      ),
+                      _buildStatusChip('New', AppColorScheme.statusNew, statusCounts['new']!),
                     if (statusCounts['completed'] != null)
                       _buildStatusChip(
                         'Completed',
@@ -383,9 +349,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           Builder(
             builder: (context) {
               final error = Theme.of(context).colorScheme.error;
-              final errorContainer = Theme.of(
-                context,
-              ).colorScheme.errorContainer;
+              final errorContainer = Theme.of(context).colorScheme.errorContainer;
               return Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -401,10 +365,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                     Expanded(
                       child: Text(
                         'Conflict: Multiple events on this date',
-                        style: TextStyle(
-                          color: error,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: error, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -427,10 +388,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(
-          '$label: $count',
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
+        Text('$label: $count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -445,10 +403,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -491,8 +446,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       if (eventDate == null) continue;
 
       // Get canonical status from statusValue (maps legacy confirmed → approved, etc.)
-      final rawStatus = ((data['statusValue'] as String?) ?? 'new')
-          .toLowerCase();
+      final rawStatus = ((data['statusValue'] as String?) ?? 'new').toLowerCase();
       final status = EnquiryStatus.fromValue(rawStatus)?.value ?? rawStatus;
 
       // Filter out irrelevant statuses for calendar view
@@ -503,11 +457,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       }
 
       // Normalize event date to start of day for comparison
-      final eventDateStart = DateTime(
-        eventDate.year,
-        eventDate.month,
-        eventDate.day,
-      );
+      final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
 
       // Optional: Filter out past completed events (keep recent ones for reference)
       if (status == 'completed' && eventDateStart.isBefore(todayStart)) {
@@ -544,11 +494,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       // Track status counts per day
       dayStatusCounts
           .putIfAbsent(dayKey, () => <String, int>{})
-          .update(
-            status,
-            (currentCount) => currentCount + 1,
-            ifAbsent: () => 1,
-          );
+          .update(status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
     }
 
     // Identify conflicts (multiple events on same day) and store status counts
@@ -604,10 +550,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String userId) {
     return ref
         .read(firestoreServiceProvider)
-        .watchEnquiriesForRoleByEventDate(
-          isAdmin: isAdmin,
-          assignedToUid: userId,
-        );
+        .watchEnquiriesForRoleByEventDate(isAdmin: isAdmin, assignedToUid: userId);
   }
 }
 

@@ -45,9 +45,7 @@ class ErrorState extends StatelessWidget {
             // Error message
             Text(
               message,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface,
-              ),
+              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
               textAlign: TextAlign.center,
             ),
 
@@ -102,8 +100,7 @@ class NetworkErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.wifi_off,
-      message:
-          'No internet connection.\nPlease check your network and try again.',
+      message: 'No internet connection.\nPlease check your network and try again.',
       onRetry: onRetry,
       retryText: 'Retry',
       padding: padding,
@@ -141,8 +138,7 @@ class PermissionErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.block,
-      message:
-          'Access denied.\nYou don\'t have permission to view this content.',
+      message: 'Access denied.\nYou don\'t have permission to view this content.',
       onRetry: onRetry,
       retryText: 'Go Back',
       padding: padding,
@@ -222,12 +218,7 @@ class UploadErrorState extends StatelessWidget {
 
 /// Error state for validation failures
 class ValidationErrorState extends StatelessWidget {
-  const ValidationErrorState({
-    super.key,
-    required this.message,
-    this.onRetry,
-    this.padding,
-  });
+  const ValidationErrorState({super.key, required this.message, this.onRetry, this.padding});
 
   final String message;
   final VoidCallback? onRetry;
@@ -277,8 +268,7 @@ class TimeoutErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.timer_off_outlined,
-      message:
-          'Request timed out.\nPlease check your connection and try again.',
+      message: 'Request timed out.\nPlease check your connection and try again.',
       onRetry: onRetry,
       retryText: 'Retry',
       padding: padding,

@@ -42,18 +42,9 @@ class EventDetailsSection extends StatelessWidget {
       title: 'Event Details',
       children: [
         EnquiryDetailInfoRow(label: 'Event Type', value: eventTypeLabel),
-        EnquiryDetailInfoRow(
-          label: 'Event Date',
-          value: _formatDate(eventDate),
-        ),
-        EnquiryDetailInfoRow(
-          label: 'Guest Count',
-          value: '${guestCount ?? 'N/A'} guests',
-        ),
-        EnquiryDetailInfoRow(
-          label: 'Budget Range',
-          value: budgetRange ?? 'N/A',
-        ),
+        EnquiryDetailInfoRow(label: 'Event Date', value: _formatDate(eventDate)),
+        EnquiryDetailInfoRow(label: 'Guest Count', value: '${guestCount ?? 'N/A'} guests'),
+        EnquiryDetailInfoRow(label: 'Budget Range', value: budgetRange ?? 'N/A'),
         EnquiryDetailInfoRow(label: 'Priority', value: priorityLabel),
         EnquiryDetailInfoRow(label: 'Source', value: sourceLabel),
       ],

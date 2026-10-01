@@ -6,8 +6,7 @@ import '../../../core/providers/audit_provider.dart';
 import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../core/services/notification_service.dart'
-    as notification_service;
+import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
 import 'pagination_state.dart';
@@ -38,18 +37,14 @@ class EnquiryRepository {
     this._notificationService,
   );
 
-  CollectionReference<Map<String, dynamic>> get _enquiries =>
-      _firestoreService.enquiriesCollection;
+  CollectionReference<Map<String, dynamic>> get _enquiries => _firestoreService.enquiriesCollection;
 
   /// Get all enquiries as a stream
   Stream<List<Enquiry>> getEnquiries() {
     return _enquiries
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList(),
-        );
+        .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
   }
 
   /// Get paginated enquiries (cursor-based pagination)
@@ -61,19 +56,13 @@ class EnquiryRepository {
     int pageSize = 20,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _enquiries.orderBy(
-        'createdAt',
-        descending: true,
-      );
+      Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
 
       if (!isAdmin && assignedTo != null) {
         query = query.where('assignedTo', isEqualTo: assignedTo);
       }
 
-      if (status != null &&
-          status.isNotEmpty &&
-          status != 'All' &&
-          status != 'reminders') {
+      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
         query = query.where('statusValue', isEqualTo: status);
       }
 
@@ -115,12 +104,9 @@ class EnquiryRepository {
 
     final oldEnquiryData = oldEnquiryDoc.data()!;
     final oldStatusValue =
-        EnquiryStatus.canonicalValue(
-          oldEnquiryData['statusValue'] as String?,
-        ) ??
+        EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
         (oldEnquiryData['statusValue'] as String? ?? 'new');
-    final canonicalNext =
-        EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
+    final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
 
     if (oldStatusValue == canonicalNext) {
       return;
@@ -130,8 +116,7 @@ class EnquiryRepository {
     final statusLabel = lookup.labelForStatus(canonicalNext);
     final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
-    final customerName =
-        oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
+    final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
     await _enquiries.doc(id).update({

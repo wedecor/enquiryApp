@@ -35,14 +35,8 @@ void main() {
 
   test('filters by assignee including current user alias', () {
     const filters = EnquiryFilters(assigneeId: 'current_user_id');
-    expect(
-      matchesEnquiryFilters(sample, filters, currentUserId: 'user-2'),
-      isFalse,
-    );
-    expect(
-      matchesEnquiryFilters(sample, filters, currentUserId: 'user-1'),
-      isTrue,
-    );
+    expect(matchesEnquiryFilters(sample, filters, currentUserId: 'user-2'), isFalse);
+    expect(matchesEnquiryFilters(sample, filters, currentUserId: 'user-1'), isTrue);
   });
 
   test('filters by search query', () {

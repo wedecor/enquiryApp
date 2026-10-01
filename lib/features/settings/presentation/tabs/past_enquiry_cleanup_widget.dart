@@ -12,12 +12,10 @@ class PastEnquiryCleanupWidget extends ConsumerStatefulWidget {
   const PastEnquiryCleanupWidget({super.key});
 
   @override
-  ConsumerState<PastEnquiryCleanupWidget> createState() =>
-      _PastEnquiryCleanupWidgetState();
+  ConsumerState<PastEnquiryCleanupWidget> createState() => _PastEnquiryCleanupWidgetState();
 }
 
-class _PastEnquiryCleanupWidgetState
-    extends ConsumerState<PastEnquiryCleanupWidget> {
+class _PastEnquiryCleanupWidgetState extends ConsumerState<PastEnquiryCleanupWidget> {
   bool _isRunning = false;
   int? _pendingCount;
   bool _isLoadingCount = false;
@@ -77,8 +75,7 @@ class _PastEnquiryCleanupWidgetState
     try {
       final service = ref.read(pastEnquiryCleanupServiceProvider);
       // Use runAutomaticCleanup(force: true) — same date-guarded logic as the daily run
-      final updatedCount =
-          await service.runAutomaticCleanup(force: true, userId: userId) ?? 0;
+      final updatedCount = await service.runAutomaticCleanup(force: true, userId: userId) ?? 0;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,10 +111,7 @@ class _PastEnquiryCleanupWidgetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Update Past Enquiries Status',
-          style: TextStyle(fontWeight: FontWeight.w500),
-        ),
+        const Text('Update Past Enquiries Status', style: TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
         Text(
           'Automatically marks approved bookings as completed once their event date has passed (runs at start of next day).',

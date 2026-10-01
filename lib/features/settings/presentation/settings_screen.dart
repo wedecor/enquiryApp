@@ -19,8 +19,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen>
-    with TickerProviderStateMixin {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -78,15 +77,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     ];
 
     final tabs = isAdmin
-        ? [
-            ...baseTabs,
-            const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'),
-          ]
+        ? [...baseTabs, const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin')]
         : baseTabs;
 
-    final tabViews = isAdmin
-        ? [...baseTabViews, const AdminTab()]
-        : baseTabViews;
+    final tabViews = isAdmin ? [...baseTabViews, const AdminTab()] : baseTabViews;
 
     // Update tab controller length if needed
     if (_tabController.length != tabs.length) {
@@ -94,10 +88,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       _tabController = TabController(length: tabs.length, vsync: this);
     }
 
-    final tabContent = TabBarView(
-      controller: _tabController,
-      children: tabViews,
-    );
+    final tabContent = TabBarView(controller: _tabController, children: tabViews);
 
     if (widget.embeddedInShell) {
       return Column(
@@ -112,11 +103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: tabs,
-          isScrollable: true,
-        ),
+        bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
       ),
       body: tabContent,
     );

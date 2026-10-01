@@ -57,10 +57,7 @@ class EnquiryDetailFooter extends ConsumerWidget {
           IconButton.outlined(
             tooltip: 'WhatsApp',
             onPressed: () => onWhatsApp!(),
-            icon: Icon(
-              Icons.chat_bubble_outline,
-              color: AppColorScheme.whatsApp,
-            ),
+            icon: Icon(Icons.chat_bubble_outline, color: AppColorScheme.whatsApp),
           ),
         ],
         const SizedBox(width: AppTokens.space2),
@@ -90,10 +87,7 @@ class EnquiryDetailFooter extends ConsumerWidget {
             itemBuilder: (context) => const [
               PopupMenuItem(value: 'edit', child: Text('Edit enquiry')),
             ],
-            icon: Icon(
-              Icons.more_vert,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            icon: Icon(Icons.more_vert, color: theme.colorScheme.onSurfaceVariant),
           ),
       ],
     );

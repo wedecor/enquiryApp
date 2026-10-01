@@ -18,9 +18,7 @@ class StickyBottomBar extends StatelessWidget {
         top: false,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: theme.colorScheme.outlineVariant),
-            ),
+            border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(

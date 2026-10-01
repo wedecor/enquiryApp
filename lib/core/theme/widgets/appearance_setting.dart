@@ -30,9 +30,7 @@ class AppearanceSetting extends ConsumerWidget {
           children: [
             Text(
               'Appearance',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: AppTokens.space2),
             Text(
@@ -84,9 +82,7 @@ class AppearanceSetting extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(AppTokens.space3),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(
-                  0.3,
-                ),
+                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
                 borderRadius: AppRadius.medium,
               ),
               child: Row(

@@ -35,11 +35,7 @@ class TopListTable extends StatelessWidget {
 
     return Table(
       columnWidths: showPercentage
-          ? const {
-              0: FlexColumnWidth(1),
-              1: FixedColumnWidth(60),
-              2: FixedColumnWidth(80),
-            }
+          ? const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60), 2: FixedColumnWidth(80)}
           : const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60)},
       children: [
         // Header row
@@ -47,10 +43,7 @@ class TopListTable extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             border: Border(
-              bottom: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                width: 1,
-              ),
+              bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
             ),
           ),
           children: [
@@ -67,11 +60,7 @@ class TopListTable extends StatelessWidget {
             children: [
               _buildDataCell(context, label),
               _buildDataCell(context, item.count.toString()),
-              if (showPercentage)
-                _buildDataCell(
-                  context,
-                  '${item.percentage.toStringAsFixed(1)}%',
-                ),
+              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
             ],
           );
         }),
@@ -81,10 +70,7 @@ class TopListTable extends StatelessWidget {
 
   Widget _buildHeaderCell(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppTokens.space3,
-        horizontal: AppTokens.space2,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
       child: Text(
         text,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -97,10 +83,7 @@ class TopListTable extends StatelessWidget {
 
   Widget _buildDataCell(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppTokens.space3,
-        horizontal: AppTokens.space2,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodyMedium,
@@ -157,9 +140,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
 
     return AnalyticsSectionCard(
       title: title,
-      child: data.isEmpty
-          ? _buildEmptyState(context)
-          : _buildTable(context, dropdownLookup),
+      child: data.isEmpty ? _buildEmptyState(context) : _buildTable(context, dropdownLookup),
     );
   }
 
@@ -173,57 +154,43 @@ class RecentEnquiriesTable extends ConsumerWidget {
           DataColumn(
             label: Text(
               'Date',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Customer',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Event Type',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Status',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Source',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Priority',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           DataColumn(
             label: Text(
               'Total Cost',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -232,17 +199,14 @@ class RecentEnquiriesTable extends ConsumerWidget {
               (enquiry) => DataRow(
                 cells: [
                   DataCell(
-                    Text(
-                      _formatDate(enquiry.date),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    Text(_formatDate(enquiry.date), style: Theme.of(context).textTheme.bodySmall),
                   ),
                   DataCell(
                     Text(
                       enquiry.customerName,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
                   DataCell(
@@ -254,10 +218,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
                   ),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getStatusColor(enquiry.status),
                         borderRadius: BorderRadius.circular(12),
@@ -282,10 +243,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
                   ),
                   DataCell(
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: _getPriorityColor(enquiry.priority),
                         borderRadius: BorderRadius.circular(12),
@@ -303,12 +261,10 @@ class RecentEnquiriesTable extends ConsumerWidget {
                   ),
                   DataCell(
                     Text(
-                      enquiry.totalCost != null
-                          ? _formatCurrency(enquiry.totalCost!)
-                          : '—',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      enquiry.totalCost != null ? _formatCurrency(enquiry.totalCost!) : '—',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -325,11 +281,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(
-              Icons.table_rows,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            Icon(Icons.table_rows, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               'No recent enquiries',
@@ -383,10 +335,7 @@ class RecentEnquiriesTable extends ConsumerWidget {
   String _formatStatusName(String status) {
     return status
         .split('_')
-        .map(
-          (word) =>
-              word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '',
-        )
+        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
         .join(' ');
   }
 

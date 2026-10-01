@@ -15,8 +15,7 @@ class UserSettings with _$UserSettings {
     DateTime? updatedAt,
   }) = _UserSettings;
 
-  factory UserSettings.fromJson(Map<String, dynamic> json) =>
-      _$UserSettingsFromJson(json);
+  factory UserSettings.fromJson(Map<String, dynamic> json) => _$UserSettingsFromJson(json);
 
   factory UserSettings.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
@@ -64,8 +63,7 @@ class ColumnSettings with _$ColumnSettings {
     @Default(0) int order,
   }) = _ColumnSettings;
 
-  factory ColumnSettings.fromJson(Map<String, dynamic> json) =>
-      _$ColumnSettingsFromJson(json);
+  factory ColumnSettings.fromJson(Map<String, dynamic> json) => _$ColumnSettingsFromJson(json);
 }
 
 @freezed

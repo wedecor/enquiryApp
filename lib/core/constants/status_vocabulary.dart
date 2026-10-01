@@ -86,13 +86,11 @@ enum EnquiryStatus {
   }
 
   /// Booked enquiries (incl. legacy confirmed/scheduled).
-  static bool isApproved(String? raw) =>
-      fromValue(raw) == EnquiryStatus.approved;
+  static bool isApproved(String? raw) => fromValue(raw) == EnquiryStatus.approved;
 
   /// Active pipeline discussion (incl. legacy contacted/quote_sent).
   static bool isInTalks(String? raw) => fromValue(raw) == EnquiryStatus.inTalks;
 
   /// Terminal lost states.
-  static bool isLost(String? raw) =>
-      fromValue(raw)?.category == StatusCategory.lost;
+  static bool isLost(String? raw) => fromValue(raw)?.category == StatusCategory.lost;
 }

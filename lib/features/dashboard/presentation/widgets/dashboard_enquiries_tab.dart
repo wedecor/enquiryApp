@@ -51,8 +51,7 @@ class DashboardEnquiriesTab extends ConsumerStatefulWidget {
   final VoidCallback? onTabVisible;
 
   @override
-  ConsumerState<DashboardEnquiriesTab> createState() =>
-      _DashboardEnquiriesTabState();
+  ConsumerState<DashboardEnquiriesTab> createState() => _DashboardEnquiriesTabState();
 }
 
 class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
@@ -69,9 +68,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.onTabVisible != null) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget.onTabVisible!(),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onTabVisible!());
     }
 
     return StreamBuilder<QuerySnapshot>(
@@ -90,10 +87,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
     );
   }
 
-  List<Widget> _buildContentSlivers(
-    BuildContext context,
-    AsyncSnapshot<QuerySnapshot> snapshot,
-  ) {
+  List<Widget> _buildContentSlivers(BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
     if (snapshot.hasError) {
       return [_centeredContentSliver(errorBuilder(context, snapshot.error!))];
     }
@@ -124,18 +118,13 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
         ? preFilteredEnquiries
         : preFilteredEnquiries
               .where(
-                (doc) => matchesEnquirySearchQuery(
-                  doc.data() as Map<String, dynamic>,
-                  searchQuery,
-                ),
+                (doc) => matchesEnquirySearchQuery(doc.data() as Map<String, dynamic>, searchQuery),
               )
               .toList(growable: false);
 
     if (searchQuery.isNotEmpty && filteredEnquiries.isEmpty) {
       return [
-        _centeredContentSliver(
-          SearchEmptyState(query: searchQuery, onClearSearch: onClearSearch),
-        ),
+        _centeredContentSliver(SearchEmptyState(query: searchQuery, onClearSearch: onClearSearch)),
       ];
     }
 
@@ -157,12 +146,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(
-          AppTokens.space4,
-          AppTokens.space1,
-          AppTokens.space4,
-          0,
-        ),
+        padding: const EdgeInsets.fromLTRB(AppTokens.space4, AppTokens.space1, AppTokens.space4, 0),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) => DashboardEnquiryListRow(
@@ -200,17 +184,12 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
     }
     if (status == 'reminders') {
       return raw
-          .where(
-            (doc) =>
-                shouldShowReminder(doc.data() as Map<String, dynamic>, now),
-          )
+          .where((doc) => shouldShowReminder(doc.data() as Map<String, dynamic>, now))
           .toList(growable: false);
     }
     if (status == 'in_talks') {
       return raw
-          .where(
-            (doc) => shouldShowInTalks(doc.data() as Map<String, dynamic>, now),
-          )
+          .where((doc) => shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
           .toList(growable: false);
     }
     if (status == 'approved') {
@@ -249,14 +228,10 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
         list.sort((a, b) => compareByCreatedDate(b, a));
       case _SortMode.nameAz:
         list.sort((a, b) {
-          final aName =
-              ((a.data() as Map<String, dynamic>)['customerName'] as String? ??
-                      '')
-                  .toLowerCase();
-          final bName =
-              ((b.data() as Map<String, dynamic>)['customerName'] as String? ??
-                      '')
-                  .toLowerCase();
+          final aName = ((a.data() as Map<String, dynamic>)['customerName'] as String? ?? '')
+              .toLowerCase();
+          final bName = ((b.data() as Map<String, dynamic>)['customerName'] as String? ?? '')
+              .toLowerCase();
           return aName.compareTo(bName);
         });
     }
@@ -264,11 +239,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 }
 
 class _SortSummaryBar extends StatelessWidget {
-  const _SortSummaryBar({
-    required this.count,
-    required this.current,
-    required this.onSortSelected,
-  });
+  const _SortSummaryBar({required this.count, required this.current, required this.onSortSelected});
 
   final int count;
   final _SortMode current;
@@ -294,18 +265,13 @@ class _SortSummaryBar extends StatelessWidget {
                   AppTokens.space4,
                   AppTokens.space3,
                 ),
-                child: Text(
-                  'Sort enquiries',
-                  style: theme.textTheme.titleMedium,
-                ),
+                child: Text('Sort enquiries', style: theme.textTheme.titleMedium),
               ),
               ..._SortMode.values.map((mode) {
                 final isSelected = mode == current;
                 return ListTile(
                   leading: Icon(
-                    isSelected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
+                    isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
                     color: isSelected ? cs.primary : cs.onSurfaceVariant,
                   ),
                   title: Text(mode.label),
@@ -338,9 +304,7 @@ class _SortSummaryBar extends StatelessWidget {
         children: [
           Text(
             '$count result${count == 1 ? '' : 's'}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
           const Spacer(),
           IconButton(
@@ -348,9 +312,7 @@ class _SortSummaryBar extends StatelessWidget {
             onPressed: () => _showSortSheet(context),
             icon: const Icon(Icons.sort_rounded),
             style: IconButton.styleFrom(
-              backgroundColor: cs.surfaceContainerHighest.withValues(
-                alpha: 0.45,
-              ),
+              backgroundColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
               foregroundColor: cs.onSurfaceVariant,
             ),
           ),

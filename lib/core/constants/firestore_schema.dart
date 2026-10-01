@@ -155,11 +155,7 @@ class FinancialDocument {
   });
 
   Map<String, dynamic> toMap() {
-    return {
-      'totalCost': totalCost,
-      'advancePaid': advancePaid,
-      'paymentStatus': paymentStatus,
-    };
+    return {'totalCost': totalCost, 'advancePaid': advancePaid, 'paymentStatus': paymentStatus};
   }
 }
 
@@ -270,10 +266,5 @@ class DefaultDropdownValues {
   ];
 
   /// Default payment statuses
-  static const List<String> paymentStatuses = [
-    'Pending',
-    'Partial',
-    'Paid',
-    'Overdue',
-  ];
+  static const List<String> paymentStatuses = ['Pending', 'Partial', 'Paid', 'Overdue'];
 }

@@ -51,16 +51,11 @@ class EnquiryDetailsHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: AppTokens.space2),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.12),
                     borderRadius: AppRadius.full,
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.28),
-                    ),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.28)),
                   ),
                   child: Text(
                     statusLabel,
@@ -75,9 +70,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
             const SizedBox(height: AppTokens.space2),
             Text(
               'Enquiry #${enquiryId.substring(0, 8)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ],
         ),

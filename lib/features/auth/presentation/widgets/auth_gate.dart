@@ -25,32 +25,24 @@ class AuthGate extends ConsumerWidget {
     return sessionAsync.when(
       data: (session) => _buildForSessionState(context, ref, session),
       loading: () => _buildLoadingScreen(context, 'Initializing...'),
-      error: (error, stack) =>
-          _buildErrorScreen(context, ref, 'Initialization failed: $error'),
+      error: (error, stack) => _buildErrorScreen(context, ref, 'Initialization failed: $error'),
     );
   }
 
-  Widget _buildForSessionState(
-    BuildContext context,
-    WidgetRef ref,
-    SessionState session,
-  ) {
+  Widget _buildForSessionState(BuildContext context, WidgetRef ref, SessionState session) {
     return session.when(
       unauthenticated: () => const LoginScreen(),
-      loading: (reason) =>
-          _buildLoadingScreen(context, _getLoadingMessage(reason)),
+      loading: (reason) => _buildLoadingScreen(context, _getLoadingMessage(reason)),
       authenticated: (user, profile) => Column(
         children: [
-          if (kDebugMode)
-            _buildDebugBanner(context, 'Authenticated: ${profile.role.name}'),
+          if (kDebugMode) _buildDebugBanner(context, 'Authenticated: ${profile.role.name}'),
           if (kDebugMode) _buildAndroidConfigBanner(context),
           const Expanded(child: AppShell()),
         ],
       ),
       unprovisioned: (email) => _buildUnprovisionedScreen(context, ref, email),
       disabled: (email) => _buildDisabledScreen(context, ref, email),
-      error: (message, cause) =>
-          _buildErrorScreen(context, ref, message, cause),
+      error: (message, cause) => _buildErrorScreen(context, ref, message, cause),
     );
   }
 
@@ -74,11 +66,7 @@ class AuthGate extends ConsumerWidget {
     );
   }
 
-  Widget _buildUnprovisionedScreen(
-    BuildContext context,
-    WidgetRef ref,
-    String email,
-  ) {
+  Widget _buildUnprovisionedScreen(BuildContext context, WidgetRef ref, String email) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -88,11 +76,7 @@ class AuthGate extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.person_off,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              Icon(Icons.person_off, size: 64, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 24),
 
               Text(
@@ -114,9 +98,7 @@ class AuthGate extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -124,10 +106,7 @@ class AuthGate extends ConsumerWidget {
                       children: [
                         Icon(Icons.info_outline, color: colorScheme.primary),
                         const SizedBox(width: 8),
-                        const Text(
-                          'Next Steps',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                        const Text('Next Steps', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -173,11 +152,7 @@ class AuthGate extends ConsumerWidget {
     );
   }
 
-  Widget _buildDisabledScreen(
-    BuildContext context,
-    WidgetRef ref,
-    String email,
-  ) {
+  Widget _buildDisabledScreen(BuildContext context, WidgetRef ref, String email) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -211,9 +186,7 @@ class AuthGate extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: colorScheme.error.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
@@ -257,12 +230,7 @@ class AuthGate extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorScreen(
-    BuildContext context,
-    WidgetRef ref,
-    String message, [
-    Object? cause,
-  ]) {
+  Widget _buildErrorScreen(BuildContext context, WidgetRef ref, String message, [Object? cause]) {
     final colorScheme = Theme.of(context).colorScheme;
     final warningColor = AppColorScheme.snackWarning;
     return Scaffold(
@@ -278,9 +246,7 @@ class AuthGate extends ConsumerWidget {
 
               Text(
                 'Authentication Error',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineMedium?.copyWith(color: warningColor),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: warningColor),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -301,10 +267,7 @@ class AuthGate extends ConsumerWidget {
                   ),
                   child: Text(
                     'Debug: ${cause.toString()}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
-                    ),
+                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                   ),
                 ),
               ],
@@ -349,11 +312,7 @@ class AuthGate extends ConsumerWidget {
           const SizedBox(width: 8),
           Text(
             'DEBUG: $info',
-            style: TextStyle(
-              fontSize: 12,
-              color: warningColor,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 12, color: warningColor, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -377,20 +336,14 @@ class AuthGate extends ConsumerWidget {
       SnackBar(
         content: Text('Email copied: $email'),
         backgroundColor: AppColorScheme.snackSuccess,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
       ),
     );
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
-      await FcmTokenManager.removeCurrentToken(
-        ref.read(firestoreServiceProvider),
-      );
+      await FcmTokenManager.removeCurrentToken(ref.read(firestoreServiceProvider));
       await FirebaseAuth.instance.signOut();
       safeLog('user_signed_out', {'method': 'auth_gate'});
     } catch (e) {

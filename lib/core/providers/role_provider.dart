@@ -46,8 +46,7 @@ final roleProvider = StreamProvider<UserRole>((ref) {
 
       return firestoreService.watchUser(user.uid).map((snap) {
         final data = snap.data();
-        final roleString =
-            (data != null ? (data['role'] as String?) : null) ?? 'staff';
+        final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
         return roleString == 'admin' ? UserRole.admin : UserRole.staff;
       });
     },
@@ -188,19 +187,18 @@ final currentUserUidProvider = Provider<String?>((ref) {
   return ref.watch(currentUserProvider).valueOrNull?.uid;
 });
 
-final currentUserDocProvider =
-    StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
-      final authAsync = ref.watch(currentUserProvider);
-      final firestoreService = ref.watch(firestoreServiceProvider);
-      return authAsync.when(
-        data: (auth) {
-          if (auth == null) return const Stream.empty();
-          return firestoreService.watchUser(auth.uid);
-        },
-        loading: () => const Stream.empty(),
-        error: (_, __) => const Stream.empty(),
-      );
-    });
+final currentUserDocProvider = StreamProvider<DocumentSnapshot<Map<String, dynamic>>?>((ref) {
+  final authAsync = ref.watch(currentUserProvider);
+  final firestoreService = ref.watch(firestoreServiceProvider);
+  return authAsync.when(
+    data: (auth) {
+      if (auth == null) return const Stream.empty();
+      return firestoreService.watchUser(auth.uid);
+    },
+    loading: () => const Stream.empty(),
+    error: (_, __) => const Stream.empty(),
+  );
+});
 
 final currentUserRoleProvider = Provider<String?>((ref) {
   return ref

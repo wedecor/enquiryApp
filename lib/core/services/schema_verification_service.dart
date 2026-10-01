@@ -46,11 +46,7 @@ class SchemaVerificationService {
       // Verify history subcollections
       results['history'] = await _verifyHistorySchema();
     } catch (e, st) {
-      Log.e(
-        'SchemaVerificationService error during verification',
-        error: e,
-        stackTrace: st,
-      );
+      Log.e('SchemaVerificationService error during verification', error: e, stackTrace: st);
     }
 
     return results;
@@ -63,10 +59,7 @@ class SchemaVerificationService {
     final details = <String, dynamic>{};
 
     try {
-      final usersSnapshot = await _firestore
-          .collection('users')
-          .limit(100)
-          .get();
+      final usersSnapshot = await _firestore.collection('users').limit(100).get();
       int validCount = 0;
       int invalidCount = 0;
 
@@ -108,10 +101,7 @@ class SchemaVerificationService {
     final details = <String, dynamic>{};
 
     try {
-      final enquiriesSnapshot = await _firestore
-          .collection('enquiries')
-          .limit(100)
-          .get();
+      final enquiriesSnapshot = await _firestore.collection('enquiries').limit(100).get();
       int validCount = 0;
       int invalidCount = 0;
 
@@ -173,9 +163,7 @@ class SchemaVerificationService {
             totalValid++;
           } else {
             totalInvalid++;
-            errors.add(
-              'Dropdown $dropdownType/${doc.id}: ${validation.errors.join(', ')}',
-            );
+            errors.add('Dropdown $dropdownType/${doc.id}: ${validation.errors.join(', ')}');
           }
         }
       }
@@ -206,10 +194,7 @@ class SchemaVerificationService {
     final details = <String, dynamic>{};
 
     try {
-      final enquiriesSnapshot = await _firestore
-          .collection('enquiries')
-          .limit(20)
-          .get();
+      final enquiriesSnapshot = await _firestore.collection('enquiries').limit(20).get();
       int totalValid = 0;
       int totalInvalid = 0;
 
@@ -227,9 +212,7 @@ class SchemaVerificationService {
             totalValid++;
           } else {
             totalInvalid++;
-            errors.add(
-              'Financial ${enquiryDoc.id}/${doc.id}: ${validation.errors.join(', ')}',
-            );
+            errors.add('Financial ${enquiryDoc.id}/${doc.id}: ${validation.errors.join(', ')}');
           }
         }
       }
@@ -260,18 +243,12 @@ class SchemaVerificationService {
     final details = <String, dynamic>{};
 
     try {
-      final enquiriesSnapshot = await _firestore
-          .collection('enquiries')
-          .limit(20)
-          .get();
+      final enquiriesSnapshot = await _firestore.collection('enquiries').limit(20).get();
       int totalValid = 0;
       int totalInvalid = 0;
 
       for (final enquiryDoc in enquiriesSnapshot.docs) {
-        final historySnapshot = await enquiryDoc.reference
-            .collection('history')
-            .limit(10)
-            .get();
+        final historySnapshot = await enquiryDoc.reference.collection('history').limit(10).get();
 
         for (final doc in historySnapshot.docs) {
           final data = doc.data();
@@ -281,9 +258,7 @@ class SchemaVerificationService {
             totalValid++;
           } else {
             totalInvalid++;
-            errors.add(
-              'History ${enquiryDoc.id}/${doc.id}: ${validation.errors.join(', ')}',
-            );
+            errors.add('History ${enquiryDoc.id}/${doc.id}: ${validation.errors.join(', ')}');
           }
         }
       }
@@ -335,9 +310,7 @@ class SchemaVerificationService {
     }
 
     // Field value validation
-    if (data.containsKey('name') &&
-        data['name'] is String &&
-        (data['name'] as String).isEmpty) {
+    if (data.containsKey('name') && data['name'] is String && (data['name'] as String).isEmpty) {
       errors.add('name cannot be empty');
     }
     if (data.containsKey('email') &&
@@ -345,9 +318,7 @@ class SchemaVerificationService {
         !(data['email'] as String).contains('@')) {
       errors.add('email must be a valid email address');
     }
-    if (data.containsKey('phone') &&
-        data['phone'] is String &&
-        (data['phone'] as String).isEmpty) {
+    if (data.containsKey('phone') && data['phone'] is String && (data['phone'] as String).isEmpty) {
       errors.add('phone cannot be empty');
     }
     if (data.containsKey('role') &&
@@ -416,8 +387,7 @@ class SchemaVerificationService {
     if (data.containsKey('notes') && data['notes'] is! String) {
       errors.add('notes must be a string');
     }
-    if (data.containsKey('referenceImages') &&
-        data['referenceImages'] is! List) {
+    if (data.containsKey('referenceImages') && data['referenceImages'] is! List) {
       errors.add('referenceImages must be a list');
     }
     if (data.containsKey('createdBy') && data['createdBy'] is! String) {
@@ -490,9 +460,7 @@ class SchemaVerificationService {
     }
 
     // Field value validation
-    if (data.containsKey('value') &&
-        data['value'] is String &&
-        (data['value'] as String).isEmpty) {
+    if (data.containsKey('value') && data['value'] is String && (data['value'] as String).isEmpty) {
       errors.add('value cannot be empty');
     }
 
@@ -559,13 +527,7 @@ class SchemaVerificationService {
     final warnings = <String>[];
 
     // Required fields
-    final requiredFields = [
-      'fieldChanged',
-      'oldValue',
-      'newValue',
-      'changedBy',
-      'timestamp',
-    ];
+    final requiredFields = ['fieldChanged', 'oldValue', 'newValue', 'changedBy', 'timestamp'];
     for (final field in requiredFields) {
       if (!data.containsKey(field)) {
         errors.add('Missing required field: $field');
@@ -632,9 +594,7 @@ class SchemaVerificationService {
           report.writeln('     • $error');
         }
         if (result.errors.length > 5) {
-          report.writeln(
-            '     ... and ${result.errors.length - 5} more errors',
-          );
+          report.writeln('     ... and ${result.errors.length - 5} more errors');
         }
       }
 

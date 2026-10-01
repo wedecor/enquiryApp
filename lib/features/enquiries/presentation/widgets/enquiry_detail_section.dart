@@ -4,11 +4,7 @@ import '../../../../core/theme/tokens.dart';
 
 /// Card wrapper for a labelled section on the enquiry details screen.
 class EnquiryDetailSection extends StatelessWidget {
-  const EnquiryDetailSection({
-    super.key,
-    required this.title,
-    required this.children,
-  });
+  const EnquiryDetailSection({super.key, required this.title, required this.children});
 
   final String title;
   final List<Widget> children;
@@ -31,9 +27,7 @@ class EnquiryDetailSection extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: AppTokens.space3),
               ...children,

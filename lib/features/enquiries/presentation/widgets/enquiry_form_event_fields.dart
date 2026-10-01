@@ -71,9 +71,7 @@ class EnquiryFormEventFields extends ConsumerWidget {
                       ? 'Select Event Date *'
                       : 'Event Date: ${selectedDate!.toString().split(' ')[0]}',
                   style: TextStyle(
-                    color: selectedDate == null
-                        ? colorScheme.onSurfaceVariant
-                        : null,
+                    color: selectedDate == null ? colorScheme.onSurfaceVariant : null,
                   ),
                 ),
               ],
@@ -146,13 +144,11 @@ class EnquiryFormEventFields extends ConsumerWidget {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isEmpty) return null;
               final count = int.tryParse(trimmed);
-              if (count == null || count < 0)
-                return 'Enter a valid guest count';
+              if (count == null || count < 0) return 'Enter a valid guest count';
               return null;
             },
           ),
-        if (guestCountController != null)
-          const SizedBox(height: AppTokens.space4),
+        if (guestCountController != null) const SizedBox(height: AppTokens.space4),
         if (budgetController != null)
           TextFormField(
             controller: budgetController,
@@ -182,8 +178,7 @@ class EnquiryFormEventFields extends ConsumerWidget {
               return null;
             },
           ),
-        if (showLeadSource && onSourceChanged != null)
-          const SizedBox(height: AppTokens.space4),
+        if (showLeadSource && onSourceChanged != null) const SizedBox(height: AppTokens.space4),
         roleAsync.when(
           data: (role) {
             if (role != UserRole.admin) {
@@ -225,12 +220,10 @@ class _AssignToDropdownField extends ConsumerStatefulWidget {
   final ValueChanged<String?> onAssignedToChanged;
 
   @override
-  ConsumerState<_AssignToDropdownField> createState() =>
-      _AssignToDropdownFieldState();
+  ConsumerState<_AssignToDropdownField> createState() => _AssignToDropdownFieldState();
 }
 
-class _AssignToDropdownFieldState
-    extends ConsumerState<_AssignToDropdownField> {
+class _AssignToDropdownFieldState extends ConsumerState<_AssignToDropdownField> {
   String? _inactiveAssigneeLabel;
   String? _loadingInactiveUid;
 
@@ -275,32 +268,21 @@ class _AssignToDropdownFieldState
             !activeIds.contains(selected) &&
             _inactiveAssigneeLabel == null &&
             _loadingInactiveUid != selected) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _loadInactiveLabel(selected),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) => _loadInactiveLabel(selected));
         }
 
         final items = <DropdownMenuItem<String>>[
-          const DropdownMenuItem<String>(
-            value: null,
-            child: Text('Unassigned'),
-          ),
+          const DropdownMenuItem<String>(value: null, child: Text('Unassigned')),
           ...users.docs.map((doc) {
             final user = doc.data() as Map<String, dynamic>;
             return DropdownMenuItem<String>(
               value: doc.id,
-              child: Text(
-                (user['name'] as String?) ??
-                    (user['email'] as String?) ??
-                    'Unknown',
-              ),
+              child: Text((user['name'] as String?) ?? (user['email'] as String?) ?? 'Unknown'),
             );
           }),
         ];
 
-        if (selected != null &&
-            selected.isNotEmpty &&
-            !activeIds.contains(selected)) {
+        if (selected != null && selected.isNotEmpty && !activeIds.contains(selected)) {
           items.add(
             DropdownMenuItem<String>(
               value: selected,

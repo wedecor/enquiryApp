@@ -54,36 +54,24 @@ class ContactLauncher {
       final normalizedPhone = normalize(rawPhone);
 
       if (normalizedPhone.isEmpty || normalizedPhone.length < 8) {
-        Logger.error(
-          'Invalid phone number for calling',
-          tag: 'ContactLauncher',
-        );
+        Logger.error('Invalid phone number for calling', tag: 'ContactLauncher');
         return ContactLaunchStatus.invalidNumber;
       }
 
       final telUri = Uri.parse('tel:$normalizedPhone');
 
       if (await canLaunchUrl(telUri)) {
-        final launched = await launchUrl(
-          telUri,
-          mode: LaunchMode.externalApplication,
-        );
+        final launched = await launchUrl(telUri, mode: LaunchMode.externalApplication);
 
         if (launched) {
-          Logger.info(
-            'Phone dialer launched successfully',
-            tag: 'ContactLauncher',
-          );
+          Logger.info('Phone dialer launched successfully', tag: 'ContactLauncher');
           return ContactLaunchStatus.opened;
         } else {
           Logger.error('Failed to launch phone dialer', tag: 'ContactLauncher');
           return ContactLaunchStatus.failed;
         }
       } else {
-        Logger.error(
-          'Phone dialer not available on this platform',
-          tag: 'ContactLauncher',
-        );
+        Logger.error('Phone dialer not available on this platform', tag: 'ContactLauncher');
         return ContactLaunchStatus.notInstalled;
       }
     } catch (e) {
@@ -96,18 +84,12 @@ class ContactLauncher {
   ///
   /// Tries native WhatsApp app first, falls back to WhatsApp Web
   /// Supports optional prefilled message text
-  Future<ContactLaunchStatus> openWhatsApp(
-    String rawPhone, {
-    String? prefillText,
-  }) async {
+  Future<ContactLaunchStatus> openWhatsApp(String rawPhone, {String? prefillText}) async {
     try {
       final normalizedPhone = normalize(rawPhone);
 
       if (normalizedPhone.isEmpty || normalizedPhone.length < 8) {
-        Logger.error(
-          'Invalid phone number for WhatsApp',
-          tag: 'ContactLauncher',
-        );
+        Logger.error('Invalid phone number for WhatsApp', tag: 'ContactLauncher');
         return ContactLaunchStatus.invalidNumber;
       }
 
@@ -117,9 +99,7 @@ class ContactLauncher {
           : normalizedPhone;
 
       // Encode prefill text for URL
-      final encodedText = prefillText != null
-          ? Uri.encodeComponent(prefillText)
-          : '';
+      final encodedText = prefillText != null ? Uri.encodeComponent(prefillText) : '';
 
       // Try native WhatsApp app first
       final nativeUri = Uri.parse(
@@ -127,16 +107,10 @@ class ContactLauncher {
       );
 
       if (await canLaunchUrl(nativeUri)) {
-        final launched = await launchUrl(
-          nativeUri,
-          mode: LaunchMode.externalApplication,
-        );
+        final launched = await launchUrl(nativeUri, mode: LaunchMode.externalApplication);
 
         if (launched) {
-          Logger.info(
-            'WhatsApp app launched successfully',
-            tag: 'ContactLauncher',
-          );
+          Logger.info('WhatsApp app launched successfully', tag: 'ContactLauncher');
           return ContactLaunchStatus.opened;
         }
       }
@@ -146,22 +120,13 @@ class ContactLauncher {
         'https://wa.me/$whatsappPhone${encodedText.isNotEmpty ? '?text=$encodedText' : ''}',
       );
 
-      final webLaunched = await launchUrl(
-        webUri,
-        mode: LaunchMode.externalApplication,
-      );
+      final webLaunched = await launchUrl(webUri, mode: LaunchMode.externalApplication);
 
       if (webLaunched) {
-        Logger.info(
-          'WhatsApp Web launched successfully',
-          tag: 'ContactLauncher',
-        );
+        Logger.info('WhatsApp Web launched successfully', tag: 'ContactLauncher');
         return ContactLaunchStatus.opened;
       } else {
-        Logger.error(
-          'Failed to launch WhatsApp (both app and web)',
-          tag: 'ContactLauncher',
-        );
+        Logger.error('Failed to launch WhatsApp (both app and web)', tag: 'ContactLauncher');
         return ContactLaunchStatus.failed;
       }
     } catch (e) {
@@ -172,17 +137,11 @@ class ContactLauncher {
 
   /// Log contact action for audit trail
   void _logContactAction(String mode, bool success) {
-    Logger.info(
-      'Contact action: $mode (success: $success)',
-      tag: 'ContactLauncher',
-    );
+    Logger.info('Contact action: $mode (success: $success)', tag: 'ContactLauncher');
   }
 
   /// Launch phone call with audit logging
-  Future<ContactLaunchStatus> callNumberWithAudit(
-    String rawPhone, {
-    String? enquiryId,
-  }) async {
+  Future<ContactLaunchStatus> callNumberWithAudit(String rawPhone, {String? enquiryId}) async {
     final status = await callNumber(rawPhone);
     _logContactAction('call', status == ContactLaunchStatus.opened);
     return status;

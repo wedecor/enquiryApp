@@ -21,8 +21,7 @@ class EventTypeAutocomplete extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EventTypeAutocomplete> createState() =>
-      _EventTypeAutocompleteState();
+  ConsumerState<EventTypeAutocomplete> createState() => _EventTypeAutocompleteState();
 }
 
 class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
@@ -77,10 +76,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       final resolved = DropdownDefaults.resolve(eventTypes, 'event_types');
       Log.d(
         'EventTypeAutocomplete loaded options',
-        data: {
-          'firestoreCount': eventTypes.length,
-          'resolvedCount': resolved.length,
-        },
+        data: {'firestoreCount': eventTypes.length, 'resolvedCount': resolved.length},
       );
       setState(() {
         _eventTypes = resolved;
@@ -109,9 +105,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
       'EventTypeAutocomplete setting initial value',
       data: {'value': widget.initialValue, 'eventCount': _eventTypes.length},
     );
-    if (widget.initialValue != null &&
-        widget.initialValue!.isNotEmpty &&
-        _eventTypes.isNotEmpty) {
+    if (widget.initialValue != null && widget.initialValue!.isNotEmpty && _eventTypes.isNotEmpty) {
       final matchingEventType = _eventTypes.firstWhere(
         (eventType) => eventType['value'] == widget.initialValue,
         orElse: () => <String, String>{},
@@ -124,9 +118,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         });
       } else {
         final matchingByLabel = _eventTypes.firstWhere(
-          (eventType) =>
-              eventType['label']?.toLowerCase() ==
-              widget.initialValue!.toLowerCase(),
+          (eventType) => eventType['label']?.toLowerCase() == widget.initialValue!.toLowerCase(),
           orElse: () => <String, String>{},
         );
 
@@ -156,8 +148,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         final label = type['label'] ?? '';
         final value = type['value'] ?? '';
         final q = query.toLowerCase();
-        return label.toLowerCase().contains(q) ||
-            value.toLowerCase().contains(q);
+        return label.toLowerCase().contains(q) || value.toLowerCase().contains(q);
       }).toList();
 
       setState(() {
@@ -214,9 +205,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             label: trimmedType,
             value: newValue,
             order: _eventTypes.length + 1,
-            createdBy:
-                ref.read(currentUserWithFirestoreProvider).value?.uid ??
-                'unknown',
+            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
           );
 
       await _loadEventTypes();
@@ -320,10 +309,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
             );
           },
         ),
-        if (_showAddButton && !_isLoading) ...[
-          const SizedBox(height: 8),
-          _buildAddNewOption(),
-        ],
+        if (_showAddButton && !_isLoading) ...[const SizedBox(height: 8), _buildAddNewOption()],
       ],
     );
   }
@@ -346,16 +332,10 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const Icon(
-          Icons.add_circle,
-          color: AppColorScheme.snackSuccess,
-        ),
+        leading: const Icon(Icons.add_circle, color: AppColorScheme.snackSuccess),
         title: Text(
           'Add "${_controller.text.trim()}" as new event type',
-          style: const TextStyle(
-            color: AppColorScheme.snackSuccess,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: AppColorScheme.snackSuccess, fontWeight: FontWeight.bold),
         ),
         subtitle: const Text('Admin only'),
         onTap: () => _addNewEventType(_controller.text),

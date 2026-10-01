@@ -30,9 +30,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   static const int _calendarTabIndex = 1;
 
   void _navigateToAnalytics(bool isAdmin) {
-    final idx = _destinations(
-      isAdmin,
-    ).indexWhere((d) => d.label == 'Analytics');
+    final idx = _destinations(isAdmin).indexWhere((d) => d.label == 'Analytics');
     if (idx >= 0) setState(() => _selectedIndex = idx);
   }
 
@@ -44,8 +42,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         selectedIcon: Icons.dashboard,
         body: DashboardScreen(
           embeddedInShell: true,
-          onNavigateToCalendar: () =>
-              setState(() => _selectedIndex = _calendarTabIndex),
+          onNavigateToCalendar: () => setState(() => _selectedIndex = _calendarTabIndex),
           onNavigateToAnalytics: () => _navigateToAnalytics(isAdmin),
         ),
       ),
@@ -88,18 +85,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text(
-          'You will need to sign in again to access the app.',
-        ),
+        content: const Text('You will need to sign in again to access the app.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Sign out'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sign out')),
         ],
       ),
     );
@@ -110,9 +99,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _openNewEnquiry() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
   }
 
   @override
@@ -140,11 +129,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         title: _AppBarTitle(label: current.label),
         actions: [
           _NotificationBell(isAdmin: isAdmin),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
-            onPressed: _signOut,
-          ),
+          IconButton(icon: const Icon(Icons.logout), tooltip: 'Sign Out', onPressed: _signOut),
         ],
       ),
       body: Row(
@@ -153,11 +138,8 @@ class _AppShellState extends ConsumerState<AppShell> {
             NavigationRail(
               extended: railExtended,
               selectedIndex: safeIndex,
-              onDestinationSelected: (index) =>
-                  setState(() => _selectedIndex = index),
-              labelType: railExtended
-                  ? NavigationRailLabelType.none
-                  : NavigationRailLabelType.all,
+              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+              labelType: railExtended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               leading: railExtended
                   ? const Padding(
                       padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -179,18 +161,14 @@ class _AppShellState extends ConsumerState<AppShell> {
             const VerticalDivider(width: 1, thickness: 1),
           ],
           Expanded(
-            child: IndexedStack(
-              index: safeIndex,
-              children: [for (final d in destinations) d.body],
-            ),
+            child: IndexedStack(index: safeIndex, children: [for (final d in destinations) d.body]),
           ),
         ],
       ),
       bottomNavigationBar: useBottomNav
           ? NavigationBar(
               selectedIndex: safeIndex,
-              onDestinationSelected: (index) =>
-                  setState(() => _selectedIndex = index),
+              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
               destinations: [
                 for (final d in destinations)
                   NavigationDestination(
@@ -201,8 +179,7 @@ class _AppShellState extends ConsumerState<AppShell> {
               ],
             )
           : null,
-      floatingActionButton:
-          _showFab(destinations) && permissions.canCreateEnquiries
+      floatingActionButton: _showFab(destinations) && permissions.canCreateEnquiries
           ? FloatingActionButton(
               onPressed: _openNewEnquiry,
               tooltip: 'Add New Enquiry',
@@ -231,9 +208,9 @@ class _NotificationBell extends ConsumerWidget {
 
     return IconButton(
       tooltip: 'Notifications',
-      onPressed: () => Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
-      ),
+      onPressed: () => Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())),
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(count > 99 ? '99+' : '$count'),
@@ -268,11 +245,7 @@ class _AppBarTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        const BrandMark(compact: true),
-        const SizedBox(width: 10),
-        Text(label),
-      ],
+      children: [const BrandMark(compact: true), const SizedBox(width: 10), Text(label)],
     );
   }
 }

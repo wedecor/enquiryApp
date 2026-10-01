@@ -52,16 +52,12 @@ class DashboardTodaySection extends ConsumerWidget {
           if (status == 'new') {
             newUncontacted++;
             final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
-            if (createdAt != null && now.difference(createdAt).inDays > 3)
-              staleNew++;
+            if (createdAt != null && now.difference(createdAt).inDays > 3) staleNew++;
           }
           if (shouldShowReminder(data, now)) pendingReminders++;
-          if (eventDate != null &&
-              eventDate.isAfter(now) &&
-              eventDate.isBefore(weekFromNow)) {
+          if (eventDate != null && eventDate.isAfter(now) && eventDate.isBefore(weekFromNow)) {
             eventsThisWeek++;
-            if (nearestEventDate == null ||
-                eventDate.isBefore(nearestEventDate)) {
+            if (nearestEventDate == null || eventDate.isBefore(nearestEventDate)) {
               nearestEventDate = eventDate;
               nearestEventName = data['customerName'] as String?;
             }
@@ -76,8 +72,7 @@ class DashboardTodaySection extends ConsumerWidget {
           } else if (diff.inDays == 1) {
             thisWeekSublabel = '${nearestEventName ?? 'Event'} — tomorrow';
           } else {
-            thisWeekSublabel =
-                '${nearestEventName ?? 'Event'} in ${diff.inDays}d';
+            thisWeekSublabel = '${nearestEventName ?? 'Event'} in ${diff.inDays}d';
           }
         }
 
@@ -87,9 +82,7 @@ class DashboardTodaySection extends ConsumerWidget {
               bucket: 'new',
               icon: Icons.person_add_outlined,
               label: '$newUncontacted new',
-              sublabel: staleNew > 0
-                  ? '$staleNew waiting 3+ days'
-                  : 'Need first contact',
+              sublabel: staleNew > 0 ? '$staleNew waiting 3+ days' : 'Need first contact',
               urgency: staleNew > 0 ? _Urgency.critical : _Urgency.high,
               onTap: onBucketTap,
             ),
@@ -97,8 +90,7 @@ class DashboardTodaySection extends ConsumerWidget {
             _PriorityBucket(
               bucket: 'reminders',
               icon: Icons.notifications_active_outlined,
-              label:
-                  '$pendingReminders follow-up${pendingReminders == 1 ? '' : 's'}',
+              label: '$pendingReminders follow-up${pendingReminders == 1 ? '' : 's'}',
               sublabel: 'Event within 21 days',
               urgency: _Urgency.medium,
               onTap: onBucketTap,
@@ -149,8 +141,7 @@ class DashboardTodaySection extends ConsumerWidget {
             ),
             LayoutBuilder(
               builder: (context, constraints) {
-                final isWide =
-                    constraints.maxWidth >= AppTokens.breakpointTablet;
+                final isWide = constraints.maxWidth >= AppTokens.breakpointTablet;
 
                 if (isWide) {
                   return Padding(
@@ -173,10 +164,8 @@ class DashboardTodaySection extends ConsumerWidget {
                     padding: AppSpacing.horizontal4,
                     scrollDirection: Axis.horizontal,
                     itemCount: buckets.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(width: AppTokens.space3),
-                    itemBuilder: (context, i) =>
-                        SizedBox(width: 172, child: buckets[i]),
+                    separatorBuilder: (_, __) => const SizedBox(width: AppTokens.space3),
+                    itemBuilder: (context, i) => SizedBox(width: 172, child: buckets[i]),
                   ),
                 );
               },
@@ -266,11 +255,7 @@ class _PriorityBucket extends StatelessWidget {
                               borderRadius: AppRadius.medium,
                             ),
                             alignment: Alignment.center,
-                            child: Icon(
-                              icon,
-                              color: accentColor,
-                              size: AppTokens.iconMedium,
-                            ),
+                            child: Icon(icon, color: accentColor, size: AppTokens.iconMedium),
                           ),
                           const SizedBox(width: AppTokens.space3),
                           Expanded(
@@ -351,11 +336,7 @@ class _AllClearBanner extends StatelessWidget {
                 color: cs.tertiary.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.celebration_outlined,
-                color: cs.tertiary,
-                size: 20,
-              ),
+              child: Icon(Icons.celebration_outlined, color: cs.tertiary, size: 20),
             ),
             const SizedBox(width: AppTokens.space3),
             Expanded(

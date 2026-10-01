@@ -37,17 +37,13 @@ class RoleCheckerPanel extends StatelessWidget {
               children: [
                 Icon(
                   isAdmin ? Icons.admin_panel_settings : Icons.person,
-                  color: isAdmin
-                      ? AppColorScheme.chartGreen
-                      : AppColorScheme.chartAmber,
+                  color: isAdmin ? AppColorScheme.chartGreen : AppColorScheme.chartAmber,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   'Access Check',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -68,9 +64,7 @@ class RoleCheckerPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColorScheme.warningContainerLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: warningColor.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: warningColor.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,9 +87,7 @@ class RoleCheckerPanel extends StatelessWidget {
                       "You're signed in but not an admin. To access User Management actions, "
                       "make sure your Firestore users/{uid} document has role: 'admin' and active: true, "
                       'or sign in as the seeded admin user.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: warningColor,
-                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(color: warningColor),
                     ),
                   ],
                 ),
@@ -106,9 +98,7 @@ class RoleCheckerPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColorScheme.successContainerLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: AppColorScheme.successLight.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -132,16 +122,10 @@ class RoleCheckerPanel extends StatelessWidget {
             Row(
               children: [
                 if (onRefresh != null)
-                  FilledButton.tonal(
-                    onPressed: onRefresh,
-                    child: const Text('Refresh Role'),
-                  ),
+                  FilledButton.tonal(onPressed: onRefresh, child: const Text('Refresh Role')),
                 const SizedBox(width: 12),
                 if (onSignOut != null)
-                  OutlinedButton(
-                    onPressed: onSignOut,
-                    child: const Text('Sign Out'),
-                  ),
+                  OutlinedButton(onPressed: onSignOut, child: const Text('Sign Out')),
               ],
             ),
           ],
@@ -170,15 +154,9 @@ class RoleCheckerPanel extends StatelessWidget {
       ),
       label: Text(
         'Role: ${role.toUpperCase()}',
-        style: TextStyle(
-          fontSize: 12,
-          color: onChip,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(fontSize: 12, color: onChip, fontWeight: FontWeight.w600),
       ),
-      backgroundColor: isAdminRole
-          ? AppColorScheme.chartGreen
-          : AppColorScheme.chartBlue,
+      backgroundColor: isAdminRole ? AppColorScheme.chartGreen : AppColorScheme.chartBlue,
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

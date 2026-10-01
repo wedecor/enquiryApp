@@ -15,18 +15,8 @@ class DashboardEnquiryTabActions {
   });
 
   final void Function(String enquiryId) onView;
-  final Future<void> Function(
-    String? phone,
-    String customerName,
-    String enquiryId,
-  )
-  onCall;
-  final Future<void> Function(
-    String? phone,
-    String customerName,
-    String enquiryId,
-  )
-  onWhatsApp;
+  final Future<void> Function(String? phone, String customerName, String enquiryId) onCall;
+  final Future<void> Function(String? phone, String customerName, String enquiryId) onWhatsApp;
   final Future<void> Function(
     String phone,
     String customerName,
@@ -39,12 +29,6 @@ class DashboardEnquiryTabActions {
   final Future<void> Function(Enquiry enquiry) onUpdateStatus;
   final Future<void> Function(Enquiry enquiry) onShare;
   final Future<void> Function(Enquiry enquiry) onAddNote;
-  final Future<void> Function(
-    String phone,
-    String customerName,
-    String enquiryId,
-  )
-  onReviewRequest;
-  final Future<void> Function(String enquiryId, String userId)
-  onMarkNotInterested;
+  final Future<void> Function(String phone, String customerName, String enquiryId) onReviewRequest;
+  final Future<void> Function(String enquiryId, String userId) onMarkNotInterested;
 }

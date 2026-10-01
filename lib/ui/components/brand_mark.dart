@@ -21,18 +21,13 @@ class BrandMark extends StatelessWidget {
             Container(
               width: 10,
               height: 10,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
             ),
             if (!compact) ...[
               const SizedBox(width: AppTokens.space2),
               Text(
                 'We Decor',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ],

@@ -5,13 +5,7 @@ part 'app_notification.freezed.dart';
 part 'app_notification.g.dart';
 
 /// Enumeration of notification types
-enum NotificationType {
-  enquiryUpdate,
-  newEnquiry,
-  assignment,
-  statusChange,
-  paymentUpdate,
-}
+enum NotificationType { enquiryUpdate, newEnquiry, assignment, statusChange, paymentUpdate }
 
 /// Represents an application notification
 @freezed
@@ -29,8 +23,7 @@ class AppNotification with _$AppNotification {
     Map<String, dynamic>? metadata,
   }) = _AppNotification;
 
-  factory AppNotification.fromJson(Map<String, dynamic> json) =>
-      _$AppNotificationFromJson(json);
+  factory AppNotification.fromJson(Map<String, dynamic> json) => _$AppNotificationFromJson(json);
 
   /// Create from Firestore document
   factory AppNotification.fromFirestore(DocumentSnapshot doc) {

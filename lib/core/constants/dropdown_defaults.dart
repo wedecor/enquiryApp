@@ -4,9 +4,8 @@ import 'status_vocabulary.dart';
 class DropdownDefaults {
   DropdownDefaults._();
 
-  static List<Map<String, String>> get statuses => EnquiryStatus.values
-      .map((s) => {'label': s.label, 'value': s.value})
-      .toList(growable: false);
+  static List<Map<String, String>> get statuses =>
+      EnquiryStatus.values.map((s) => {'label': s.label, 'value': s.value}).toList(growable: false);
 
   static const List<Map<String, String>> paymentStatuses = [
     {'label': 'Pending', 'value': 'pending'},
@@ -85,9 +84,7 @@ class DropdownDefaults {
     return forCollection(collectionName);
   }
 
-  static List<Map<String, String>> resolveStatusOptions(
-    List<Map<String, String>> fetched,
-  ) {
+  static List<Map<String, String>> resolveStatusOptions(List<Map<String, String>> fetched) {
     final labelOverrides = <String, String>{};
     for (final item in fetched) {
       final canonical = EnquiryStatus.fromValue(item['value']);
@@ -98,20 +95,12 @@ class DropdownDefaults {
       }
     }
     return EnquiryStatus.values
-        .map(
-          (s) => {
-            'value': s.value,
-            'label': labelOverrides[s.value] ?? s.label,
-          },
-        )
+        .map((s) => {'value': s.value, 'label': labelOverrides[s.value] ?? s.label})
         .toList(growable: false);
   }
 
   /// Returns [fetched] when non-empty; otherwise built-in value→label defaults.
-  static Map<String, String> resolveMap(
-    Map<String, String> fetched,
-    String collectionName,
-  ) {
+  static Map<String, String> resolveMap(Map<String, String> fetched, String collectionName) {
     if (collectionName == 'statuses') {
       final canonical = valueLabelMapFor('statuses');
       if (fetched.isEmpty) return canonical;

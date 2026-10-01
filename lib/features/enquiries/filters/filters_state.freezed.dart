@@ -31,16 +31,13 @@ mixin _$EnquiryFilters {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $EnquiryFiltersCopyWith<EnquiryFilters> get copyWith =>
-      throw _privateConstructorUsedError;
+  $EnquiryFiltersCopyWith<EnquiryFilters> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $EnquiryFiltersCopyWith<$Res> {
-  factory $EnquiryFiltersCopyWith(
-    EnquiryFilters value,
-    $Res Function(EnquiryFilters) then,
-  ) = _$EnquiryFiltersCopyWithImpl<$Res, EnquiryFilters>;
+  factory $EnquiryFiltersCopyWith(EnquiryFilters value, $Res Function(EnquiryFilters) then) =
+      _$EnquiryFiltersCopyWithImpl<$Res, EnquiryFilters>;
   @useResult
   $Res call({
     List<String> statuses,
@@ -125,8 +122,7 @@ class _$EnquiryFiltersCopyWithImpl<$Res, $Val extends EnquiryFilters>
 }
 
 /// @nodoc
-abstract class _$$EnquiryFiltersImplCopyWith<$Res>
-    implements $EnquiryFiltersCopyWith<$Res> {
+abstract class _$$EnquiryFiltersImplCopyWith<$Res> implements $EnquiryFiltersCopyWith<$Res> {
   factory _$$EnquiryFiltersImplCopyWith(
     _$EnquiryFiltersImpl value,
     $Res Function(_$EnquiryFiltersImpl) then,
@@ -261,19 +257,12 @@ class _$EnquiryFiltersImpl implements _EnquiryFilters {
         (other.runtimeType == runtimeType &&
             other is _$EnquiryFiltersImpl &&
             const DeepCollectionEquality().equals(other._statuses, _statuses) &&
-            const DeepCollectionEquality().equals(
-              other._eventTypes,
-              _eventTypes,
-            ) &&
-            (identical(other.assigneeId, assigneeId) ||
-                other.assigneeId == assigneeId) &&
-            (identical(other.dateRange, dateRange) ||
-                other.dateRange == dateRange) &&
-            (identical(other.searchQuery, searchQuery) ||
-                other.searchQuery == searchQuery) &&
+            const DeepCollectionEquality().equals(other._eventTypes, _eventTypes) &&
+            (identical(other.assigneeId, assigneeId) || other.assigneeId == assigneeId) &&
+            (identical(other.dateRange, dateRange) || other.dateRange == dateRange) &&
+            (identical(other.searchQuery, searchQuery) || other.searchQuery == searchQuery) &&
             (identical(other.sortBy, sortBy) || other.sortBy == sortBy) &&
-            (identical(other.sortOrder, sortOrder) ||
-                other.sortOrder == sortOrder));
+            (identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder));
   }
 
   @JsonKey(ignore: true)
@@ -293,10 +282,7 @@ class _$EnquiryFiltersImpl implements _EnquiryFilters {
   @override
   @pragma('vm:prefer-inline')
   _$$EnquiryFiltersImplCopyWith<_$EnquiryFiltersImpl> get copyWith =>
-      __$$EnquiryFiltersImplCopyWithImpl<_$EnquiryFiltersImpl>(
-        this,
-        _$identity,
-      );
+      __$$EnquiryFiltersImplCopyWithImpl<_$EnquiryFiltersImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
@@ -315,8 +301,7 @@ abstract class _EnquiryFilters implements EnquiryFilters {
     final SortOrder sortOrder,
   }) = _$EnquiryFiltersImpl;
 
-  factory _EnquiryFilters.fromJson(Map<String, dynamic> json) =
-      _$EnquiryFiltersImpl.fromJson;
+  factory _EnquiryFilters.fromJson(Map<String, dynamic> json) = _$EnquiryFiltersImpl.fromJson;
 
   @override
   List<String> get statuses;
@@ -349,16 +334,13 @@ mixin _$FilterDateRange {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $FilterDateRangeCopyWith<FilterDateRange> get copyWith =>
-      throw _privateConstructorUsedError;
+  $FilterDateRangeCopyWith<FilterDateRange> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $FilterDateRangeCopyWith<$Res> {
-  factory $FilterDateRangeCopyWith(
-    FilterDateRange value,
-    $Res Function(FilterDateRange) then,
-  ) = _$FilterDateRangeCopyWithImpl<$Res, FilterDateRange>;
+  factory $FilterDateRangeCopyWith(FilterDateRange value, $Res Function(FilterDateRange) then) =
+      _$FilterDateRangeCopyWithImpl<$Res, FilterDateRange>;
   @useResult
   $Res call({DateTime start, DateTime end});
 }
@@ -393,8 +375,7 @@ class _$FilterDateRangeCopyWithImpl<$Res, $Val extends FilterDateRange>
 }
 
 /// @nodoc
-abstract class _$$FilterDateRangeImplCopyWith<$Res>
-    implements $FilterDateRangeCopyWith<$Res> {
+abstract class _$$FilterDateRangeImplCopyWith<$Res> implements $FilterDateRangeCopyWith<$Res> {
   factory _$$FilterDateRangeImplCopyWith(
     _$FilterDateRangeImpl value,
     $Res Function(_$FilterDateRangeImpl) then,
@@ -466,10 +447,7 @@ class _$FilterDateRangeImpl implements _FilterDateRange {
   @override
   @pragma('vm:prefer-inline')
   _$$FilterDateRangeImplCopyWith<_$FilterDateRangeImpl> get copyWith =>
-      __$$FilterDateRangeImplCopyWithImpl<_$FilterDateRangeImpl>(
-        this,
-        _$identity,
-      );
+      __$$FilterDateRangeImplCopyWithImpl<_$FilterDateRangeImpl>(this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
@@ -478,13 +456,10 @@ class _$FilterDateRangeImpl implements _FilterDateRange {
 }
 
 abstract class _FilterDateRange implements FilterDateRange {
-  const factory _FilterDateRange({
-    required final DateTime start,
-    required final DateTime end,
-  }) = _$FilterDateRangeImpl;
+  const factory _FilterDateRange({required final DateTime start, required final DateTime end}) =
+      _$FilterDateRangeImpl;
 
-  factory _FilterDateRange.fromJson(Map<String, dynamic> json) =
-      _$FilterDateRangeImpl.fromJson;
+  factory _FilterDateRange.fromJson(Map<String, dynamic> json) = _$FilterDateRangeImpl.fromJson;
 
   @override
   DateTime get start;
@@ -511,8 +486,7 @@ mixin _$SavedView {
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
-  $SavedViewCopyWith<SavedView> get copyWith =>
-      throw _privateConstructorUsedError;
+  $SavedViewCopyWith<SavedView> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -533,8 +507,7 @@ abstract class $SavedViewCopyWith<$Res> {
 }
 
 /// @nodoc
-class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView>
-    implements $SavedViewCopyWith<$Res> {
+class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView> implements $SavedViewCopyWith<$Res> {
   _$SavedViewCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
@@ -593,12 +566,9 @@ class _$SavedViewCopyWithImpl<$Res, $Val extends SavedView>
 }
 
 /// @nodoc
-abstract class _$$SavedViewImplCopyWith<$Res>
-    implements $SavedViewCopyWith<$Res> {
-  factory _$$SavedViewImplCopyWith(
-    _$SavedViewImpl value,
-    $Res Function(_$SavedViewImpl) then,
-  ) = __$$SavedViewImplCopyWithImpl<$Res>;
+abstract class _$$SavedViewImplCopyWith<$Res> implements $SavedViewCopyWith<$Res> {
+  factory _$$SavedViewImplCopyWith(_$SavedViewImpl value, $Res Function(_$SavedViewImpl) then) =
+      __$$SavedViewImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({
@@ -615,13 +585,10 @@ abstract class _$$SavedViewImplCopyWith<$Res>
 }
 
 /// @nodoc
-class __$$SavedViewImplCopyWithImpl<$Res>
-    extends _$SavedViewCopyWithImpl<$Res, _$SavedViewImpl>
+class __$$SavedViewImplCopyWithImpl<$Res> extends _$SavedViewCopyWithImpl<$Res, _$SavedViewImpl>
     implements _$$SavedViewImplCopyWith<$Res> {
-  __$$SavedViewImplCopyWithImpl(
-    _$SavedViewImpl _value,
-    $Res Function(_$SavedViewImpl) _then,
-  ) : super(_value, _then);
+  __$$SavedViewImplCopyWithImpl(_$SavedViewImpl _value, $Res Function(_$SavedViewImpl) _then)
+    : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -676,8 +643,7 @@ class _$SavedViewImpl implements _SavedView {
     required this.updatedAt,
   });
 
-  factory _$SavedViewImpl.fromJson(Map<String, dynamic> json) =>
-      _$$SavedViewImplFromJson(json);
+  factory _$SavedViewImpl.fromJson(Map<String, dynamic> json) => _$$SavedViewImplFromJson(json);
 
   @override
   final String id;
@@ -706,25 +672,14 @@ class _$SavedViewImpl implements _SavedView {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.filters, filters) || other.filters == filters) &&
-            (identical(other.isDefault, isDefault) ||
-                other.isDefault == isDefault) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
-                other.updatedAt == updatedAt));
+            (identical(other.isDefault, isDefault) || other.isDefault == isDefault) &&
+            (identical(other.createdAt, createdAt) || other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    id,
-    name,
-    filters,
-    isDefault,
-    createdAt,
-    updatedAt,
-  );
+  int get hashCode => Object.hash(runtimeType, id, name, filters, isDefault, createdAt, updatedAt);
 
   @JsonKey(ignore: true)
   @override
@@ -748,8 +703,7 @@ abstract class _SavedView implements SavedView {
     required final DateTime updatedAt,
   }) = _$SavedViewImpl;
 
-  factory _SavedView.fromJson(Map<String, dynamic> json) =
-      _$SavedViewImpl.fromJson;
+  factory _SavedView.fromJson(Map<String, dynamic> json) = _$SavedViewImpl.fromJson;
 
   @override
   String get id;
@@ -765,8 +719,7 @@ abstract class _SavedView implements SavedView {
   DateTime get updatedAt;
   @override
   @JsonKey(ignore: true)
-  _$$SavedViewImplCopyWith<_$SavedViewImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+  _$$SavedViewImplCopyWith<_$SavedViewImpl> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
@@ -776,16 +729,13 @@ mixin _$SavedViewsState {
   String? get error => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
-  $SavedViewsStateCopyWith<SavedViewsState> get copyWith =>
-      throw _privateConstructorUsedError;
+  $SavedViewsStateCopyWith<SavedViewsState> get copyWith => throw _privateConstructorUsedError;
 }
 
 /// @nodoc
 abstract class $SavedViewsStateCopyWith<$Res> {
-  factory $SavedViewsStateCopyWith(
-    SavedViewsState value,
-    $Res Function(SavedViewsState) then,
-  ) = _$SavedViewsStateCopyWithImpl<$Res, SavedViewsState>;
+  factory $SavedViewsStateCopyWith(SavedViewsState value, $Res Function(SavedViewsState) then) =
+      _$SavedViewsStateCopyWithImpl<$Res, SavedViewsState>;
   @useResult
   $Res call({List<SavedView> views, bool isLoading, String? error});
 }
@@ -802,11 +752,7 @@ class _$SavedViewsStateCopyWithImpl<$Res, $Val extends SavedViewsState>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? views = null,
-    Object? isLoading = null,
-    Object? error = freezed,
-  }) {
+  $Res call({Object? views = null, Object? isLoading = null, Object? error = freezed}) {
     return _then(
       _value.copyWith(
             views: null == views
@@ -828,8 +774,7 @@ class _$SavedViewsStateCopyWithImpl<$Res, $Val extends SavedViewsState>
 }
 
 /// @nodoc
-abstract class _$$SavedViewsStateImplCopyWith<$Res>
-    implements $SavedViewsStateCopyWith<$Res> {
+abstract class _$$SavedViewsStateImplCopyWith<$Res> implements $SavedViewsStateCopyWith<$Res> {
   factory _$$SavedViewsStateImplCopyWith(
     _$SavedViewsStateImpl value,
     $Res Function(_$SavedViewsStateImpl) then,
@@ -850,11 +795,7 @@ class __$$SavedViewsStateImplCopyWithImpl<$Res>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? views = null,
-    Object? isLoading = null,
-    Object? error = freezed,
-  }) {
+  $Res call({Object? views = null, Object? isLoading = null, Object? error = freezed}) {
     return _then(
       _$SavedViewsStateImpl(
         views: null == views
@@ -909,27 +850,19 @@ class _$SavedViewsStateImpl implements _SavedViewsState {
         (other.runtimeType == runtimeType &&
             other is _$SavedViewsStateImpl &&
             const DeepCollectionEquality().equals(other._views, _views) &&
-            (identical(other.isLoading, isLoading) ||
-                other.isLoading == isLoading) &&
+            (identical(other.isLoading, isLoading) || other.isLoading == isLoading) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    const DeepCollectionEquality().hash(_views),
-    isLoading,
-    error,
-  );
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(_views), isLoading, error);
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SavedViewsStateImplCopyWith<_$SavedViewsStateImpl> get copyWith =>
-      __$$SavedViewsStateImplCopyWithImpl<_$SavedViewsStateImpl>(
-        this,
-        _$identity,
-      );
+      __$$SavedViewsStateImplCopyWithImpl<_$SavedViewsStateImpl>(this, _$identity);
 }
 
 abstract class _SavedViewsState implements SavedViewsState {

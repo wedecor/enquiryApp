@@ -57,14 +57,8 @@ void main() {
     });
 
     test('staff can move approved directly to completed', () {
-      expect(
-        EnquiryStatus.isStaffTransitionAllowed('approved', 'completed'),
-        isTrue,
-      );
-      expect(
-        EnquiryStatus.isStaffTransitionAllowed('approved', 'scheduled'),
-        isFalse,
-      );
+      expect(EnquiryStatus.isStaffTransitionAllowed('approved', 'completed'), isTrue);
+      expect(EnquiryStatus.isStaffTransitionAllowed('approved', 'scheduled'), isFalse);
     });
   });
 }

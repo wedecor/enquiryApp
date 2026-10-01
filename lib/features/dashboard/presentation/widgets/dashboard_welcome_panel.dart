@@ -60,9 +60,7 @@ class DashboardWelcomePanel extends StatelessWidget {
                   radius: 22,
                   backgroundColor: cs.primary,
                   child: Text(
-                    user?.name.isNotEmpty == true
-                        ? user!.name[0].toUpperCase()
-                        : 'U',
+                    user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: cs.onPrimary,
@@ -77,18 +75,14 @@ class DashboardWelcomePanel extends StatelessWidget {
                     children: [
                       Text(
                         _greeting(user?.name),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: AppTokens.space1),
                       Text(
                         todayLabel,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
+                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                       const SizedBox(height: AppTokens.space2),
                       _RoleBadge(isAdmin: isAdmin),
@@ -107,10 +101,7 @@ class DashboardWelcomePanel extends StatelessWidget {
                           vertical: AppTokens.space2,
                         ),
                       ),
-                      icon: const Icon(
-                        Icons.insights_outlined,
-                        size: AppTokens.iconSmall,
-                      ),
+                      icon: const Icon(Icons.insights_outlined, size: AppTokens.iconSmall),
                       label: const Text('Analytics'),
                     ),
                   ),
@@ -132,9 +123,7 @@ class DashboardWelcomePanel extends StatelessWidget {
 
   String _greeting(String? name) {
     final hour = DateTime.now().hour;
-    final salutation = name?.isNotEmpty == true
-        ? ', ${name!.split(' ').first}'
-        : '';
+    final salutation = name?.isNotEmpty == true ? ', ${name!.split(' ').first}' : '';
     if (hour < 12) return 'Good morning$salutation';
     if (hour < 17) return 'Good afternoon$salutation';
     return 'Good evening$salutation';
@@ -152,10 +141,7 @@ class _RoleBadge extends StatelessWidget {
     final cs = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTokens.space2,
-        vertical: AppTokens.space1,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
       decoration: BoxDecoration(
         color: isAdmin ? cs.secondaryContainer : cs.tertiaryContainer,
         borderRadius: AppRadius.full,

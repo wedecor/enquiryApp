@@ -28,9 +28,7 @@ class EventTypePieChart extends StatelessWidget {
         final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
         return AnalyticsSectionCard(
           title: title,
-          child: narrow
-              ? _buildChart(context)
-              : SizedBox(height: 300, child: _buildChart(context)),
+          child: narrow ? _buildChart(context) : SizedBox(height: 300, child: _buildChart(context)),
         );
       },
     );
@@ -136,8 +134,7 @@ class EventTypePieChart extends StatelessWidget {
   }
 
   Color _getColor(int index) {
-    return AppColorScheme.chartPalette[index %
-        AppColorScheme.chartPalette.length];
+    return AppColorScheme.chartPalette[index % AppColorScheme.chartPalette.length];
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -145,25 +142,20 @@ class EventTypePieChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.pie_chart,
-            size: 48,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          Icon(Icons.pie_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
     );
   }
 
-  String _labelFor(CategoryCount item) =>
-      item.label ?? DropdownLookup.titleCase(item.key);
+  String _labelFor(CategoryCount item) => item.label ?? DropdownLookup.titleCase(item.key);
 }
 
 /// Horizontal bar chart for source breakdown
@@ -207,12 +199,8 @@ class SourceBarChart extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -223,10 +211,7 @@ class SourceBarChart extends StatelessWidget {
                     axisSide: meta.axisSide,
                     child: Text(
                       _truncateLabel(_labelFor(data[index])),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppColorScheme.neutralGrey,
-                      ),
+                      style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
                     ),
                   );
                 }
@@ -244,10 +229,7 @@ class SourceBarChart extends StatelessWidget {
                   axisSide: meta.axisSide,
                   child: Text(
                     value.toInt().toString(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColorScheme.neutralGrey,
-                    ),
+                    style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
                   ),
                 );
               },
@@ -256,9 +238,7 @@ class SourceBarChart extends StatelessWidget {
         ),
         borderData: FlBorderData(
           show: true,
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         barGroups: _getBarGroups(primary),
         gridData: FlGridData(
@@ -266,10 +246,7 @@ class SourceBarChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: _getHorizontalInterval(),
           getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: Theme.of(context).colorScheme.outlineVariant,
-              strokeWidth: 1,
-            );
+            return FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1);
           },
         ),
       ),
@@ -315,17 +292,13 @@ class SourceBarChart extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.bar_chart,
-            size: 48,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+          Icon(Icons.bar_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -333,19 +306,14 @@ class SourceBarChart extends StatelessWidget {
   }
 }
 
-String _labelFor(CategoryCount item) =>
-    item.label ?? DropdownLookup.titleCase(item.key);
+String _labelFor(CategoryCount item) => item.label ?? DropdownLookup.titleCase(item.key);
 
 /// Stacked bar chart for status breakdown
 class StatusStackedBarChart extends StatelessWidget {
   final List<CategoryCount> data;
   final String title;
 
-  const StatusStackedBarChart({
-    super.key,
-    required this.data,
-    required this.title,
-  });
+  const StatusStackedBarChart({super.key, required this.data, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -361,9 +329,7 @@ class StatusStackedBarChart extends StatelessWidget {
         final narrow = constraints.maxWidth < AppTokens.breakpointMobile + 80;
         return AnalyticsSectionCard(
           title: title,
-          child: narrow
-              ? _buildChart(context)
-              : SizedBox(height: 300, child: _buildChart(context)),
+          child: narrow ? _buildChart(context) : SizedBox(height: 300, child: _buildChart(context)),
         );
       },
     );
@@ -383,10 +349,7 @@ class StatusStackedBarChart extends StatelessWidget {
                   child: BarChart(
                     BarChartData(
                       alignment: BarChartAlignment.center,
-                      maxY: data.fold<double>(
-                        0,
-                        (sum, item) => sum + item.count.toDouble(),
-                      ),
+                      maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
                       barTouchData: BarTouchData(
                         enabled: true,
                         touchTooltipData: BarTouchTooltipData(
@@ -409,10 +372,7 @@ class StatusStackedBarChart extends StatelessWidget {
                           x: 0,
                           barRods: [
                             BarChartRodData(
-                              toY: data.fold<double>(
-                                0,
-                                (sum, item) => sum + item.count.toDouble(),
-                              ),
+                              toY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
                               rodStackItems: _getStackItems(),
                               width: 60,
                               borderRadius: BorderRadius.circular(4),
@@ -438,10 +398,7 @@ class StatusStackedBarChart extends StatelessWidget {
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.center,
-                  maxY: data.fold<double>(
-                    0,
-                    (sum, item) => sum + item.count.toDouble(),
-                  ),
+                  maxY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
                   barTouchData: BarTouchData(
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
@@ -464,10 +421,7 @@ class StatusStackedBarChart extends StatelessWidget {
                       x: 0,
                       barRods: [
                         BarChartRodData(
-                          toY: data.fold<double>(
-                            0,
-                            (sum, item) => sum + item.count.toDouble(),
-                          ),
+                          toY: data.fold<double>(0, (sum, item) => sum + item.count.toDouble()),
                           rodStackItems: _getStackItems(),
                           width: 60,
                           borderRadius: BorderRadius.circular(4),
@@ -494,9 +448,7 @@ class StatusStackedBarChart extends StatelessWidget {
     for (int i = 0; i < data.length; i++) {
       final item = data[i];
       final color = _getStatusColor(item.key);
-      stackItems.add(
-        BarChartRodStackItem(currentY, currentY + item.count.toDouble(), color),
-      );
+      stackItems.add(BarChartRodStackItem(currentY, currentY + item.count.toDouble(), color));
       currentY += item.count.toDouble();
     }
 
@@ -517,10 +469,7 @@ class StatusStackedBarChart extends StatelessWidget {
               Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -539,16 +488,12 @@ class StatusStackedBarChart extends StatelessWidget {
 
   Color _getStatusColor(String status) => AppColorScheme.statusColorFor(status);
 
-  String _statusLabel(CategoryCount item) =>
-      item.label ?? _formatStatusName(item.key);
+  String _statusLabel(CategoryCount item) => item.label ?? _formatStatusName(item.key);
 
   String _formatStatusName(String status) {
     return status
         .split('_')
-        .map(
-          (word) =>
-              word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '',
-        )
+        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
         .join(' ');
   }
 
@@ -565,9 +510,9 @@ class StatusStackedBarChart extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No data available',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),

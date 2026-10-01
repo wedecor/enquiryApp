@@ -4,11 +4,7 @@ import '../../../../core/theme/tokens.dart';
 
 /// Label/value row for enquiry detail sections.
 class EnquiryDetailInfoRow extends StatelessWidget {
-  const EnquiryDetailInfoRow({
-    super.key,
-    required this.label,
-    required this.value,
-  });
+  const EnquiryDetailInfoRow({super.key, required this.label, required this.value});
 
   final String label;
   final dynamic value;
@@ -31,12 +27,7 @@ class EnquiryDetailInfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value?.toString() ?? 'N/A',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
+          Expanded(child: Text(value?.toString() ?? 'N/A', style: theme.textTheme.bodyMedium)),
         ],
       ),
     );

@@ -59,11 +59,7 @@ class EnquiryListRow extends StatelessWidget {
     final cs = theme.colorScheme;
     final accentColor =
         statusColor ??
-        resolveStatusColor(
-          context,
-          statusValue,
-          firestoreColors: firestoreStatusColors,
-        );
+        resolveStatusColor(context, statusValue, firestoreColors: firestoreStatusColors);
     final chipLabel = statusLabel ?? _formatStatusLabel(statusValue);
     final isLight = cs.brightness == Brightness.light;
 
@@ -76,10 +72,8 @@ class EnquiryListRow extends StatelessWidget {
     final eventColor = EventColors.accentFor(eventTypeValue ?? eventTypeLabel);
 
     // Whether the structured meta row has anything to show
-    final hasStructuredMeta =
-        location != null || ageLabel != null || assigneeLabel != null;
-    final hasLegacyMeta =
-        secondaryMeta != null && secondaryMeta!.trim().isNotEmpty;
+    final hasStructuredMeta = location != null || ageLabel != null || assigneeLabel != null;
+    final hasLegacyMeta = secondaryMeta != null && secondaryMeta!.trim().isNotEmpty;
     final showMeta = !compact && (hasStructuredMeta || hasLegacyMeta);
 
     return Padding(
@@ -90,27 +84,20 @@ class EnquiryListRow extends StatelessWidget {
         shadowColor: cs.shadow.withValues(alpha: 0.06),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.large,
-          side: BorderSide(
-            color: cs.outlineVariant.withValues(alpha: isLight ? 0.75 : 0.5),
-          ),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: isLight ? 0.75 : 0.5)),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           onLongPress: onLongPress,
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: isLight ? AppShadows.elevation1 : null,
-            ),
+            decoration: BoxDecoration(boxShadow: isLight ? AppShadows.elevation1 : null),
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // ── Status strip ───────────────────────────────────────
-                  ColoredBox(
-                    color: accentColor,
-                    child: const SizedBox(width: 5),
-                  ),
+                  ColoredBox(color: accentColor, child: const SizedBox(width: 5)),
 
                   // ── Content ────────────────────────────────────────────
                   Expanded(
@@ -164,12 +151,10 @@ class EnquiryListRow extends StatelessWidget {
                                       secondaryMeta!.trim(),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: cs.onSurfaceVariant
-                                                .withValues(alpha: 0.8),
-                                            fontSize: AppTokens.fontSizeSmall,
-                                          ),
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                                        fontSize: AppTokens.fontSizeSmall,
+                                      ),
                                     ),
                                 ],
                               ],
@@ -262,9 +247,7 @@ class _EventLine extends StatelessWidget {
               eventDateLabel.trim(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ),
         ],
@@ -295,19 +278,13 @@ class _StructuredMeta extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <_MetaItem>[];
     if (location != null && location!.trim().isNotEmpty) {
-      items.add(
-        _MetaItem(icon: Icons.location_on_outlined, label: location!.trim()),
-      );
+      items.add(_MetaItem(icon: Icons.location_on_outlined, label: location!.trim()));
     }
     if (ageLabel != null && ageLabel!.trim().isNotEmpty) {
-      items.add(
-        _MetaItem(icon: Icons.access_time_outlined, label: ageLabel!.trim()),
-      );
+      items.add(_MetaItem(icon: Icons.access_time_outlined, label: ageLabel!.trim()));
     }
     if (assigneeLabel != null && assigneeLabel!.trim().isNotEmpty) {
-      items.add(
-        _MetaItem(icon: Icons.person_outline, label: assigneeLabel!.trim()),
-      );
+      items.add(_MetaItem(icon: Icons.person_outline, label: assigneeLabel!.trim()));
     }
     if (items.isEmpty) return const SizedBox.shrink();
 
@@ -319,11 +296,7 @@ class _StructuredMeta extends StatelessWidget {
             (item) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  item.icon,
-                  size: 12,
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.65),
-                ),
+                Icon(item.icon, size: 12, color: cs.onSurfaceVariant.withValues(alpha: 0.65)),
                 const SizedBox(width: 3),
                 Text(
                   item.label,
@@ -358,10 +331,7 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 96),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTokens.space2,
-        vertical: AppTokens.space1,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: AppTokens.space1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: AppRadius.full,
@@ -372,10 +342,9 @@ class _StatusChip extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
       ),
     );
   }

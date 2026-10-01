@@ -55,9 +55,7 @@ class ContactService {
     }
 
     // Mobile platform: Use flutter_contacts
-    final permissionGranted = await FlutterContacts.requestPermission(
-      readonly: false,
-    );
+    final permissionGranted = await FlutterContacts.requestPermission(readonly: false);
 
     if (!permissionGranted) {
       Log.w(
@@ -85,10 +83,7 @@ class ContactService {
     }
 
     if (existing) {
-      Log.d(
-        'contact_save_skipped_exists',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.d('contact_save_skipped_exists', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.alreadyExists;
     }
 
@@ -114,37 +109,25 @@ class ContactService {
     final lastName = nameParts.lastName.trim();
 
     if (firstName.isEmpty && lastName.isEmpty) {
-      Log.w(
-        'contact_save_invalid_name',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.w('contact_save_invalid_name', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.invalidInput;
     }
 
     try {
       // Create contact with defensive checks
       final contact = Contact()
-        ..name = Name(
-          first: firstName.isEmpty ? 'Customer' : firstName,
-          last: lastName,
-        )
+        ..name = Name(first: firstName.isEmpty ? 'Customer' : firstName, last: lastName)
         ..phones = [Phone(formattedPhone, label: PhoneLabel.mobile)];
 
       // Add timeout to prevent hanging on OnePlus devices
       await FlutterContacts.insertContact(contact).timeout(
         const Duration(seconds: 15),
         onTimeout: () {
-          throw TimeoutException(
-            'Contact insertion timed out',
-            const Duration(seconds: 15),
-          );
+          throw TimeoutException('Contact insertion timed out', const Duration(seconds: 15));
         },
       );
 
-      Log.i(
-        'contact_save_success',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.i('contact_save_success', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.saved;
     } on TimeoutException catch (error, stack) {
       Log.e(
@@ -204,10 +187,7 @@ class ContactService {
       // Copy to clipboard
       await Clipboard.setData(ClipboardData(text: vCard.toString()));
 
-      Log.i(
-        'contact_save_web_clipboard',
-        data: {'name': sanitizedName, 'phone': formattedPhone},
-      );
+      Log.i('contact_save_web_clipboard', data: {'name': sanitizedName, 'phone': formattedPhone});
       return ContactSaveStatus.copiedToClipboard;
     } catch (error, stack) {
       Log.e(
@@ -228,9 +208,7 @@ class ContactService {
 
     try {
       // Request permission again to ensure we have it
-      final hasPermission = await FlutterContacts.requestPermission(
-        readonly: true,
-      );
+      final hasPermission = await FlutterContacts.requestPermission(readonly: true);
       if (!hasPermission) {
         Log.w('contact_check_permission_denied', data: {'phone': phoneDigits});
         return false; // Assume doesn't exist if we can't check
@@ -244,9 +222,7 @@ class ContactService {
 
       return candidates.any((contact) {
         try {
-          return contact.phones.any(
-            (phoneEntry) => _digitsOnly(phoneEntry.number) == phoneDigits,
-          );
+          return contact.phones.any((phoneEntry) => _digitsOnly(phoneEntry.number) == phoneDigits);
         } catch (e) {
           // Skip contacts with invalid phone data
           Log.w(
@@ -258,22 +234,12 @@ class ContactService {
       });
     } on TimeoutException catch (error, stack) {
       // Handle timeout specifically (common on OnePlus devices)
-      Log.e(
-        'contact_check_timeout',
-        error: error,
-        stackTrace: stack,
-        data: {'phone': phoneDigits},
-      );
+      Log.e('contact_check_timeout', error: error, stackTrace: stack, data: {'phone': phoneDigits});
       // Return false to allow save attempt even if check times out
       return false;
     } catch (error, stack) {
       // Catch any other exceptions from getContacts (common on OnePlus devices)
-      Log.e(
-        'contact_check_failed',
-        error: error,
-        stackTrace: stack,
-        data: {'phone': phoneDigits},
-      );
+      Log.e('contact_check_failed', error: error, stackTrace: stack, data: {'phone': phoneDigits});
       // Return false to allow save attempt even if check fails
       return false;
     }
@@ -316,10 +282,7 @@ class ContactService {
     }
 
     // No event info, just split the name normally
-    final segments = customerName
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .toList();
+    final segments = customerName.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
     if (segments.length == 1) {
       return _NameParts(firstName: segments.first, lastName: '');
     }
