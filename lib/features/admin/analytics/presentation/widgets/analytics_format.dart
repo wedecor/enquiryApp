@@ -5,7 +5,7 @@ import '../../domain/analytics_models.dart';
 
 String formatAnalyticsDateRange(DateRange range) {
   final fmt = DateFormat('d MMM yyyy');
-  return '${fmt.format(range.start)} – ${fmt.format(range.end)}';
+  return '${fmt.format(range.start)} – ${fmt.format(lastIncludedDay(range))}';
 }
 
 String formatAnalyticsCurrency(double amount) {

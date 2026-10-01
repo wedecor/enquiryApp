@@ -6,7 +6,6 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -46,27 +45,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     super.initState();
     _selectedDay = DateTime.now();
     _focusedDay = DateTime.now();
-    // Trigger automatic cleanup when calendar view loads to mark past events
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _runAutomaticCleanup();
-    });
-  }
-
-  /// Run automatic cleanup to mark past "in_talks" events as "not_interested"
-  Future<void> _runAutomaticCleanup() async {
-    try {
-      final cleanupService = ref.read(pastEnquiryCleanupServiceProvider);
-      final currentUser = ref.read(currentUserWithFirestoreProvider);
-      final userId = currentUser.value?.uid ?? 'system';
-
-      await cleanupService.runAutomaticCleanup(
-        force: false, // Only run if not already run today
-        userId: userId,
-      );
-    } catch (e) {
-      // Silently fail - cleanup is not critical for calendar view
-      // Errors are logged by the cleanup service
-    }
   }
 
   @override
@@ -281,9 +259,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         }
       }
 
-      // Note: Past "in_talks" and "new" events are NOT filtered here
-      // They will be automatically marked as "not_interested" by the cleanup service
-      // and will disappear once their status is updated
+      // Past "new" / "in_talks" events are not filtered here: the nightly autoExpireEnquiries
+      // function closes them as "not_interested" once their IST event day has passed.
 
       final dayKey = DateTime(eventDate.year, eventDate.month, eventDate.day);
 

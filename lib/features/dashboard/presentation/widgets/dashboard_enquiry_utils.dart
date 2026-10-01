@@ -166,26 +166,16 @@ bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
   return daysUntilEvent >= 0 && daysUntilEvent < 21;
 }
 
-bool shouldShowInTalks(Map<String, dynamic> enquiryData, DateTime now) {
-  if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
-    return false;
-  }
-
-  final eventDate = parseEnquiryDateTime(enquiryData['eventDate']);
-
-  if (eventDate == null) {
-    final createdAt = parseEnquiryDateTime(enquiryData['createdAt']);
-    if (createdAt != null) {
-      final daysSinceCreation = now.difference(createdAt).inDays;
-      return daysSinceCreation <= 30;
-    }
-    return true;
-  }
-
-  final todayStart = DateTime(now.year, now.month, now.day);
-  final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-  return eventDateStart.compareTo(todayStart) >= 0;
+/// Calendar days from [now]'s day to [eventDate]'s day (0 = today, negative = past).
+int eventDayOffset(DateTime eventDate, DateTime now) {
+  final eventDay = DateTime.utc(eventDate.year, eventDate.month, eventDate.day);
+  final today = DateTime.utc(now.year, now.month, now.day);
+  return eventDay.difference(today).inDays;
 }
+
+/// Past-dated enquiries stay visible until the nightly auto-close function moves them.
+bool shouldShowInTalks(Map<String, dynamic> enquiryData) =>
+    EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?);
 
 String formatAgeLabel(DateTime createdAt) {
   final age = DateTime.now().difference(createdAt);

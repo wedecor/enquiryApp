@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../widgets/dashboard_action_handlers.dart';
@@ -69,10 +68,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _primeDropdownColors();
     _tabLabels = _statusTabs.map((tab) => tab['label']!).toList(growable: false);
     _searchController.addListener(_handleSearchChanged);
-    // Run automatic cleanup for past enquiries (only for admins, runs silently in background)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _runAutomaticCleanup();
-    });
   }
 
   Future<void> _primeDropdownColors() async {
@@ -116,41 +111,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           'eventTypes': _eventColorCache.keys.toList(),
         },
       );
-    }
-  }
-
-  /// Runs automatic cleanup for past enquiries (only for admins)
-  /// This runs silently in the background without blocking the UI
-  Future<void> _runAutomaticCleanup() async {
-    try {
-      final roleAsync = ref.read(roleProvider);
-      final role = roleAsync.valueOrNull;
-
-      // Only run for admins
-      if (role != UserRole.admin) {
-        return;
-      }
-
-      final currentUserAsync = ref.read(currentUserWithFirestoreProvider);
-      final currentUser = currentUserAsync.valueOrNull;
-      final userId = currentUser?.uid ?? 'system';
-
-      // Run cleanup in background (non-blocking)
-      final cleanupService = ref.read(pastEnquiryCleanupServiceProvider);
-      unawaited(
-        cleanupService
-            .runAutomaticCleanup(userId: userId)
-            .then((updatedCount) {
-              if (updatedCount != null && updatedCount > 0 && mounted) {
-                Log.i('Automatic cleanup completed', data: {'updatedCount': updatedCount});
-              }
-            })
-            .catchError((Object error, StackTrace stack) {
-              Log.e('Automatic cleanup error', error: error, stackTrace: stack);
-            }),
-      );
-    } catch (e) {
-      Log.e('Error initiating automatic cleanup', error: e);
     }
   }
 
@@ -208,7 +168,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             onClearSearch: _clearSearch,
             actions: tabActions,
             errorBuilder: _buildErrorWidget,
-            onTabVisible: s['value'] == 'in_talks' ? _runAutomaticCleanup : null,
             headerSlivers: [
               SliverToBoxAdapter(
                 child: DashboardWelcomePanel(

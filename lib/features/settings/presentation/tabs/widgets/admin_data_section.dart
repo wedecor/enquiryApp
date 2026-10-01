@@ -10,7 +10,6 @@ import '../../../../admin/dropdowns/presentation/dropdown_management_screen.dart
 import '../../../../admin/users/presentation/user_management_screen.dart';
 import '../../widgets/settings_layout.dart';
 import '../../widgets/settings_tiles.dart';
-import '../past_enquiry_cleanup_widget.dart';
 
 class DataIntegrationsTab extends ConsumerWidget {
   const DataIntegrationsTab({super.key});
@@ -101,7 +100,13 @@ class DataIntegrationsTab extends ConsumerWidget {
           eyebrow: 'Housekeeping',
           title: 'Maintenance',
           separated: false,
-          children: [PastEnquiryCleanupWidget()],
+          children: [
+            SettingsTile(
+              icon: Icons.auto_fix_high_rounded,
+              title: 'Auto-close',
+              subtitle: 'Past enquiries are closed automatically each night',
+            ),
+          ],
         ),
         const SettingsNote(
           title: 'Integration Status',

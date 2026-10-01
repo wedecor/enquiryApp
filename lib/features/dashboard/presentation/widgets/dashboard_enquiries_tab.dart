@@ -27,7 +27,6 @@ class DashboardEnquiriesTab extends ConsumerStatefulWidget {
     required this.actions,
     required this.errorBuilder,
     required this.headerSlivers,
-    this.onTabVisible,
   });
 
   final String status;
@@ -38,7 +37,6 @@ class DashboardEnquiriesTab extends ConsumerStatefulWidget {
   final DashboardEnquiryTabActions actions;
   final Widget Function(BuildContext context, Object error) errorBuilder;
   final List<Widget> headerSlivers;
-  final VoidCallback? onTabVisible;
 
   @override
   ConsumerState<DashboardEnquiriesTab> createState() => _DashboardEnquiriesTabState();
@@ -61,10 +59,6 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.onTabVisible != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onTabVisible!());
-    }
-
     return StreamBuilder<QuerySnapshot>(
       stream: ref
           .read(firestoreServiceProvider)
@@ -195,7 +189,7 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
     }
     if (status == 'in_talks') {
       return raw
-          .where((doc) => shouldShowInTalks(doc.data() as Map<String, dynamic>, now))
+          .where((doc) => shouldShowInTalks(doc.data() as Map<String, dynamic>))
           .toList(growable: false);
     }
     if (status == 'approved') {

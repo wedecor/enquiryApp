@@ -5,12 +5,18 @@ import '../../../../core/constants/status_vocabulary.dart';
 part 'analytics_models.freezed.dart';
 part 'analytics_models.g.dart';
 
-/// Date range for analytics filtering
+/// Date range for analytics filtering: [start] inclusive, [end] exclusive (queries use `< end`).
 @freezed
 class DateRange with _$DateRange {
   const factory DateRange({required DateTime start, required DateTime end}) = _DateRange;
 
   factory DateRange.fromJson(Map<String, dynamic> json) => _$DateRangeFromJson(json);
+}
+
+/// Last calendar day included in [range], for labels and pickers.
+DateTime lastIncludedDay(DateRange range) {
+  final last = range.end.subtract(const Duration(microseconds: 1));
+  return DateTime(last.year, last.month, last.day);
 }
 
 /// Predefined date range presets
@@ -42,30 +48,19 @@ enum DateRangePreset {
   DateRange get dateRange {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
 
     switch (this) {
       case DateRangePreset.today:
-        return DateRange(start: today, end: today.add(const Duration(days: 1, microseconds: -1)));
+        return DateRange(start: today, end: tomorrow);
       case DateRangePreset.last7Days:
-        return DateRange(
-          start: today.subtract(const Duration(days: 6)),
-          end: today.add(const Duration(days: 1, microseconds: -1)),
-        );
+        return DateRange(start: today.subtract(const Duration(days: 6)), end: tomorrow);
       case DateRangePreset.last30Days:
-        return DateRange(
-          start: today.subtract(const Duration(days: 29)),
-          end: today.add(const Duration(days: 1, microseconds: -1)),
-        );
+        return DateRange(start: today.subtract(const Duration(days: 29)), end: tomorrow);
       case DateRangePreset.last90Days:
-        return DateRange(
-          start: today.subtract(const Duration(days: 89)),
-          end: today.add(const Duration(days: 1, microseconds: -1)),
-        );
+        return DateRange(start: today.subtract(const Duration(days: 89)), end: tomorrow);
       case DateRangePreset.yearToDate:
-        return DateRange(
-          start: DateTime(now.year, 1, 1),
-          end: today.add(const Duration(days: 1, microseconds: -1)),
-        );
+        return DateRange(start: DateTime(now.year, 1, 1), end: tomorrow);
       case DateRangePreset.custom:
         // Default to last 30 days for custom
         return DateRangePreset.last30Days.dateRange;

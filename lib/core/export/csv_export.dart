@@ -210,7 +210,7 @@ class CsvExport {
       ['WeDecor Analytics Summary'],
       [
         'Date Range',
-        '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(dateRange.end)}',
+        '${_dateFormat.format(dateRange.start)} to ${_dateFormat.format(lastIncludedDay(dateRange))}',
       ],
       ['Generated At', _dateFormat.format(DateTime.now())],
       [''],

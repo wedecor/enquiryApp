@@ -44,7 +44,6 @@ class DashboardTodaySection extends ConsumerWidget {
 
         final docs = snapshot.data!.docs;
         final now = DateTime.now();
-        final weekFromNow = now.add(const Duration(days: 7));
 
         int newUncontacted = 0;
         int staleNew = 0;
@@ -53,6 +52,7 @@ class DashboardTodaySection extends ConsumerWidget {
         final perDay = List<double>.filled(7, 0);
 
         DateTime? nearestEventDate;
+        int? nearestDayOffset;
         String? nearestEventName;
 
         for (final doc in docs) {
@@ -66,26 +66,27 @@ class DashboardTodaySection extends ConsumerWidget {
             if (createdAt != null && now.difference(createdAt).inDays > 3) staleNew++;
           }
           if (shouldShowReminder(data, now)) pendingReminders++;
-          if (eventDate != null && eventDate.isAfter(now) && eventDate.isBefore(weekFromNow)) {
-            eventsThisWeek++;
-            perDay[eventDate.difference(now).inDays.clamp(0, 6)]++;
-            if (nearestEventDate == null || eventDate.isBefore(nearestEventDate)) {
-              nearestEventDate = eventDate;
-              nearestEventName = data['customerName'] as String?;
-            }
+          if (eventDate == null || status?.category == StatusCategory.lost) continue;
+          final dayOffset = eventDayOffset(eventDate, now);
+          if (dayOffset < 0 || dayOffset >= 7) continue;
+          eventsThisWeek++;
+          perDay[dayOffset]++;
+          if (nearestEventDate == null || eventDate.isBefore(nearestEventDate)) {
+            nearestEventDate = eventDate;
+            nearestDayOffset = dayOffset;
+            nearestEventName = data['customerName'] as String?;
           }
         }
 
         String? thisWeekSublabel;
-        if (nearestEventDate != null) {
-          final diff = nearestEventDate.difference(now);
+        if (nearestDayOffset != null) {
           final name = nearestEventName ?? 'Event';
-          if (diff.inDays == 0) {
+          if (nearestDayOffset == 0) {
             thisWeekSublabel = '$name today';
-          } else if (diff.inDays == 1) {
+          } else if (nearestDayOffset == 1) {
             thisWeekSublabel = '$name tomorrow';
           } else {
-            thisWeekSublabel = '$name in ${diff.inDays}d';
+            thisWeekSublabel = '$name in ${nearestDayOffset}d';
           }
         }
 

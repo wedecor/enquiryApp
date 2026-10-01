@@ -185,9 +185,8 @@ class AnalyticsRepository {
     final Map<DateTime, int> dateCounts = {};
 
     DateTime current = _truncateToTimeBucketStatic(dateRange.start, bucket);
-    final end = _truncateToTimeBucketStatic(dateRange.end, bucket);
 
-    while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+    while (current.isBefore(dateRange.end)) {
       dateCounts[current] = 0;
       current = _incrementTimeBucketStatic(current, bucket);
     }

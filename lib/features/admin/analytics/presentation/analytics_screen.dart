@@ -120,11 +120,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
-      initialDateRange: DateTimeRange(start: currentRange.start, end: currentRange.end),
+      initialDateRange: DateTimeRange(
+        start: currentRange.start,
+        end: lastIncludedDay(currentRange),
+      ),
     );
 
     if (picked != null) {
-      final customRange = DateRange(start: picked.start, end: picked.end);
+      final end = picked.end;
+      final customRange = DateRange(
+        start: picked.start,
+        end: DateTime(end.year, end.month, end.day).add(const Duration(days: 1)),
+      );
       ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange);
     }
   }
