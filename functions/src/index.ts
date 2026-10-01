@@ -530,6 +530,5 @@ export const sendNotificationToTopic = onDocumentWritten(
 );
 
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
-export { weeklyDigest } from "./weeklyDigest";
 // Removed: migrateStatusFields - Migration complete, no longer needed
 // Removed: notifyOverdueInTalks - 4-hour scheduled reminders disabled
