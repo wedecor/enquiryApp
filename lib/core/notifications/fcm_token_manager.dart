@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/widgets.dart';
 
 import '../services/firestore_service.dart';
+import 'notification_router.dart';
 
 class FcmTokenManager {
   static bool _registered = false;
   static StreamSubscription<String>? _tokenRefreshSubscription;
+  static StreamSubscription<RemoteMessage>? _foregroundSubscription;
+  static StreamSubscription<RemoteMessage>? _openedSubscription;
 
   static Future<void> ensureFcmRegistered(FirestoreService firestoreService) async {
     if (_registered) return;
@@ -28,9 +32,17 @@ class FcmTokenManager {
 
     await firestoreService.saveFcmToken(user.uid, token);
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage m) {
-      // Optional in-app foreground handling
-    });
+    // Foreground pushes are not shown by the OS — show an in-app banner instead.
+    await _foregroundSubscription?.cancel();
+    _foregroundSubscription = FirebaseMessaging.onMessage.listen(NotificationRouter.showForeground);
+
+    // Tapping a push opens the enquiry it refers to.
+    await _openedSubscription?.cancel();
+    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(NotificationRouter.open);
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => NotificationRouter.open(initial));
+    }
 
     await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
@@ -59,6 +71,10 @@ class FcmTokenManager {
   static Future<void> dispose() async {
     await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = null;
+    await _foregroundSubscription?.cancel();
+    _foregroundSubscription = null;
+    await _openedSubscription?.cancel();
+    _openedSubscription = null;
     _registered = false;
   }
 }

@@ -604,6 +604,20 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       );
     }
 
+    // Re-assignment from the edit form: tell the new assignee (and other admins).
+    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
+    if (_selectedAssignedTo != null &&
+        _selectedAssignedTo!.isNotEmpty &&
+        _selectedAssignedTo != previousAssignee) {
+      await notificationService.notifyEnquiryAssigned(
+        enquiryId: widget.enquiryId!,
+        customerName: _nameController.text.trim(),
+        eventType: eventTypeLabel,
+        assignedTo: _selectedAssignedTo!,
+        assignedBy: currentUser.uid,
+      );
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(
         context,

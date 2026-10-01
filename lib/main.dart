@@ -13,6 +13,7 @@ import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
 import 'core/logging/logger.dart';
 import 'core/notifications/fcm_bootstrap.dart';
+import 'core/notifications/notification_router.dart';
 import 'core/services/update_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
@@ -180,6 +181,8 @@ class MyApp extends ConsumerWidget {
       ),
       scrollBehavior: NoScrollbarScrollBehavior(),
       themeMode: themeMode,
+      navigatorKey: appNavigatorKey,
+      scaffoldMessengerKey: appScaffoldMessengerKey,
       home: const AuthGate().withUpdateChecker(),
       debugShowCheckedModeBanner: false,
     );

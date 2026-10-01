@@ -7,7 +7,6 @@ import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 // Removed deprecated config import for Firebase Functions v2
 import { createEmailTransporter, getSmtpFromAddress, SMTP_SECRET_NAMES } from "./smtp";
-import { canonicalStatus, statusLabel } from "./statusVocabulary";
 
 setGlobalOptions({
   region: "asia-south1",
@@ -22,14 +21,6 @@ initializeApp();
 const ACTION_CODE_SETTINGS = {
   url: 'https://wedecorenquries.web.app/auth/completed',
   handleCodeInApp: false,
-};
-
-type Enquiry = {
-  assignedTo?: string | null;
-  statusValue?: string | null;
-  paymentStatusValue?: string | null;
-  paymentStatus?: string | null;
-  customerName?: string | null;
 };
 
 type InviteUserRequest = {
@@ -302,104 +293,10 @@ If you didn't expect this invitation, please ignore this email.`
   }
 );
 
-export const notifyOnEnquiryChange = onDocumentWritten(
-  "enquiries/{id}",
-  async (event) => {
-    const before = (event.data?.before?.data() || null) as Enquiry | null;
-    const after = (event.data?.after?.data() || null) as Enquiry | null;
-
-    if (!after) {
-      // Deleted doc: no-op
-      return;
-    }
-
-    // Canonical comparison: legacy aliases (e.g. quote_sent → in_talks) and deletion of
-    // legacy fields (eventStatus / status) must not count as a status change.
-    const beforeStatus = canonicalStatus(before?.statusValue);
-    const afterStatus = canonicalStatus(after.statusValue);
-    const beforePayment = before?.paymentStatusValue ?? before?.paymentStatus ?? null;
-    const afterPayment = after.paymentStatusValue ?? after.paymentStatus ?? null;
-
-    const changedAssigned = (before?.assignedTo ?? null) !== (after.assignedTo ?? null);
-    const changedStatus   = beforeStatus !== afterStatus;
-    const changedPayment  = beforePayment !== afterPayment;
-
-    if (!(changedAssigned || changedStatus || changedPayment)) {
-      logger.debug("No meaningful change; skipping push", { id: event.params.id });
-      return;
-    }
-
-    const uid = after.assignedTo;
-    if (!uid) {
-      logger.debug("No assignedTo on enquiry; skipping", { id: event.params.id });
-      return;
-    }
-
-    const db = getFirestore();
-    
-    // NEW: Read private tokens from secure subcollection
-    const tokensSnap = await db.collection("users").doc(uid)
-      .collection("private").doc("notifications")
-      .collection("tokens").limit(500).get();
-
-    const tokens = Array.from(new Set(
-      tokensSnap.docs.map(d => (d.get("token") as string | undefined) || d.id).filter(Boolean) as string[]
-    ));
-
-    if (tokens.length === 0) {
-      logger.info("No FCM devices found for user; skipping notification", { 
-        uid, 
-        deviceCount: 0,
-        enquiryId: event.params.id 
-      });
-      return;
-    }
-
-    const titleParts: string[] = [];
-    if (changedAssigned) titleParts.push("Assigned");
-    if (changedStatus)   titleParts.push(`Status: ${afterStatus ? statusLabel(afterStatus) : ""}`);
-    if (changedPayment)  titleParts.push(`Payment: ${afterPayment ?? ""}`);
-    const title = titleParts.join(" • ") || "Enquiry Updated";
-
-    const body  = after.customerName ? `Customer: ${after.customerName}` : "Open the app for details";
-    const data  = {
-      type: "enquiry_update",
-      enquiryId: event.params.id,
-      statusValue: afterStatus ?? "",
-      // Kept for older app builds; carries the canonical status value.
-      eventStatus: afterStatus ?? "",
-      paymentStatus: afterPayment ?? ""
-    };
-
-    const res = await getMessaging().sendEachForMulticast({
-      tokens,
-      notification: { title, body },
-      data
-    });
-
-    logger.info("Push notification summary", {
-      enquiryId: event.params.id,
-      uid,
-      deviceCount: tokens.length,
-      successCount: res.successCount,
-      failureCount: res.failureCount
-    });
-
-    // Optional in-app inbox doc
-    await db.collection("notifications").doc(uid).collection("items").add({
-      type: "enquiry_update",
-      enquiryId: event.params.id,
-      title,
-      body,
-      statusValue: afterStatus,
-      eventStatus: afterStatus,
-      paymentStatus: afterPayment,
-      createdAt: FieldValue.serverTimestamp(),
-      read: false,
-      archived: false
-    });
-  }
-);
+// notifyOnEnquiryChange was removed: the app already queues a notification doc
+// (users/{uid}/notifications) for every create / assign / status change / edit,
+// and sendNotificationToUser below pushes it. The extra trigger caused duplicate
+// pushes and pushes to the person who made the change.
 
 // Cloud Function to send FCM notifications when a notification is written to users/{userId}/notifications
 export const sendNotificationToUser = onDocumentWritten(
@@ -450,12 +347,34 @@ export const sendNotificationToUser = onDocumentWritten(
       }
       fcmData.notificationId = event.params.notificationId;
 
-      // Send FCM notification
+      fcmData.title = title;
+      fcmData.body = body;
+
+      // Send FCM notification (high priority so Android shows it promptly)
       const res = await getMessaging().sendEachForMulticast({
         tokens,
         notification: { title, body },
         data: fcmData,
+        android: { priority: "high", notification: { sound: "default" } },
+        apns: { payload: { aps: { sound: "default" } } },
       });
+
+      // Remove tokens FCM reports as dead (uninstalled app, expired token).
+      const dead: string[] = [];
+      res.responses.forEach((r, i) => {
+        const code = r.error?.code;
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token"
+        ) {
+          dead.push(tokens[i]);
+        }
+      });
+      if (dead.length > 0) {
+        const tokenDocs = tokensSnap.docs.filter((d) => dead.includes((d.get("token") as string | undefined) || d.id));
+        await Promise.all(tokenDocs.map((d) => d.ref.delete()));
+        logger.info("Removed dead FCM tokens", { userId, removed: tokenDocs.length });
+      }
 
       logger.info("FCM notification sent to user", {
         userId,
