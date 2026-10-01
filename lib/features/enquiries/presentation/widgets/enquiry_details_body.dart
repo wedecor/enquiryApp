@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../domain/enquiry_lifecycle.dart';
 import 'customer_info_section.dart';
 import 'enquiry_assignment_section.dart';
 import 'enquiry_detail_info_row.dart';
@@ -59,6 +61,12 @@ class EnquiryDetailsBody extends StatelessWidget {
           advancePaid: enquiryData['advancePaid'],
           paymentStatusLabel: labels.paymentStatusLabel,
         ),
+      if (_outcomeRows(isAdmin: userRole == UserRole.admin).isNotEmpty)
+        EnquiryDetailSection(
+          eyebrow: 'Outcome',
+          title: 'Quote & Outcome',
+          children: _outcomeRows(isAdmin: userRole == UserRole.admin),
+        ),
       _AsymmetricPair(
         major: CustomerInfoSection(
           customerPhone: enquiryData['customerPhone'] as String?,
@@ -98,6 +106,18 @@ class EnquiryDetailsBody extends StatelessWidget {
               label: 'Last Updated',
               value: _formatTimestamp(enquiryData['updatedAt']),
             ),
+            EnquiryDetailInfoRow(
+              label: 'First Contacted',
+              value: enquiryData['firstContactAt'] == null
+                  ? 'Not yet'
+                  : '${_formatTimestamp(enquiryData['firstContactAt'])}'
+                        '${enquiryData['firstContactEstimated'] == true ? ' (est.)' : ''}',
+            ),
+            if ((enquiryData['contactCount'] as num?) != null)
+              EnquiryDetailInfoRow(
+                label: 'Contacts',
+                value: '${(enquiryData['contactCount'] as num).toInt()}',
+              ),
           ],
         ),
       ),
@@ -121,6 +141,39 @@ class EnquiryDetailsBody extends StatelessWidget {
         itemBuilder: (context, i) => StaggerIn(index: i, child: sections[i]),
       ),
     );
+  }
+
+  /// Quote (admin only) and lost-reason rows; empty when there is nothing to show.
+  List<Widget> _outcomeRows({required bool isAdmin}) {
+    final rows = <Widget>[];
+    final quoted = (enquiryData['quotedAmount'] as num?)?.toDouble();
+    if (isAdmin && quoted != null) {
+      final at = enquiryData['quotedAt'];
+      rows.add(
+        EnquiryDetailInfoRow(
+          label: 'Quoted',
+          value: '₹${quoted.toStringAsFixed(0)}${at is Timestamp ? ' on ${_formatDate(at)}' : ''}',
+        ),
+      );
+    }
+    if (EnquiryStatus.isLost(enquiryData['statusValue'] as String?)) {
+      rows.add(
+        EnquiryDetailInfoRow(
+          label: 'Lost reason',
+          value: LostReason.labelOf(enquiryData['lostReason'] as String?),
+        ),
+      );
+      final note = (enquiryData['lostReasonNote'] as String?)?.trim();
+      if (note != null && note.isNotEmpty) {
+        rows.add(EnquiryDetailInfoRow(label: 'Note', value: note, maxLines: null));
+      }
+    }
+    return rows;
+  }
+
+  static String _formatDate(Timestamp ts) {
+    final d = ts.toDate();
+    return '${d.day}/${d.month}/${d.year}';
   }
 
   String _formatTimestamp(dynamic timestamp) {

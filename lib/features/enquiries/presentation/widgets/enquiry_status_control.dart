@@ -12,6 +12,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../data/enquiry_repository.dart';
 import 'enquiry_status_parts.dart';
+import 'lost_reason_sheet.dart';
 
 /// How [EnquiryStatusControl] presents the available statuses.
 enum EnquiryStatusLayout {
@@ -200,16 +201,25 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     final nextLabel = lookup.labelForStatus(value);
     final oldStatusLabel = lookup.labelForStatus(currentStatusValue);
 
-    final confirmed = await ConfirmationDialog.show(
-      context: context,
-      title: 'Change Status',
-      message:
-          'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
-      confirmText: 'Change Status',
-      cancelText: 'Cancel',
-      isDestructive: false,
-      icon: Icons.info_outline,
-    );
+    if (!mounted) return;
+    // Lost statuses ask for a reason; the reason sheet doubles as confirmation.
+    final lostPrompt = await promptLostReasonIfNeeded(context, value);
+    if (!mounted) return;
+    final bool confirmed;
+    if (EnquiryStatus.isLost(value)) {
+      confirmed = lostPrompt.proceed;
+    } else {
+      confirmed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Change Status',
+        message:
+            'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
+        confirmText: 'Change Status',
+        cancelText: 'Cancel',
+        isDestructive: false,
+        icon: Icons.info_outline,
+      );
+    }
 
     if (!confirmed || !mounted) {
       setState(() {
@@ -229,7 +239,12 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
       // statusUpdatedBy, notifications, and legacy field cleanup in one place.
       await ref
           .read(enquiryRepositoryProvider)
-          .updateStatus(id: widget.enquiryId, nextStatus: value, userId: userId);
+          .updateStatus(
+            id: widget.enquiryId,
+            nextStatus: value,
+            userId: userId,
+            lostReason: lostPrompt.choice,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

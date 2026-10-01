@@ -9,6 +9,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
+import '../domain/enquiry_lifecycle.dart';
 import 'pagination_state.dart';
 
 /// Provider for enquiry repository
@@ -95,6 +96,7 @@ class EnquiryRepository {
     required String id,
     required String nextStatus,
     required String userId,
+    LostReasonChoice? lostReason,
   }) async {
     final oldEnquiryDoc = await _enquiries.doc(id).get();
 
@@ -116,6 +118,7 @@ class EnquiryRepository {
     final statusLabel = lookup.labelForStatus(canonicalNext);
     final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
+    final isLost = EnquiryStatus.isLost(canonicalNext);
     final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
@@ -128,6 +131,9 @@ class EnquiryRepository {
       'eventStatus': FieldValue.delete(),
       'status': FieldValue.delete(),
       'status_slug': FieldValue.delete(),
+      for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, canonicalNext))
+        field: FieldValue.serverTimestamp(),
+      if (isLost && lostReason != null) ...lostReason.toFields(),
     });
 
     await _auditService.recordChange(
@@ -137,6 +143,16 @@ class EnquiryRepository {
       newValue: canonicalNext,
       userId: userId,
     );
+
+    if (isLost && lostReason != null) {
+      await _auditService.recordChange(
+        enquiryId: id,
+        fieldChanged: 'lostReason',
+        oldValue: oldEnquiryData['lostReason'],
+        newValue: lostReason.reason.value,
+        userId: userId,
+      );
+    }
 
     try {
       await _notificationService.notifyStatusUpdated(

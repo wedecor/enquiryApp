@@ -376,6 +376,93 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('📞 Contact log & quote fields', () => {
+    const contacts = (uid, role, enquiryId) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('enquiries')
+        .doc(enquiryId)
+        .collection('contacts');
+
+    test('✅ Assigned staff can log a contact as themselves', async () => {
+      await assertSucceeds(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
+          type: 'call',
+          at: new Date(),
+          by: STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Staff cannot log a contact on someone else\'s enquiry', async () => {
+      await assertFails(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-other').add({
+          type: 'call',
+          at: new Date(),
+          by: STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Contact must be logged under the caller\'s own uid', async () => {
+      await assertFails(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
+          type: 'call',
+          at: new Date(),
+          by: OTHER_STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Unknown contact type is rejected', async () => {
+      await assertFails(
+        contacts(ADMIN_UID, 'admin', 'enquiry-assigned-to-staff').add({
+          type: 'email',
+          at: new Date(),
+          by: ADMIN_UID,
+        })
+      );
+    });
+
+    test('❌ Contact log entries cannot be edited or deleted', async () => {
+      let id;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const ref = await context
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('contacts')
+          .add({ type: 'call', at: new Date(), by: STAFF_UID });
+        id = ref.id;
+      });
+      await assertFails(contacts(ADMIN_UID, 'admin', 'enquiry-assigned-to-staff').doc(id).update({ type: 'whatsapp' }));
+      await assertFails(contacts(ADMIN_UID, 'admin', 'enquiry-assigned-to-staff').doc(id).delete());
+    });
+
+    test('✅ Assigned staff can update contact counters on the enquiry', async () => {
+      await assertSucceeds(
+        testEnv
+          .authenticatedContext(STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .update({ firstContactAt: new Date(), lastContactAt: new Date(), contactCount: 1 })
+      );
+    });
+
+    test('❌ Staff cannot set the quoted amount', async () => {
+      await assertFails(
+        testEnv
+          .authenticatedContext(STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .update({ quotedAmount: 50000, quotedAt: new Date() })
+      );
+    });
+  });
+
   describe('👑 Admin Full Access', () => {
     test('✅ Admin can read any enquiry', async () => {
       const adminContext = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' });
