@@ -36,8 +36,7 @@ class NotificationRouter {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (title != null)
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              if (title != null) Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
               if (body != null) Text(body, maxLines: 3, overflow: TextOverflow.ellipsis),
             ],
           ),

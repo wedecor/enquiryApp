@@ -14,7 +14,10 @@ enum ContactLaunchStatus { opened, notInstalled, invalidNumber, failed }
 /// Provider for the contact launcher service
 final contactLauncherProvider = Provider<ContactLauncher>((ref) {
   // Default to +91 (India) - can be made configurable later
-  return ContactLauncher(defaultCountryCode: '+91', contactLog: ref.watch(contactLogServiceProvider));
+  return ContactLauncher(
+    defaultCountryCode: '+91',
+    contactLog: ref.watch(contactLogServiceProvider),
+  );
 });
 
 /// Service for launching contact applications (phone, WhatsApp)

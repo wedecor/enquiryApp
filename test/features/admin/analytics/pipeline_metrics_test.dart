@@ -136,8 +136,18 @@ void main() {
   group('speed to lead', () {
     test('percentiles, shares and buckets exclude estimates', () {
       final r = computeSpeedToLead([
-        row('1', 'in_talks', created: ago(days: 2), firstContact: ago(days: 2).add(const Duration(minutes: 30))),
-        row('2', 'approved', created: ago(days: 5), firstContact: ago(days: 5).add(const Duration(hours: 5))),
+        row(
+          '1',
+          'in_talks',
+          created: ago(days: 2),
+          firstContact: ago(days: 2).add(const Duration(minutes: 30)),
+        ),
+        row(
+          '2',
+          'approved',
+          created: ago(days: 5),
+          firstContact: ago(days: 5).add(const Duration(hours: 5)),
+        ),
         row('3', 'not_interested', created: ago(days: 9), firstContact: ago(days: 4)),
         row('4', 'new', created: ago(days: 1)), // never contacted
         row('5', 'completed', created: ago(days: 30), firstContact: ago(days: 29), estimated: true),
@@ -277,8 +287,20 @@ void main() {
 
   test('buildPipelineReport wires the period and attribution', () {
     final rows = [
-      row('1', 'approved', created: DateTime(2026, 10, 2), event: DateTime(2027, 1, 5), total: 1000),
-      row('2', 'approved', created: DateTime(2026, 8, 2), event: DateTime(2026, 10, 20), total: 2000),
+      row(
+        '1',
+        'approved',
+        created: DateTime(2026, 10, 2),
+        event: DateTime(2027, 1, 5),
+        total: 1000,
+      ),
+      row(
+        '2',
+        'approved',
+        created: DateTime(2026, 8, 2),
+        event: DateTime(2026, 10, 20),
+        total: 2000,
+      ),
     ];
     final byEnquiry = buildPipelineReport(
       allRows: rows,

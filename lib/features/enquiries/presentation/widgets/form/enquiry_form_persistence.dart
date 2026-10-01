@@ -285,7 +285,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     final quoteFields = _quoteFields(const {});
     if (quoteFields.isNotEmpty) {
-      await firestoreService.updateEnquiry(enquiryId, {...quoteFields, 'updatedBy': currentUser.uid});
+      await firestoreService.updateEnquiry(enquiryId, {
+        ...quoteFields,
+        'updatedBy': currentUser.uid,
+      });
     }
 
     // Upload reference images if any and save URLs

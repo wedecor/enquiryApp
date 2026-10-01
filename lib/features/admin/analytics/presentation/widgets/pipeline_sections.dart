@@ -275,22 +275,17 @@ class _StatWrap extends StatelessWidget {
     return Wrap(
       spacing: AppTokens.space6,
       runSpacing: AppTokens.space4,
-      children: [for (final c in children) ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 96),
-        child: c,
-      )],
+      children: [
+        for (final c in children)
+          ConstrainedBox(constraints: const BoxConstraints(minWidth: 96), child: c),
+      ],
     );
   }
 }
 
 /// One labelled proportional bar row (label · count · share).
 class _BarRow extends StatelessWidget {
-  const _BarRow({
-    required this.label,
-    required this.value,
-    required this.fraction,
-    this.trailing,
-  });
+  const _BarRow({required this.label, required this.value, required this.fraction, this.trailing});
 
   final String label;
   final String value;
@@ -434,10 +429,7 @@ class FunnelSteps extends StatelessWidget {
         if (!compact) ...[
           const SizedBox(height: AppTokens.space3),
           MetricTable(
-            columns: const [
-              MetricColumn('Lost', flex: 3, numeric: false),
-              MetricColumn('Count'),
-            ],
+            columns: const [MetricColumn('Lost', flex: 3, numeric: false), MetricColumn('Count')],
             rows: [
               ['Before In Talks', '${f.lostBeforeInTalks}'],
               ['After In Talks', '${f.lostAfterInTalks}'],
@@ -609,9 +601,7 @@ class FollowUpSection extends ConsumerWidget {
 
 String _assigneeName(WidgetRef ref, String? uid) {
   if (uid == null || uid.isEmpty) return 'Unassigned';
-  return ref
-      .watch(userDisplayNameProvider(uid))
-      .maybeWhen(data: (name) => name, orElse: () => '…');
+  return ref.watch(userDisplayNameProvider(uid)).maybeWhen(data: (name) => name, orElse: () => '…');
 }
 
 // ── Team & sources ───────────────────────────────────────────────────────────
@@ -730,9 +720,7 @@ class SourcePerformanceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lookup = ref
-        .watch(dropdownLookupProvider)
-        .maybeWhen(data: (l) => l, orElse: () => null);
+    final lookup = ref.watch(dropdownLookupProvider).maybeWhen(data: (l) => l, orElse: () => null);
     return AnalyticsSectionCard(
       eyebrow: 'Channels',
       title: 'Source performance',
@@ -818,7 +806,10 @@ class MoneyByMonthSection extends StatelessWidget {
                             segments: [
                               (m.collected.clamp(0, m.booked).toDouble(), s.accent),
                               (m.outstanding, s.accent.withValues(alpha: 0.3)),
-                              ((maxBooked - m.booked).clamp(0, maxBooked).toDouble(), s.microBorder),
+                              (
+                                (maxBooked - m.booked).clamp(0, maxBooked).toDouble(),
+                                s.microBorder,
+                              ),
                             ],
                           ),
                         ),
@@ -848,10 +839,7 @@ class OverdueSection extends StatelessWidget {
           ? 'Past events with a balance still due'
           : '${report.overdue.length} past events · ${_money(total)} due',
       child: items.isEmpty
-          ? const AnalyticsEmptyState(
-              icon: Icons.check_circle_outline,
-              message: 'Nothing overdue',
-            )
+          ? const AnalyticsEmptyState(icon: Icons.check_circle_outline, message: 'Nothing overdue')
           : MetricTable(
               columns: const [
                 MetricColumn('Customer', flex: 3, numeric: false),
@@ -859,7 +847,8 @@ class OverdueSection extends StatelessWidget {
                 MetricColumn('Due', flex: 2),
               ],
               rows: [
-                for (final i in items) [i.customerName, fmt.format(i.eventDate), _money(i.outstanding)],
+                for (final i in items)
+                  [i.customerName, fmt.format(i.eventDate), _money(i.outstanding)],
               ],
               onRowTap: (index) => _openEnquiry(context, items[index].id),
             ),
@@ -931,9 +920,7 @@ class UpcomingDemandSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final lookup = ref
-        .watch(dropdownLookupProvider)
-        .maybeWhen(data: (l) => l, orElse: () => null);
+    final lookup = ref.watch(dropdownLookupProvider).maybeWhen(data: (l) => l, orElse: () => null);
     final months = report.upcomingDemand;
     final max = months.fold<int>(0, (m, e) => e.total > m ? e.total : m);
     final fmt = DateFormat('MMM yyyy');
@@ -941,7 +928,10 @@ class UpcomingDemandSection extends ConsumerWidget {
       final entries = m.byEventType.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
       return entries
           .take(3)
-          .map((e) => '${lookup?.labelForEventType(e.key) ?? DropdownLookup.titleCase(e.key)} ${e.value}')
+          .map(
+            (e) =>
+                '${lookup?.labelForEventType(e.key) ?? DropdownLookup.titleCase(e.key)} ${e.value}',
+          )
           .join(' · ');
     }
 
@@ -950,13 +940,18 @@ class UpcomingDemandSection extends ConsumerWidget {
       title: 'Busy months ahead',
       subtitle: 'Upcoming events (not lost) for the next 12 months',
       child: max == 0
-          ? const AnalyticsEmptyState(icon: Icons.event_busy_outlined, message: 'No upcoming events')
+          ? const AnalyticsEmptyState(
+              icon: Icons.event_busy_outlined,
+              message: 'No upcoming events',
+            )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final m in months)
                   _BarRow(
-                    label: m.total == 0 ? fmt.format(m.month) : '${fmt.format(m.month)} — ${top(m)}',
+                    label: m.total == 0
+                        ? fmt.format(m.month)
+                        : '${fmt.format(m.month)} — ${top(m)}',
                     value: '${m.total}',
                     fraction: max == 0 ? 0 : m.total / max,
                   ),

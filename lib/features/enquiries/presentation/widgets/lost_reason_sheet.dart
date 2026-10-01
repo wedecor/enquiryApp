@@ -22,10 +22,7 @@ class LostReasonPrompt {
 /// Asks for a lost reason when [nextStatus] is a lost status (not interested,
 /// closed lost, cancelled). Returns [LostReasonPrompt.notNeeded] for any other
 /// status, and [LostReasonPrompt.cancelled] if the sheet is dismissed.
-Future<LostReasonPrompt> promptLostReasonIfNeeded(
-  BuildContext context,
-  String nextStatus,
-) async {
+Future<LostReasonPrompt> promptLostReasonIfNeeded(BuildContext context, String nextStatus) async {
   if (!EnquiryStatus.isLost(nextStatus)) return LostReasonPrompt.notNeeded;
   final label = EnquiryStatus.fromValue(nextStatus)?.label ?? 'Lost';
   final choice = await showModalBottomSheet<LostReasonChoice>(

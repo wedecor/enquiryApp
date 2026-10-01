@@ -192,7 +192,10 @@ class AnalyticsPipelineTab extends StatelessWidget {
       sections: (r) => [
         FunnelSection(report: r),
         _Responsive(
-          narrow: [LostReasonsSection(report: r), SpeedToLeadSection(report: r)],
+          narrow: [
+            LostReasonsSection(report: r),
+            SpeedToLeadSection(report: r),
+          ],
           wide: _pair(LostReasonsSection(report: r), SpeedToLeadSection(report: r)),
         ),
       ],
@@ -229,7 +232,10 @@ class AnalyticsMoneyTab extends StatelessWidget {
 List<Widget> _demandSections(PipelineReport r) => [
   SourcePerformanceSection(report: r),
   _Responsive(
-    narrow: [LeadTimeSection(report: r), UpcomingDemandSection(report: r)],
+    narrow: [
+      LeadTimeSection(report: r),
+      UpcomingDemandSection(report: r),
+    ],
     wide: _pair(LeadTimeSection(report: r), UpcomingDemandSection(report: r)),
   ),
 ];

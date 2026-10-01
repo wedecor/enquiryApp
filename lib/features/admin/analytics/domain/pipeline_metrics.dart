@@ -44,8 +44,7 @@ String _canonicalField(Map<String, dynamic> row, String primary, String legacy) 
 
 String sourceOf(Map<String, dynamic> row) => _canonicalField(row, 'sourceValue', 'source');
 
-String eventTypeOf(Map<String, dynamic> row) =>
-    _canonicalField(row, 'eventTypeValue', 'eventType');
+String eventTypeOf(Map<String, dynamic> row) => _canonicalField(row, 'eventTypeValue', 'eventType');
 
 /// Real (non-estimated) response time, or null if not contacted / estimated.
 Duration? responseTime(Map<String, dynamic> row) {
@@ -195,16 +194,17 @@ List<LabeledCount> computeLostReasons(List<Map<String, dynamic>> rows) {
     final key = (raw == null || raw.isEmpty) ? 'not_recorded' : raw;
     counts[key] = (counts[key] ?? 0) + 1;
   }
-  final list = counts.entries
-      .map(
-        (e) => LabeledCount(
-          e.key,
-          e.key == 'not_recorded' ? 'Not recorded' : LostReason.labelOf(e.key),
-          e.value,
-        ),
-      )
-      .toList()
-    ..sort((a, b) => b.count.compareTo(a.count));
+  final list =
+      counts.entries
+          .map(
+            (e) => LabeledCount(
+              e.key,
+              e.key == 'not_recorded' ? 'Not recorded' : LostReason.labelOf(e.key),
+              e.value,
+            ),
+          )
+          .toList()
+        ..sort((a, b) => b.count.compareTo(a.count));
   return list;
 }
 
@@ -287,8 +287,7 @@ SpeedToLeadReport computeSpeedToLead(List<Map<String, dynamic>> rows) {
       }
     } else if (row['firstContactAt'] == null) {
       bucket = 4;
-      if (metricStatus(row) == EnquiryStatus.newEnquiry ||
-          row['statusValue'] == null) {
+      if (metricStatus(row) == EnquiryStatus.newEnquiry || row['statusValue'] == null) {
         never++;
       }
     }
@@ -350,7 +349,11 @@ class PerformanceRow {
 }
 
 /// Open and not updated (nor contacted) for [staleAfter].
-bool isStale(Map<String, dynamic> row, DateTime now, {Duration staleAfter = const Duration(days: 7)}) {
+bool isStale(
+  Map<String, dynamic> row,
+  DateTime now, {
+  Duration staleAfter = const Duration(days: 7),
+}) {
   if (!isOpen(row)) return false;
   final candidates = [
     metricDate(row['updatedAt']),
@@ -382,7 +385,9 @@ List<PerformanceRow> _groupPerformance(
       lost: g.where(isLostRow).length,
       open: g.where(isOpen).length,
       stale: g.where((r) => isStale(r, now)).length,
-      bookedValue: g.where(isWon).fold<double>(0, (sum, r) => sum + (metricNum(r['totalCost']) ?? 0)),
+      bookedValue: g
+          .where(isWon)
+          .fold<double>(0, (sum, r) => sum + (metricNum(r['totalCost']) ?? 0)),
       medianResponse: percentileDuration(times, 0.5),
     );
   }).toList()..sort((a, b) => b.leads.compareTo(a.leads));
@@ -589,7 +594,9 @@ List<LabeledCount> computeLeadTime(List<Map<String, dynamic>> rows) {
         : 4;
     counts[i]++;
   }
-  return [for (var i = 0; i < labels.length; i++) LabeledCount(labels[i].$1, labels[i].$2, counts[i])];
+  return [
+    for (var i = 0; i < labels.length; i++) LabeledCount(labels[i].$1, labels[i].$2, counts[i]),
+  ];
 }
 
 class MonthDemand {
@@ -683,10 +690,7 @@ FollowUpReport computeFollowUp({
   stale.sort((a, b) => b.daysSinceContact.compareTo(a.daysSinceContact));
 
   double? avgContacts(Iterable<Map<String, dynamic>> rows) {
-    final values = rows
-        .map((r) => metricNum(r['contactCount']))
-        .whereType<double>()
-        .toList();
+    final values = rows.map((r) => metricNum(r['contactCount'])).whereType<double>().toList();
     if (values.isEmpty) return null;
     return values.reduce((a, b) => a + b) / values.length;
   }
