@@ -8,6 +8,7 @@ import '../../providers/settings_providers.dart';
 import '../../../../ui/components/glass_state_message.dart';
 import '../widgets/settings_layout.dart';
 import '../widgets/settings_tiles.dart';
+import '../widgets/weekly_digest_setting.dart';
 
 class NotificationsTab extends ConsumerStatefulWidget {
   const NotificationsTab({super.key});
@@ -54,6 +55,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
       child: SettingsScrollBody(
         children: [
           _buildMasterToggles(context),
+          const WeeklyDigestSettingsGroup(),
           _buildChannelSettings(context),
           _buildInfoSection(context),
         ],
