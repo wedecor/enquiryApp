@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/tokens.dart';
 import '../../../settings/providers/settings_providers.dart';
+import 'enquiry_round_action.dart';
 
 /// Button widget for requesting reviews from customers for completed enquiries
 class ReviewRequestButton extends ConsumerWidget {
@@ -40,35 +40,25 @@ class ReviewRequestButton extends ConsumerWidget {
         final instagramHandle = config.instagramHandle.isNotEmpty ? config.instagramHandle : null;
         final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: AppTokens.space2),
-          child: ElevatedButton.icon(
-            onPressed: enabled
-                ? () => _handleReviewRequest(
-                    context,
-                    ref,
-                    reviewService,
-                    googleReviewLink,
-                    instagramHandle,
-                    websiteUrl,
-                  )
-                : null,
-            icon: const Icon(Icons.star_rate_rounded),
-            label: const Text('Request Review'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.tertiary,
-              foregroundColor: Theme.of(context).colorScheme.onTertiary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTokens.space6,
-                vertical: AppTokens.space3,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
-            ),
+        return EnquiryRoundAction(
+          icon: Icons.star_rate_rounded,
+          label: 'Request Review',
+          color: AppSurfaces.of(context).accent,
+          enabled: enabled,
+          onTap: () => _handleReviewRequest(
+            context,
+            ref,
+            reviewService,
+            googleReviewLink,
+            instagramHandle,
+            websiteUrl,
           ),
+          semanticLabel: 'Request Review from $customerName',
+          semanticHint: 'Sends a review request on WhatsApp',
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 

@@ -2,8 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/tokens.dart';
+import '../../ui/primitives/primitives.dart';
+import 'empty_state.dart';
+import 'press_scale.dart';
+import 'state_accent.dart';
 
-/// A reusable error state widget with consistent styling
+/// Typographic error state: a broken-orbit accent in the error colour, a
+/// tracked eyebrow, a split-weight headline (first line of [message]) and the
+/// remaining copy as body. Debug builds also show the raw [error].
 class ErrorState extends StatelessWidget {
   const ErrorState({
     super.key,
@@ -13,6 +19,7 @@ class ErrorState extends StatelessWidget {
     this.retryText,
     this.icon,
     this.padding,
+    this.eyebrow,
   });
 
   final String message;
@@ -21,68 +28,83 @@ class ErrorState extends StatelessWidget {
   final String? retryText;
   final IconData? icon;
   final EdgeInsetsGeometry? padding;
+  final String? eyebrow;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final copy = StateCopy.from(message);
 
     return Center(
-      child: Padding(
-        padding: padding ?? AppSpacing.space8,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Error icon
-            Icon(
-              icon ?? Icons.error_outline,
-              size: AppTokens.iconXLarge * 2,
-              color: colorScheme.error,
-            ),
-
-            const SizedBox(height: AppTokens.space6),
-
-            // Error message
-            Text(
-              message,
-              style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onSurface),
-              textAlign: TextAlign.center,
-            ),
-
-            // Error details (if provided and in debug mode)
-            if (error != null && kDebugMode) ...[
-              const SizedBox(height: AppTokens.space4),
-              Container(
-                padding: AppSpacing.space4,
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer,
-                  borderRadius: AppRadius.medium,
-                ),
-                child: Text(
-                  error.toString(),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onErrorContainer,
-                    fontFamily: 'monospace',
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: Padding(
+          padding:
+              padding ??
+              const EdgeInsets.symmetric(horizontal: AppTokens.space8, vertical: AppTokens.space6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              StateAccent(
+                icon: icon ?? Icons.error_outline,
+                color: colorScheme.error,
+                broken: true,
+              ),
+              const SizedBox(height: AppTokens.space5),
+              Eyebrow(eyebrow ?? 'Something went wrong', color: colorScheme.error),
+              const SizedBox(height: AppTokens.space2),
+              SplitHeading(
+                light: copy.light,
+                bold: copy.bold,
+                maxLines: 3,
+                style: theme.textTheme.headlineSmall,
+              ),
+              if (copy.body.isNotEmpty) ...[
+                const SizedBox(height: AppTokens.space2),
+                Text(
+                  copy.body,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w300,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-            ],
-
-            // Retry button
-            if (onRetry != null) ...[
-              const SizedBox(height: AppTokens.space6),
-              ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: Text(retryText ?? 'Retry'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.error,
-                  foregroundColor: colorScheme.onError,
+              ],
+              if (error != null && kDebugMode) ...[
+                const SizedBox(height: AppTokens.space4),
+                GlassPanel(
+                  borderRadius: AppRadius.medium,
+                  tint: colorScheme.error.withValues(alpha: 0.08),
+                  borderColor: colorScheme.error.withValues(alpha: 0.25),
+                  padding: AppSpacing.space3,
+                  child: Text(
+                    error.toString(),
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
                 ),
-              ),
+              ],
+              if (onRetry != null) ...[
+                const SizedBox(height: AppTokens.space5),
+                PressScale(
+                  child: ElevatedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(retryText ?? 'Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.error,
+                      foregroundColor: colorScheme.onError,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -100,6 +122,7 @@ class NetworkErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.wifi_off,
+      eyebrow: 'Offline',
       message: 'No internet connection.\nPlease check your network and try again.',
       onRetry: onRetry,
       retryText: 'Retry',
@@ -119,6 +142,7 @@ class AuthErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.lock_outline,
+      eyebrow: 'Session',
       message: 'Authentication failed.\nPlease sign in again.',
       onRetry: onRetry,
       retryText: 'Sign In',
@@ -138,6 +162,7 @@ class PermissionErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.block,
+      eyebrow: 'Restricted',
       message: 'Access denied.\nYou don\'t have permission to view this content.',
       onRetry: onRetry,
       retryText: 'Go Back',
@@ -165,6 +190,7 @@ class DataLoadErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.cloud_off,
+      eyebrow: 'Load failed',
       message: 'Failed to load $dataType.\nPlease try again.',
       error: error,
       onRetry: onRetry,
@@ -186,6 +212,7 @@ class ExportErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.file_download_off,
+      eyebrow: 'Export',
       message: 'Export failed.\nUnable to generate CSV file.',
       error: error,
       onRetry: onRetry,
@@ -207,6 +234,7 @@ class UploadErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.cloud_upload_outlined,
+      eyebrow: 'Upload',
       message: 'Upload failed.\nPlease check your connection and try again.',
       error: error,
       onRetry: onRetry,
@@ -228,6 +256,7 @@ class ValidationErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.warning_amber_outlined,
+      eyebrow: 'Check details',
       message: message,
       onRetry: onRetry,
       retryText: 'Fix Issues',
@@ -248,6 +277,7 @@ class ServerErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.dns_outlined,
+      eyebrow: 'Server',
       message: 'Server error occurred.\nPlease try again later.',
       error: error,
       onRetry: onRetry,
@@ -268,6 +298,7 @@ class TimeoutErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ErrorState(
       icon: Icons.timer_off_outlined,
+      eyebrow: 'Timed out',
       message: 'Request timed out.\nPlease check your connection and try again.',
       onRetry: onRetry,
       retryText: 'Retry',

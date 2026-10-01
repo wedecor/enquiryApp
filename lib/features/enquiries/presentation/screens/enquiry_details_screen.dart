@@ -7,23 +7,18 @@ import '../../../../core/providers/audit_provider.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
-import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
-import '../../../../shared/widgets/enquiry_history_widget.dart';
-import '../../../../ui/components/sticky_bottom_bar.dart';
-import '../widgets/customer_info_section.dart';
+import '../../../../ui/primitives/primitives.dart';
 import '../widgets/enquiry_access_denied.dart';
-import '../widgets/enquiry_assignment_section.dart';
 import '../widgets/enquiry_detail_footer.dart';
-import '../widgets/enquiry_detail_info_row.dart';
-import '../widgets/enquiry_detail_section.dart';
+import '../widgets/enquiry_details_body.dart';
 import '../widgets/enquiry_details_header.dart';
 import '../widgets/enquiry_display_labels.dart';
-import '../widgets/enquiry_images_section.dart';
-import '../widgets/event_details_section.dart';
-import '../widgets/payment_section.dart';
+import '../widgets/enquiry_glass_bar.dart';
+import '../widgets/enquiry_round_button.dart';
+import '../widgets/enquiry_sheet_header.dart';
 import 'enquiry_form_screen.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
@@ -43,255 +38,197 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final roleAsync = ref.watch(roleProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Enquiry Details'),
-        actions: [
-          roleAsync.when(
-            data: (role) {
-              if (role != UserRole.admin) {
-                return const SizedBox.shrink();
-              }
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () {
-                      Navigator.of(context).push<void>(
-                        MaterialPageRoute<void>(
-                          builder: (context) =>
-                              EnquiryFormScreen(enquiryId: widget.enquiryId, mode: 'edit'),
-                        ),
-                      );
-                    },
-                    tooltip: 'Edit Enquiry',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete),
-                    onPressed: _isUpdatingStatus
-                        ? null
-                        : () async {
-                            await _confirmAndDelete(context);
-                          },
-                    tooltip: 'Delete Enquiry',
-                  ),
-                ],
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-      body: currentUser.when(
-        data: (user) {
-          if (user == null) {
-            return const Center(child: Text('Please log in to view enquiry details'));
-          }
+    final actions = roleAsync.maybeWhen(
+      data: (role) => role != UserRole.admin
+          ? const <Widget>[]
+          : [
+              EnquiryRoundButton(
+                icon: Icons.edit_outlined,
+                tooltip: 'Edit Enquiry',
+                onTap: _openEdit,
+              ),
+              EnquiryRoundButton(
+                icon: Icons.delete_outline_rounded,
+                tooltip: 'Delete Enquiry',
+                iconColor: Theme.of(context).colorScheme.error,
+                onTap: _isUpdatingStatus
+                    ? null
+                    : () async {
+                        await _confirmAndDelete(context);
+                      },
+              ),
+            ],
+      orElse: () => const <Widget>[],
+    );
 
-          return roleAsync.when(
-            data: (userRole) {
-              final firestoreService = ref.watch(firestoreServiceProvider);
-              return StreamBuilder<DocumentSnapshot>(
-                stream: firestoreService.watchEnquiry(widget.enquiryId),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
+    return AmbientBackdrop(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: currentUser.when(
+          data: (user) {
+            if (user == null) {
+              return _frame(actions, const Text('Please log in to view enquiry details'));
+            }
 
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (!snapshot.hasData || !snapshot.data!.exists) {
-                    return const Center(child: Text('Enquiry not found'));
-                  }
-
-                  final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
-                  final dropdownLookup = ref
-                      .watch(dropdownLookupProvider)
-                      .maybeWhen(data: (value) => value, orElse: () => null);
-
-                  final labels = EnquiryDisplayLabels.from(enquiryData, dropdownLookup);
-                  final statusValue = labels.statusValue;
-                  final statusLabel = labels.statusLabel;
-                  final eventTypeLabel = labels.eventTypeLabel;
-                  final priorityLabel = labels.priorityLabel;
-                  final paymentStatusLabel = labels.paymentStatusLabel;
-                  final sourceLabel = labels.sourceLabel;
-
-                  if (userRole != UserRole.admin) {
-                    final assignedTo = enquiryData['assignedTo'] as String?;
-                    final currentUserId = user.uid;
-
-                    if (assignedTo != null && assignedTo != currentUserId) {
-                      return const EnquiryAccessDenied();
+            return roleAsync.when(
+              data: (userRole) {
+                final firestoreService = ref.watch(firestoreServiceProvider);
+                return StreamBuilder<DocumentSnapshot>(
+                  stream: firestoreService.watchEnquiry(widget.enquiryId),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return _frame(actions, Text('Error: ${snapshot.error}'));
                     }
-                  }
 
-                  final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return _frame(actions, const CircularProgressIndicator());
+                    }
 
-                  final customerPhone = enquiryData['customerPhone'] as String?;
-                  final eventDateTs = enquiryData['eventDate'];
-                  final eventDate = eventDateTs is Timestamp ? eventDateTs.toDate() : null;
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return _frame(actions, const Text('Enquiry not found'));
+                    }
 
-                  return Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: AppSpacing.space4,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              EnquiryDetailsHeader(
-                                enquiryId: widget.enquiryId,
-                                enquiryData: enquiryData,
-                                userRole: userRole,
-                                currentUserId: user.uid,
-                                statusValue: statusValue,
-                                statusLabel: statusLabel,
-                              ),
-                              const SizedBox(height: AppTokens.space6),
+                    final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+                    final dropdownLookup = ref
+                        .watch(dropdownLookupProvider)
+                        .maybeWhen(data: (value) => value, orElse: () => null);
 
-                              CustomerInfoSection(
-                                enquiryId: widget.enquiryId,
-                                customerName: (enquiryData['customerName'] as String?) ?? 'N/A',
-                                customerPhone: customerPhone,
-                                location:
-                                    (enquiryData['eventLocation'] as String?) ??
-                                    (enquiryData['location'] as String? ?? 'N/A'),
-                                eventTypeLabel: eventTypeLabel,
-                                eventDate: eventDate,
-                                statusValue: statusValue,
-                              ),
+                    final labels = EnquiryDisplayLabels.from(enquiryData, dropdownLookup);
 
-                              EventDetailsSection(
-                                eventTypeLabel: eventTypeLabel,
-                                eventDate: enquiryData['eventDate'],
-                                guestCount: enquiryData['guestCount'],
-                                budgetRange: enquiryData['budgetRange'] as String?,
-                                priorityLabel: priorityLabel,
-                                sourceLabel: sourceLabel,
-                              ),
+                    if (userRole != UserRole.admin) {
+                      final assignedTo = enquiryData['assignedTo'] as String?;
+                      final currentUserId = user.uid;
 
-                              if (_canViewImages(userRole, enquiryData, user.uid))
-                                EnquiryImagesSection(images: images),
+                      if (assignedTo != null && assignedTo != currentUserId) {
+                        return _frame(actions, const EnquiryAccessDenied());
+                      }
+                    }
 
-                              EnquiryAssignmentSection(
-                                userRole: userRole,
-                                assignedTo: enquiryData['assignedTo'] as String?,
-                                createdBy: enquiryData['createdBy'] as String?,
-                                currentUserId: user.uid,
-                              ),
-
-                              if (userRole == UserRole.admin)
-                                PaymentSection(
-                                  totalCost: enquiryData['totalCost'],
-                                  advancePaid: enquiryData['advancePaid'],
-                                  paymentStatusLabel: paymentStatusLabel,
-                                ),
-
-                              EnquiryDetailSection(
-                                title: 'Description',
-                                children: [
-                                  EnquiryDetailInfoRow(
-                                    label: 'Notes',
-                                    value:
-                                        enquiryNotesFrom(enquiryData) ?? 'No description provided',
-                                  ),
-                                ],
-                              ),
-
-                              EnquiryDetailSection(
-                                title: 'Timestamps',
-                                children: [
-                                  EnquiryDetailInfoRow(
-                                    label: 'Created',
-                                    value: _formatTimestamp(enquiryData['createdAt']),
-                                  ),
-                                  EnquiryDetailInfoRow(
-                                    label: 'Last Updated',
-                                    value: _formatTimestamp(enquiryData['updatedAt']),
-                                  ),
-                                ],
-                              ),
-
-                              EnquiryDetailSection(
-                                title: 'Change History',
-                                children: [EnquiryHistoryWidget(enquiryId: widget.enquiryId)],
-                              ),
-
-                              const SizedBox(height: AppTokens.space4),
-                            ],
-                          ),
-                        ),
-                      ),
-                      StickyBottomBar(
-                        child: EnquiryDetailFooter(
-                          enquiryId: widget.enquiryId,
-                          enquiryData: enquiryData,
-                          userRole: userRole,
-                          currentUserId: user.uid,
-                          statusValue: statusValue,
-                          statusLabel: statusLabel,
-                          customerPhone: customerPhone,
-                          customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-                          onCall: customerPhone == null
-                              ? null
-                              : () async {
-                                  final launcher = ref.read(contactLauncherProvider);
-                                  await launcher.callNumberWithAudit(
-                                    customerPhone,
-                                    enquiryId: widget.enquiryId,
-                                  );
-                                },
-                          onWhatsApp: customerPhone == null
-                              ? null
-                              : () async {
-                                  final launcher = ref.read(contactLauncherProvider);
-                                  await launcher.openWhatsAppWithAudit(
-                                    customerPhone,
-                                    enquiryId: widget.enquiryId,
-                                    prefillText:
-                                        'Hi ${enquiryData['customerName'] ?? 'there'}, this is from We Decor.',
-                                  );
-                                },
-                          onEdit: userRole == UserRole.admin
-                              ? () {
-                                  Navigator.of(context).push<void>(
-                                    MaterialPageRoute<void>(
-                                      builder: (context) => EnquiryFormScreen(
-                                        enquiryId: widget.enquiryId,
-                                        mode: 'edit',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : null,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error checking permissions: $error')),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error loading user data: $error')),
+                    return _buildLoaded(
+                      context,
+                      enquiryData: enquiryData,
+                      labels: labels,
+                      userRole: userRole,
+                      currentUserId: user.uid,
+                      actions: actions,
+                    );
+                  },
+                );
+              },
+              loading: () => _frame(actions, const CircularProgressIndicator()),
+              error: (error, stack) => _frame(actions, Text('Error checking permissions: $error')),
+            );
+          },
+          loading: () => _frame(actions, const CircularProgressIndicator()),
+          error: (error, stack) => _frame(actions, Text('Error loading user data: $error')),
+        ),
       ),
     );
   }
 
-  String _formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return 'N/A';
-    if (timestamp is Timestamp) {
-      return '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year} ${timestamp.toDate().hour}:${timestamp.toDate().minute}';
-    }
-    return timestamp.toString();
+  /// Header + centred state content for loading, error and gated states.
+  Widget _frame(List<Widget> actions, Widget child) {
+    return CustomScrollView(
+      slivers: [
+        EnquirySheetHeader(eyebrow: 'Enquiry', title: 'Enquiry Details', actions: actions),
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Padding(
+              padding: AppSpacing.space6,
+              child: DefaultTextStyle.merge(textAlign: TextAlign.center, child: child),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoaded(
+    BuildContext context, {
+    required Map<String, dynamic> enquiryData,
+    required EnquiryDisplayLabels labels,
+    required UserRole? userRole,
+    required String currentUserId,
+    required List<Widget> actions,
+  }) {
+    final customerPhone = enquiryData['customerPhone'] as String?;
+    final eventDateTs = enquiryData['eventDate'];
+    final eventDate = eventDateTs is Timestamp ? eventDateTs.toDate() : null;
+
+    return Stack(
+      children: [
+        CustomScrollView(
+          slivers: [
+            EnquiryDetailsHeader(
+              enquiryId: widget.enquiryId,
+              customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+              customerPhone: customerPhone,
+              location:
+                  (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
+              eventTypeLabel: labels.eventTypeLabel,
+              eventDate: eventDate,
+              statusValue: labels.statusValue,
+              statusLabel: labels.statusLabel,
+              actions: actions,
+            ),
+            EnquiryDetailsBody(
+              enquiryId: widget.enquiryId,
+              enquiryData: enquiryData,
+              labels: labels,
+              userRole: userRole,
+              currentUserId: currentUserId,
+              canViewImages: _canViewImages(userRole, enquiryData, currentUserId),
+              bottomClearance: enquiryGlassBarClearance(context) + AppTokens.space4,
+            ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: EnquiryGlassBar(
+            child: EnquiryDetailFooter(
+              enquiryId: widget.enquiryId,
+              enquiryData: enquiryData,
+              userRole: userRole,
+              currentUserId: currentUserId,
+              statusValue: labels.statusValue,
+              statusLabel: labels.statusLabel,
+              customerPhone: customerPhone,
+              customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+              onCall: customerPhone == null
+                  ? null
+                  : () async {
+                      final launcher = ref.read(contactLauncherProvider);
+                      await launcher.callNumberWithAudit(
+                        customerPhone,
+                        enquiryId: widget.enquiryId,
+                      );
+                    },
+              onWhatsApp: customerPhone == null
+                  ? null
+                  : () async {
+                      final launcher = ref.read(contactLauncherProvider);
+                      await launcher.openWhatsAppWithAudit(
+                        customerPhone,
+                        enquiryId: widget.enquiryId,
+                        prefillText:
+                            'Hi ${enquiryData['customerName'] ?? 'there'}, this is from We Decor.',
+                      );
+                    },
+              onEdit: userRole == UserRole.admin ? _openEdit : null,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _openEdit() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => EnquiryFormScreen(enquiryId: widget.enquiryId, mode: 'edit'),
+      ),
+    );
   }
 
   bool _canViewImages(UserRole? role, Map<String, dynamic> data, String meUid) {

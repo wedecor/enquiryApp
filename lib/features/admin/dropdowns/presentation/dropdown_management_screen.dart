@@ -1,12 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/navigation/shell_widgets.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/components/glass_page_scaffold.dart';
+import '../../../../ui/components/glass_segmented_tabs.dart';
+import '../../../../ui/components/glass_state_message.dart';
+import '../../../../ui/components/gradient_pill_button.dart';
 import '../domain/dropdown_item.dart';
 import 'dropdown_form_dialog.dart';
 import 'dropdown_providers.dart';
+import 'widgets/dropdown_item_tile.dart';
 
 /// Main screen for managing dropdown items
 class DropdownManagementScreen extends ConsumerStatefulWidget {
@@ -52,70 +61,80 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   Widget build(BuildContext context) {
     final currentGroup = ref.watch(dropdownGroupProvider);
     final roleAsync = ref.watch(roleProvider);
+    final isAdmin = roleAsync.valueOrNull == UserRole.admin;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dropdown Management'),
-        actions: [
-          // Search field
-          SizedBox(
-            width: 200,
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+    return GlassPageScaffold(
+      eyebrow: 'Admin',
+      title: 'Dropdown Management',
+      actions: [
+        ShellIconButton(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Refresh',
+          onTap: () {
+            ref.invalidate(filteredDropdownsProvider);
+          },
+        ),
+      ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTokens.space4,
+              AppTokens.space3,
+              AppTokens.space4,
+              0,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Search...',
+                      prefixIcon: Icon(Icons.search_rounded),
+                    ),
+                  ),
                 ),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                if (isAdmin) ...[
+                  const SizedBox(width: AppTokens.space3),
+                  Expanded(
+                    flex: 2,
+                    child: GradientPillButton(
+                      label: 'Add Item',
+                      icon: Icons.add_rounded,
+                      height: AppTokens.minTapTarget,
+                      onPressed: () => _showAddDialog(context, currentGroup),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-
-          // Add button (admin only)
-          roleAsync.when(
-            data: (role) {
-              if (role != UserRole.admin) {
-                return const SizedBox.shrink();
-              }
-              return ElevatedButton.icon(
-                onPressed: () => _showAddDialog(context, currentGroup),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Item'),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTokens.space4,
+              AppTokens.space3,
+              AppTokens.space4,
+              AppTokens.space1,
+            ),
+            child: GlassSegmentedTabs(
+              controller: _tabController,
+              minSegmentWidth: 140,
+              segments: [
+                for (final group in DropdownGroup.values)
+                  GlassSegment(group.displayName, icon: dropdownGroupIcon(group)),
+              ],
+            ),
           ),
-
-          const SizedBox(width: 8),
-
-          // Refresh button
-          IconButton(
-            onPressed: () {
-              ref.invalidate(filteredDropdownsProvider);
-            },
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: DropdownGroup.values.map((group) => _buildGroupContent(group)).toList(),
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: DropdownGroup.values
-              .map((group) => Tab(text: group.displayName, icon: Icon(_getGroupIcon(group))))
-              .toList(),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: DropdownGroup.values.map((group) => _buildGroupContent(group)).toList(),
       ),
     );
   }
@@ -125,244 +144,114 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     final isAdmin = roleAsync.when(
       data: (role) => role == UserRole.admin,
       loading: () => false,
-      error: (_, __) => false,
+      error: (_, _) => false,
     );
     final dropdownsAsync = ref.watch(filteredDropdownsProvider(group));
 
-    return Column(
-      children: [
-        // Group statistics
-        _buildGroupStats(group),
-
-        // Dropdowns list
-        Expanded(
-          child: dropdownsAsync.when(
-            data: (items) {
-              if (items.isEmpty) {
-                return _buildEmptyState(group, isAdmin);
-              }
-              return _buildDropdownsList(group, items, isAdmin);
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => _buildErrorState(error),
-          ),
-        ),
-      ],
+    return dropdownsAsync.when(
+      data: (items) {
+        if (items.isEmpty) {
+          return Column(
+            children: [
+              _buildGroupStats(group),
+              Expanded(child: _buildEmptyState(group, isAdmin)),
+            ],
+          );
+        }
+        return _buildDropdownsList(group, items, isAdmin);
+      },
+      loading: () => Column(
+        children: [
+          _buildGroupStats(group),
+          const Expanded(child: GlassLoadingState()),
+        ],
+      ),
+      error: (error, stack) => Column(
+        children: [
+          _buildGroupStats(group),
+          Expanded(child: _buildErrorState(error)),
+        ],
+      ),
     );
   }
 
   Widget _buildGroupStats(DropdownGroup group) {
     final statsAsync = ref.watch(dropdownGroupStatsProvider(group));
 
-    return Container(
-      padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppTokens.space4, AppTokens.space3, AppTokens.space4, 0),
       child: statsAsync.when(
-        data: (stats) => Row(
-          children: [
-            _buildStatCard('Total', stats['total']!, AppColorScheme.chartBlue),
-            const SizedBox(width: 16),
-            _buildStatCard('Active', stats['active']!, AppColorScheme.chartGreen),
-            const SizedBox(width: 16),
-            _buildStatCard('Inactive', stats['inactive']!, AppColorScheme.chartAmber),
-          ],
+        data: (stats) => DropdownGroupStats(
+          total: stats['total']!,
+          active: stats['active']!,
+          inactive: stats['inactive']!,
         ),
         loading: () => const SizedBox(height: 80),
-        error: (_, __) => const SizedBox(height: 80),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, int value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value.toString(),
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
-            ),
-            Text(
-              label,
-              style: TextStyle(color: color.withOpacity(0.8), fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
+        error: (_, _) => const SizedBox(height: 80),
       ),
     );
   }
 
   Widget _buildEmptyState(DropdownGroup group, bool isAdmin) {
-    final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(_getGroupIcon(group), size: 64, color: mutedColor),
-          const SizedBox(height: 16),
-          Text(
-            'No ${group.displayName.toLowerCase()} found',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isAdmin
-                ? 'Tap "Add Item" to create your first dropdown item'
-                : 'Contact an administrator to add dropdown items',
-            style: TextStyle(color: mutedColor),
-          ),
-        ],
-      ),
+    return GlassStateMessage(
+      icon: dropdownGroupIcon(group),
+      title: 'No ${group.displayName.toLowerCase()} found',
+      message: isAdmin
+          ? 'Tap "Add Item" to create your first dropdown item'
+          : 'Contact an administrator to add dropdown items',
     );
   }
 
   Widget _buildErrorState(Object error) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
-          const SizedBox(height: 16),
-          Text(
-            'Error loading dropdowns',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colorScheme.error),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error.toString(),
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () {
-              ref.invalidate(filteredDropdownsProvider);
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-          ),
-        ],
+    return GlassStateMessage(
+      icon: Icons.error_outline_rounded,
+      title: 'Error loading dropdowns',
+      message: error.toString(),
+      color: Theme.of(context).colorScheme.error,
+      action: FilledButton.icon(
+        onPressed: () {
+          ref.invalidate(filteredDropdownsProvider);
+        },
+        icon: const Icon(Icons.refresh_rounded),
+        label: const Text('Retry'),
       ),
     );
   }
 
   Widget _buildDropdownsList(DropdownGroup group, List<DropdownItem> items, bool isAdmin) {
     return ReorderableListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        AppTokens.space4,
+        0,
+        AppTokens.space4,
+        AppTokens.space8 + MediaQuery.paddingOf(context).bottom,
+      ),
+      header: Padding(
+        padding: const EdgeInsets.only(bottom: AppTokens.space3),
+        child: _buildGroupStats(group),
+      ),
+      proxyDecorator: (child, index, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) => Transform.scale(
+          scale: 1 + 0.02 * Curves.easeOut.transform(animation.value),
+          child: Material(type: MaterialType.transparency, child: child),
+        ),
+        child: child,
+      ),
       itemCount: items.length,
       onReorder: isAdmin
           ? (oldIndex, newIndex) => _onReorder(group, items, oldIndex, newIndex)
-          : (_, __) {},
+          : (_, _) {},
       itemBuilder: (context, index) {
         final item = items[index];
-        return _buildDropdownItem(group, item, index, isAdmin);
+        return DropdownItemTile(
+          key: ValueKey(item.value),
+          item: item,
+          index: index,
+          isAdmin: isAdmin,
+          onAction: (action) => _handleItemAction(action, group, item),
+        );
       },
-    );
-  }
-
-  Widget _buildDropdownItem(DropdownGroup group, DropdownItem item, int index, bool isAdmin) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      key: ValueKey(item.value),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isAdmin) ...[
-              ReorderableDragStartListener(
-                index: index,
-                child: Icon(Icons.drag_handle, color: colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(width: 8),
-            ],
-            if (item.color != null) ...[
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Color(int.parse(item.color!.replaceFirst('#', '0xFF'))),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ],
-        ),
-        title: Text(item.label, style: const TextStyle(fontWeight: FontWeight.w500)),
-        subtitle: Text(
-          item.value,
-          style: TextStyle(fontFamily: 'monospace', color: colorScheme.onSurfaceVariant),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Active status chip
-            Chip(
-              label: Text(item.active ? 'Active' : 'Inactive'),
-              backgroundColor: item.active
-                  ? AppColorScheme.successContainerLight
-                  : colorScheme.errorContainer,
-              labelStyle: TextStyle(
-                color: item.active
-                    ? AppColorScheme.onSuccessContainerLight
-                    : colorScheme.onErrorContainer,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // Actions menu
-            PopupMenuButton<String>(
-              enabled: isAdmin,
-              onSelected: (action) => _handleItemAction(action, group, item),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'edit',
-                  child: Row(children: [Icon(Icons.edit), SizedBox(width: 8), Text('Edit')]),
-                ),
-                PopupMenuItem(
-                  value: item.active ? 'deactivate' : 'activate',
-                  child: Row(
-                    children: [
-                      Icon(item.active ? Icons.visibility_off : Icons.visibility),
-                      const SizedBox(width: 8),
-                      Text(item.active ? 'Deactivate' : 'Activate'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'replace',
-                  child: Row(
-                    children: [
-                      Icon(Icons.swap_horiz),
-                      SizedBox(width: 8),
-                      Text('Replace in enquiries'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: colorScheme.error),
-                      const SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: colorScheme.error)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -480,27 +369,14 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   ) async {
     final hasReferences = await ref.read(isDropdownReferencedProvider((group, item.value)).future);
 
-    if (mounted) {
-      showDialog<void>(
-        context: context,
-        builder: (context) =>
-            DropdownDeleteDialog(group: group, item: item, hasReferences: hasReferences),
+    if (context.mounted) {
+      unawaited(
+        showDialog<void>(
+          context: context,
+          builder: (context) =>
+              DropdownDeleteDialog(group: group, item: item, hasReferences: hasReferences),
+        ),
       );
-    }
-  }
-
-  IconData _getGroupIcon(DropdownGroup group) {
-    switch (group) {
-      case DropdownGroup.statuses:
-        return Icons.flag;
-      case DropdownGroup.eventTypes:
-        return Icons.event;
-      case DropdownGroup.priorities:
-        return Icons.priority_high;
-      case DropdownGroup.paymentStatuses:
-        return Icons.payment;
-      case DropdownGroup.sources:
-        return Icons.campaign_outlined;
     }
   }
 }

@@ -6,8 +6,14 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/feedback/feedback_sheet.dart';
 import '../../../../core/services/consent_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../ui/components/brand_mark.dart';
+import '../../../../ui/primitives/primitives.dart';
 import '../../../legal/privacy_policy_screen.dart';
 import '../../../legal/terms_of_service_screen.dart';
+import '../widgets/settings_layout.dart';
+import '../widgets/settings_tiles.dart';
 
 class PrivacyTab extends ConsumerStatefulWidget {
   const PrivacyTab({super.key});
@@ -56,151 +62,156 @@ class _PrivacyTabState extends ConsumerState<PrivacyTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    return SettingsScrollBody(
       children: [
-        const Text('Privacy & Data', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Text(
-          'Manage your privacy preferences and data sharing settings.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 24),
-
-        // Analytics Consent
-        Card(
-          child: SwitchListTile(
-            title: const Text('Share Anonymous Analytics'),
-            subtitle: const Text(
-              'Help us improve the app by sharing anonymous usage data. '
-              'No personal information is collected.',
-            ),
-            value: _analyticsConsent,
-            onChanged: AppConfig.enableAnalytics
-                ? (value) async {
-                    await ConsentService.instance.setAnalyticsConsent(value);
-                    setState(() {
-                      _analyticsConsent = value;
-                    });
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            value
-                                ? 'Analytics enabled. Thank you for helping us improve!'
-                                : 'Analytics disabled. Your privacy is protected.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                : null,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space1,
+            AppTokens.space5,
+            AppTokens.space1,
+            0,
           ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Crash Reporting Consent
-        Card(
-          child: SwitchListTile(
-            title: const Text('Share Crash Reports'),
-            subtitle: const Text(
-              'Help us fix bugs by automatically sending crash reports. '
-              'Requires app restart to take effect.',
-            ),
-            value: _crashlyticsConsent,
-            onChanged: AppConfig.enableCrashlytics
-                ? (value) async {
-                    await ConsentService.instance.setCrashlyticsConsent(value);
-                    setState(() {
-                      _crashlyticsConsent = value;
-                    });
-
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Crash reporting preference saved. Restart app to apply changes.',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                : null,
-          ),
-        ),
-
-        const SizedBox(height: 32),
-
-        // Legal Documents
-        const Text('Legal Documents', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
-
-        Card(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ListTile(
-                leading: const Icon(Icons.privacy_tip),
-                title: const Text('Privacy Policy'),
-                subtitle: const Text('How we handle your personal information'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute<void>(builder: (context) => const PrivacyPolicyScreen())),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('Terms of Service'),
-                subtitle: const Text('Terms and conditions for using this app'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen())),
+              SplitHeading(light: 'Privacy &', bold: 'Data', style: t.headlineMedium),
+              const SizedBox(height: AppTokens.space2),
+              Text(
+                'Manage your privacy preferences and data sharing settings.',
+                style: t.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w300,
+                ),
               ),
             ],
           ),
         ),
+        SettingsGroup(
+          eyebrow: 'Consent',
+          title: 'Data Sharing',
+          children: [
+            SettingsSwitchTile(
+              icon: Icons.insights_rounded,
+              iconColor: AppColorScheme.chartBlue,
+              title: 'Share Anonymous Analytics',
+              subtitle:
+                  'Help us improve the app by sharing anonymous usage data. '
+                  'No personal information is collected.',
+              value: _analyticsConsent,
+              onChanged: AppConfig.enableAnalytics
+                  ? (value) async {
+                      await ConsentService.instance.setAnalyticsConsent(value);
+                      setState(() {
+                        _analyticsConsent = value;
+                      });
 
-        const SizedBox(height: 24),
-
-        // Help & Support
-        const Text('Help & Support', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
-
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.feedback),
-            title: const Text('Send Feedback'),
-            subtitle: const Text('Report issues or suggest improvements'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => showFeedbackSheet(context),
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // App Information
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'App Information',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 12),
-                Text('Version: ${_versionDisplay ?? (_isLoadingVersion ? "Loading…" : "Unknown")}'),
-                const Text('Environment: ${AppConfig.env}'),
-                const Text('Build: ${kReleaseMode ? "Production" : "Development"}'),
-                const SizedBox(height: 8),
-                Text('© ${DateTime.now().year} We Decor Enquiries. All rights reserved.'),
-              ],
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              value
+                                  ? 'Analytics enabled. Thank you for helping us improve!'
+                                  : 'Analytics disabled. Your privacy is protected.',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
             ),
-          ),
+            SettingsSwitchTile(
+              icon: Icons.bug_report_outlined,
+              iconColor: AppColorScheme.chartOrange,
+              title: 'Share Crash Reports',
+              subtitle:
+                  'Help us fix bugs by automatically sending crash reports. '
+                  'Requires app restart to take effect.',
+              value: _crashlyticsConsent,
+              onChanged: AppConfig.enableCrashlytics
+                  ? (value) async {
+                      await ConsentService.instance.setCrashlyticsConsent(value);
+                      setState(() {
+                        _crashlyticsConsent = value;
+                      });
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Crash reporting preference saved. Restart app to apply changes.',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+            ),
+          ],
+        ),
+        SettingsGroup(
+          eyebrow: 'Policies',
+          title: 'Legal Documents',
+          children: [
+            SettingsTile(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              subtitle: 'How we handle your personal information',
+              trailing: const SettingsChevron(),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (context) => const PrivacyPolicyScreen())),
+            ),
+            SettingsTile(
+              icon: Icons.description_outlined,
+              title: 'Terms of Service',
+              subtitle: 'Terms and conditions for using this app',
+              trailing: const SettingsChevron(),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (context) => const TermsOfServiceScreen())),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          eyebrow: 'Support',
+          title: 'Help & Support',
+          children: [
+            SettingsTile(
+              icon: Icons.feedback_outlined,
+              title: 'Send Feedback',
+              subtitle: 'Report issues or suggest improvements',
+              trailing: const SettingsChevron(),
+              onTap: () => showFeedbackSheet(context),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          eyebrow: 'Build',
+          title: 'App Information',
+          separated: false,
+          padding: const EdgeInsets.all(AppTokens.space4),
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(bottom: AppTokens.space3),
+              child: BrandMark(showSubtitle: true, size: 26),
+            ),
+            SettingsInfoRow(
+              label: 'Version',
+              value: _versionDisplay ?? (_isLoadingVersion ? 'Loading…' : 'Unknown'),
+            ),
+            const SettingsInfoRow(label: 'Environment', value: AppConfig.env),
+            const SettingsInfoRow(
+              label: 'Build',
+              value: kReleaseMode ? 'Production' : 'Development',
+            ),
+            const SizedBox(height: AppTokens.space2),
+            Text(
+              '© ${DateTime.now().year} We Decor Enquiries. All rights reserved.',
+              style: t.bodySmall?.copyWith(fontWeight: FontWeight.w300),
+            ),
+          ],
         ),
       ],
     );

@@ -12,7 +12,12 @@ import '../../../../core/notifications/fcm_token_manager.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../ui/components/brand_mark.dart';
+import '../../../../ui/components/gradient_pill_button.dart';
 import '../screens/login_screen.dart';
+import 'auth_backdrop.dart';
+import 'auth_status_view.dart';
 
 /// Root authentication gate that handles all session states
 class AuthGate extends ConsumerWidget {
@@ -47,20 +52,27 @@ class AuthGate extends ConsumerWidget {
   }
 
   Widget _buildLoadingScreen(BuildContext context, String message) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 24),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-          ],
+    return AuthBackdrop(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const BrandMark(size: 48, showSubtitle: true),
+              const SizedBox(height: AppTokens.space8),
+              const SizedBox.square(
+                dimension: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.4),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              Text(
+                message,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w300),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -68,251 +80,121 @@ class AuthGate extends ConsumerWidget {
 
   Widget _buildUnprovisionedScreen(BuildContext context, WidgetRef ref, String email) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_off, size: 64, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 24),
-
-              Text(
-                'Account Not Provisioned',
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-
-              Text(
-                'Your account ($email) is signed in but not yet provisioned for WeDecor Events.',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, color: colorScheme.primary),
-                        const SizedBox(width: 8),
-                        const Text('Next Steps', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '1. Contact your administrator to invite/activate your account\n'
-                      '2. Provide your email address for account setup\n'
-                      '3. Wait for invitation email with setup instructions',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _copyEmail(context, email),
-                      icon: const Icon(Icons.copy),
-                      label: const Text('Copy Email'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _signOut(context, ref),
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Sign Out'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColorScheme.snackError,
-                        foregroundColor: colorScheme.onError,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    final tone = AppSurfaces.of(context).accentInk;
+    return AuthStatusView(
+      icon: Icons.person_off_outlined,
+      tone: tone,
+      eyebrow: 'Almost there',
+      title: 'Account Not Provisioned',
+      message: 'Your account ($email) is signed in but not yet provisioned for WeDecor Events.',
+      details: [
+        AuthInfoBlock(
+          icon: Icons.info_outline_rounded,
+          title: 'Next Steps',
+          tone: tone,
+          body:
+              '1. Contact your administrator to invite/activate your account\n'
+              '2. Provide your email address for account setup\n'
+              '3. Wait for invitation email with setup instructions',
         ),
-      ),
+      ],
+      actions: [
+        GradientPillButton(
+          label: 'Copy Email',
+          icon: Icons.copy_rounded,
+          onPressed: () => _copyEmail(context, email),
+        ),
+        AuthOutlinedPill(
+          label: 'Sign Out',
+          icon: Icons.logout_rounded,
+          color: colorScheme.error,
+          onPressed: () => _signOut(context, ref),
+        ),
+      ],
     );
   }
 
   Widget _buildDisabledScreen(BuildContext context, WidgetRef ref, String email) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.block, size: 64, color: colorScheme.error),
-              const SizedBox(height: 24),
-
-              Text(
-                'Access Disabled',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineMedium?.copyWith(color: colorScheme.error),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-
-              Text(
-                'Your account ($email) access has been disabled.',
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.errorContainer,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.error.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.support_agent, color: colorScheme.error),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Contact Support',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Please contact your administrator to reactivate your account or discuss access requirements.',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _signOut(context, ref),
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Sign Out'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColorScheme.snackError,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
+    return AuthStatusView(
+      icon: Icons.block_rounded,
+      tone: colorScheme.error,
+      eyebrow: 'Account paused',
+      title: 'Access Disabled',
+      message: 'Your account ($email) access has been disabled.',
+      details: [
+        AuthInfoBlock(
+          icon: Icons.support_agent_rounded,
+          title: 'Contact Support',
+          tone: colorScheme.error,
+          body:
+              'Please contact your administrator to reactivate your account or discuss access requirements.',
         ),
-      ),
+      ],
+      actions: [
+        AuthOutlinedPill(
+          label: 'Sign Out',
+          icon: Icons.logout_rounded,
+          color: colorScheme.error,
+          onPressed: () => _signOut(context, ref),
+        ),
+      ],
     );
   }
 
   Widget _buildErrorScreen(BuildContext context, WidgetRef ref, String message, [Object? cause]) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final warningColor = AppColorScheme.snackWarning;
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: warningColor),
-              const SizedBox(height: 24),
-
-              Text(
-                'Authentication Error',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: warningColor),
-                textAlign: TextAlign.center,
+    final s = AppSurfaces.of(context);
+    return AuthStatusView(
+      icon: Icons.error_outline_rounded,
+      tone: AppColorScheme.snackWarning,
+      eyebrow: 'Something went wrong',
+      title: 'Authentication Error',
+      message: message,
+      details: [
+        if (kDebugMode && cause != null)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: s.glassFillStrong,
+              borderRadius: AppRadius.medium,
+              border: Border.all(color: s.microBorder),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppTokens.space3),
+              child: Text(
+                'Debug: ${cause.toString()}',
+                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
               ),
-              const SizedBox(height: 16),
-
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-
-              if (kDebugMode && cause != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Debug: ${cause.toString()}',
-                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 32),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _retry(context),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _signOut(context, ref),
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Sign Out'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
+      ],
+      actions: [
+        GradientPillButton(
+          label: 'Retry',
+          icon: Icons.refresh_rounded,
+          onPressed: () => _retry(context),
         ),
-      ),
+        AuthOutlinedPill(
+          label: 'Sign Out',
+          icon: Icons.logout_rounded,
+          onPressed: () => _signOut(context, ref),
+        ),
+      ],
     );
   }
 
   Widget _buildDebugBanner(BuildContext context, String info) {
-    final warningColor = AppColorScheme.warning;
+    const warningColor = AppColorScheme.warning;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: AppColorScheme.warningContainerLight,
+      color: warningColor.withValues(alpha: 0.12),
       child: Row(
         children: [
-          Icon(Icons.bug_report, size: 16, color: warningColor),
+          const Icon(Icons.bug_report, size: 16, color: warningColor),
           const SizedBox(width: 8),
           Text(
             'DEBUG: $info',
-            style: TextStyle(fontSize: 12, color: warningColor, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 12, color: warningColor, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -387,15 +269,15 @@ class AuthGate extends ConsumerWidget {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: AppColorScheme.warningContainerLight,
+          color: AppColorScheme.warning.withValues(alpha: 0.12),
           child: Row(
             children: [
-              Icon(Icons.warning, size: 16, color: AppColorScheme.warning),
+              const Icon(Icons.warning, size: 16, color: AppColorScheme.warning),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'DEBUG: Project ID mismatch - Expected: wedecorenquries, Got: $projectId',
-                  style: TextStyle(fontSize: 12, color: AppColorScheme.warning),
+                  style: const TextStyle(fontSize: 12, color: AppColorScheme.warning),
                 ),
               ),
             ],

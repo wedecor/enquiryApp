@@ -60,7 +60,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
         ? null
         : ref
               .watch(users_providers.userDisplayNameProvider(assignedUserId))
-              .when(data: (v) => v, loading: () => '…', error: (_, __) => 'Unknown');
+              .when(data: (v) => v, loading: () => '…', error: (_, _) => 'Unknown');
 
     final sheetActions = contactEnquiryRowActions(
       customerName: customerName,
@@ -96,6 +96,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
       eventTypeLabel: eventTypeLabel,
       eventTypeValue: eventTypeValue,
       eventDateLabel: formatDateLabel(eventDate),
+      eventDate: (eventDate != null && eventDate.year > 1971) ? eventDate : null,
       location: location?.trim(),
       ageLabel: formatAgeLabel(createdAt),
       assigneeLabel: assigneeLabel?.trim(),

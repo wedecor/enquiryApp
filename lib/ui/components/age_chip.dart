@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/tokens.dart';
+
+/// Quiet glass pill showing how long ago an enquiry arrived.
 class AgeChip extends StatelessWidget {
   const AgeChip({super.key, required this.createdAt});
 
@@ -7,10 +11,36 @@ class AgeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = AppSurfaces.of(context);
     final age = DateTime.now().difference(createdAt);
     final label = _formatAge(age);
 
-    return Chip(label: Text(label));
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: s.glassFill,
+        borderRadius: AppRadius.full,
+        border: Border.all(color: s.microBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.schedule_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              maxLines: 1,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _formatAge(Duration age) {

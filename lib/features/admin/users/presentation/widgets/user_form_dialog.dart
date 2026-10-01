@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/providers/role_provider.dart';
 import '../../../../../core/theme/app_theme.dart';
+import '../../../../../core/theme/tokens.dart';
 import '../../../../../shared/models/user_model.dart';
+import '../../../../../ui/components/glass_dialog.dart';
 import '../../domain/user_model.dart' as domain;
 import '../users_providers.dart';
 
@@ -49,16 +51,22 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     final isEdit = widget.user != null;
     final roleAsync = ref.watch(roleProvider);
 
-    return AlertDialog(
-      title: Text(isEdit ? 'Edit User' : 'Add User'),
+    return GlassDialog(
+      eyebrow: 'Team',
+      title: isEdit ? 'Edit User' : 'Add User',
+      icon: isEdit ? Icons.manage_accounts_outlined : Icons.person_add_alt_1_rounded,
       content: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                prefixIcon: Icon(Icons.person_outline_rounded),
+              ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter a name';
@@ -66,12 +74,12 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.space4),
             TextFormField(
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: 'Email',
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.alternate_email_rounded),
                 enabled: !isEdit, // Email is read-only for edits
               ),
               validator: (value) {
@@ -84,18 +92,22 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.space4),
             TextFormField(
               controller: _phoneController,
               decoration: const InputDecoration(
                 labelText: 'Phone (optional)',
-                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone_outlined),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTokens.space4),
             DropdownButtonFormField<String>(
               initialValue: _selectedRole,
-              decoration: const InputDecoration(labelText: 'Role', border: OutlineInputBorder()),
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Role',
+                prefixIcon: Icon(Icons.shield_outlined),
+              ),
               items: const [
                 DropdownMenuItem(value: 'staff', child: Text('Staff')),
                 DropdownMenuItem(value: 'admin', child: Text('Admin')),
@@ -106,19 +118,21 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 });
               },
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Checkbox(
-                  value: _isActive,
-                  onChanged: (value) {
-                    setState(() {
-                      _isActive = value ?? true;
-                    });
-                  },
-                ),
-                const Text('Active'),
-              ],
+            const SizedBox(height: AppTokens.space2),
+            MergeSemantics(
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _isActive,
+                    onChanged: (value) {
+                      setState(() {
+                        _isActive = value ?? true;
+                      });
+                    },
+                  ),
+                  const Text('Active'),
+                ],
+              ),
             ),
           ],
         ),
@@ -133,7 +147,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             return FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create'));
           },
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
         ),
       ],
     );

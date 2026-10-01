@@ -1,82 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
-import '../../../../shared/models/user_model.dart';
+import '../../../../ui/primitives/primitives.dart';
+import 'contact_buttons.dart';
+import 'enquiry_round_action.dart';
+import 'enquiry_sheet_header.dart';
+import 'review_request_button.dart';
 
-/// Header card for enquiry details with ID and read-only status.
+/// Expanding sheet header for enquiry details: event eyebrow, customer name,
+/// enquiry reference, live status and round contact actions.
 class EnquiryDetailsHeader extends StatelessWidget {
   const EnquiryDetailsHeader({
     super.key,
     required this.enquiryId,
-    required this.enquiryData,
-    required this.userRole,
-    required this.currentUserId,
+    required this.customerName,
+    required this.customerPhone,
+    required this.location,
+    required this.eventTypeLabel,
+    required this.eventDate,
     required this.statusValue,
     required this.statusLabel,
+    this.actions = const [],
   });
 
   final String enquiryId;
-  final Map<String, dynamic> enquiryData;
-  final UserRole? userRole;
-  final String currentUserId;
+  final String customerName;
+  final String? customerPhone;
+  final String? location;
+  final String eventTypeLabel;
+  final DateTime? eventDate;
   final String statusValue;
   final String statusLabel;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final t = Theme.of(context).textTheme;
+    final textScale = (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 2.0);
     final statusColor = AppColorScheme.statusColorFor(statusValue);
+    final date = eventDate;
+    final shortId = enquiryId.length > 8 ? enquiryId.substring(0, 8) : enquiryId;
+    final place = location?.trim();
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: AppRadius.medium,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+    return EnquirySheetHeader(
+      title: customerName,
+      eyebrow: [
+        eventTypeLabel,
+        if (date != null && date.year > 1971) DateFormat('d MMM yyyy').format(date),
+      ].join(' · '),
+      subtitle: [
+        'Enquiry #$shortId',
+        if (place != null && place.isNotEmpty && place != 'N/A') place,
+      ].join(' · '),
+      tint: statusColor,
+      actions: actions,
+      meta: Row(
+        children: [
+          StatusDot(color: statusColor, size: 9, pulse: statusValue == 'new'),
+          const SizedBox(width: AppTokens.space2),
+          Flexible(
+            child: Text(
+              statusLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: AppSpacing.space4,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    (enquiryData['customerName'] as String?) ?? 'Customer',
-                    style: theme.textTheme.titleLarge,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: AppTokens.space2),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTokens.space2,
-                    vertical: AppTokens.space1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.small,
-                    border: Border.all(color: statusColor.withValues(alpha: 0.28)),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+      footerHeight: EnquiryRoundAction.circleSize + 6 + 18 * textScale,
+      footer: Wrap(
+        spacing: AppTokens.space2,
+        runSpacing: AppTokens.space2,
+        children: [
+          ContactButtons(
+            customerPhone: customerPhone,
+            customerName: customerName,
+            enquiryId: enquiryId,
+            eventType: eventTypeLabel,
+            eventDate: eventDate,
+          ),
+          if (statusValue == 'completed')
+            ReviewRequestButton(
+              customerPhone: customerPhone,
+              customerName: customerName,
+              enquiryId: enquiryId,
             ),
-            const SizedBox(height: AppTokens.space2),
-            Text(
-              'Enquiry #${enquiryId.substring(0, 8)}',
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

@@ -1,0 +1,160 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+
+import '../../../../core/theme/tokens.dart';
+import '../../../../core/utils/enquiry_fields.dart';
+import '../../../../shared/models/user_model.dart';
+import '../../../../shared/widgets/enquiry_history_widget.dart';
+import '../../../../ui/primitives/primitives.dart';
+import 'customer_info_section.dart';
+import 'enquiry_assignment_section.dart';
+import 'enquiry_detail_info_row.dart';
+import 'enquiry_detail_section.dart';
+import 'enquiry_display_labels.dart';
+import 'enquiry_images_section.dart';
+import 'event_details_section.dart';
+import 'payment_section.dart';
+
+/// Sliver list of the enquiry detail sections, cascading in on first build.
+class EnquiryDetailsBody extends StatelessWidget {
+  const EnquiryDetailsBody({
+    super.key,
+    required this.enquiryId,
+    required this.enquiryData,
+    required this.labels,
+    required this.userRole,
+    required this.currentUserId,
+    required this.canViewImages,
+    required this.bottomClearance,
+  });
+
+  final String enquiryId;
+  final Map<String, dynamic> enquiryData;
+  final EnquiryDisplayLabels labels;
+  final UserRole? userRole;
+  final String currentUserId;
+  final bool canViewImages;
+  final double bottomClearance;
+
+  static const double _maxContentWidth = 760;
+
+  @override
+  Widget build(BuildContext context) {
+    final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
+    final width = MediaQuery.sizeOf(context).width;
+    final side = ((width - _maxContentWidth) / 2).clamp(AppTokens.space4, double.infinity);
+
+    final sections = <Widget>[
+      EventDetailsSection(
+        eventTypeLabel: labels.eventTypeLabel,
+        eventDate: enquiryData['eventDate'],
+        guestCount: enquiryData['guestCount'],
+        budgetRange: enquiryData['budgetRange'] as String?,
+        priorityLabel: labels.priorityLabel,
+        sourceLabel: labels.sourceLabel,
+      ),
+      if (userRole == UserRole.admin)
+        PaymentSection(
+          totalCost: enquiryData['totalCost'],
+          advancePaid: enquiryData['advancePaid'],
+          paymentStatusLabel: labels.paymentStatusLabel,
+        ),
+      _AsymmetricPair(
+        major: CustomerInfoSection(
+          customerPhone: enquiryData['customerPhone'] as String?,
+          location:
+              (enquiryData['eventLocation'] as String?) ??
+              (enquiryData['location'] as String? ?? 'N/A'),
+        ),
+        minor: EnquiryAssignmentSection(
+          userRole: userRole,
+          assignedTo: enquiryData['assignedTo'] as String?,
+          createdBy: enquiryData['createdBy'] as String?,
+          currentUserId: currentUserId,
+        ),
+      ),
+      if (canViewImages) EnquiryImagesSection(images: images),
+      _AsymmetricPair(
+        major: EnquiryDetailSection(
+          eyebrow: 'In their words',
+          title: 'Description',
+          children: [
+            EnquiryDetailInfoRow(
+              label: 'Notes',
+              value: enquiryNotesFrom(enquiryData) ?? 'No description provided',
+              maxLines: null,
+            ),
+          ],
+        ),
+        minor: EnquiryDetailSection(
+          eyebrow: 'Timeline',
+          title: 'Timestamps',
+          children: [
+            EnquiryDetailInfoRow(
+              label: 'Created',
+              value: _formatTimestamp(enquiryData['createdAt']),
+            ),
+            EnquiryDetailInfoRow(
+              label: 'Last Updated',
+              value: _formatTimestamp(enquiryData['updatedAt']),
+            ),
+          ],
+        ),
+      ),
+      const SectionHeader(
+        eyebrow: 'Audit trail',
+        title: 'Change History',
+        padding: EdgeInsets.fromLTRB(
+          AppTokens.space1,
+          AppTokens.space4,
+          AppTokens.space1,
+          AppTokens.space3,
+        ),
+      ),
+      EnquiryHistoryWidget(enquiryId: enquiryId),
+    ];
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(side, AppTokens.space5, side, bottomClearance),
+      sliver: SliverList.builder(
+        itemCount: sections.length,
+        itemBuilder: (context, i) => StaggerIn(index: i, child: sections[i]),
+      ),
+    );
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    if (timestamp is Timestamp) {
+      return '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year} ${timestamp.toDate().hour}:${timestamp.toDate().minute}';
+    }
+    return timestamp.toString();
+  }
+}
+
+/// Two sections side by side at a 3:2 ratio on wide layouts, stacked on phones.
+class _AsymmetricPair extends StatelessWidget {
+  const _AsymmetricPair({required this.major, required this.minor});
+
+  final Widget major;
+  final Widget minor;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        if (box.maxWidth < 600) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [major, minor]);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 3, child: major),
+            const SizedBox(width: AppTokens.space3),
+            Expanded(flex: 2, child: minor),
+          ],
+        );
+      },
+    );
+  }
+}

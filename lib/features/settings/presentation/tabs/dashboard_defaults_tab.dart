@@ -5,6 +5,9 @@ import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
+import '../../../../ui/components/glass_state_message.dart';
+import '../widgets/settings_layout.dart';
+import '../widgets/settings_tiles.dart';
 
 class DashboardDefaultsTab extends ConsumerStatefulWidget {
   const DashboardDefaultsTab({super.key});
@@ -32,31 +35,29 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
 
         return _buildDashboardContent(context, settings);
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error loading dashboard settings: $error')),
+      loading: () => const GlassLoadingState(),
+      error: (error, stack) => GlassStateMessage(
+        icon: Icons.error_outline_rounded,
+        title: 'Dashboard settings unavailable',
+        message: 'Error loading dashboard settings: $error',
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 
   Widget _buildDashboardContent(BuildContext context, UserSettings settings) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDateRangeSection(context),
-                const SizedBox(height: 24),
-                _buildStatusTabsSection(context),
-                const SizedBox(height: 24),
-                _buildColumnsSection(context),
-              ],
-            ),
-          ),
-        ),
-        if (_hasChanges) _buildSaveSection(context),
-      ],
+    return SettingsEditableBody(
+      hasChanges: _hasChanges,
+      isSaving: _isSaving,
+      onSave: _saveChanges,
+      onDiscard: _discardChanges,
+      child: SettingsScrollBody(
+        children: [
+          _buildDateRangeSection(context),
+          _buildStatusTabsSection(context),
+          _buildColumnsSection(context),
+        ],
+      ),
     );
   }
 
@@ -67,42 +68,25 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
       ('90d', '90 Days', 'Last 90 days'),
       ('ytd', 'Year to Date', 'From January 1st'),
     ];
+    final groupValue = _currentSettings?.dashboard.dateRange ?? '30d';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Default Date Range', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Default time period for dashboard and analytics',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: dateRangeOptions.map((option) {
-                final (value, title, subtitle) = option;
-                return RadioListTile<String>(
-                  value: value,
-                  groupValue: _currentSettings?.dashboard.dateRange ?? '30d',
-                  onChanged: (newRange) {
-                    if (newRange != null) {
-                      final newDashboard = _currentSettings!.dashboard.copyWith(
-                        dateRange: newRange,
-                      );
-                      _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
-                    }
-                  },
-                  title: Text(title),
-                  subtitle: Text(subtitle),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+    return SettingsGroup(
+      eyebrow: 'Period',
+      title: 'Default Date Range',
+      subtitle: 'Default time period for dashboard and analytics',
+      dividerIndent: 16,
+      children: [
+        for (final (value, title, subtitle) in dateRangeOptions)
+          SettingsChoiceTile(
+            title: title,
+            subtitle: subtitle,
+            selected: groupValue == value,
+            onTap: () {
+              final newDashboard = _currentSettings!.dashboard.copyWith(dateRange: value);
+              _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
+            },
+          ),
+      ],
     );
   }
 
@@ -118,52 +102,40 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
 
     final currentTabs = _currentSettings?.dashboard.statusTabs ?? ['new', 'in_talks', 'approved'];
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Default Status Tabs', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Which status tabs to show by default on the dashboard',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: availableStatuses.map((status) {
-                final (value, title, subtitle) = status;
-                final isSelected = currentTabs.contains(value);
+    return SettingsGroup(
+      eyebrow: 'Pipeline',
+      title: 'Default Status Tabs',
+      subtitle: 'Which status tabs to show by default on the dashboard',
+      children: [
+        for (final (value, title, subtitle) in availableStatuses)
+          SettingsChoiceTile(
+            multiSelect: true,
+            icon: Icons.fiber_manual_record_rounded,
+            iconColor: AppColorScheme.statusColorFor(value),
+            title: title,
+            subtitle: subtitle,
+            selected: currentTabs.contains(value),
+            onTap: () {
+              final checked = !currentTabs.contains(value);
+              List<String> newTabs = List.from(currentTabs);
+              if (checked) {
+                if (!newTabs.contains(value)) {
+                  newTabs.add(value);
+                }
+              } else {
+                newTabs.remove(value);
+              }
 
-                return CheckboxListTile(
-                  value: isSelected,
-                  onChanged: (checked) {
-                    List<String> newTabs = List.from(currentTabs);
-                    if (checked == true) {
-                      if (!newTabs.contains(value)) {
-                        newTabs.add(value);
-                      }
-                    } else {
-                      newTabs.remove(value);
-                    }
+              // Ensure at least one tab is selected
+              if (newTabs.isEmpty) {
+                newTabs = ['new'];
+              }
 
-                    // Ensure at least one tab is selected
-                    if (newTabs.isEmpty) {
-                      newTabs = ['new'];
-                    }
-
-                    final newDashboard = _currentSettings!.dashboard.copyWith(statusTabs: newTabs);
-                    _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
-                  },
-                  title: Text(title),
-                  subtitle: Text(subtitle),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+              final newDashboard = _currentSettings!.dashboard.copyWith(statusTabs: newTabs);
+              _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
+            },
+          ),
+      ],
     );
   }
 
@@ -181,87 +153,50 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
 
     final currentColumns = _currentSettings?.dashboard.columns ?? [];
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Table Columns', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Configure which columns to show in enquiry lists',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: availableColumns.map((column) {
-                final (id, title, subtitle) = column;
-                final existingColumn = currentColumns.firstWhere(
+    return SettingsGroup(
+      eyebrow: 'Lists',
+      title: 'Table Columns',
+      subtitle: 'Configure which columns to show in enquiry lists',
+      dividerIndent: 16,
+      children: [
+        for (final (id, title, subtitle) in availableColumns)
+          SettingsChoiceTile(
+            multiSelect: true,
+            title: title,
+            subtitle: subtitle,
+            selected: currentColumns
+                .firstWhere(
                   (col) => col.id == id,
                   orElse: () => ColumnSettings(id: id, visible: false, order: 0),
-                );
+                )
+                .visible,
+            onTap: () {
+              final existingColumn = currentColumns.firstWhere(
+                (col) => col.id == id,
+                orElse: () => ColumnSettings(id: id, visible: false, order: 0),
+              );
+              final checked = !existingColumn.visible;
+              final List<ColumnSettings> newColumns = List.from(currentColumns);
 
-                return CheckboxListTile(
-                  value: existingColumn.visible,
-                  onChanged: (checked) {
-                    final List<ColumnSettings> newColumns = List.from(currentColumns);
+              // Remove existing column with same id
+              newColumns.removeWhere((col) => col.id == id);
 
-                    // Remove existing column with same id
-                    newColumns.removeWhere((col) => col.id == id);
+              if (checked) {
+                // Add column with next order
+                final maxOrder = newColumns.isEmpty
+                    ? 0
+                    : newColumns.map((col) => col.order).reduce((a, b) => a > b ? a : b);
+                newColumns.add(ColumnSettings(id: id, visible: true, order: maxOrder + 1));
+              }
 
-                    if (checked == true) {
-                      // Add column with next order
-                      final maxOrder = newColumns.isEmpty
-                          ? 0
-                          : newColumns.map((col) => col.order).reduce((a, b) => a > b ? a : b);
-                      newColumns.add(ColumnSettings(id: id, visible: true, order: maxOrder + 1));
-                    }
+              // Sort by order
+              newColumns.sort((a, b) => a.order.compareTo(b.order));
 
-                    // Sort by order
-                    newColumns.sort((a, b) => a.order.compareTo(b.order));
-
-                    final newDashboard = _currentSettings!.dashboard.copyWith(columns: newColumns);
-                    _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
-                  },
-                  title: Text(title),
-                  subtitle: Text(subtitle),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveChanges,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
-            ),
+              final newDashboard = _currentSettings!.dashboard.copyWith(columns: newColumns);
+              _updateSettings(_currentSettings!.copyWith(dashboard: newDashboard));
+            },
           ),
-          const SizedBox(width: 16),
-          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
-        ],
-      ),
+      ],
     );
   }
 

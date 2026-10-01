@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:we_decor_enquiries/core/theme/app_theme.dart';
 import 'package:we_decor_enquiries/utils/event_colors.dart';
 
 void main() {
@@ -55,51 +56,51 @@ void main() {
 
   group('eventAccent', () {
     test('returns correct color for wedding', () {
-      expect(eventAccent('wedding'), const Color(0xFF8B5CF6));
+      expect(eventAccent('wedding'), AppColorScheme.eventWedding);
     });
 
     test('returns correct color for haldi', () {
-      expect(eventAccent('haldi'), const Color(0xFFF4B400));
+      expect(eventAccent('haldi'), AppColorScheme.eventHaldi);
     });
 
     test('returns correct color for engagement', () {
-      expect(eventAccent('engagement'), const Color(0xFFFF6B6B));
+      expect(eventAccent('engagement'), AppColorScheme.eventEngagement);
     });
 
     test('returns correct color for birthday', () {
-      expect(eventAccent('birthday'), const Color(0xFF06B6D4));
+      expect(eventAccent('birthday'), AppColorScheme.eventBirthday);
     });
 
     test('returns correct color for corporate', () {
-      expect(eventAccent('corporate'), const Color(0xFF22C55E));
+      expect(eventAccent('corporate'), AppColorScheme.chartEmerald);
     });
 
     test('handles case insensitivity', () {
-      expect(eventAccent('WEDDING'), const Color(0xFF8B5CF6));
-      expect(eventAccent('Wedding'), const Color(0xFF8B5CF6));
+      expect(eventAccent('WEDDING'), AppColorScheme.eventWedding);
+      expect(eventAccent('Wedding'), AppColorScheme.eventWedding);
     });
 
     test('returns default color for unknown type', () {
-      expect(eventAccent('unknown'), const Color(0xFF7AA2FF));
+      expect(eventAccent('unknown'), AppColorScheme.chartIndigo);
     });
 
     test('handles null input', () {
-      expect(eventAccent(null), const Color(0xFF7AA2FF));
+      expect(eventAccent(null), AppColorScheme.chartIndigo);
     });
 
     test('handles empty string', () {
-      expect(eventAccent(''), const Color(0xFF7AA2FF));
+      expect(eventAccent(''), AppColorScheme.chartIndigo);
     });
   });
 
   group('EventColors.accentFor', () {
     test('returns accent color for known type', () {
-      expect(EventColors.accentFor('wedding'), const Color(0xFF8B5CF6));
+      expect(EventColors.accentFor('wedding'), AppColorScheme.eventWedding);
     });
 
     test('uses fallback when provided', () {
       const fallback = Colors.red;
-      expect(EventColors.accentFor('unknown', fallback: fallback), const Color(0xFF7AA2FF));
+      expect(EventColors.accentFor('unknown', fallback: fallback), AppColorScheme.chartIndigo);
     });
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/role_provider.dart';
+import '../../../core/theme/tokens.dart';
 import '../../../shared/models/user_model.dart';
 import 'tabs/account_tab.dart';
 import 'tabs/admin_tab.dart';
@@ -9,6 +10,9 @@ import 'tabs/dashboard_defaults_tab.dart';
 import 'tabs/notifications_tab.dart';
 import 'tabs/preferences_tab.dart';
 import 'tabs/privacy_tab.dart';
+import '../../../ui/components/glass_page_scaffold.dart';
+import '../../../ui/components/glass_segmented_tabs.dart';
+import '../../../ui/components/glass_state_message.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.embeddedInShell = false});
@@ -21,6 +25,16 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProviderStateMixin {
   late TabController _tabController;
+
+  static const _baseSegments = [
+    GlassSegment('Account', icon: Icons.person_outline_rounded),
+    GlassSegment('Preferences', icon: Icons.tune_rounded),
+    GlassSegment('Notifications', icon: Icons.notifications_none_rounded),
+    GlassSegment('Dashboard', icon: Icons.space_dashboard_outlined),
+    GlassSegment('Privacy', icon: Icons.privacy_tip_outlined),
+  ];
+
+  static const _adminSegment = GlassSegment('Admin', icon: Icons.admin_panel_settings_outlined);
 
   @override
   void initState() {
@@ -44,68 +58,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
         final isAdmin = role == UserRole.admin;
         return _buildSettingsScreen(context, isAdmin);
       },
-      loading: () => widget.embeddedInShell
-          ? const Center(child: CircularProgressIndicator())
-          : Scaffold(
-              appBar: AppBar(title: const Text('Settings'), centerTitle: true),
-              body: const Center(child: CircularProgressIndicator()),
-            ),
-      error: (error, stack) => widget.embeddedInShell
-          ? Center(child: Text('Error: $error'))
-          : Scaffold(
-              appBar: AppBar(title: const Text('Settings'), centerTitle: true),
-              body: Center(child: Text('Error: $error')),
-            ),
+      loading: () => _wrap(const GlassLoadingState()),
+      error: (error, stack) => _wrap(
+        GlassStateMessage(
+          icon: Icons.error_outline_rounded,
+          title: 'Settings unavailable',
+          message: 'Error: $error',
+          color: Theme.of(context).colorScheme.error,
+        ),
+      ),
     );
   }
 
+  Widget _wrap(Widget body) {
+    if (widget.embeddedInShell) return body;
+    return GlassPageScaffold(eyebrow: 'Workspace', title: 'Settings', body: body);
+  }
+
   Widget _buildSettingsScreen(BuildContext context, bool isAdmin) {
-    final baseTabs = [
-      const Tab(icon: Icon(Icons.person), text: 'Account'),
-      const Tab(icon: Icon(Icons.tune), text: 'Preferences'),
-      const Tab(icon: Icon(Icons.notifications), text: 'Notifications'),
-      const Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
-      const Tab(icon: Icon(Icons.privacy_tip), text: 'Privacy'),
+    const baseTabViews = [
+      AccountTab(),
+      PreferencesTab(),
+      NotificationsTab(),
+      DashboardDefaultsTab(),
+      PrivacyTab(),
     ];
 
-    final baseTabViews = [
-      const AccountTab(),
-      const PreferencesTab(),
-      const NotificationsTab(),
-      const DashboardDefaultsTab(),
-      const PrivacyTab(),
-    ];
-
-    final tabs = isAdmin
-        ? [...baseTabs, const Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin')]
-        : baseTabs;
-
+    final segments = isAdmin ? [..._baseSegments, _adminSegment] : _baseSegments;
     final tabViews = isAdmin ? [...baseTabViews, const AdminTab()] : baseTabViews;
 
     // Update tab controller length if needed
-    if (_tabController.length != tabs.length) {
+    if (_tabController.length != segments.length) {
       _tabController.dispose();
-      _tabController = TabController(length: tabs.length, vsync: this);
+      _tabController = TabController(length: segments.length, vsync: this);
     }
 
-    final tabContent = TabBarView(controller: _tabController, children: tabViews);
-
-    if (widget.embeddedInShell) {
-      return Column(
+    return _wrap(
+      Column(
         children: [
-          TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
-          Expanded(child: tabContent),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppTokens.space4,
+              AppTokens.space3,
+              AppTokens.space4,
+              AppTokens.space1,
+            ),
+            child: GlassSegmentedTabs(controller: _tabController, segments: segments),
+          ),
+          Expanded(
+            child: TabBarView(controller: _tabController, children: tabViews),
+          ),
         ],
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-        bottom: TabBar(controller: _tabController, tabs: tabs, isScrollable: true),
       ),
-      body: tabContent,
     );
   }
 }

@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
+import '../../core/constants/status_vocabulary.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/utils/status_colors.dart';
+import '../primitives/primitives.dart';
 
-/// The single shared enquiry list item ("EnquiryCard") — used by the dashboard,
-/// the enquiries list/search results and the calendar day view. Do not build an
-/// enquiry row layout anywhere else; wrap this widget instead.
+/// The single shared enquiry list item — used by the dashboard, the enquiries
+/// list/search results, the calendar day view and Kanban columns. Do not build
+/// an enquiry row layout anywhere else; wrap this widget instead.
 ///
-/// Dense, table-like row: flat on the surface, separated from its neighbours by
-/// a 1px bottom hairline. One colour signal per row — the status dot.
+/// A floating glass tile with an asymmetric layout:
 ///
-///   Customer name                              12 Oct 2026
-///   Baby Shower · Whitefield                       ● New
-///   16m old · mohammed zakir
+///   ┌────┐  Customer name                     ● New
+///   │ 12 │  Baby Shower · Whitefield
+///   │OCT │  16m old · mohammed zakir
+///   └────┘
 ///
-/// Pass [location], [ageLabel], [assigneeLabel] separately for structured display.
-/// Set [compact] to hide the meta line. Set [bordered] where rows sit on a tinted
-/// background as separate cards (Kanban columns).
+/// Pass [eventDate] to get the typographic date block; otherwise the
+/// [eventDateLabel] text is shown in its place.
 class EnquiryListRow extends StatelessWidget {
   const EnquiryListRow({
     super.key,
@@ -25,16 +28,15 @@ class EnquiryListRow extends StatelessWidget {
     required this.eventTypeLabel,
     required this.eventDateLabel,
 
-    /// Raw event type key (e.g. 'wedding', 'haldi') — used to derive badge color.
+    /// Raw event type key (e.g. 'wedding', 'haldi').
     this.eventTypeValue,
+    this.eventDate,
     this.statusLabel,
     this.statusColor,
     this.firestoreStatusColors,
-    // Structured meta — preferred over secondaryMeta
     this.location,
     this.ageLabel,
     this.assigneeLabel,
-    // Legacy fallback (plain dot-joined string)
     this.secondaryMeta,
     required this.onTap,
     this.onLongPress,
@@ -42,6 +44,7 @@ class EnquiryListRow extends StatelessWidget {
     this.showStatusChip = true,
     this.showChevron = true,
     this.bordered = false,
+    this.margin,
   });
 
   final String customerName;
@@ -49,45 +52,43 @@ class EnquiryListRow extends StatelessWidget {
   final String eventTypeLabel;
   final String eventDateLabel;
   final String? eventTypeValue;
+  final DateTime? eventDate;
   final String? statusLabel;
   final Color? statusColor;
   final Map<String, Color>? firestoreStatusColors;
 
-  /// Structured meta fields — displayed with icons when non-null.
   final String? location;
   final String? ageLabel;
   final String? assigneeLabel;
 
-  /// Legacy dot-joined fallback shown only when the structured fields are all null.
+  /// Dot-joined fallback shown only when [ageLabel]/[assigneeLabel] are null.
   final String? secondaryMeta;
 
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool compact;
 
-  /// Hide where the status is already implied (e.g. inside a Kanban status column).
+  /// Hide where the status is already implied (e.g. inside a Kanban column).
   final bool showStatusChip;
 
-  /// Kept for call-site compatibility; the dense row has no chevron.
+  /// Kept for call-site compatibility; the tile has no chevron.
   final bool showChevron;
 
-  /// Render as a separate bordered card instead of a flat divided row.
+  /// Tighter tile for dense containers such as Kanban columns.
   final bool bordered;
+
+  /// Outer spacing; defaults depend on [bordered].
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final statusDotColor =
+    final dotColor =
         statusColor ??
         resolveStatusColor(context, statusValue, firestoreColors: firestoreStatusColors);
-    final chipLabel = statusLabel ?? _formatStatusLabel(statusValue);
-
-    final secondary = theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
-    final tertiary = theme.textTheme.labelSmall?.copyWith(
-      color: cs.onSurfaceVariant.withValues(alpha: 0.85),
-      fontWeight: FontWeight.w400,
-    );
+    final label = statusLabel ?? _formatStatusLabel(statusValue);
+    final isNew = EnquiryStatus.fromValue(statusValue) == EnquiryStatus.newEnquiry;
 
     final line2 = [
       eventTypeLabel.trim(),
@@ -104,89 +105,91 @@ class EnquiryListRow extends StatelessWidget {
         : (secondaryMeta?.trim() ?? '');
     final showMeta = !compact && line3.isNotEmpty;
 
+    final radius = bordered ? AppRadius.medium : AppRadius.large;
+    final pad = bordered ? AppTokens.space3 : AppTokens.space4;
+
     final content = Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTokens.space4,
-        vertical: AppTokens.space3,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
+      padding: EdgeInsets.all(pad),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: Text(
-                  customerName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+          _DateBlock(
+            date: eventDate,
+            fallback: eventDateLabel,
+            accent: dotColor,
+            compact: bordered,
+          ),
+          SizedBox(width: bordered ? AppTokens.space3 : AppTokens.space4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        customerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    if (showStatusChip) ...[
+                      const SizedBox(width: AppTokens.space2),
+                      _StatusLabel(label: label, color: dotColor, pulse: isNew),
+                    ],
+                  ],
+                ),
+                if (line2.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    line2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w300,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: AppTokens.space3),
-              Text(
-                eventDateLabel.trim(),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppTokens.space1),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  line2,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: secondary,
-                ),
-              ),
-              if (showStatusChip) ...[
-                const SizedBox(width: AppTokens.space3),
-                _StatusLabel(label: chipLabel, color: statusDotColor),
+                ],
+                if (showMeta) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    line3,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-          if (showMeta) ...[
-            const SizedBox(height: AppTokens.space1 / 2),
-            Text(line3, maxLines: 1, overflow: TextOverflow.ellipsis, style: tertiary),
-          ],
         ],
       ),
     );
 
-    if (bordered) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppTokens.space2),
-        child: Material(
-          color: theme.cardTheme.color ?? cs.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppRadius.medium,
-            side: BorderSide(color: cs.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(onTap: onTap, onLongPress: onLongPress, child: content),
-        ),
-      );
-    }
-
-    return Material(
-      color: cs.surface,
-      child: InkWell(
+    return Padding(
+      padding:
+          margin ??
+          (bordered
+              ? const EdgeInsets.only(bottom: AppTokens.space2)
+              : const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: 5)),
+      child: Pressable(
         onTap: onTap,
         onLongPress: onLongPress,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: cs.outlineVariant)),
-          ),
+        borderRadius: radius,
+        child: GlassPanel(
+          strong: true,
+          borderRadius: radius,
+          tint: dotColor.withValues(alpha: 0.05),
           child: content,
         ),
       ),
@@ -203,26 +206,105 @@ class EnquiryListRow extends StatelessWidget {
   }
 }
 
-/// Status as a coloured dot + plain label — the row's only colour signal.
+/// Day number (heavy) over a tracked month (whisper) — or the raw label when
+/// no [date] is supplied.
+class _DateBlock extends StatelessWidget {
+  const _DateBlock({
+    required this.date,
+    required this.fallback,
+    required this.accent,
+    required this.compact,
+  });
+
+  final DateTime? date;
+  final String fallback;
+  final Color accent;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final s = AppSurfaces.of(context);
+    final size = compact ? 44.0 : 52.0;
+
+    final Widget inner;
+    if (date != null) {
+      inner = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            DateFormat('d').format(date!),
+            style: t.titleLarge?.copyWith(
+              fontSize: compact ? 18 : 22,
+              fontWeight: FontWeight.w800,
+              height: 1,
+              letterSpacing: -0.8,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            DateFormat('MMM').format(date!).toUpperCase(),
+            style: t.labelSmall?.copyWith(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 1.6,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      );
+    } else {
+      inner = Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            fallback.trim().isEmpty ? '—' : fallback.trim(),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: t.labelSmall?.copyWith(fontWeight: FontWeight.w700, height: 1.15),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.medium,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [accent.withValues(alpha: 0.14), accent.withValues(alpha: 0.03)],
+        ),
+        border: Border.all(color: s.microBorder),
+      ),
+      child: inner,
+    );
+  }
+}
+
+/// Status as a glowing dot + label — the tile's only saturated colour.
 class _StatusLabel extends StatelessWidget {
-  const _StatusLabel({required this.label, required this.color});
+  const _StatusLabel({required this.label, required this.color, required this.pulse});
 
   final String label;
   final Color color;
+  final bool pulse;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 112),
+      constraints: const BoxConstraints(maxWidth: 116),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: const SizedBox(width: AppTokens.space2, height: AppTokens.space2),
-          ),
-          const SizedBox(width: AppTokens.space1 + 2),
+          StatusDot(color: color, size: 7, pulse: pulse),
+          const SizedBox(width: 6),
           Flexible(
             child: Text(
               label,
@@ -230,7 +312,7 @@ class _StatusLabel extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

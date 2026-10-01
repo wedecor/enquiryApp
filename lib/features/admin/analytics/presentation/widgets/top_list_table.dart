@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
+import '../../../../../ui/primitives/primitives.dart';
 import '../../domain/analytics_models.dart';
 import 'analytics_section_card.dart';
 
-/// Reusable table widget for displaying top lists and recent enquiries
+/// Ranked list: heavy rank numerals, count + share, and a thin proportional
+/// bar under each row in place of table grid lines.
 class TopListTable extends StatelessWidget {
   final String title;
   final List<CategoryCount> data;
@@ -25,337 +26,146 @@ class TopListTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnalyticsSectionCard(
+      eyebrow: 'Ranking',
       title: title,
-      child: data.isEmpty ? _buildEmptyState(context) : _buildTable(context),
+      child: data.isEmpty
+          ? const AnalyticsEmptyState(icon: Icons.format_list_numbered_rounded)
+          : _buildList(context),
     );
   }
 
-  Widget _buildTable(BuildContext context) {
+  Widget _buildList(BuildContext context) {
     final displayData = data.take(maxItems).toList();
+    final maxCount = displayData.fold<int>(0, (m, e) => e.count > m ? e.count : m);
 
-    return Table(
-      columnWidths: showPercentage
-          ? const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60), 2: FixedColumnWidth(80)}
-          : const {0: FlexColumnWidth(1), 1: FixedColumnWidth(60)},
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Header row
-        TableRow(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-              bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppTokens.space2),
+          child: Row(
+            children: [
+              const SizedBox(width: 40),
+              const Expanded(child: Eyebrow('Name')),
+              const SizedBox(width: 56, child: Eyebrow('Count')),
+              if (showPercentage)
+                const SizedBox(
+                  width: 56,
+                  child: Align(alignment: Alignment.centerRight, child: Eyebrow('Share')),
+                ),
+            ],
+          ),
+        ),
+        for (var i = 0; i < displayData.length; i++)
+          StaggerIn(
+            index: i,
+            child: _RankedRow(
+              rank: i + 1,
+              label: displayData[i].label ?? _formatName(displayData[i].key),
+              count: displayData[i].count,
+              percentage: showPercentage ? displayData[i].percentage : null,
+              fraction: maxCount > 0 ? displayData[i].count / maxCount : 0,
             ),
           ),
-          children: [
-            _buildHeaderCell(context, 'Name'),
-            _buildHeaderCell(context, 'Count'),
-            if (showPercentage) _buildHeaderCell(context, 'Share'),
-          ],
-        ),
-
-        // Data rows
-        ...displayData.map((item) {
-          final label = item.label ?? _formatName(item.key);
-          return TableRow(
-            children: [
-              _buildDataCell(context, label),
-              _buildDataCell(context, item.count.toString()),
-              if (showPercentage) _buildDataCell(context, '${item.percentage.toStringAsFixed(1)}%'),
-            ],
-          );
-        }),
       ],
-    );
-  }
-
-  Widget _buildHeaderCell(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDataCell(BuildContext context, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppTokens.space3, horizontal: AppTokens.space2),
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.bodyMedium,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(
-              Icons.table_chart,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No data available',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
   String _formatName(String value) => DropdownLookup.titleCase(value);
 }
 
-/// Recent enquiries table with more detailed information
-class RecentEnquiriesTable extends ConsumerWidget {
-  final List<RecentEnquiry> data;
-  final String title;
-  final int maxItems;
-
-  const RecentEnquiriesTable({
-    super.key,
-    required this.data,
-    required this.title,
-    this.maxItems = 20,
+class _RankedRow extends StatelessWidget {
+  const _RankedRow({
+    required this.rank,
+    required this.label,
+    required this.count,
+    required this.percentage,
+    required this.fraction,
   });
 
+  final int rank;
+  final String label;
+  final int count;
+  final double? percentage;
+  final double fraction;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final dropdownLookup = ref
-        .watch(dropdownLookupProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final s = AppSurfaces.of(context);
+    final lead = rank == 1;
 
-    return AnalyticsSectionCard(
-      title: title,
-      child: data.isEmpty ? _buildEmptyState(context) : _buildTable(context, dropdownLookup),
-    );
-  }
-
-  Widget _buildTable(BuildContext context, DropdownLookup? dropdownLookup) {
-    final displayData = data.take(maxItems).toList();
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: [
-          DataColumn(
-            label: Text(
-              'Date',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppTokens.space2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 40,
+                child: Text(
+                  rank.toString().padLeft(2, '0'),
+                  style: t.titleLarge
+                      ?.merge(AppTypography.numeral)
+                      .copyWith(
+                        fontSize: 20,
+                        color: lead ? s.accentInk : cs.onSurfaceVariant.withValues(alpha: 0.6),
+                      ),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.bodyMedium?.copyWith(
+                    fontWeight: lead ? FontWeight.w700 : FontWeight.w500,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 56,
+                child: Text(
+                  '$count',
+                  maxLines: 1,
+                  style: t.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+              if (percentage != null)
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    '${percentage!.toStringAsFixed(1)}%',
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    style: t.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w300,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+            ],
           ),
-          DataColumn(
-            label: Text(
-              'Customer',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Event Type',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Status',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Source',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Priority',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          DataColumn(
-            label: Text(
-              'Total Cost',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          const SizedBox(height: AppTokens.space2),
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: ProportionStrip(
+              height: 3,
+              segments: [
+                (fraction, lead ? s.accent : s.accent.withValues(alpha: 0.55)),
+                (1 - fraction, s.microBorder),
+              ],
             ),
           ),
         ],
-        rows: displayData
-            .map(
-              (enquiry) => DataRow(
-                cells: [
-                  DataCell(
-                    Text(_formatDate(enquiry.date), style: Theme.of(context).textTheme.bodySmall),
-                  ),
-                  DataCell(
-                    Text(
-                      enquiry.customerName,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      dropdownLookup?.labelForEventType(enquiry.eventType) ??
-                          DropdownLookup.titleCase(enquiry.eventType),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(enquiry.status),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        dropdownLookup?.labelForStatus(enquiry.status) ??
-                            _formatStatusName(enquiry.status),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      dropdownLookup?.labelForSource(enquiry.source) ??
-                          DropdownLookup.titleCase(enquiry.source),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getPriorityColor(enquiry.priority),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        dropdownLookup?.labelForPriority(enquiry.priority) ??
-                            _formatPriorityName(enquiry.priority),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  DataCell(
-                    Text(
-                      enquiry.totalCost != null ? _formatCurrency(enquiry.totalCost!) : '—',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
-              ),
-            )
-            .toList(),
       ),
     );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(Icons.table_rows, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            const SizedBox(height: 16),
-            Text(
-              'No recent enquiries',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Select a different date range or filters',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date).inDays;
-
-    if (difference == 0) {
-      return 'Today';
-    } else if (difference == 1) {
-      return 'Yesterday';
-    } else if (difference < 7) {
-      return '${date.day}/${date.month}';
-    } else {
-      return '${date.day}/${date.month}/${date.year % 100}';
-    }
-  }
-
-  Color _getStatusColor(String status) => AppColorScheme.statusColorFor(status);
-
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return AppColorScheme.chartRed;
-      case 'medium':
-        return AppColorScheme.chartAmber;
-      case 'low':
-        return AppColorScheme.chartGreen;
-      default:
-        return AppColorScheme.neutralGrey;
-    }
-  }
-
-  String _formatStatusName(String status) {
-    return status
-        .split('_')
-        .map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '')
-        .join(' ');
-  }
-
-  String _formatPriorityName(String priority) {
-    return priority.isNotEmpty
-        ? priority[0].toUpperCase() + priority.substring(1).toLowerCase()
-        : priority;
-  }
-
-  String _formatCurrency(double amount) {
-    if (amount == 0) return '—';
-
-    if (amount >= 1000000) {
-      return '₹${(amount / 1000000).toStringAsFixed(1)}M';
-    } else if (amount >= 100000) {
-      return '₹${(amount / 100000).toStringAsFixed(1)}L';
-    } else if (amount >= 1000) {
-      return '₹${(amount / 1000).toStringAsFixed(1)}K';
-    } else {
-      return '₹${amount.toStringAsFixed(0)}';
-    }
   }
 }

@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../ui/primitives/primitives.dart';
+import '../../../../ui/components/glass_dialog.dart';
 
 // Removed shared user model import - using string-based roles instead
 
@@ -34,179 +37,156 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Invite User'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_resetLink == null) ...[
-                // Form fields
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Name is required';
-                    }
-                    return null;
-                  },
+    final t = Theme.of(context).textTheme;
+    final s = AppSurfaces.of(context);
+    const success = AppColorScheme.snackSuccess;
+    final invited = _resetLink != null;
+
+    return GlassDialog(
+      eyebrow: invited ? 'Invitation sent' : 'Team',
+      title: 'Invite User',
+      icon: invited ? Icons.check_circle_outline_rounded : Icons.mail_outline_rounded,
+      iconColor: invited ? success : null,
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!invited) ...[
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
                 ),
-
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email Address',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Email is required';
-                    }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
-                      return 'Enter a valid email address';
-                    }
-                    return null;
-                  },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppTokens.space4),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email Address',
+                  prefixIcon: Icon(Icons.alternate_email_rounded),
                 ),
-
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.security),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'staff', child: Text('Staff Member')),
-                    DropdownMenuItem(value: 'admin', child: Text('Administrator')),
-                  ],
-                  onChanged: (role) {
-                    if (role != null) {
-                      setState(() {
-                        _selectedRole = role;
-                      });
-                    }
-                  },
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Email is required';
+                  }
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
+                    return 'Enter a valid email address';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppTokens.space4),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedRole,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Role',
+                  prefixIcon: Icon(Icons.shield_outlined),
                 ),
-              ] else ...[
-                // Success state with reset link
-                const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess, size: 64),
-
-                const SizedBox(height: 16),
-
-                Text(
-                  'User invited successfully!',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColorScheme.snackSuccess,
-                    fontWeight: FontWeight.bold,
+                items: const [
+                  DropdownMenuItem(value: 'staff', child: Text('Staff Member')),
+                  DropdownMenuItem(value: 'admin', child: Text('Administrator')),
+                ],
+                onChanged: (role) {
+                  if (role != null) {
+                    setState(() {
+                      _selectedRole = role;
+                    });
+                  }
+                },
+              ),
+            ] else ...[
+              Text(
+                'User invited successfully!',
+                style: t.titleLarge?.copyWith(color: success, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: AppTokens.space4),
+              if (_emailSent) ...[
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: success.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.medium,
+                    border: Border.all(color: success.withValues(alpha: 0.28)),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 16),
-
-                if (_emailSent) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColorScheme.successContainerLight,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
-                    ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppTokens.space3),
                     child: Row(
                       children: [
-                        const Icon(Icons.email, color: AppColorScheme.onSuccessContainerLight),
-                        const SizedBox(width: 8),
+                        const StatusDot(color: success),
+                        const SizedBox(width: AppTokens.space3),
                         Expanded(
                           child: Text(
                             'Invitation email sent to ${_emailController.text.trim()}',
-                            style: const TextStyle(
-                              color: AppColorScheme.onSuccessContainerLight,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-
-                Text(
-                  _emailSent
-                      ? 'Backup reset link (if needed):'
-                      : 'Share this password reset link with the user:',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
                 ),
-
-                const SizedBox(height: 12),
-
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                  ),
+                const SizedBox(height: AppTokens.space4),
+              ],
+              Text(
+                _emailSent
+                    ? 'Backup reset link (if needed):'
+                    : 'Share this password reset link with the user:',
+                style: t.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: AppTokens.space2),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: s.glassFillStrong,
+                  borderRadius: AppRadius.medium,
+                  border: Border.all(color: s.microBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppTokens.space3),
                   child: SelectableText(
                     _resetLink!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    style: t.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                ElevatedButton.icon(
+              ),
+              const SizedBox(height: AppTokens.space3),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
                   onPressed: _copyResetLink,
-                  icon: const Icon(Icons.copy),
+                  icon: const Icon(Icons.copy_rounded, size: 18),
                   label: const Text('Copy Link'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
       actions: [
-        if (_resetLink == null) ...[
+        if (!invited) ...[
           TextButton(
             onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: _isLoading ? null : _inviteUser,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            ),
             child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
+                ? const SizedBox.square(
+                    dimension: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Text('Send Invite'),
           ),
         ] else ...[
-          ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Done')),
         ],
       ],
     );

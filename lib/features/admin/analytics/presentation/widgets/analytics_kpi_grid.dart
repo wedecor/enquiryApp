@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/tokens.dart';
+import '../../../../../ui/primitives/primitives.dart';
 import '../../domain/analytics_models.dart';
 import '../analytics_controller.dart';
-import 'kpi_card.dart';
+import 'analytics_format.dart';
+import 'kpi_metric_cards.dart';
 
-/// Responsive KPI grid driven by [analyticsControllerProvider].
+/// Asymmetric KPI layout driven by [analyticsControllerProvider]: one hero
+/// metric with spark bars, then smaller glass tiles in staggered columns.
 class AnalyticsKpiGrid extends ConsumerWidget {
   const AnalyticsKpiGrid({super.key});
 
@@ -20,21 +23,19 @@ class AnalyticsKpiGrid extends ConsumerWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             AppTokens.space4,
-            AppTokens.space3,
-            AppTokens.space4,
             AppTokens.space2,
+            AppTokens.space4,
+            AppTokens.space3,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Key metrics',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.2),
+              const Padding(
+                padding: EdgeInsets.only(left: AppTokens.space1),
+                child: Eyebrow('Key metrics'),
               ),
               const SizedBox(height: AppTokens.space3),
-              _KpiGridBody(state: state),
+              _KpiLayout(state: state),
             ],
           ),
         );
@@ -61,75 +62,146 @@ class AnalyticsKpiGrid extends ConsumerWidget {
   }
 }
 
-class _KpiGridBody extends StatelessWidget {
-  const _KpiGridBody({required this.state});
+class _KpiLayout extends StatelessWidget {
+  const _KpiLayout({required this.state});
 
   final AnalyticsState state;
+
+  static const double _gap = AppTokens.space3;
 
   @override
   Widget build(BuildContext context) {
     final kpi = state.kpiSummary!;
     final isLoading = state.isLoading;
+    final total = kpi.totalEnquiries;
+    double? shareOf(int n) => total > 0 ? n / total : null;
+
+    final trend = bucketValues([for (final p in state.timeSeries) p.count.toDouble()]);
+
+    final hero = StaggerIn(
+      index: 0,
+      child: TotalEnquiriesCard(
+        count: kpi.totalEnquiries,
+        deltaPercentage: kpi.deltas.totalEnquiriesChange,
+        isLoading: isLoading,
+        hero: true,
+        trend: trend,
+      ),
+    );
+    final active = StaggerIn(
+      index: 1,
+      child: ActiveEnquiriesCard(
+        count: kpi.activeEnquiries,
+        deltaPercentage: kpi.deltas.activeEnquiriesChange,
+        isLoading: isLoading,
+        share: shareOf(kpi.activeEnquiries),
+      ),
+    );
+    final won = StaggerIn(
+      index: 2,
+      child: WonEnquiriesCard(
+        count: kpi.wonEnquiries,
+        deltaPercentage: kpi.deltas.wonEnquiriesChange,
+        isLoading: isLoading,
+        share: shareOf(kpi.wonEnquiries),
+      ),
+    );
+    final conversion = StaggerIn(
+      index: 3,
+      child: ConversionRateCard(
+        rate: kpi.conversionRate,
+        deltaPercentage: kpi.deltas.conversionRateChange,
+        isLoading: isLoading,
+      ),
+    );
+    final lost = StaggerIn(
+      index: 4,
+      child: LostEnquiriesCard(
+        count: kpi.lostEnquiries,
+        deltaPercentage: kpi.deltas.lostEnquiriesChange,
+        isLoading: isLoading,
+        share: shareOf(kpi.lostEnquiries),
+      ),
+    );
+    final revenue = StaggerIn(
+      index: 5,
+      child: EstimatedRevenueCard(
+        revenue: kpi.estimatedRevenue,
+        deltaPercentage: kpi.deltas.estimatedRevenueChange,
+        isLoading: isLoading,
+      ),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final int crossAxisCount;
-        final double childAspectRatio;
 
-        if (width < AppTokens.breakpointTablet) {
-          crossAxisCount = 2;
-          // Taller cells — KPI cards need room for icon, value, subtitle, and delta.
-          childAspectRatio = width < 360 ? 0.82 : 0.9;
-        } else if (width < AppTokens.breakpointDesktop) {
-          crossAxisCount = 3;
-          childAspectRatio = 1.15;
-        } else {
-          crossAxisCount = width >= 1200 ? 4 : 3;
-          childAspectRatio = 1.25;
+        if (width >= AppTokens.breakpointTablet) {
+          return _row([
+            (2, hero),
+            (1, _stack([active, won])),
+            (1, conversion),
+            (1, _stack([lost, revenue])),
+          ]);
         }
 
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppTokens.space3,
-          crossAxisSpacing: AppTokens.space3,
-          childAspectRatio: childAspectRatio,
+        if (width >= 520) {
+          return Column(
+            children: [
+              _row([
+                (3, hero),
+                (2, _stack([active, won])),
+              ]),
+              const SizedBox(height: _gap),
+              _row([
+                (2, conversion),
+                (3, _stack([lost, revenue])),
+              ]),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TotalEnquiriesCard(
-              count: kpi.totalEnquiries,
-              deltaPercentage: kpi.deltas.totalEnquiriesChange,
-              isLoading: isLoading,
-            ),
-            ActiveEnquiriesCard(
-              count: kpi.activeEnquiries,
-              deltaPercentage: kpi.deltas.activeEnquiriesChange,
-              isLoading: isLoading,
-            ),
-            WonEnquiriesCard(
-              count: kpi.wonEnquiries,
-              deltaPercentage: kpi.deltas.wonEnquiriesChange,
-              isLoading: isLoading,
-            ),
-            LostEnquiriesCard(
-              count: kpi.lostEnquiries,
-              deltaPercentage: kpi.deltas.lostEnquiriesChange,
-              isLoading: isLoading,
-            ),
-            ConversionRateCard(
-              rate: kpi.conversionRate,
-              deltaPercentage: kpi.deltas.conversionRateChange,
-              isLoading: isLoading,
-            ),
-            EstimatedRevenueCard(
-              revenue: kpi.estimatedRevenue,
-              deltaPercentage: kpi.deltas.estimatedRevenueChange,
-              isLoading: isLoading,
-            ),
+            IntrinsicHeight(child: hero),
+            const SizedBox(height: _gap),
+            _row([
+              (1, _stack([active, won])),
+              (1, conversion),
+            ]),
+            const SizedBox(height: _gap),
+            _row([(3, revenue), (2, lost)]),
           ],
         );
       },
+    );
+  }
+
+  /// Equal-height row whose cells share space by flex.
+  static Widget _row(List<(int, Widget)> cells) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < cells.length; i++) ...[
+            if (i > 0) const SizedBox(width: _gap),
+            Expanded(flex: cells[i].$1, child: cells[i].$2),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static Widget _stack(List<Widget> tiles) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0) const SizedBox(height: _gap),
+          Expanded(child: tiles[i]),
+        ],
+      ],
     );
   }
 }

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/a11y/tap_target.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
+import 'enquiry_round_action.dart';
 
 /// Contact action buttons for calling and messaging customers
 ///
@@ -32,140 +32,71 @@ class ContactButtons extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final s = AppSurfaces.of(context);
     final contactLauncher = ref.read(contactLauncherProvider);
 
     // Don't show buttons if no phone number — show a subtle hint instead
     if (customerPhone == null || customerPhone!.trim().isEmpty) {
-      return Container(
-        margin: const EdgeInsets.only(top: AppTokens.space2),
-        padding: const EdgeInsets.all(AppTokens.space2),
+      return DecoratedBox(
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: AppRadius.medium,
-          border: Border.all(color: theme.colorScheme.outlineVariant),
+          color: s.glassFill,
+          borderRadius: AppRadius.full,
+          border: Border.all(color: s.microBorder),
         ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: AppTokens.iconSmall,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: AppTokens.space2),
-            Expanded(
-              child: Text(
-                'Add a phone number to enable Call and WhatsApp actions',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppTokens.space4,
+            vertical: AppTokens.space3,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: AppTokens.iconSmall,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppTokens.space2),
+              Flexible(
+                child: Text(
+                  'Add a phone number to enable Call and WhatsApp actions',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.only(top: AppTokens.space2),
-      child: Row(
-        children: [
-          // Call Button
-          Expanded(
-            child: TapTarget(
-              onTap: enabled ? () => _handleCall(context, ref, contactLauncher) : null,
-              semanticLabel: 'Call $customerName',
-              semanticHint: 'Opens phone dialer with customer number',
-              enabled: enabled,
-              minSize: AppTokens.minTapTarget,
-              child: Container(
-                height: AppTokens.minTapTarget,
-                decoration: BoxDecoration(
-                  color: enabled
-                      ? theme.colorScheme.surface
-                      : theme.colorScheme.onSurface.withOpacity(0.05),
-                  borderRadius: AppRadius.medium,
-                  border: Border.all(
-                    color: enabled
-                        ? theme.colorScheme.outlineVariant
-                        : theme.colorScheme.onSurface.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.call_outlined,
-                      size: AppTokens.iconSmall,
-                      color: enabled
-                          ? AppColorScheme.phoneCall
-                          : theme.colorScheme.onSurface.withOpacity(0.4),
-                    ),
-                    const SizedBox(width: AppTokens.space1),
-                    Text(
-                      'Call',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: enabled
-                            ? theme.colorScheme.onSurface
-                            : theme.colorScheme.onSurface.withOpacity(0.4),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: AppTokens.space3),
-
-          // WhatsApp Button
-          Expanded(
-            child: TapTarget(
-              onTap: enabled ? () => _handleWhatsApp(context, ref, contactLauncher) : null,
-              semanticLabel: 'Message $customerName on WhatsApp',
-              semanticHint: 'Opens WhatsApp chat with customer',
-              enabled: enabled,
-              minSize: AppTokens.minTapTarget,
-              child: Container(
-                height: AppTokens.minTapTarget,
-                decoration: BoxDecoration(
-                  color: enabled
-                      ? AppColorScheme.whatsApp.withValues(alpha: 0.1)
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.05),
-                  borderRadius: AppRadius.medium,
-                  border: Border.all(
-                    color: enabled
-                        ? AppColorScheme.whatsApp
-                        : theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.chat,
-                      size: AppTokens.iconSmall,
-                      color: enabled
-                          ? AppColorScheme.whatsApp
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(width: AppTokens.space1),
-                    Text(
-                      'WhatsApp',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: enabled
-                            ? AppColorScheme.whatsApp
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        EnquiryRoundAction(
+          icon: Icons.call_outlined,
+          label: 'Call',
+          color: AppColorScheme.phoneCall,
+          enabled: enabled,
+          onTap: () => _handleCall(context, ref, contactLauncher),
+          semanticLabel: 'Call $customerName',
+          semanticHint: 'Opens phone dialer with customer number',
+        ),
+        const SizedBox(width: AppTokens.space2),
+        EnquiryRoundAction(
+          icon: Icons.chat,
+          label: 'WhatsApp',
+          color: AppColorScheme.whatsApp,
+          enabled: enabled,
+          onTap: () => _handleWhatsApp(context, ref, contactLauncher),
+          semanticLabel: 'Message $customerName on WhatsApp',
+          semanticHint: 'Opens WhatsApp chat with customer',
+        ),
+      ],
     );
   }
 

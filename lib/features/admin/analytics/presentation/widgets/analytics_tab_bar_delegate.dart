@@ -1,33 +1,45 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
+import '../../../../../ui/primitives/primitives.dart';
 
-/// Pinned pill-style tab bar for the analytics screen.
+/// Pinned header holding the analytics tab pill. The pill is frosted glass so
+/// content and the ambient ground blur softly beneath it.
 class AnalyticsTabBarDelegate extends SliverPersistentHeaderDelegate {
   AnalyticsTabBarDelegate(this._tabBar);
 
   final TabBar _tabBar;
 
-  @override
-  double get minExtent => _tabBar.preferredSize.height + AppTokens.space2;
+  static const double _pillPadding = 4;
+  static const double _verticalInset = AppTokens.space2;
+
+  double get _extent => _tabBar.preferredSize.height + _pillPadding * 2 + _verticalInset * 2;
 
   @override
-  double get maxExtent => _tabBar.preferredSize.height + AppTokens.space2;
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Material(
-      color: cs.surface,
-      child: DecoratedBox(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: _verticalInset),
+      child: AnimatedContainer(
+        duration: AppMotion.of(context, AppMotion.standard),
+        curve: AppMotion.standardCurve,
         decoration: BoxDecoration(
-          color: cs.surface,
-          border: Border(bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.7))),
-          boxShadow: overlapsContent ? AppShadows.elevation1 : null,
+          borderRadius: AppRadius.full,
+          boxShadow: overlapsContent
+              ? AppShadows.glow(AppSurfaces.of(context).shadow, strength: 0.10)
+              : const [],
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: AppTokens.space2),
+        child: GlassPanel(
+          blur: true,
+          strong: true,
+          borderRadius: AppRadius.full,
+          padding: const EdgeInsets.all(_pillPadding),
           child: SizedBox(height: _tabBar.preferredSize.height, child: _tabBar),
         ),
       ),
@@ -40,56 +52,39 @@ class AnalyticsTabBarDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-/// Builds a pill-style tab bar matching the main dashboard aesthetic.
+/// Tab pill whose ink indicator slides between Overview, Trends, Breakdown and
+/// Tables. Labels scale down rather than truncate on narrow phones.
 TabBar buildAnalyticsTabBar({required BuildContext context, required TabController controller}) {
   final cs = Theme.of(context).colorScheme;
+  final s = AppSurfaces.of(context);
+  final label = Theme.of(context).textTheme.labelLarge;
+
+  Tab tab(String text) => Tab(
+    height: 44,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
+        child: Text(text, maxLines: 1),
+      ),
+    ),
+  );
 
   return TabBar(
     controller: controller,
-    isScrollable: true,
-    tabAlignment: TabAlignment.start,
     dividerColor: Colors.transparent,
     indicatorSize: TabBarIndicatorSize.tab,
-    labelPadding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
-    indicatorPadding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
-    padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
-    indicator: BoxDecoration(borderRadius: AppRadius.full, color: cs.primaryContainer),
-    labelColor: cs.onPrimaryContainer,
-    unselectedLabelColor: cs.onSurfaceVariant,
-    labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTokens.fontSizeBody),
-    unselectedLabelStyle: const TextStyle(
-      fontWeight: FontWeight.w500,
-      fontSize: AppTokens.fontSizeBody,
+    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+    splashBorderRadius: AppRadius.full,
+    indicator: BoxDecoration(
+      gradient: s.inkGradient,
+      borderRadius: AppRadius.full,
+      boxShadow: AppShadows.glow(s.shadow, strength: 0.14),
     ),
-    tabs: const [
-      Tab(
-        height: 40,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppTokens.space4),
-          child: Text('Overview'),
-        ),
-      ),
-      Tab(
-        height: 40,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppTokens.space4),
-          child: Text('Trends'),
-        ),
-      ),
-      Tab(
-        height: 40,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppTokens.space4),
-          child: Text('Breakdown'),
-        ),
-      ),
-      Tab(
-        height: 40,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppTokens.space4),
-          child: Text('Tables'),
-        ),
-      ),
-    ],
+    labelColor: cs.onPrimary,
+    unselectedLabelColor: cs.onSurfaceVariant,
+    labelStyle: label?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.1),
+    unselectedLabelStyle: label?.copyWith(fontWeight: FontWeight.w500),
+    tabs: [tab('Overview'), tab('Trends'), tab('Breakdown'), tab('Tables')],
   );
 }

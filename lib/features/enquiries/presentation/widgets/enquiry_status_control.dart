@@ -11,8 +11,18 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../data/enquiry_repository.dart';
+import 'enquiry_status_parts.dart';
 
-/// Status dropdown with role-based transition guards for enquiry details.
+/// How [EnquiryStatusControl] presents the available statuses.
+enum EnquiryStatusLayout {
+  /// Glass pill dropdown for rows and inline use.
+  compact,
+
+  /// Full list of glass options with a gold selection, for sheets.
+  list,
+}
+
+/// Status picker with role-based transition guards for enquiry details.
 class EnquiryStatusControl extends ConsumerStatefulWidget {
   const EnquiryStatusControl({
     super.key,
@@ -22,6 +32,7 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
     required this.currentStatusLabel,
     required this.isAdmin,
     this.isAssignee = true,
+    this.layout = EnquiryStatusLayout.compact,
   });
 
   final String enquiryId;
@@ -30,6 +41,7 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
   final String currentStatusLabel;
   final bool isAdmin;
   final bool isAssignee;
+  final EnquiryStatusLayout layout;
 
   @override
   ConsumerState<EnquiryStatusControl> createState() => _EnquiryStatusControlState();
@@ -90,31 +102,69 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         }
 
         final canChange = widget.isAdmin || (!widget.isAdmin && widget.isAssignee);
+        final enabled = canChange && !_isUpdatingStatus;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: widget.layout == EnquiryStatusLayout.list
+              ? CrossAxisAlignment.stretch
+              : CrossAxisAlignment.start,
           children: [
-            DropdownButton<String>(
-              key: const Key('statusDropdown'),
-              value: currentStatus,
-              items: nextOptions.map((status) {
-                final value = status['value'] ?? '';
-                final label = status['label'] ?? value;
-                return DropdownMenuItem<String>(value: value, child: Text(label));
-              }).toList(),
-              onChanged: (!canChange || _isUpdatingStatus)
-                  ? null
-                  : (value) => _handleStatusChange(value, rawCurrent),
-            ),
-            if (_isUpdatingStatus) ...[
-              const SizedBox(width: AppTokens.space2),
-              const SizedBox(
-                height: 16,
-                width: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+            if (widget.layout == EnquiryStatusLayout.list)
+              for (final status in nextOptions)
+                Padding(
+                  padding: AppSpacing.bottom(AppTokens.space2),
+                  child: EnquiryStatusOption(
+                    label: status['label'] ?? status['value'] ?? '',
+                    color: statusColorFor(context, status['value']),
+                    selected: (status['value'] ?? '') == currentStatus,
+                    onTap: enabled ? () => _handleStatusChange(status['value'], rawCurrent) : null,
+                  ),
+                )
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: EnquiryStatusPill(
+                      color: statusColorFor(context, currentStatus),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          key: const Key('statusDropdown'),
+                          value: currentStatus,
+                          isDense: true,
+                          borderRadius: AppRadius.large,
+                          icon: const Icon(Icons.expand_more_rounded),
+                          items: nextOptions.map((status) {
+                            final value = status['value'] ?? '';
+                            final label = status['label'] ?? value;
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: EnquiryStatusLabel(
+                                label: label,
+                                color: statusColorFor(context, value),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: enabled
+                              ? (value) => _handleStatusChange(value, rawCurrent)
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_isUpdatingStatus) ...[
+                    const SizedBox(width: AppTokens.space2),
+                    const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            if (_isUpdatingStatus && widget.layout == EnquiryStatusLayout.list)
+              const LinearProgressIndicator(minHeight: 2),
             if (!widget.isAdmin && !widget.isAssignee) ...[
               const SizedBox(height: AppTokens.space1 + 2),
               Text(
@@ -219,22 +269,7 @@ class _ReadOnlyStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: AppSpacing.horizontal(
-        AppTokens.space3,
-      ).copyWith(top: AppTokens.space1 + 2, bottom: AppTokens.space1 + 2),
-      decoration: BoxDecoration(
-        color: statusColorFor(context, statusValue),
-        borderRadius: BorderRadius.circular(AppTokens.radiusXLarge),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onPrimary,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+    return EnquiryStatusChip(label: label, color: statusColorFor(context, statusValue));
   }
 }
 

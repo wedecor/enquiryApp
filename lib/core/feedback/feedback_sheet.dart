@@ -6,9 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../ui/primitives/primitives.dart';
 import '../app_config.dart';
 import '../logging/logger.dart';
 import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
+import 'widgets/feedback_sheet_parts.dart';
 
 /// In-app feedback collection sheet with device info and log bundle
 /// Non-PII compliant feedback system for internal testing
@@ -67,61 +70,29 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
+        return FeedbackGlassSheet(
           child: Column(
             children: [
-              // Handle bar
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(Icons.feedback, color: colorScheme.primary),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Send Feedback',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Form
+              FeedbackSheetHeader(onClose: () => Navigator.of(context).pop()),
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(
+                    AppTokens.space5,
+                    AppTokens.space3,
+                    AppTokens.space5,
+                    AppTokens.space6 + MediaQuery.viewInsetsOf(context).bottom,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Summary
                         TextFormField(
                           controller: _summaryController,
                           decoration: const InputDecoration(
                             labelText: 'Issue Summary *',
                             hintText: 'Brief description of the problem',
-                            border: OutlineInputBorder(),
                           ),
                           maxLines: 2,
                           validator: (value) {
@@ -131,142 +102,93 @@ class _FeedbackSheetState extends State<FeedbackSheet> {
                             return null;
                           },
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Steps to reproduce
+                        const SizedBox(height: AppTokens.space4),
                         TextFormField(
                           controller: _stepsController,
                           decoration: const InputDecoration(
                             labelText: 'Steps to Reproduce',
                             hintText: '1. Go to...\n2. Tap on...\n3. See error',
-                            border: OutlineInputBorder(),
                           ),
                           maxLines: 4,
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Expected behavior
+                        const SizedBox(height: AppTokens.space4),
                         TextFormField(
                           controller: _expectedController,
                           decoration: const InputDecoration(
                             labelText: 'Expected Behavior',
                             hintText: 'What should have happened?',
-                            border: OutlineInputBorder(),
                           ),
                           maxLines: 2,
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Actual behavior
+                        const SizedBox(height: AppTokens.space4),
                         TextFormField(
                           controller: _actualController,
                           decoration: const InputDecoration(
                             labelText: 'Actual Behavior',
                             hintText: 'What actually happened?',
-                            border: OutlineInputBorder(),
                           ),
                           maxLines: 2,
                         ),
-
-                        const SizedBox(height: 20),
-
-                        // Include logs toggle
-                        SwitchListTile(
-                          title: const Text('Include Debug Information'),
-                          subtitle: const Text(
-                            'Attach device info and recent logs (no personal data)',
+                        const SizedBox(height: AppTokens.space5),
+                        GlassPanel(
+                          padding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
+                          child: SwitchListTile(
+                            title: const Text(
+                              'Include Debug Information',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: const Text(
+                              'Attach device info and recent logs (no personal data)',
+                              style: TextStyle(fontWeight: FontWeight.w300),
+                            ),
+                            value: _includeLogs,
+                            onChanged: (value) {
+                              setState(() {
+                                _includeLogs = value;
+                              });
+                            },
                           ),
-                          value: _includeLogs,
-                          onChanged: (value) {
-                            setState(() {
-                              _includeLogs = value;
-                            });
-                          },
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // Device info preview
-                        if (_includeLogs) ...[
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Device Information (Preview)',
-                                    style: TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _deviceInfo,
-                                    style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                                  ),
-                                ],
-                              ),
-                            ),
+                        AnimatedSize(
+                          duration: AppMotion.of(context, AppMotion.standard),
+                          curve: AppMotion.standardCurve,
+                          alignment: Alignment.topCenter,
+                          child: _includeLogs
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: AppTokens.space3),
+                                  child: FeedbackDevicePreview(deviceInfo: _deviceInfo),
+                                )
+                              : const SizedBox(width: double.infinity),
+                        ),
+                        const SizedBox(height: AppTokens.space5),
+                        FilledButton(
+                          onPressed: _isSubmitting ? null : _submitFeedback,
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52),
+                            shape: const StadiumBorder(),
                           ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Submit button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _isSubmitting ? null : _submitFeedback,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: colorScheme.primary,
-                              foregroundColor: colorScheme.onPrimary,
-                            ),
-                            child: _isSubmitting
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary),
-                                        ),
+                          child: _isSubmitting
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox.square(
+                                      dimension: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(colorScheme.onPrimary),
                                       ),
-                                      const SizedBox(width: 12),
-                                      const Text('Submitting...'),
-                                    ],
-                                  )
-                                : const Text(
-                                    'Submit Feedback',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                                  ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Privacy note
-                        Card(
-                          color: colorScheme.primaryContainer,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                Icon(Icons.privacy_tip, color: colorScheme.primary, size: 20),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'No personal information is collected. Device info helps us reproduce and fix issues.',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
+                                    ),
+                                    const SizedBox(width: AppTokens.space3),
+                                    const Text('Submitting...'),
+                                  ],
+                                )
+                              : const Text(
+                                  'Submit Feedback',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
-                              ],
-                            ),
-                          ),
                         ),
+                        const SizedBox(height: AppTokens.space4),
+                        const FeedbackPrivacyNote(),
                       ],
                     ),
                   ),

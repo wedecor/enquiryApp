@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
-import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
@@ -85,28 +84,26 @@ class EnquiryListItem extends ConsumerWidget {
       onView: openDetails,
     );
 
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: EnquiryListRow(
-        customerName: customerName,
-        statusValue: statusValue,
-        firestoreStatusColors: dropdownLookup?.statusColorMap,
-        eventTypeLabel: eventTypeLabel,
-        eventTypeValue: eventTypeValue,
-        eventDateLabel: _formatDateLabel(eventDate),
-        location: compact ? null : location?.trim(),
-        ageLabel: compact ? null : _formatAgeLabel(createdAt),
-        assigneeLabel: compact || !showAssignee ? null : assigneeLabel?.trim(),
-        compact: compact,
-        onTap: onEdit ?? openDetails,
-        onLongPress: sheetActions.isEmpty
-            ? null
-            : () => showEnquiryRowActionsSheet(
-                context,
-                customerName: customerName,
-                actions: sheetActions,
-              ),
-      ),
+    return EnquiryListRow(
+      customerName: customerName,
+      statusValue: statusValue,
+      firestoreStatusColors: dropdownLookup?.statusColorMap,
+      eventTypeLabel: eventTypeLabel,
+      eventTypeValue: eventTypeValue,
+      eventDateLabel: _formatDateLabel(eventDate),
+      eventDate: (eventDate != null && eventDate.year > 1971) ? eventDate : null,
+      location: compact ? null : location?.trim(),
+      ageLabel: compact ? null : _formatAgeLabel(createdAt),
+      assigneeLabel: compact || !showAssignee ? null : assigneeLabel?.trim(),
+      compact: compact,
+      onTap: onEdit ?? openDetails,
+      onLongPress: sheetActions.isEmpty
+          ? null
+          : () => showEnquiryRowActionsSheet(
+              context,
+              customerName: customerName,
+              actions: sheetActions,
+            ),
     );
   }
 

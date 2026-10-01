@@ -7,13 +7,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/role_guards.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart' show UserRole;
+import '../../../../ui/primitives/primitives.dart';
+import '../../../../ui/components/glass_page_scaffold.dart';
+import '../../../../ui/components/glass_state_message.dart';
 import '../domain/user_model.dart' as domain;
 import 'invite_user_dialog.dart';
 import 'role_checker_panel.dart';
 import 'users_providers.dart';
 import 'widgets/confirm_dialog.dart';
 import 'widgets/user_form_dialog.dart';
+import 'widgets/user_member_tile.dart';
+import 'widgets/users_admin_actions.dart';
+import 'widgets/users_filter_panel.dart';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -23,6 +30,8 @@ class UserManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
+  static const double _maxContentWidth = 1100;
+
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
 
@@ -53,203 +62,126 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
     final paginationState = ref.watch(paginationStateProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('User Management'),
-        actions: [
-          roleAsync.when(
-            data: (role) {
-              if (role != UserRole.admin) {
-                return const SizedBox.shrink();
-              }
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: FilledButton.icon(
-                      onPressed: () => _showInviteUserDialog(context),
-                      icon: const Icon(Icons.email),
-                      label: const Text('Invite'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColorScheme.snackSuccess,
-                        foregroundColor: Colors.white,
+    return GlassPageScaffold(
+      eyebrow: 'Admin',
+      title: 'User Management',
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth > 768;
+          final gutter = constraints.maxWidth > _maxContentWidth + AppTokens.space8
+              ? (constraints.maxWidth - _maxContentWidth) / 2
+              : AppTokens.space4;
+          final hPad = EdgeInsets.symmetric(horizontal: gutter);
+
+          return CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: hPad.copyWith(top: AppTokens.space2),
+                sliver: SliverToBoxAdapter(
+                  child: roleAsync.when(
+                    data: (role) => StaggerIn(
+                      index: 0,
+                      child: RoleCheckerPanel(
+                        email: currentUser.valueOrNull?.email,
+                        uid: currentUser.valueOrNull?.uid,
+                        isAdmin: role == UserRole.admin,
+                        role: role == UserRole.admin ? 'admin' : 'staff',
+                        onRefresh: () => ref.invalidate(roleProvider),
+                        onSignOut: () async {
+                          await fb.FirebaseAuth.instance.signOut();
+                        },
+                      ),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+              if (roleAsync.valueOrNull == UserRole.admin)
+                SliverPadding(
+                  padding: hPad.copyWith(top: AppTokens.space4),
+                  sliver: SliverToBoxAdapter(
+                    child: StaggerIn(
+                      index: 1,
+                      child: UsersAdminActions(
+                        onInvite: () => _showInviteUserDialog(context),
+                        onAddUser: () => _showAddUserDialog(context),
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: FilledButton.icon(
-                      onPressed: () => _showAddUserDialog(context),
-                      icon: const Icon(Icons.person_add),
-                      label: const Text('Add User'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+              SliverPadding(
+                padding: hPad.copyWith(top: AppTokens.space4, bottom: AppTokens.space4),
+                sliver: SliverToBoxAdapter(
+                  child: StaggerIn(
+                    index: 2,
+                    child: UsersFilterPanel(
+                      searchController: _searchController,
+                      role: filter['role'] as String,
+                      isActive: filter['isActive'] as bool?,
+                      onRoleChanged: (value) {
+                        ref.read(usersFilterProvider.notifier).updateRole(value);
+                      },
+                      onActiveChanged: (value) {
+                        ref.read(usersFilterProvider.notifier).updateActive(value);
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              ...roleAsync.when(
+                data: (role) {
+                  if (role != UserRole.admin) {
+                    return [
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: GlassStateMessage(
+                          icon: Icons.lock_outline_rounded,
+                          title: 'Access Denied',
+                          message: 'Only administrators can access user management.',
+                        ),
                       ),
+                    ];
+                  }
+                  return [
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final usersAsync = ref.watch(usersStreamProvider(filter));
+                        return _buildUsersListArea(
+                          usersAsync,
+                          true,
+                          true,
+                          paginationState,
+                          wide: wide,
+                          padding: hPad,
+                        );
+                      },
+                    ),
+                  ];
+                },
+                loading: () => const [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: GlassLoadingState(message: 'Checking permissions...'),
+                  ),
+                ],
+                error: (error, stack) => [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: GlassStateMessage(
+                      icon: Icons.error_outline_rounded,
+                      title: 'Error checking permissions: $error',
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ],
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Role Checker Panel
-          roleAsync.when(
-            data: (role) {
-              return RoleCheckerPanel(
-                email: currentUser.valueOrNull?.email,
-                uid: currentUser.valueOrNull?.uid,
-                isAdmin: role == UserRole.admin,
-                role: role == UserRole.admin ? 'admin' : 'staff',
-                onRefresh: () => ref.invalidate(roleProvider),
-                onSignOut: () async {
-                  await fb.FirebaseAuth.instance.signOut();
-                },
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          // Header with search and filters
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Search row
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Search by name or email...',
-                          prefixIcon: Icon(Icons.search),
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Filters row
-                Row(
-                  children: [
-                    // Role filter
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: filter['role'] as String,
-                        decoration: const InputDecoration(
-                          labelText: 'Role',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'All', child: Text('All Roles')),
-                          DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                          DropdownMenuItem(value: 'staff', child: Text('Staff')),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            ref.read(usersFilterProvider.notifier).updateRole(value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Status filter
-                    Expanded(
-                      child: DropdownButtonFormField<bool?>(
-                        initialValue: filter['isActive'] as bool?,
-                        decoration: const InputDecoration(
-                          labelText: 'Status',
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: const [
-                          DropdownMenuItem<bool?>(value: null, child: Text('All Status')),
-                          DropdownMenuItem<bool?>(value: true, child: Text('Active')),
-                          DropdownMenuItem<bool?>(value: false, child: Text('Inactive')),
-                        ],
-                        onChanged: (value) {
-                          ref.read(usersFilterProvider.notifier).updateActive(value);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Users list
-          roleAsync.when(
-            data: (role) {
-              if (role != UserRole.admin) {
-                return Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Access Denied',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        Text('Only administrators can access user management.'),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              // User is admin, watch users provider
-              return Consumer(
-                builder: (context, ref, child) {
-                  final usersAsync = ref.watch(usersStreamProvider(filter));
-                  return Expanded(
-                    child: _buildUsersListArea(usersAsync, true, true, paginationState),
-                  );
-                },
-              );
-            },
-            loading: () => const Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Checking permissions...'),
-                  ],
-                ),
               ),
-            ),
-            error: (error, stack) =>
-                Expanded(child: Center(child: Text('Error checking permissions: $error'))),
-          ),
-        ],
+              SliverToBoxAdapter(
+                child: SizedBox(height: AppTokens.space8 + MediaQuery.paddingOf(context).bottom),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -258,12 +190,32 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     AsyncValue<List<domain.UserModel>> usersAsync,
     bool isAdmin,
     bool roleKnown,
-    PaginationState paginationState,
-  ) {
+    PaginationState paginationState, {
+    required bool wide,
+    required EdgeInsets padding,
+  }) {
     return usersAsync.when(
-      data: (users) => _buildUsersList(users, isAdmin, roleKnown, paginationState),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorState(error),
+      data: (users) =>
+          _buildUsersList(users, isAdmin, roleKnown, paginationState, wide: wide, padding: padding),
+      loading: () => const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => SliverFillRemaining(
+        hasScrollBody: false,
+        child: GlassStateMessage(
+          icon: Icons.error_outline_rounded,
+          title: 'Error loading users',
+          message: error.toString(),
+          color: Theme.of(context).colorScheme.error,
+          action: FilledButton(
+            onPressed: () {
+              ref.invalidate(usersStreamProvider);
+            },
+            child: const Text('Retry'),
+          ),
+        ),
+      ),
     );
   }
 
@@ -271,291 +223,66 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     List<domain.UserModel> users,
     bool isAdmin,
     bool roleKnown,
-    PaginationState paginationState,
-  ) {
+    PaginationState paginationState, {
+    required bool wide,
+    required EdgeInsets padding,
+  }) {
     if (!roleKnown) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Resolving your role...'),
-          ],
-        ),
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: GlassLoadingState(message: 'Resolving your role...'),
       );
     }
 
     if (users.isEmpty) {
-      final mutedColor = Theme.of(context).colorScheme.onSurfaceVariant;
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 64, color: mutedColor),
-            const SizedBox(height: 16),
-            Text(
-              isAdmin
-                  ? 'No users found. Use "Add User" to create one.'
-                  : 'No users to show or you lack permissions to modify.',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: mutedColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isAdmin
-                  ? 'Start by adding your first user to the system.'
-                  : 'Contact an admin to get access or check your role in Firestore.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: mutedColor),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: GlassStateMessage(
+          icon: Icons.people_outline_rounded,
+          title: isAdmin
+              ? 'No users found. Use "Add User" to create one.'
+              : 'No users to show or you lack permissions to modify.',
+          message: isAdmin
+              ? 'Start by adding your first user to the system.'
+              : 'Contact an admin to get access or check your role in Firestore.',
         ),
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Use table layout for wider screens, card layout for narrow screens
-        if (constraints.maxWidth > 768) {
-          return _buildTableLayout(users, isAdmin, paginationState);
-        } else {
-          return _buildCardLayout(users, isAdmin, paginationState);
-        }
-      },
-    );
-  }
-
-  Widget _buildTableLayout(
-    List<domain.UserModel> users,
-    bool isAdmin,
-    PaginationState paginationState,
-  ) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Name')),
-                DataColumn(label: Text('Email')),
-                DataColumn(label: Text('Phone')),
-                DataColumn(label: Text('Role')),
-                DataColumn(label: Text('Status')),
-                DataColumn(label: Text('Created')),
-                DataColumn(label: Text('Updated')),
-                DataColumn(label: Text('Actions')),
-              ],
-              rows: users
-                  .map(
-                    (user) => DataRow(
-                      cells: [
-                        DataCell(Text(user.name)),
-                        DataCell(Text(user.email, style: const TextStyle(fontFamily: 'monospace'))),
-                        DataCell(Text(user.phone ?? '')),
-                        DataCell(_buildRoleChip(user.role)),
-                        DataCell(_buildStatusChip(user.isActive)),
-                        DataCell(Text(_formatDate(user.createdAt))),
-                        DataCell(Text(_formatDate(user.updatedAt))),
-                        DataCell(_buildActionButtons(user, isAdmin)),
-                      ],
-                    ),
+    return SliverPadding(
+      padding: padding,
+      sliver: SliverList.builder(
+        itemCount: users.length + 2,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return SectionHeader(
+              eyebrow: 'Team',
+              title: '${users.length} ${users.length == 1 ? 'member' : 'members'}',
+              padding: const EdgeInsets.only(bottom: AppTokens.space3),
+            );
+          }
+          if (index == users.length + 1) {
+            return paginationState.hasMore
+                ? UsersLoadMoreButton(
+                    loading: paginationState.isLoading,
+                    onPressed: () => _loadMore(users),
                   )
-                  .toList(),
+                : const SizedBox.shrink();
+          }
+          final user = users[index - 1];
+          return StaggerIn(
+            index: index,
+            child: UserMemberTile(
+              key: ValueKey(user.uid),
+              user: user,
+              isAdmin: isAdmin,
+              wide: wide,
+              onAction: isAdmin ? (action) => _handleUserAction(action, user) : (_) {},
             ),
-          ),
-        ),
-        if (paginationState.hasMore)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              onPressed: paginationState.isLoading ? null : () => _loadMore(users),
-              child: paginationState.isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Load More...'),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildCardLayout(
-    List<domain.UserModel> users,
-    bool isAdmin,
-    PaginationState paginationState,
-  ) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(user.name),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user.email, style: const TextStyle(fontFamily: 'monospace')),
-                      if (user.phone != null) Text(user.phone!),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          _buildRoleChip(user.role),
-                          const SizedBox(width: 8),
-                          _buildStatusChip(user.isActive),
-                        ],
-                      ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: isAdmin ? (action) => _handleUserAction(action, user) : null,
-                    enabled: isAdmin,
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit),
-                            const SizedBox(width: 8),
-                            Text(isAdmin ? 'Edit' : 'Edit (admin only)'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: user.isActive ? 'deactivate' : 'activate',
-                        enabled: isAdmin,
-                        child: Row(
-                          children: [
-                            Icon(user.isActive ? Icons.block : Icons.check_circle),
-                            const SizedBox(width: 8),
-                            Text(
-                              isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (paginationState.hasMore)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              onPressed: paginationState.isLoading ? null : () => _loadMore(users),
-              child: paginationState.isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Load More...'),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRoleChip(String role) {
-    final color = role == 'admin' ? AppColorScheme.chartPurple : AppColorScheme.chartBlue;
-    return Chip(
-      label: Text(
-        role.toUpperCase(),
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-      backgroundColor: color,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-
-  Widget _buildStatusChip(bool active) {
-    return Chip(
-      label: Text(
-        active ? 'ACTIVE' : 'INACTIVE',
-        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-      backgroundColor: active ? AppColorScheme.chartGreen : AppColorScheme.chartRed,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-
-  Widget _buildActionButtons(domain.UserModel user, bool isAdmin) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: isAdmin ? () => _showEditUserDialog(context, user) : null,
-          tooltip: isAdmin ? 'Edit' : 'Edit (admin only)',
-        ),
-        IconButton(
-          icon: Icon(user.isActive ? Icons.block : Icons.check_circle),
-          onPressed: isAdmin ? () => _toggleUserStatus(user) : null,
-          tooltip: isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildErrorState(Object error) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
-          const SizedBox(height: 16),
-          Text('Error loading users', style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 8),
-          Text(
-            error.toString(),
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              ref.invalidate(usersStreamProvider);
-            },
-            child: const Text('Retry'),
-          ),
-        ],
+          );
+        },
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day} ${_getMonthName(date.month)} ${date.year}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
   }
 
   void _loadMore(List<domain.UserModel> users) {
@@ -620,8 +347,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         builder: (context) => ConfirmDialog(
           title: '${action.capitalize()} User',
           content: 'Are you sure you want to $action ${user.name}?',
+          isDestructive: user.isActive,
           onConfirm: () {
-            Navigator.of(context).pop();
             logAdminAction(ref, 'user_status_toggle_confirmed', {
               'targetUserId': user.uid,
               'action': action,

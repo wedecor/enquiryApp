@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_theme.dart';
+import '../../../../../ui/components/glass_dialog.dart';
 
 class ConfirmDialog extends StatelessWidget {
   final String title;
@@ -22,34 +22,28 @@ class ConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(title),
+    final cs = Theme.of(context).colorScheme;
+    return GlassDialog(
+      eyebrow: 'Confirm',
+      title: title,
+      icon: isDestructive ? Icons.warning_amber_rounded : Icons.help_outline_rounded,
+      iconColor: isDestructive ? cs.error : null,
       content: Text(content),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(cancelText ?? 'Cancel'),
         ),
-        if (isDestructive)
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirm();
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColorScheme.snackError,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(confirmText ?? 'Confirm'),
-          )
-        else
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onConfirm();
-            },
-            child: Text(confirmText ?? 'Confirm'),
-          ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            onConfirm();
+          },
+          style: isDestructive
+              ? FilledButton.styleFrom(backgroundColor: cs.error, foregroundColor: cs.onError)
+              : null,
+          child: Text(confirmText ?? 'Confirm'),
+        ),
       ],
     );
   }

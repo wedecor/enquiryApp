@@ -1,0 +1,28 @@
+---
+description: Premium bespoke Flutter design protocol (Taste/Impeccable standard) for all UI work
+globs: lib/**/*.dart
+alwaysApply: false
+---
+
+# Flutter Design Protocol
+
+Overrides the "Hard rules" in `DESIGN_FIX_PROMPT.md` and `DESIGN_SPEC.md` where they conflict.
+
+## Aesthetic
+- No boxy Material templates or stock Cards. Prefer asymmetric grids, staggered offsets, expanding sheet headers and contextual depth.
+- Surfaces: semantic gradients, subtle `BackdropFilter` blur, 1px micro-borders at 0.05–0.1 opacity. Dark mode uses rich charcoal/deep slate, not pure black.
+- Typography is structure: mix `FontWeight.w300` with `w800`, use size scale and `letterSpacing` instead of heavy containers.
+- Every tappable widget gives physical feedback (`AnimatedScale` press, `AnimatedContainer`, custom `Curves`). No instant layout jumps.
+- Stats/data: minimal abstract geometry (`CustomPainter`) over stock chart libraries unless told otherwise. Subtle accent dots/lines are welcome.
+
+## Engineering
+- No unused imports; delete dead files during structural changes.
+- `const` wherever possible; no overflows (Flexible/Expanded, `maxLines` + `overflow`).
+- Keep widget files small: extract private sub-widgets instead of 500-line trees.
+- Add needed packages (`google_fonts`, `flutter_animate`, ...) to `pubspec.yaml` and resolve them.
+- Fix compiler errors and lifecycle bugs before reporting done.
+
+## Guardrails (production app)
+- Presentation layer only: do not change Firestore queries, providers' logic, models, repositories or RBAC checks.
+- Keep `lib/core/a11y/semantics_ext.dart` semantics and 48px tap targets; respect `MediaQuery.disableAnimations`.
+- Colours and tokens live in `lib/core/theme/`; screens read them from the theme, not hard-coded.

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
+import '../primitives/primitives.dart';
 
+/// Glass metric tile: tracked eyebrow label, a heavy Outfit numeral and an
+/// optional trend line led by a small glyph. The [icon] sits quietly in the
+/// corner in the accent ink instead of a filled box.
 class StatsCard extends StatelessWidget {
   const StatsCard({
     super.key,
@@ -20,93 +25,74 @@ class StatsCard extends StatelessWidget {
   final String? trendLabel;
   final IconData? trendIcon;
   final Color? trendColor;
+
+  /// Optional colour wash over the glass.
   final Color? background;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final s = AppSurfaces.of(context);
 
-    final Color cardColor =
-        background ??
-        (colorScheme.brightness == Brightness.dark
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.55)
-            : colorScheme.surface.withValues(alpha: 0.9));
+    return GlassPanel(
+      strong: true,
+      borderRadius: AppRadius.large,
+      tint: background,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight.isFinite && constraints.maxHeight < 130;
+          final pad = compact ? AppTokens.space3 : AppTokens.space4;
+          final trendTint = trendColor ?? s.accentInk;
 
-    return Card.filled(
-      color: cardColor,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.medium,
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.7)),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Padding(
-        padding: const EdgeInsets.all(AppTokens.space3),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxHeight = constraints.maxHeight;
-            final hasBoundedHeight = maxHeight.isFinite;
-            final compact = hasBoundedHeight && maxHeight < 130;
-            final showTrend = trendLabel != null;
+          final numeralStyle = theme.textTheme.displayMedium?.copyWith(
+            fontSize: compact ? 26 : 32,
+            fontWeight: FontWeight.w800,
+            height: 1,
+            letterSpacing: -1.1,
+            color: colorScheme.onSurface,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          );
 
-            final titleStyle = theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurfaceVariant,
-            );
-            final valueStyle =
-                (compact ? theme.textTheme.titleLarge : theme.textTheme.headlineSmall)?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onSurface,
-                );
-            final subtitleStyle = theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            );
-
-            final iconBackground = colorScheme.primaryContainer;
-            final iconForeground = colorScheme.onPrimaryContainer;
-            const iconSize = 36.0;
-            const glyphSize = 18.0;
-
-            return Column(
+          return Padding(
+            padding: EdgeInsets.all(pad),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    _iconBox(iconBackground, iconForeground, iconSize, glyphSize),
+                    Expanded(child: Eyebrow(label)),
                     const SizedBox(width: AppTokens.space2),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: titleStyle,
-                      ),
-                    ),
+                    Icon(icon, size: 16, color: s.accentInk),
                   ],
                 ),
-                const SizedBox(height: AppTokens.space2),
+                SizedBox(height: compact ? AppTokens.space1 : AppTokens.space2),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(value, maxLines: 1, style: valueStyle),
+                  child: Text(value, maxLines: 1, style: numeralStyle),
                 ),
-                if (showTrend) ...[
-                  const SizedBox(height: AppTokens.space1),
+                if (trendLabel != null) ...[
+                  SizedBox(height: compact ? 2 : AppTokens.space1),
                   Row(
                     children: [
-                      if (trendIcon != null)
-                        Icon(trendIcon, size: 12, color: trendColor ?? colorScheme.primary),
-                      if (trendIcon != null) const SizedBox(width: AppTokens.space1),
+                      if (trendIcon != null) ...[
+                        Icon(trendIcon, size: 12, color: trendTint),
+                        const SizedBox(width: AppTokens.space1),
+                      ] else ...[
+                        StatusDot(color: trendTint, size: 5),
+                        const SizedBox(width: 6),
+                      ],
                       Expanded(
                         child: Text(
                           trendLabel!,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: subtitleStyle?.copyWith(
-                            color: trendColor ?? colorScheme.primary,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: trendTint,
                             fontWeight: FontWeight.w600,
+                            letterSpacing: 0.1,
                           ),
                         ),
                       ),
@@ -114,20 +100,10 @@ class StatsCard extends StatelessWidget {
                   ),
                 ],
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
-
-  Widget _iconBox(Color bg, Color fg, double size, double glyph) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: bg, borderRadius: AppRadius.medium),
-      alignment: Alignment.center,
-      child: Icon(icon, size: glyph, color: fg),
     );
   }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_theme.dart';
+import '../../../../ui/components/tinted_icon_badge.dart';
+
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../ui/primitives/primitives.dart';
 
 class RoleCheckerPanel extends StatelessWidget {
   final String? email;
@@ -22,143 +26,127 @@ class RoleCheckerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final warningColor = AppColorScheme.warning;
-    return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isAdmin ? Icons.admin_panel_settings : Icons.person,
-                  color: isAdmin ? AppColorScheme.chartGreen : AppColorScheme.chartAmber,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Access Check',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _buildInfoChip('Email', email ?? 'Unknown', Icons.email),
-                _buildInfoChip('UID', _truncateUid(uid), Icons.fingerprint),
-                _buildRoleChip(context, role ?? 'unknown'),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (!isAdmin)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColorScheme.warningContainerLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: warningColor.withValues(alpha: 0.3)),
-                ),
+    final t = Theme.of(context).textTheme;
+    final tone = isAdmin ? AppColorScheme.chartGreen : AppColorScheme.warning;
+
+    return GlassPanel(
+      padding: const EdgeInsets.all(AppTokens.space4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              TintedIconBadge(
+                icon: isAdmin ? Icons.admin_panel_settings_outlined : Icons.person_outline_rounded,
+                color: isAdmin ? AppColorScheme.chartGreen : AppColorScheme.chartAmber,
+                size: 34,
+              ),
+              const SizedBox(width: AppTokens.space3),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, color: warningColor, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Limited Access',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: warningColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
+                    const Eyebrow('Session', accent: true),
                     Text(
-                      "You're signed in but not an admin. To access User Management actions, "
-                      "make sure your Firestore users/{uid} document has role: 'admin' and active: true, "
-                      'or sign in as the seeded admin user.',
-                      style: theme.textTheme.bodySmall?.copyWith(color: warningColor),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColorScheme.successContainerLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColorScheme.successLight.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.check_circle_outline,
-                      color: AppColorScheme.onSuccessContainerLight,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Admin access granted. You can manage users.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColorScheme.onSuccessContainerLight,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      'Access Check',
+                      style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 16),
-            Row(
+            ],
+          ),
+          const SizedBox(height: AppTokens.space3),
+          Wrap(
+            spacing: AppTokens.space2,
+            runSpacing: AppTokens.space2,
+            children: [
+              _InfoPill(icon: Icons.alternate_email_rounded, text: 'Email: ${email ?? 'Unknown'}'),
+              _InfoPill(icon: Icons.fingerprint_rounded, text: 'UID: ${_truncateUid(uid)}'),
+              _InfoPill(
+                icon: (role ?? 'unknown') == 'admin'
+                    ? Icons.admin_panel_settings_outlined
+                    : Icons.person_outline_rounded,
+                text: 'Role: ${(role ?? 'unknown').toUpperCase()}',
+                color: (role ?? 'unknown') == 'admin'
+                    ? AppColorScheme.chartGreen
+                    : AppColorScheme.chartBlue,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTokens.space3),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: tone.withValues(alpha: 0.08),
+              borderRadius: AppRadius.medium,
+              border: Border.all(color: tone.withValues(alpha: 0.25)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AppTokens.space3),
+              child: isAdmin
+                  ? Row(
+                      children: [
+                        StatusDot(color: tone),
+                        const SizedBox(width: AppTokens.space2),
+                        Expanded(
+                          child: Text(
+                            'Admin access granted. You can manage users.',
+                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline_rounded, color: tone, size: 18),
+                            const SizedBox(width: AppTokens.space2),
+                            Text(
+                              'Limited Access',
+                              style: t.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: tone,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppTokens.space2),
+                        Text(
+                          "You're signed in but not an admin. To access User Management actions, "
+                          "make sure your Firestore users/{uid} document has role: 'admin' and active: true, "
+                          'or sign in as the seeded admin user.',
+                          style: t.bodySmall?.copyWith(fontWeight: FontWeight.w300, height: 1.45),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          if (onRefresh != null || onSignOut != null) ...[
+            const SizedBox(height: AppTokens.space3),
+            Wrap(
+              spacing: AppTokens.space3,
+              runSpacing: AppTokens.space2,
               children: [
                 if (onRefresh != null)
-                  FilledButton.tonal(onPressed: onRefresh, child: const Text('Refresh Role')),
-                const SizedBox(width: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: onRefresh,
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Refresh Role'),
+                  ),
                 if (onSignOut != null)
-                  OutlinedButton(onPressed: onSignOut, child: const Text('Sign Out')),
+                  OutlinedButton.icon(
+                    onPressed: onSignOut,
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('Sign Out'),
+                  ),
               ],
             ),
           ],
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildInfoChip(String label, String value, IconData icon) {
-    return Chip(
-      avatar: Icon(icon, size: 16),
-      label: Text('$label: $value', style: const TextStyle(fontSize: 12)),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    );
-  }
-
-  Widget _buildRoleChip(BuildContext context, String role) {
-    final isAdminRole = role == 'admin';
-    final onChip = Theme.of(context).colorScheme.onPrimary;
-    return Chip(
-      avatar: Icon(
-        isAdminRole ? Icons.admin_panel_settings : Icons.person,
-        size: 16,
-        color: onChip,
-      ),
-      label: Text(
-        'Role: ${role.toUpperCase()}',
-        style: TextStyle(fontSize: 12, color: onChip, fontWeight: FontWeight.w600),
-      ),
-      backgroundColor: isAdminRole ? AppColorScheme.chartGreen : AppColorScheme.chartBlue,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -166,5 +154,48 @@ class RoleCheckerPanel extends StatelessWidget {
     if (uid == null) return 'Unknown';
     if (uid.length <= 12) return uid;
     return '${uid.substring(0, 8)}...';
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({required this.icon, required this.text, this.color});
+
+  final IconData icon;
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppSurfaces.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final tone = color ?? cs.onSurfaceVariant;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color?.withValues(alpha: 0.10) ?? s.glassFillStrong,
+        borderRadius: AppRadius.full,
+        border: Border.all(color: color?.withValues(alpha: 0.28) ?? s.microBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: tone),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color ?? cs.onSurface,
+                  fontWeight: color != null ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

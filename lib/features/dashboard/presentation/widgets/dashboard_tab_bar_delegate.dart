@@ -1,103 +1,70 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
+import 'dashboard_search_field.dart';
+import 'dashboard_status_bar.dart';
 
-/// Pinned sliver header combining pill-style status tabs with a search field.
+/// Pinned frosted band holding the status segmented bar and the search pill.
+/// The band only gains a fill and hairline once content scrolls beneath it.
 class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
-  DashboardTabBarDelegate(
-    this._tabBar, {
+  DashboardTabBarDelegate({
+    required this.controller,
+    required this.labels,
     this.searchController,
     this.searchQuery = '',
     this.onClearSearch,
   });
 
-  final TabBar _tabBar;
+  final TabController controller;
+  final List<String> labels;
   final TextEditingController? searchController;
   final String searchQuery;
   final VoidCallback? onClearSearch;
 
-  static const double _searchFieldHeight = 44.0;
-  static const double _searchRowHeight = AppTokens.space2 + _searchFieldHeight + AppTokens.space3;
+  static const double _top = AppTokens.space2;
+  static const double _gap = AppTokens.space2;
+  static const double _bottom = AppTokens.space3;
+  static const double _extent =
+      _top + DashboardStatusBar.height + _gap + DashboardSearchField.height + _bottom;
 
   @override
-  double get minExtent => _tabBar.preferredSize.height + _searchRowHeight;
+  double get minExtent => _extent;
 
   @override
-  double get maxExtent => _tabBar.preferredSize.height + _searchRowHeight;
+  double get maxExtent => _extent;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tabHeight = _tabBar.preferredSize.height;
+    final s = AppSurfaces.of(context);
+    final floating = shrinkOffset > 0 || overlapsContent;
 
-    return Material(
-      elevation: 0,
-      color: cs.surface,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          border: Border(
-            top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
-            bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: AppTokens.blurSigma, sigmaY: AppTokens.blurSigma),
+        child: AnimatedContainer(
+          duration: AppMotion.of(context, AppMotion.standard),
+          curve: AppMotion.standardCurve,
+          color: floating ? s.glassFill : s.glassFill.withValues(alpha: 0),
+          foregroundDecoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: floating ? s.microBorder : s.microBorder.withValues(alpha: 0),
+              ),
+            ),
           ),
-        ),
-        child: SizedBox(
-          height: minExtent,
+          padding: const EdgeInsets.fromLTRB(AppTokens.space4, _top, AppTokens.space4, _bottom),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: tabHeight, child: _tabBar),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTokens.space4,
-                    AppTokens.space1,
-                    AppTokens.space4,
-                    AppTokens.space3,
-                  ),
-                  child: SizedBox(
-                    height: _searchFieldHeight,
-                    child: TextField(
-                      controller: searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search by name or phone…',
-                        hintStyle: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          size: AppTokens.iconMedium,
-                          color: cs.onSurfaceVariant,
-                        ),
-                        suffixIcon: searchQuery.isNotEmpty
-                            ? IconButton(
-                                tooltip: 'Clear search',
-                                icon: const Icon(Icons.clear_rounded, size: AppTokens.iconSmall),
-                                onPressed: onClearSearch,
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: AppRadius.medium,
-                          borderSide: BorderSide.none,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.medium,
-                          borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.medium,
-                          borderSide: BorderSide(color: cs.primary, width: 1.5),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 0,
-                          horizontal: AppTokens.space3,
-                        ),
-                        filled: true,
-                        fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
-                        isDense: true,
-                      ),
-                      textInputAction: TextInputAction.search,
-                    ),
-                  ),
-                ),
+              DashboardStatusBar(controller: controller, labels: labels),
+              const SizedBox(height: _gap),
+              DashboardSearchField(
+                controller: searchController,
+                query: searchQuery,
+                onClear: onClearSearch,
               ),
             ],
           ),
@@ -108,8 +75,10 @@ class DashboardTabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant DashboardTabBarDelegate old) {
-    return old._tabBar != _tabBar ||
+    return old.controller != controller ||
+        old.labels != labels ||
         old.searchQuery != searchQuery ||
-        old.searchController != searchController;
+        old.searchController != searchController ||
+        old.onClearSearch != onClearSearch;
   }
 }

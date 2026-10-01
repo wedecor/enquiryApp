@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/dropdown_defaults.dart';
 import '../../core/constants/status_vocabulary.dart';
 import '../../core/logging/logger.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/theme/tokens.dart';
 import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/tokens.dart';
 import '../../shared/models/user_model.dart';
+import '../../ui/primitives/primitives.dart';
 
 class StatusDropdown extends ConsumerStatefulWidget {
   final String? value;
@@ -227,10 +228,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           children: [
             TextField(
               controller: _addController,
-              decoration: InputDecoration(
-                labelText: widget.label,
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(labelText: widget.label),
               autofocus: true,
               onSubmitted: (_) => _addNewStatus(),
             ),
@@ -264,10 +262,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 key: _fieldKey,
                 // CRITICAL: Always ensure value is valid or null
                 initialValue: _getValidValue(widget.value),
+                borderRadius: AppRadius.large,
+                dropdownColor: AppSurfaces.of(context).glassFillStrong,
+                icon: const Icon(Icons.expand_more_rounded),
                 decoration: InputDecoration(
                   labelText: widget.required ? '${widget.label} *' : widget.label,
-                  prefixIcon: Icon(_getIconForStatus()),
-                  border: const OutlineInputBorder(),
+                  prefixIcon: Icon(_getIconForStatus(), size: AppTokens.iconMedium),
                   hintText:
                       widget.value != null &&
                           !_isLoading &&
@@ -297,26 +297,41 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                 if (role != UserRole.admin) {
                   return const SizedBox.shrink();
                 }
+                final s = AppSurfaces.of(context);
+                final tooltip = 'Add new ${widget.label.toLowerCase()}';
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(width: AppTokens.space2),
                     // Neutral secondary action — not a coloured call-to-action.
-                    IconButton.outlined(
-                      onPressed: _showAddDialog,
-                      icon: const Icon(Icons.add, size: AppTokens.iconMedium),
-                      tooltip: 'Add new ${widget.label.toLowerCase()}',
-                      style: IconButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-                        shape: RoundedRectangleBorder(borderRadius: AppRadius.medium),
+                    Tooltip(
+                      message: tooltip,
+                      child: Pressable(
+                        onTap: _showAddDialog,
+                        borderRadius: AppRadius.medium,
+                        pressedScale: 0.9,
+                        semanticLabel: tooltip,
+                        child: Container(
+                          width: AppTokens.minTapTarget + 4,
+                          height: AppTokens.minTapTarget + 4,
+                          decoration: BoxDecoration(
+                            color: s.glassFillStrong,
+                            borderRadius: AppRadius.medium,
+                            border: Border.all(color: s.microBorderStrong),
+                          ),
+                          child: Icon(
+                            Icons.add_rounded,
+                            size: AppTokens.iconMedium,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ],
         ),

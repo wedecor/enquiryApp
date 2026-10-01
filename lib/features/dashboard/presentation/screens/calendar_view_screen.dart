@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
@@ -9,10 +8,18 @@ import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/primitives/primitives.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../../enquiries/presentation/widgets/enquiry_list_item.dart';
+import '../widgets/calendar_day_agenda.dart';
+import '../widgets/calendar_day_markers.dart';
+import '../widgets/calendar_event.dart';
+import '../widgets/calendar_month_panel.dart';
+
+export '../widgets/calendar_event.dart';
 
 /// Calendar View Screen - Shows relevant enquiries on a calendar
 /// Filters out cancelled and not_interested events
@@ -71,7 +78,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       data: (user) => roleAsync.when(
         data: (role) => _buildCalendarContent(context, user, role == UserRole.admin),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _buildCalendarContent(context, user, false),
+        error: (_, _) => _buildCalendarContent(context, user, false),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (Object error, StackTrace stack) => Center(child: Text('Error: $error')),
@@ -81,23 +88,27 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       return body;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Calendar View'),
-        actions: [
-          if (roleAsync.valueOrNull == UserRole.admin)
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
-                );
-              },
-              tooltip: 'Add New Enquiry',
-            ),
-        ],
+    return AmbientBackdrop(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: const Text('Calendar View'),
+          actions: [
+            if (roleAsync.valueOrNull == UserRole.admin)
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () {
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
+                  );
+                },
+                tooltip: 'Add New Enquiry',
+              ),
+          ],
+        ),
+        body: body,
       ),
-      body: body,
     );
   }
 
@@ -121,290 +132,92 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         final enquiries = snapshot.data?.docs ?? [];
         _processEnquiries(enquiries);
 
-        return Column(
-          children: [
-            // Color Legend
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildLegendItem('Approved', AppColorScheme.statusConfirmed),
-                  _buildLegendItem('In Talks', AppColorScheme.statusInTalks),
-                  _buildLegendItem('Quote Sent', AppColorScheme.statusQuoteSent),
-                  _buildLegendItem('New', AppColorScheme.statusNew),
-                  _buildLegendItem('Completed', AppColorScheme.statusCompleted),
-                ],
+        final selectedDayKey = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.space4,
+                AppTokens.space3,
+                AppTokens.space4,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: StaggerIn(
+                  index: 0,
+                  child: CalendarMonthPanel(
+                    focusedDay: _focusedDay,
+                    selectedDay: _selectedDay,
+                    calendarFormat: _calendarFormat,
+                    eventLoader: _getEventsForDay,
+                    legend: const [
+                      ('Approved', AppColorScheme.statusConfirmed),
+                      ('In Talks', AppColorScheme.statusInTalks),
+                      ('New', AppColorScheme.statusNew),
+                      ('Completed', AppColorScheme.statusCompleted),
+                    ],
+                    onDaySelected: (selectedDay, focusedDay) {
+                      setState(() {
+                        _selectedDay = selectedDay;
+                        _focusedDay = focusedDay;
+                      });
+                    },
+                    onPageChanged: (focusedDay) {
+                      _focusedDay = focusedDay;
+                    },
+                    onFormatChanged: (format) {
+                      setState(() {
+                        _calendarFormat = format;
+                      });
+                    },
+                    markerBuilder: _buildDayMarkers,
+                  ),
+                ),
               ),
             ),
-            // Calendar Widget
-            TableCalendar<CalendarEvent>(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              calendarFormat: _calendarFormat,
-              eventLoader: (day) => _getEventsForDay(day),
-              startingDayOfWeek: StartingDayOfWeek.monday,
-              calendarStyle: CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                selectedDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-                markerDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary,
-                  shape: BoxShape.circle,
-                ),
-                outsideDaysVisible: false,
-                weekendTextStyle: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-              headerStyle: HeaderStyle(
-                formatButtonVisible: true,
-                titleCentered: true,
-                formatButtonShowsNext: false,
-                formatButtonDecoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                formatButtonTextStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              onPageChanged: (focusedDay) {
-                _focusedDay = focusedDay;
-              },
-              onFormatChanged: (format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              },
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, date, events) {
-                  if (events.isEmpty) return null;
-
-                  final dayKey = DateTime(date.year, date.month, date.day);
-                  final statusCounts = _statusCounts[dayKey];
-
-                  if (statusCounts == null || statusCounts.isEmpty) {
-                    return null;
-                  }
-
-                  final hasConflict = _conflicts.containsKey(dayKey);
-                  final totalEvents = events.length;
-
-                  // Show status breakdown with colored indicators
-                  return Positioned(
-                    bottom: 1,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Show colored dots for each status type
-                        if (statusCounts['approved'] != null && statusCounts['approved']! > 0)
-                          _buildStatusIndicator(
-                            AppColorScheme.statusConfirmed,
-                            statusCounts['approved']!,
-                            hasConflict,
-                          ),
-                        if (statusCounts['in_talks'] != null && statusCounts['in_talks']! > 0)
-                          _buildStatusIndicator(
-                            AppColorScheme.statusInTalks,
-                            statusCounts['in_talks']!,
-                            hasConflict,
-                          ),
-                        if (statusCounts['new'] != null && statusCounts['new']! > 0)
-                          _buildStatusIndicator(
-                            AppColorScheme.statusNew,
-                            statusCounts['new']!,
-                            hasConflict,
-                          ),
-                        if (statusCounts['completed'] != null && statusCounts['completed']! > 0)
-                          _buildStatusIndicator(
-                            AppColorScheme.statusCompleted,
-                            statusCounts['completed']!,
-                            hasConflict,
-                          ),
-                        // Show total count badge if multiple events
-                        if (totalEvents > 1)
-                          Container(
-                            margin: const EdgeInsets.only(left: 2),
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: hasConflict
-                                  ? Theme.of(context).colorScheme.error
-                                  : Theme.of(context).colorScheme.onSurfaceVariant,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '$totalEvents',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            CalendarDayAgenda(
+              day: _selectedDay,
+              events: _getEventsForDay(_selectedDay),
+              statusCounts: _statusCounts[selectedDayKey] ?? const {},
+              hasConflict: _conflicts.containsKey(selectedDayKey),
+              statuses: _breakdownStatuses,
+              itemBuilder: _buildEventListItem,
             ),
-            const Divider(),
-            // Selected Day Events List
-            Expanded(child: _buildEventsList(context)),
           ],
         );
       },
     );
   }
 
-  Widget _buildEventsList(BuildContext context) {
-    final selectedDayEvents = _getEventsForDay(_selectedDay);
-    final selectedDayKey = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    final hasConflict = _conflicts.containsKey(selectedDayKey);
+  /// Statuses shown as day markers and in the agenda breakdown, in order.
+  static const List<(String, String, Color)> _breakdownStatuses = [
+    ('approved', 'Approved', AppColorScheme.statusConfirmed),
+    ('in_talks', 'In Talks', AppColorScheme.statusInTalks),
+    ('new', 'New', AppColorScheme.statusNew),
+    ('completed', 'Completed', AppColorScheme.statusCompleted),
+  ];
 
-    if (selectedDayEvents.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, size: 64, color: Theme.of(context).colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(
-              'No events on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.outline),
-            ),
-          ],
-        ),
-      );
+  Widget? _buildDayMarkers(BuildContext context, DateTime date, List<CalendarEvent> events) {
+    if (events.isEmpty) return null;
+
+    final dayKey = DateTime(date.year, date.month, date.day);
+    final statusCounts = _statusCounts[dayKey];
+
+    if (statusCounts == null || statusCounts.isEmpty) {
+      return null;
     }
 
-    final statusCounts = _statusCounts[selectedDayKey] ?? {};
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Status breakdown summary
-        if (statusCounts.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Status Breakdown',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  children: [
-                    if (statusCounts['approved'] != null)
-                      _buildStatusChip(
-                        'Approved',
-                        AppColorScheme.statusConfirmed,
-                        statusCounts['approved']!,
-                      ),
-                    if (statusCounts['in_talks'] != null)
-                      _buildStatusChip(
-                        'In Talks',
-                        AppColorScheme.statusInTalks,
-                        statusCounts['in_talks']!,
-                      ),
-                    if (statusCounts['new'] != null)
-                      _buildStatusChip('New', AppColorScheme.statusNew, statusCounts['new']!),
-                    if (statusCounts['completed'] != null)
-                      _buildStatusChip(
-                        'Completed',
-                        AppColorScheme.statusCompleted,
-                        statusCounts['completed']!,
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        if (hasConflict)
-          Builder(
-            builder: (context) {
-              final error = Theme.of(context).colorScheme.error;
-              final errorContainer = Theme.of(context).colorScheme.errorContainer;
-              return Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: errorContainer.withValues(alpha: 0.5),
-                  border: Border.all(color: error.withValues(alpha: 0.5)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: error),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Conflict: Multiple events on this date',
-                        style: TextStyle(color: error, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ...selectedDayEvents.map(_buildEventListItem),
-      ],
-    );
-  }
-
-  Widget _buildStatusChip(String label, Color color, int count) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Text('$label: $count', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
-      ],
+    return Positioned(
+      bottom: 3,
+      child: CalendarDayMarkers(
+        colors: [
+          for (final (value, _, color) in _breakdownStatuses)
+            if ((statusCounts[value] ?? 0) > 0) color,
+        ],
+        total: events.length,
+        hasConflict: _conflicts.containsKey(dayKey),
+      ),
     );
   }
 
@@ -507,34 +320,6 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     });
   }
 
-  Widget _buildStatusIndicator(Color color, int count, bool hasConflict) {
-    final conflictColor = Theme.of(context).colorScheme.error;
-    return Container(
-      margin: const EdgeInsets.only(right: 2),
-      width: hasConflict ? 8 : 6,
-      height: hasConflict ? 8 : 6,
-      decoration: BoxDecoration(
-        color: hasConflict ? conflictColor : color,
-        shape: BoxShape.circle,
-        border: hasConflict
-            ? Border.all(color: Theme.of(context).colorScheme.onError, width: 1)
-            : null,
-      ),
-      child: count > 1
-          ? Center(
-              child: Text(
-                '$count',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: hasConflict ? 7 : 6,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
-          : null,
-    );
-  }
-
   List<CalendarEvent> _getEventsForDay(DateTime day) {
     final dayKey = DateTime(day.year, day.month, day.day);
     return _events[dayKey] ?? [];
@@ -552,27 +337,4 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         .read(firestoreServiceProvider)
         .watchEnquiriesForRoleByEventDate(isAdmin: isAdmin, assignedToUid: userId);
   }
-}
-
-/// Calendar Event Model
-class CalendarEvent {
-  final String enquiryId;
-  final String customerName;
-  final String eventType;
-  final DateTime eventDate;
-  final String? eventLocation;
-  final String status;
-  final DateTime createdAt;
-  final String? customerPhone;
-
-  CalendarEvent({
-    required this.enquiryId,
-    required this.customerName,
-    required this.eventType,
-    required this.eventDate,
-    this.eventLocation,
-    required this.status,
-    required this.createdAt,
-    this.customerPhone,
-  });
 }

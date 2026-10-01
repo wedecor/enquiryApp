@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/dropdown_defaults.dart';
 import '../../core/logging/logger.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/theme/tokens.dart';
 import '../../shared/models/user_model.dart';
+import '../../ui/primitives/primitives.dart';
 
 class EventTypeAutocomplete extends ConsumerStatefulWidget {
   final String? initialValue;
@@ -251,8 +253,7 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
               focusNode: focusNode,
               decoration: InputDecoration(
                 labelText: 'Event Type',
-                prefixIcon: const Icon(Icons.event),
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.event, size: 20),
                 suffixIcon: _isLoading
                     ? const Padding(
                         padding: EdgeInsets.all(12),
@@ -284,25 +285,33 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
           optionsViewBuilder: (context, onSelected, options) {
             return Align(
               alignment: Alignment.topLeft,
-              child: Material(
-                elevation: 4,
-                child: Container(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: ListView.builder(
-                    padding: EdgeInsets.zero,
-                    itemCount: options.length + (_showAddButton ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == options.length && _showAddButton) {
-                        return _buildAddNewOption();
-                      }
-                      final option = options.elementAt(index);
-                      return ListTile(
-                        title: Text(option['label'] ?? ''),
-                        onTap: () {
-                          onSelected(option);
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: GlassPanel(
+                    blur: true,
+                    strong: true,
+                    shadow: true,
+                    borderRadius: AppRadius.large,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        shrinkWrap: true,
+                        itemCount: options.length + (_showAddButton ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == options.length && _showAddButton) {
+                            return _buildAddNewOption();
+                          }
+                          final option = options.elementAt(index);
+                          return _OptionRow(
+                            label: option['label'] ?? '',
+                            onTap: () => onSelected(option),
+                          );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -324,24 +333,79 @@ class _EventTypeAutocompleteState extends ConsumerState<EventTypeAutocomplete> {
         return _buildAddOptionCard();
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
   Widget _buildAddOptionCard() {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(Icons.add, color: Theme.of(context).colorScheme.tertiary),
-        title: Text(
-          'Add "${_controller.text.trim()}" as new event type',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.tertiary,
-            fontWeight: FontWeight.w600,
+    final theme = Theme.of(context);
+    final s = AppSurfaces.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Pressable(
+        onTap: () => _addNewEventType(_controller.text),
+        borderRadius: AppRadius.medium,
+        child: GlassPanel(
+          borderRadius: AppRadius.medium,
+          tint: s.accent.withValues(alpha: 0.08),
+          borderColor: s.accent.withValues(alpha: 0.3),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Icon(Icons.add_rounded, size: 20, color: s.accentInk),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Add "${_controller.text.trim()}" as new event type',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: s.accentInk,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Eyebrow('Admin only'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        subtitle: const Text('Admin only'),
-        onTap: () => _addNewEventType(_controller.text),
+      ),
+    );
+  }
+}
+
+class _OptionRow extends StatelessWidget {
+  const _OptionRow({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      pressedScale: 0.98,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: AppTokens.minTapTarget),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ),
+        ),
       ),
     );
   }

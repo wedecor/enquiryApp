@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +9,12 @@ import '../../../../core/logging/safe_log.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/update_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/components/glass_dialog.dart';
+import '../widgets/settings_layout.dart';
+import '../widgets/settings_tiles.dart';
+import 'widgets/account_sections.dart';
 
 class AccountTab extends ConsumerWidget {
   const AccountTab({super.key});
@@ -17,177 +24,60 @@ class AccountTab extends ConsumerWidget {
     final currentUserAsync = ref.watch(currentUserWithFirestoreProvider);
     final currentUserRole = ref.watch(roleProvider);
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Profile Information', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-
-            currentUserAsync.when(
-              data: (user) => _buildProfileSection(context, user),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Text('Error loading profile: $error'),
-            ),
-
-            const SizedBox(height: 32),
-
-            Text('Role Information', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-
-            currentUserRole.when(
-              data: (role) =>
-                  _buildRoleSection(context, role == UserRole.admin ? 'admin' : 'staff'),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => _buildRoleSection(context, 'staff'),
-            ),
-
-            const SizedBox(height: 32),
-
-            Text('Account Actions', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-
-            _buildActionsSection(context),
-
-            const SizedBox(height: 24),
-
-            _buildSignOutSection(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileSection(BuildContext context, UserModel? user) {
-    if (user == null) {
-      return const Text('No user data available');
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            _buildReadOnlyField(context, 'Email', user.email),
-            const SizedBox(height: 16),
-            _buildReadOnlyField(context, 'Name', user.name),
-            const SizedBox(height: 16),
-            _buildReadOnlyField(context, 'Phone', user.phone ?? 'Not provided'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleSection(BuildContext context, String role) {
-    final theme = Theme.of(context);
-    final roleIcon = role == 'admin' ? Icons.admin_panel_settings : Icons.person;
-    final roleColor = role == 'admin' ? theme.colorScheme.tertiary : theme.colorScheme.primary;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(roleIcon, color: roleColor, size: 32),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  role.toUpperCase(),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: roleColor, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  role == 'admin'
-                      ? 'Full system access and user management'
-                      : 'Access to assigned enquiries and personal settings',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionsSection(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.lock_reset),
-            title: const Text('Change Password'),
-            subtitle: const Text('Send password reset email'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () => _sendPasswordReset(context),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.system_update),
-            title: const Text('Check for Updates'),
-            subtitle: const Text('Check if a newer version is available'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () => _checkForUpdates(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignOutSection(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _signOut(context),
-        icon: const Icon(Icons.logout),
-        label: const Text('Sign Out'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.error,
-          foregroundColor: Theme.of(context).colorScheme.onError,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReadOnlyField(BuildContext context, String label, String value) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return SettingsScrollBody(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(8),
-            color: theme.colorScheme.surface,
-          ),
-          child: Text(
-            (value.trim().isEmpty) ? 'Not provided' : value,
-            style: TextStyle(
-              fontSize: 16,
-              color: (value.trim().isEmpty)
-                  ? theme.colorScheme.onSurfaceVariant
-                  : theme.colorScheme.onSurface,
-              fontStyle: (value.trim().isEmpty) ? FontStyle.italic : FontStyle.normal,
+        SettingsGroup(
+          eyebrow: 'You',
+          title: 'Profile Information',
+          separated: false,
+          children: [
+            currentUserAsync.when(
+              data: (user) => user == null
+                  ? const SettingsTile(title: 'No user data available')
+                  : AccountProfileRows(user: user),
+              loading: () => const SettingsLoadingBlock(),
+              error: (error, stack) => SettingsTile(
+                icon: Icons.error_outline_rounded,
+                iconColor: Theme.of(context).colorScheme.error,
+                title: 'Error loading profile: $error',
+              ),
             ),
-          ),
+          ],
+        ),
+        SettingsGroup(
+          eyebrow: 'Access',
+          title: 'Role Information',
+          children: [
+            currentUserRole.when(
+              data: (role) => AccountRoleRow(role: role == UserRole.admin ? 'admin' : 'staff'),
+              loading: () => const SettingsLoadingBlock(),
+              error: (error, stack) => const AccountRoleRow(role: 'staff'),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          eyebrow: 'Security',
+          title: 'Account Actions',
+          children: [
+            SettingsTile(
+              icon: Icons.lock_reset_rounded,
+              title: 'Change Password',
+              subtitle: 'Send password reset email',
+              trailing: const SettingsChevron(),
+              onTap: () => _sendPasswordReset(context),
+            ),
+            SettingsTile(
+              icon: Icons.system_update_rounded,
+              title: 'Check for Updates',
+              subtitle: 'Check if a newer version is available',
+              trailing: const SettingsChevron(),
+              onTap: () => _checkForUpdates(context),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: AppTokens.space8),
+          child: AccountSignOutButton(onTap: () => _signOut(context)),
         ),
       ],
     );
@@ -226,17 +116,18 @@ class AccountTab extends ConsumerWidget {
   Future<void> _checkForUpdates(BuildContext context) async {
     try {
       // Show loading indicator
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Checking for updates...'),
-            ],
+      unawaited(
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const GlassDialog(
+            content: Row(
+              children: [
+                SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                SizedBox(width: AppTokens.space4),
+                Expanded(child: Text('Checking for updates...')),
+              ],
+            ),
           ),
         ),
       );
@@ -258,31 +149,31 @@ class AccountTab extends ConsumerWidget {
         // No updates available - show current version info
         final packageInfo = await PackageInfo.fromPlatform();
         if (context.mounted) {
-          showDialog<void>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColorScheme.snackSuccess),
-                  const SizedBox(width: 8),
-                  const Text('Up to Date'),
+          unawaited(
+            showDialog<void>(
+              context: context,
+              builder: (context) => GlassDialog(
+                icon: Icons.check_circle_outline_rounded,
+                iconColor: AppColorScheme.snackSuccess,
+                title: 'Up to Date',
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('You\'re running the latest version!'),
+                    const SizedBox(height: AppTokens.space2),
+                    Text(
+                      'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
                 ],
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('You\'re running the latest version!'),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Current Version: ${packageInfo.version}+${packageInfo.buildNumber}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
-              ],
             ),
           );
         }
@@ -316,7 +207,7 @@ class AccountTab extends ConsumerWidget {
       safeLog('user_signed_out', {'method': 'settings_account_tab'});
 
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+        unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false));
       }
     } catch (e) {
       safeLog('sign_out_error', {'error': e.toString(), 'errorType': e.runtimeType.toString()});

@@ -5,6 +5,9 @@ import '../../../../core/logging/safe_log.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
+import '../../../../ui/components/glass_state_message.dart';
+import '../widgets/settings_layout.dart';
+import '../widgets/settings_tiles.dart';
 
 class NotificationsTab extends ConsumerStatefulWidget {
   const NotificationsTab({super.key});
@@ -32,73 +35,59 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
 
         return _buildNotificationsContent(context, settings);
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error loading notification settings: $error')),
+      loading: () => const GlassLoadingState(),
+      error: (error, stack) => GlassStateMessage(
+        icon: Icons.error_outline_rounded,
+        title: 'Notifications unavailable',
+        message: 'Error loading notification settings: $error',
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 
   Widget _buildNotificationsContent(BuildContext context, UserSettings settings) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildMasterToggles(context),
-                const SizedBox(height: 24),
-                _buildChannelSettings(context),
-                const SizedBox(height: 24),
-                _buildInfoSection(context),
-              ],
-            ),
-          ),
-        ),
-        if (_hasChanges) _buildSaveSection(context),
-      ],
+    return SettingsEditableBody(
+      hasChanges: _hasChanges,
+      isSaving: _isSaving,
+      onSave: _saveChanges,
+      onDiscard: _discardChanges,
+      child: SettingsScrollBody(
+        children: [
+          _buildMasterToggles(context),
+          _buildChannelSettings(context),
+          _buildInfoSection(context),
+        ],
+      ),
     );
   }
 
   Widget _buildMasterToggles(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Master Controls', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Enable or disable notification types',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Push Notifications'),
-              subtitle: const Text('Receive notifications in the app'),
-              value: _currentSettings?.notifications.pushEnabled ?? true,
-              onChanged: (value) {
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  pushEnabled: value,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-            SwitchListTile(
-              title: const Text('Email Notifications'),
-              subtitle: const Text('Receive notifications via email'),
-              value: _currentSettings?.notifications.emailEnabled ?? false,
-              onChanged: (value) {
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  emailEnabled: value,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-          ],
+    return SettingsGroup(
+      eyebrow: 'Delivery',
+      title: 'Master Controls',
+      subtitle: 'Enable or disable notification types',
+      children: [
+        SettingsSwitchTile(
+          icon: Icons.notifications_active_outlined,
+          title: 'Push Notifications',
+          subtitle: 'Receive notifications in the app',
+          value: _currentSettings?.notifications.pushEnabled ?? true,
+          onChanged: (value) {
+            final newNotifications = _currentSettings!.notifications.copyWith(pushEnabled: value);
+            _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
+          },
         ),
-      ),
+        SettingsSwitchTile(
+          icon: Icons.mail_outline_rounded,
+          title: 'Email Notifications',
+          subtitle: 'Receive notifications via email',
+          value: _currentSettings?.notifications.emailEnabled ?? false,
+          onChanged: (value) {
+            final newNotifications = _currentSettings!.notifications.copyWith(emailEnabled: value);
+            _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
+          },
+        ),
+      ],
     );
   }
 
@@ -108,80 +97,55 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
     final emailEnabled = _currentSettings?.notifications.emailEnabled ?? false;
     final anyEnabled = pushEnabled || emailEnabled;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Notification Channels', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              anyEnabled
-                  ? 'Choose which events trigger notifications'
-                  : 'Enable push or email notifications above to configure channels',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            _buildChannelToggle(
-              'Assignment Notifications',
-              'When enquiries are assigned to you',
-              Icons.assignment_ind,
-              channels.assignment,
-              enabled: anyEnabled,
-              onChanged: (value) {
-                final newChannels = channels.copyWith(assignment: value);
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  channels: newChannels,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-            _buildChannelToggle(
-              'Status Changes',
-              'When enquiry status is updated',
-              Icons.update,
-              channels.statusChange,
-              enabled: anyEnabled,
-              onChanged: (value) {
-                final newChannels = channels.copyWith(statusChange: value);
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  channels: newChannels,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-            _buildChannelToggle(
-              'Payment Updates',
-              'When payment status changes',
-              Icons.payment,
-              channels.payment,
-              enabled: anyEnabled,
-              onChanged: (value) {
-                final newChannels = channels.copyWith(payment: value);
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  channels: newChannels,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-            _buildChannelToggle(
-              'Reminders',
-              'Follow-up and deadline reminders',
-              Icons.alarm,
-              channels.reminders,
-              enabled: anyEnabled,
-              onChanged: (value) {
-                final newChannels = channels.copyWith(reminders: value);
-                final newNotifications = _currentSettings!.notifications.copyWith(
-                  channels: newChannels,
-                );
-                _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
-              },
-            ),
-          ],
+    void updateChannels(NotificationChannels newChannels) {
+      final newNotifications = _currentSettings!.notifications.copyWith(channels: newChannels);
+      _updateSettings(_currentSettings!.copyWith(notifications: newNotifications));
+    }
+
+    return SettingsGroup(
+      eyebrow: 'Events',
+      title: 'Notification Channels',
+      subtitle: anyEnabled
+          ? 'Choose which events trigger notifications'
+          : 'Enable push or email notifications above to configure channels',
+      children: [
+        _buildChannelToggle(
+          'Assignment Notifications',
+          'When enquiries are assigned to you',
+          Icons.assignment_ind_outlined,
+          AppColorScheme.statusNew,
+          channels.assignment,
+          enabled: anyEnabled,
+          onChanged: (value) => updateChannels(channels.copyWith(assignment: value)),
         ),
-      ),
+        _buildChannelToggle(
+          'Status Changes',
+          'When enquiry status is updated',
+          Icons.update_rounded,
+          AppColorScheme.statusInTalks,
+          channels.statusChange,
+          enabled: anyEnabled,
+          onChanged: (value) => updateChannels(channels.copyWith(statusChange: value)),
+        ),
+        _buildChannelToggle(
+          'Payment Updates',
+          'When payment status changes',
+          Icons.payments_outlined,
+          AppColorScheme.statusConfirmed,
+          channels.payment,
+          enabled: anyEnabled,
+          onChanged: (value) => updateChannels(channels.copyWith(payment: value)),
+        ),
+        _buildChannelToggle(
+          'Reminders',
+          'Follow-up and deadline reminders',
+          Icons.alarm_rounded,
+          AppColorScheme.statusQuoteSent,
+          channels.reminders,
+          enabled: anyEnabled,
+          onChanged: (value) => updateChannels(channels.copyWith(reminders: value)),
+        ),
+      ],
     );
   }
 
@@ -189,105 +153,29 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
     String title,
     String subtitle,
     IconData icon,
+    Color tint,
     bool value, {
     required bool enabled,
     required ValueChanged<bool> onChanged,
   }) {
-    return SwitchListTile(
-      title: Text(title),
-      subtitle: Text(subtitle),
-      secondary: Icon(icon, color: enabled ? null : Theme.of(context).colorScheme.onSurfaceVariant),
+    return SettingsSwitchTile(
+      icon: icon,
+      iconColor: tint,
+      title: title,
+      subtitle: subtitle,
       value: value,
       onChanged: enabled ? onChanged : null,
     );
   }
 
   Widget _buildInfoSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Important Notes',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildInfoItem(
-              context,
-              'Push notifications require browser permission. You may need to allow notifications in your browser settings.',
-            ),
-            const SizedBox(height: 8),
-            _buildInfoItem(
-              context,
-              'Email notifications depend on admin settings and may not be available for all events.',
-            ),
-            const SizedBox(height: 8),
-            _buildInfoItem(
-              context,
-              'Changes take effect immediately but may take a few minutes to apply to all services.',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoItem(BuildContext context, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(top: 6),
-          width: 4,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+    return const SettingsNote(
+      title: 'Important Notes',
+      items: [
+        'Push notifications require browser permission. You may need to allow notifications in your browser settings.',
+        'Email notifications depend on admin settings and may not be available for all events.',
+        'Changes take effect immediately but may take a few minutes to apply to all services.',
       ],
-    );
-  }
-
-  Widget _buildSaveSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveChanges,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
-            ),
-          ),
-          const SizedBox(width: 16),
-          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
-        ],
-      ),
     );
   }
 

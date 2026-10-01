@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/firestore_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
+import '../../../../ui/primitives/primitives.dart';
 import 'enquiry_detail_section.dart';
 
 /// Assignment section with async user display rows.
@@ -32,6 +34,7 @@ class _EnquiryAssignmentSectionState extends ConsumerState<EnquiryAssignmentSect
   Widget build(BuildContext context) {
     if (widget.userRole == UserRole.admin) {
       return EnquiryDetailSection(
+        eyebrow: 'Ownership',
         title: 'Assignment',
         children: [
           _AsyncUserRow(
@@ -53,6 +56,7 @@ class _EnquiryAssignmentSectionState extends ConsumerState<EnquiryAssignmentSect
 
     if (widget.userRole == UserRole.staff) {
       return EnquiryDetailSection(
+        eyebrow: 'Ownership',
         title: 'Assignment',
         children: [
           _AsyncUserRow(
@@ -109,36 +113,26 @@ class _AsyncUserRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: AppSpacing.bottom(AppTokens.space2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: _UserDisplay(
-              userId: userId,
-              currentUserId: currentUserId,
-              getUserDisplayName: getUserDisplayName,
-            ),
-          ),
-        ],
+      padding: AppSpacing.bottom(AppTokens.space4),
+      child: _UserDisplay(
+        label: label,
+        userId: userId,
+        currentUserId: currentUserId,
+        getUserDisplayName: getUserDisplayName,
       ),
     );
   }
 }
 
 class _UserDisplay extends StatelessWidget {
-  const _UserDisplay({required this.userId, required this.getUserDisplayName, this.currentUserId});
+  const _UserDisplay({
+    required this.label,
+    required this.userId,
+    required this.getUserDisplayName,
+    this.currentUserId,
+  });
 
+  final String label;
   final String? userId;
   final String? currentUserId;
   final Future<String> Function(String userId) getUserDisplayName;
@@ -146,21 +140,101 @@ class _UserDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (userId == null || userId!.isEmpty) {
-      return const Text('Unassigned', style: TextStyle(fontSize: 16));
+      return _PersonLine(label: label, name: 'Unassigned', muted: true);
     }
     if (currentUserId != null && userId == currentUserId) {
-      return const Text('You', style: TextStyle(fontSize: 16));
+      return _PersonLine(label: label, name: 'You', highlight: true);
     }
 
     return FutureBuilder<String>(
       future: getUserDisplayName(userId!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: AppTokens.space3, child: LinearProgressIndicator(minHeight: 2));
+          return _PersonLine(label: label, name: null);
         }
-        final value = snapshot.data ?? 'Unknown';
-        return Text(value, style: const TextStyle(fontSize: 16));
+        return _PersonLine(label: label, name: snapshot.data ?? 'Unknown');
       },
+    );
+  }
+}
+
+/// Monogram avatar + eyebrow label over the person's name. A null [name]
+/// shows a slim loading line in place of the name.
+class _PersonLine extends StatelessWidget {
+  const _PersonLine({
+    required this.label,
+    required this.name,
+    this.muted = false,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String? name;
+  final bool muted;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppSurfaces.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    final initial = (name == null || muted || name!.trim().isEmpty)
+        ? null
+        : name!.trim().characters.first.toUpperCase();
+
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: highlight ? s.accentGradient : null,
+            color: highlight ? null : s.glassFillStrong,
+            border: Border.all(color: highlight ? s.edgeHighlight : s.microBorderStrong),
+          ),
+          child: initial == null
+              ? Icon(
+                  Icons.person_outline_rounded,
+                  size: AppTokens.iconMedium,
+                  color: cs.onSurfaceVariant,
+                )
+              : Text(
+                  initial,
+                  style: t.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: highlight ? AppColorScheme.brandCharcoal : cs.onSurface,
+                  ),
+                ),
+        ),
+        const SizedBox(width: AppTokens.space3),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Eyebrow(label),
+              const SizedBox(height: 2),
+              if (name == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppTokens.space2),
+                  child: LinearProgressIndicator(minHeight: 2),
+                )
+              else
+                Text(
+                  name!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.bodyLarge?.copyWith(
+                    fontWeight: muted ? FontWeight.w300 : FontWeight.w600,
+                    color: muted ? cs.onSurfaceVariant : cs.onSurface,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

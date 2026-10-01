@@ -6,24 +6,14 @@ import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
-import '../../../../shared/widgets/empty_state.dart';
+import '../../../../ui/primitives/primitives.dart';
 import 'dashboard_empty_enquiries.dart';
 import 'dashboard_enquiry_list_row.dart';
 import 'dashboard_enquiry_tab_actions.dart';
 import 'dashboard_enquiry_utils.dart';
+import 'dashboard_sort_bar.dart';
 
 export 'dashboard_enquiry_tab_actions.dart';
-
-enum _SortMode { eventDateAsc, eventDateDesc, createdDesc, nameAz }
-
-extension _SortModeLabel on _SortMode {
-  String get label => switch (this) {
-    _SortMode.eventDateAsc => 'Event date (soonest)',
-    _SortMode.eventDateDesc => 'Event date (latest)',
-    _SortMode.createdDesc => 'Newest first',
-    _SortMode.nameAz => 'Name A→Z',
-  };
-}
 
 /// Filtered enquiries list for a single dashboard status tab.
 class DashboardEnquiriesTab extends ConsumerStatefulWidget {
@@ -55,7 +45,11 @@ class DashboardEnquiriesTab extends ConsumerStatefulWidget {
 }
 
 class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
-  _SortMode _sortMode = _SortMode.eventDateAsc;
+  /// Space kept free under the last row for the floating nav pill and FAB.
+  static const double _bottomClearance = 96;
+  static const int _staggeredRows = 10;
+
+  DashboardSortMode _sortMode = DashboardSortMode.eventDateAsc;
 
   String get status => widget.status;
   String get searchQuery => widget.searchQuery;
@@ -124,7 +118,13 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 
     if (searchQuery.isNotEmpty && filteredEnquiries.isEmpty) {
       return [
-        _centeredContentSliver(SearchEmptyState(query: searchQuery, onClearSearch: onClearSearch)),
+        _centeredContentSliver(
+          DashboardEmptyEnquiries(
+            status: status,
+            searchQuery: searchQuery,
+            onClearSearch: onClearSearch,
+          ),
+        ),
       ];
     }
 
@@ -139,35 +139,39 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 
     return [
       SliverToBoxAdapter(
-        child: _SortSummaryBar(
+        child: DashboardSortBar(
           count: filteredEnquiries.length,
           current: _sortMode,
           onSortSelected: (mode) => setState(() => _sortMode = mode),
         ),
       ),
-      SliverPadding(
-        // Flat, full-width rows separated by hairlines (see EnquiryListRow).
-        padding: EdgeInsets.zero,
-        sliver: SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => DashboardEnquiryListRow(
-              enquiry: filteredEnquiries[index],
-              actions: actions,
-              dropdownLookup: dropdownLookup,
-              isReminderTab: isReminderTab,
-              showStatus: isReminderTab || status == 'closed' || status == 'All',
-            ),
-            childCount: filteredEnquiries.length,
-          ),
-        ),
+      SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final row = DashboardEnquiryListRow(
+            enquiry: filteredEnquiries[index],
+            actions: actions,
+            dropdownLookup: dropdownLookup,
+            isReminderTab: isReminderTab,
+            showStatus: isReminderTab || status == 'closed' || status == 'All',
+          );
+          // Only the first screenful cascades in; rows built later while
+          // scrolling appear immediately.
+          return index < _staggeredRows ? StaggerIn(index: index, child: row) : row;
+        }, childCount: filteredEnquiries.length),
       ),
-      const SliverToBoxAdapter(child: SizedBox(height: AppTokens.space8)),
+      const SliverToBoxAdapter(child: SizedBox(height: _bottomClearance)),
     ];
   }
 
   Widget _centeredContentSliver(Widget child) {
     return SliverToBoxAdapter(
-      child: SizedBox(height: 240, child: Center(child: child)),
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppTokens.space6, bottom: _bottomClearance),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 240),
+          child: Center(child: child),
+        ),
+      ),
     );
   }
 
@@ -222,13 +226,13 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 
   void _applySort(List<QueryDocumentSnapshot<Object?>> list, DateTime now) {
     switch (_sortMode) {
-      case _SortMode.eventDateAsc:
+      case DashboardSortMode.eventDateAsc:
         list.sort((a, b) => compareByNearestEventDate(a, b, now));
-      case _SortMode.eventDateDesc:
+      case DashboardSortMode.eventDateDesc:
         list.sort((a, b) => compareByEventDate(b, a));
-      case _SortMode.createdDesc:
+      case DashboardSortMode.createdDesc:
         list.sort((a, b) => compareByCreatedDate(b, a));
-      case _SortMode.nameAz:
+      case DashboardSortMode.nameAz:
         list.sort((a, b) {
           final aName = ((a.data() as Map<String, dynamic>)['customerName'] as String? ?? '')
               .toLowerCase();
@@ -237,90 +241,5 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
           return aName.compareTo(bName);
         });
     }
-  }
-}
-
-class _SortSummaryBar extends StatelessWidget {
-  const _SortSummaryBar({required this.count, required this.current, required this.onSortSelected});
-
-  final int count;
-  final _SortMode current;
-  final ValueChanged<_SortMode> onSortSelected;
-
-  Future<void> _showSortSheet(BuildContext context) async {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    final selected = await showModalBottomSheet<_SortMode>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppTokens.space4,
-                  AppTokens.space2,
-                  AppTokens.space4,
-                  AppTokens.space3,
-                ),
-                child: Text('Sort enquiries', style: theme.textTheme.titleMedium),
-              ),
-              ..._SortMode.values.map((mode) {
-                final isSelected = mode == current;
-                return ListTile(
-                  leading: Icon(
-                    isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                  ),
-                  title: Text(mode.label),
-                  onTap: () => Navigator.of(context).pop(mode),
-                );
-              }),
-              const SizedBox(height: AppTokens.space2),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (selected != null) onSortSelected(selected);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(left: AppTokens.space4, right: AppTokens.space1),
-        child: Row(
-          children: [
-            Text(
-              '$count enquir${count == 1 ? 'y' : 'ies'}',
-              style: theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: () => _showSortSheet(context),
-              style: TextButton.styleFrom(
-                foregroundColor: cs.onSurfaceVariant,
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.swap_vert_rounded, size: AppTokens.iconSmall),
-              label: Text(current.label),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

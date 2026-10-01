@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/current_user_role_provider.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/logging/safe_log.dart';
+import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/widgets/appearance_setting.dart';
 import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
+import '../../../../ui/components/glass_state_message.dart';
+import '../widgets/settings_layout.dart';
 
 class PreferencesTab extends ConsumerStatefulWidget {
   const PreferencesTab({super.key});
@@ -34,129 +37,91 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
 
         return _buildPreferencesContent(context, settings);
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error loading preferences: $error')),
+      loading: () => const GlassLoadingState(),
+      error: (error, stack) => GlassStateMessage(
+        icon: Icons.error_outline_rounded,
+        title: 'Preferences unavailable',
+        message: 'Error loading preferences: $error',
+        color: Theme.of(context).colorScheme.error,
+      ),
     );
   }
 
   Widget _buildPreferencesContent(BuildContext context, UserSettings settings) {
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppearanceSetting(),
-                const SizedBox(height: 24),
-                _buildLanguageSection(context),
-                const SizedBox(height: 24),
-                _buildTimezoneSection(context),
-              ],
-            ),
+    return SettingsEditableBody(
+      hasChanges: _hasChanges,
+      isSaving: _isSaving,
+      onSave: _saveChanges,
+      onDiscard: _discardChanges,
+      child: SettingsScrollBody(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: AppTokens.space4),
+            child: AppearanceSetting(),
           ),
-        ),
-        if (_hasChanges) _buildSaveSection(context),
-      ],
+          _buildLanguageSection(context),
+          _buildTimezoneSection(context),
+        ],
+      ),
     );
   }
 
   Widget _buildLanguageSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Language', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'App language (more languages coming soon)',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _currentSettings?.language ?? 'en',
-              decoration: const InputDecoration(
-                labelText: 'Language',
-                border: OutlineInputBorder(),
-              ),
-              items: const [DropdownMenuItem(value: 'en', child: Text('English'))],
-              onChanged: (newLanguage) {
-                if (newLanguage != null) {
-                  _updateSettings(_currentSettings!.copyWith(language: newLanguage));
-                }
-              },
-            ),
-          ],
+    return SettingsGroup(
+      eyebrow: 'Region',
+      title: 'Language',
+      subtitle: 'App language (more languages coming soon)',
+      separated: false,
+      padding: const EdgeInsets.all(AppTokens.space4),
+      children: [
+        DropdownButtonFormField<String>(
+          // Rebuilt on discard so the field reflects the restored value.
+          key: ValueKey('language-${_currentSettings?.language}'),
+          initialValue: _currentSettings?.language ?? 'en',
+          decoration: const InputDecoration(
+            labelText: 'Language',
+            prefixIcon: Icon(Icons.translate_rounded),
+          ),
+          items: const [DropdownMenuItem(value: 'en', child: Text('English'))],
+          onChanged: (newLanguage) {
+            if (newLanguage != null) {
+              _updateSettings(_currentSettings!.copyWith(language: newLanguage));
+            }
+          },
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildTimezoneSection(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Timezone', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('Used for date and time display', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _currentSettings?.timezone ?? 'Asia/Kolkata',
-              decoration: const InputDecoration(
-                labelText: 'Timezone',
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Asia/Kolkata', child: Text('Asia/Kolkata (IST)')),
-                DropdownMenuItem(value: 'UTC', child: Text('UTC')),
-                DropdownMenuItem(value: 'America/New_York', child: Text('America/New_York (EST)')),
-                DropdownMenuItem(value: 'Europe/London', child: Text('Europe/London (GMT)')),
-              ],
-              onChanged: (newTimezone) {
-                if (newTimezone != null) {
-                  _updateSettings(_currentSettings!.copyWith(timezone: newTimezone));
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSaveSection(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveChanges,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
-            ),
+    return SettingsGroup(
+      eyebrow: 'Clock',
+      title: 'Timezone',
+      subtitle: 'Used for date and time display',
+      separated: false,
+      padding: const EdgeInsets.all(AppTokens.space4),
+      children: [
+        DropdownButtonFormField<String>(
+          key: ValueKey('timezone-${_currentSettings?.timezone}'),
+          initialValue: _currentSettings?.timezone ?? 'Asia/Kolkata',
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Timezone',
+            prefixIcon: Icon(Icons.schedule_rounded),
           ),
-          const SizedBox(width: 16),
-          TextButton(onPressed: _isSaving ? null : _discardChanges, child: const Text('Discard')),
-        ],
-      ),
+          items: const [
+            DropdownMenuItem(value: 'Asia/Kolkata', child: Text('Asia/Kolkata (IST)')),
+            DropdownMenuItem(value: 'UTC', child: Text('UTC')),
+            DropdownMenuItem(value: 'America/New_York', child: Text('America/New_York (EST)')),
+            DropdownMenuItem(value: 'Europe/London', child: Text('Europe/London (GMT)')),
+          ],
+          onChanged: (newTimezone) {
+            if (newTimezone != null) {
+              _updateSettings(_currentSettings!.copyWith(timezone: newTimezone));
+            }
+          },
+        ),
+      ],
     );
   }
 

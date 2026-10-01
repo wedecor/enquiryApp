@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/theme/tokens.dart';
 import 'dashboard_enquiry_utils.dart';
+import 'dashboard_metric_tiles.dart';
 
 /// Summary counters (New · Follow-ups · This week) computed from live data.
 /// Each counter is tappable and jumps to the matching tab / Calendar.
@@ -30,7 +30,16 @@ class DashboardTodaySection extends ConsumerWidget {
           .read(firestoreServiceProvider)
           .watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userId),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
+        if (!snapshot.hasData) {
+          return DashboardMetricCluster(
+            hero: const DashboardMetric(bucket: 'this_week', label: 'This week', value: null),
+            heroUnit: 'events',
+            heroSeries: List.filled(7, 0),
+            first: const DashboardMetric(bucket: 'new', label: 'New', value: null),
+            second: const DashboardMetric(bucket: 'reminders', label: 'Follow-ups', value: null),
+            onTap: onBucketTap,
+          );
+        }
 
         final docs = snapshot.data!.docs;
         final now = DateTime.now();
@@ -40,6 +49,7 @@ class DashboardTodaySection extends ConsumerWidget {
         int staleNew = 0;
         int pendingReminders = 0;
         int eventsThisWeek = 0;
+        final perDay = List<double>.filled(7, 0);
 
         DateTime? nearestEventDate;
         String? nearestEventName;
@@ -57,6 +67,7 @@ class DashboardTodaySection extends ConsumerWidget {
           if (shouldShowReminder(data, now)) pendingReminders++;
           if (eventDate != null && eventDate.isAfter(now) && eventDate.isBefore(weekFromNow)) {
             eventsThisWeek++;
+            perDay[eventDate.difference(now).inDays.clamp(0, 6)]++;
             if (nearestEventDate == null || eventDate.isBefore(nearestEventDate)) {
               nearestEventDate = eventDate;
               nearestEventName = data['customerName'] as String?;
@@ -77,136 +88,31 @@ class DashboardTodaySection extends ConsumerWidget {
           }
         }
 
-        final cs = Theme.of(context).colorScheme;
-        return _StatStrip(
-          cells: [
-            _StatCell(
-              bucket: 'new',
-              value: newUncontacted,
-              label: 'New',
-              note: staleNew > 0 ? '$staleNew waiting 3d+' : null,
-              valueColor: staleNew > 0 ? cs.error : null,
-              onTap: onBucketTap,
-            ),
-            _StatCell(
-              bucket: 'reminders',
-              value: pendingReminders,
-              label: 'Follow-ups',
-              note: pendingReminders > 0 ? 'Event within 21d' : null,
-              onTap: onBucketTap,
-            ),
-            _StatCell(
-              bucket: 'this_week',
-              value: eventsThisWeek,
-              label: 'This week',
-              note: thisWeekSublabel,
-              onTap: onBucketTap,
-            ),
-          ],
+        return DashboardMetricCluster(
+          hero: DashboardMetric(
+            bucket: 'this_week',
+            label: 'This week',
+            value: eventsThisWeek,
+            note: thisWeekSublabel,
+          ),
+          heroUnit: eventsThisWeek == 1 ? 'event' : 'events',
+          heroSeries: perDay,
+          first: DashboardMetric(
+            bucket: 'new',
+            label: 'New',
+            value: newUncontacted,
+            note: staleNew > 0 ? '$staleNew waiting 3d+' : null,
+            alert: staleNew > 0,
+          ),
+          second: DashboardMetric(
+            bucket: 'reminders',
+            label: 'Follow-ups',
+            value: pendingReminders,
+            note: pendingReminders > 0 ? 'Event within 21d' : null,
+          ),
+          onTap: onBucketTap,
         );
       },
-    );
-  }
-}
-
-/// Three counters in one hairline-divided row — the dashboard's summary line.
-class _StatStrip extends StatelessWidget {
-  const _StatStrip({required this.cells});
-
-  final List<_StatCell> cells;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final divider = VerticalDivider(width: 1, thickness: 1, color: cs.outlineVariant);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: cs.outlineVariant),
-          bottom: BorderSide(color: cs.outlineVariant),
-        ),
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (int i = 0; i < cells.length; i++) ...[
-              if (i > 0) divider,
-              Expanded(child: cells[i]),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCell extends StatelessWidget {
-  const _StatCell({
-    required this.bucket,
-    required this.value,
-    required this.label,
-    this.note,
-    this.valueColor,
-    this.onTap,
-  });
-
-  final String bucket;
-  final int value;
-  final String label;
-  final String? note;
-  final Color? valueColor;
-  final void Function(String)? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Semantics(
-      button: onTap != null,
-      label: '$value $label${note != null ? '. $note' : ''}',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap != null ? () => onTap!(bucket) : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTokens.space4,
-            vertical: AppTokens.space3,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: AppTokens.space1 / 2),
-              Text(
-                '$value',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: valueColor ?? cs.onSurface,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  height: 1.1,
-                ),
-              ),
-              if (note != null) ...[
-                const SizedBox(height: AppTokens.space1 / 2),
-                Text(
-                  note!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

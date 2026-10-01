@@ -44,8 +44,20 @@ Future<void> _createStatusesCollection(FirebaseFirestore firestore) async {
     {'value': 'in_talks', 'label': 'In Talks', 'order': 2, 'active': true, 'color': '#2196F3'},
     {'value': 'approved', 'label': 'Approved', 'order': 3, 'active': true, 'color': '#4CAF50'},
     {'value': 'completed', 'label': 'Completed', 'order': 4, 'active': true, 'color': '#607D8B'},
-    {'value': 'not_interested', 'label': 'Not Interested', 'order': 5, 'active': true, 'color': '#795548'},
-    {'value': 'closed_lost', 'label': 'Closed Lost', 'order': 6, 'active': true, 'color': '#795548'},
+    {
+      'value': 'not_interested',
+      'label': 'Not Interested',
+      'order': 5,
+      'active': true,
+      'color': '#795548',
+    },
+    {
+      'value': 'closed_lost',
+      'label': 'Closed Lost',
+      'order': 6,
+      'active': true,
+      'color': '#795548',
+    },
     {'value': 'cancelled', 'label': 'Cancelled', 'order': 7, 'active': true, 'color': '#F44336'},
   ];
 

@@ -5,51 +5,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
-import '../../../../ui/components/enquiry_list_row.dart';
+import '../../../../shared/widgets/error_state.dart';
 import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
+import '../widgets/list/kanban_lane.dart';
 import 'enquiry_details_screen.dart';
 
 // ── Column definitions ────────────────────────────────────────────────────────
 
 class _KanbanColumn {
-  const _KanbanColumn({required this.status, required this.label, required this.icon});
+  const _KanbanColumn({required this.status, required this.label});
   final String status;
   final String label;
-  final IconData icon;
 }
 
-IconData _iconForStatus(EnquiryStatus status) {
-  switch (status) {
-    case EnquiryStatus.newEnquiry:
-      return Icons.fiber_new_outlined;
-    case EnquiryStatus.inTalks:
-      return Icons.forum_outlined;
-    case EnquiryStatus.approved:
-      return Icons.check_circle_outline;
-    case EnquiryStatus.completed:
-      return Icons.done_all_outlined;
-    case EnquiryStatus.notInterested:
-      return Icons.block_outlined;
-    case EnquiryStatus.closedLost:
-      return Icons.thumb_down_outlined;
-    case EnquiryStatus.cancelled:
-      return Icons.cancel_outlined;
-  }
-}
+List<_KanbanColumn> get _kColumns =>
+    EnquiryStatus.values.map((s) => _KanbanColumn(status: s.value, label: s.label)).toList();
 
-List<_KanbanColumn> get _kColumns => EnquiryStatus.values
-    .map((s) => _KanbanColumn(status: s.value, label: s.label, icon: _iconForStatus(s)))
-    .toList();
-
-const double _kColumnWidth = 260.0;
-const double _kColumnHeaderHeight = 52.0;
-const double _kCardWidth = 244.0;
+const double _kColumnWidth = 272.0;
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
@@ -77,7 +54,8 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
 
     return currentUser.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) =>
+          ErrorState(message: 'Couldn\'t load your profile.\nPlease try again.', error: e),
       data: (user) {
         if (user == null) return const Center(child: Text('Not logged in'));
         final isAdmin = user.role == UserRole.admin;
@@ -89,7 +67,10 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return ErrorState(
+                message: 'Couldn\'t load the board.\nPlease check your connection and try again.',
+                error: snapshot.error,
+              );
             }
 
             final docs = (snapshot.data?.docs ?? []).where((doc) {
@@ -120,8 +101,8 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               bucket.sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
-                DateTime? aDate = _ts(aData['eventDate']);
-                DateTime? bDate = _ts(bData['eventDate']);
+                final DateTime? aDate = _ts(aData['eventDate']);
+                final DateTime? bDate = _ts(bData['eventDate']);
                 if (aDate != null && bDate != null) return aDate.compareTo(bDate);
                 if (aDate != null) return -1;
                 if (bDate != null) return 1;
@@ -215,13 +196,19 @@ class _KanbanBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(AppTokens.space3),
+      padding: const EdgeInsets.fromLTRB(
+        AppTokens.space4,
+        AppTokens.space1,
+        AppTokens.space4,
+        AppTokens.space4,
+      ),
       itemCount: columns.length,
-      separatorBuilder: (_, __) => const SizedBox(width: AppTokens.space2),
+      separatorBuilder: (_, _) => const SizedBox(width: AppTokens.space3),
       itemBuilder: (context, i) {
         final col = columns[i];
-        return _ColumnWidget(
-          column: col,
+        return KanbanLane(
+          status: col.status,
+          label: col.label,
           cards: buckets[col.status] ?? [],
           isHovered: hoverColumn == col.status,
           dropdownLookup: dropdownLookup,
@@ -229,273 +216,9 @@ class _KanbanBoard extends StatelessWidget {
           onDragLeave: onDragLeave,
           onDrop: (id) => onDrop(id, col.status),
           onTap: onTap,
-        );
-      },
-    );
-  }
-}
-
-// ── Column widget ─────────────────────────────────────────────────────────────
-
-class _ColumnWidget extends StatelessWidget {
-  const _ColumnWidget({
-    required this.column,
-    required this.cards,
-    required this.isHovered,
-    required this.dropdownLookup,
-    required this.onDragOver,
-    required this.onDragLeave,
-    required this.onDrop,
-    required this.onTap,
-  });
-
-  final _KanbanColumn column;
-  final List<QueryDocumentSnapshot> cards;
-  final bool isHovered;
-  final DropdownLookup? dropdownLookup;
-  final VoidCallback onDragOver;
-  final VoidCallback onDragLeave;
-  final void Function(String enquiryId) onDrop;
-  final void Function(String enquiryId) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final statusColor = AppColorScheme.statusColorFor(column.status);
-
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (_) {
-        onDragOver();
-        return true;
-      },
-      onLeave: (_) => onDragLeave(),
-      onAcceptWithDetails: (details) => onDrop(details.data),
-      builder: (context, candidateData, __) {
-        final accepting = candidateData.isNotEmpty || isHovered;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
           width: _kColumnWidth,
-          decoration: BoxDecoration(
-            color: accepting ? statusColor.withValues(alpha: 0.08) : cs.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppTokens.radiusMedium),
-            border: Border.all(
-              color: accepting ? statusColor : cs.outlineVariant,
-              width: accepting ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              _ColumnHeader(column: column, count: cards.length, statusColor: statusColor),
-              const Divider(height: 1),
-              // Cards
-              Expanded(
-                child: cards.isEmpty
-                    ? _EmptyColumn(accepting: accepting, statusColor: statusColor)
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(AppTokens.space2),
-                        itemCount: cards.length,
-                        itemBuilder: (context, i) {
-                          final doc = cards[i];
-                          // EnquiryListRow adds its own bottom spacing.
-                          return _KanbanCard(
-                            doc: doc,
-                            statusColor: statusColor,
-                            dropdownLookup: dropdownLookup,
-                            onTap: () => onTap(doc.id),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
         );
       },
     );
-  }
-}
-
-// ── Column header ─────────────────────────────────────────────────────────────
-
-class _ColumnHeader extends StatelessWidget {
-  const _ColumnHeader({required this.column, required this.count, required this.statusColor});
-
-  final _KanbanColumn column;
-  final int count;
-  final Color statusColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      height: _kColumnHeaderHeight,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space3),
-        child: Row(
-          children: [
-            Icon(column.icon, size: 18, color: statusColor),
-            const SizedBox(width: AppTokens.space2),
-            Text(
-              column.label,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: statusColor,
-              ),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '$count',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Empty column placeholder ──────────────────────────────────────────────────
-
-class _EmptyColumn extends StatelessWidget {
-  const _EmptyColumn({required this.accepting, required this.statusColor});
-
-  final bool accepting;
-  final Color statusColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTokens.space4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              accepting ? Icons.add_circle_outline : Icons.inbox_outlined,
-              size: 32,
-              color: accepting ? statusColor : cs.onSurfaceVariant.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: AppTokens.space2),
-            Text(
-              accepting ? 'Drop here' : 'Empty',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: accepting ? statusColor : cs.onSurfaceVariant.withValues(alpha: 0.4),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Kanban card ───────────────────────────────────────────────────────────────
-
-class _KanbanCard extends StatelessWidget {
-  const _KanbanCard({
-    required this.doc,
-    required this.statusColor,
-    required this.dropdownLookup,
-    required this.onTap,
-  });
-
-  final QueryDocumentSnapshot doc;
-  final Color statusColor;
-  final DropdownLookup? dropdownLookup;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final data = doc.data() as Map<String, dynamic>;
-    final customerName = (data['customerName'] as String?) ?? 'Customer';
-    final eventTypeValue = (data['eventTypeValue'] ?? data['eventType']) as String? ?? '';
-    final eventTypeLabel =
-        (data['eventTypeLabel'] as String?) ??
-        (dropdownLookup?.labelForEventType(eventTypeValue) ?? _titleCase(eventTypeValue));
-    final location = (data['eventLocation'] ?? data['location']) as String?;
-    final eventDate = _ts(data['eventDate']);
-    final createdAt = _ts(data['createdAt']) ?? DateTime.now();
-    final countdown = _countdownLabel(eventDate);
-    final ageLabel = _ageLabel(createdAt);
-    final statusValue = (data['statusValue'] as String?) ?? '';
-
-    // Same shared row used everywhere else; status chip is implied by the column.
-    final card = EnquiryListRow(
-      customerName: customerName,
-      statusValue: statusValue,
-      statusColor: statusColor,
-      eventTypeLabel: eventTypeLabel,
-      eventTypeValue: eventTypeValue,
-      eventDateLabel: countdown ?? '',
-      location: (location != null && location.isNotEmpty) ? location : null,
-      ageLabel: ageLabel,
-      onTap: onTap,
-      showStatusChip: false,
-      showChevron: false,
-      bordered: true,
-    );
-
-    // Wrap in LongPressDraggable
-    return LongPressDraggable<String>(
-      data: doc.id,
-      hapticFeedbackOnStart: true,
-      delay: const Duration(milliseconds: 300),
-      feedback: Material(
-        elevation: AppTokens.elevation4,
-        borderRadius: AppRadius.medium,
-        child: SizedBox(
-          width: _kCardWidth,
-          child: Opacity(opacity: 0.9, child: card),
-        ),
-      ),
-      childWhenDragging: Opacity(opacity: 0.3, child: card),
-      child: card,
-    );
-  }
-
-  DateTime? _ts(dynamic v) {
-    if (v is Timestamp) return v.toDate();
-    if (v is DateTime) return v;
-    return null;
-  }
-
-  String? _countdownLabel(DateTime? date) {
-    if (date == null || date.year <= 1971) return null;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final eventDay = DateTime(date.year, date.month, date.day);
-    final days = eventDay.difference(today).inDays;
-    if (days > 1) return 'In $days days';
-    if (days == 1) return 'Tomorrow';
-    if (days == 0) return 'Today';
-    if (days == -1) return '1 day ago';
-    return '${days.abs()}d ago';
-  }
-
-  String _ageLabel(DateTime createdAt) {
-    final age = DateTime.now().difference(createdAt);
-    if (age.inHours < 24) return '${age.inHours}h old';
-    if (age.inDays < 7) return '${age.inDays}d old';
-    final weeks = age.inDays ~/ 7;
-    if (weeks < 5) return '${weeks}w old';
-    return '${age.inDays ~/ 30}mo old';
-  }
-
-  String _titleCase(String v) {
-    if (v.isEmpty) return v;
-    return v[0].toUpperCase() + v.substring(1).replaceAll('_', ' ');
   }
 }

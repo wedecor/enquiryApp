@@ -1,11 +1,15 @@
-import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../../core/theme/app_theme.dart';
+import '../../../../../core/theme/tokens.dart';
+import '../../../../../ui/primitives/primitives.dart';
 import '../../domain/analytics_models.dart';
 import 'analytics_section_card.dart';
 
-/// Line chart widget for showing trend data
+/// Enquiry trend: headline total/peak/average figures over a smoothed
+/// [TrendLine] with sparse date ticks.
 class LineTrendChart extends StatelessWidget {
   final List<SeriesPoint> data;
   final String title;
@@ -16,159 +20,61 @@ class LineTrendChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnalyticsSectionCard(
+      eyebrow: 'Trend',
       title: title,
       subtitle: subtitle,
-      child: SizedBox(height: 300, child: _buildChart(context)),
+      child: data.isEmpty
+          ? const AnalyticsEmptyState(
+              icon: Icons.show_chart_rounded,
+              hint: 'Select a different date range or filters',
+            )
+          : _buildChart(context),
     );
   }
 
   Widget _buildChart(BuildContext context) {
-    if (data.isEmpty) {
-      return _buildEmptyState(context);
-    }
+    final s = AppSurfaces.of(context);
+    final values = [for (final p in data) p.count.toDouble()];
+    final total = data.fold<int>(0, (sum, p) => sum + p.count);
+    final peak = data.map((p) => p.count).reduce(math.max);
+    final average = total / data.length;
 
-    final primary = Theme.of(context).colorScheme.primary;
+    final ticks = <SeriesPoint>[
+      data.first,
+      if (data.length > 2) data[data.length ~/ 2],
+      if (data.length > 1) data.last,
+    ];
 
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: _getHorizontalInterval(),
-          getDrawingHorizontalLine: (value) {
-            return FlLine(color: Theme.of(context).colorScheme.outlineVariant, strokeWidth: 1);
-          },
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              interval: _getBottomInterval(),
-              getTitlesWidget: (value, meta) {
-                return _buildBottomTitle(value, meta);
-              },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              flex: 3,
+              child: _Figure(value: '$total', label: 'enquiries', large: true),
             ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: _getHorizontalInterval(),
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) {
-                return _buildLeftTitle(value, meta);
-              },
+            Expanded(
+              flex: 2,
+              child: _Figure(value: '$peak', label: 'peak'),
             ),
-          ),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-        ),
-        minX: 0,
-        maxX: (data.length - 1).toDouble(),
-        minY: 0,
-        maxY: _getMaxY(),
-        lineBarsData: [
-          LineChartBarData(
-            spots: _getSpots(),
-            isCurved: true,
-            gradient: LinearGradient(colors: [primary, primary.withValues(alpha: 0.7)]),
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [primary.withValues(alpha: 0.3), primary.withValues(alpha: 0.1)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+            Expanded(
+              flex: 2,
+              child: _Figure(value: average.toStringAsFixed(1), label: 'average'),
             ),
-          ),
-        ],
-        lineTouchData: const LineTouchData(enabled: true),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.show_chart, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text(
-            'No data available',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Select a different date range or filters',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<FlSpot> _getSpots() {
-    return data.asMap().entries.map((entry) {
-      return FlSpot(entry.key.toDouble(), entry.value.count.toDouble());
-    }).toList();
-  }
-
-  double _getMaxY() {
-    if (data.isEmpty) return 10;
-    final maxCount = data.map((point) => point.count).reduce((a, b) => a > b ? a : b);
-    return (maxCount * 1.1).ceilToDouble();
-  }
-
-  double _getHorizontalInterval() {
-    final maxY = _getMaxY();
-    if (maxY <= 10) return 1;
-    if (maxY <= 50) return 5;
-    if (maxY <= 100) return 10;
-    return (maxY / 5).ceilToDouble();
-  }
-
-  double _getBottomInterval() {
-    final length = data.length;
-    if (length <= 7) return 1;
-    if (length <= 30) return 7;
-    return (length / 5).ceilToDouble();
-  }
-
-  Widget _buildBottomTitle(double value, TitleMeta meta) {
-    final index = value.toInt();
-    if (index >= 0 && index < data.length) {
-      final point = data[index];
-      return SideTitleWidget(
-        axisSide: meta.axisSide,
-        child: Text(
-          _formatDate(point.x),
-          style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
+          ],
         ),
-      );
-    }
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildLeftTitle(double value, TitleMeta meta) {
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      child: Text(
-        value.toInt().toString(),
-        style: const TextStyle(fontSize: 10, color: AppColorScheme.neutralGrey),
-      ),
+        const SizedBox(height: AppTokens.space5),
+        TrendLine(values: values, color: s.accent, height: 200),
+        const SizedBox(height: AppTokens.space2),
+        Row(
+          mainAxisAlignment: ticks.length == 1
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.spaceBetween,
+          children: [for (final p in ticks) _Tick(label: _formatDate(p.x))],
+        ),
+      ],
     );
   }
 
@@ -193,46 +99,57 @@ class LineTrendChart extends StatelessWidget {
   }
 }
 
-/// Mini trend chart for KPI cards
-class MiniTrendChart extends StatelessWidget {
-  final List<SeriesPoint> data;
-  final Color color;
+class _Figure extends StatelessWidget {
+  const _Figure({required this.value, required this.label, this.large = false});
 
-  const MiniTrendChart({super.key, required this.data, required this.color});
+  final String value;
+  final String label;
+  final bool large;
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+    final style = large
+        ? t.displayMedium?.merge(AppTypography.numeral)
+        : t.titleLarge?.merge(AppTypography.numeral).copyWith(fontSize: 20);
 
-    return SizedBox(
-      height: 40,
-      width: 60,
-      child: LineChart(
-        LineChartData(
-          gridData: const FlGridData(show: false),
-          titlesData: const FlTitlesData(show: false),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: (data.length - 1).toDouble(),
-          minY: 0,
-          maxY: data.map((p) => p.count.toDouble()).reduce((a, b) => a > b ? a : b),
-          lineBarsData: [
-            LineChartBarData(
-              spots: data.asMap().entries.map((entry) {
-                return FlSpot(entry.key.toDouble(), entry.value.count.toDouble());
-              }).toList(),
-              isCurved: true,
-              color: color,
-              barWidth: 2,
-              isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(show: true, color: color.withValues(alpha: 0.1)),
-            ),
-          ],
-          lineTouchData: const LineTouchData(enabled: false),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value, maxLines: 1, style: style?.copyWith(color: cs.onSurface)),
         ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w300),
+        ),
+      ],
+    );
+  }
+}
+
+class _Tick extends StatelessWidget {
+  const _Tick({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      label,
+      maxLines: 1,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: cs.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0.6,
       ),
     );
   }

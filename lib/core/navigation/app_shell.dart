@@ -9,21 +9,21 @@ import '../../features/enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../shared/models/user_model.dart';
-import '../../ui/components/brand_mark.dart';
+import '../../ui/primitives/primitives.dart';
 import '../providers/notification_provider.dart';
 import '../providers/role_provider.dart';
 import '../services/firebase_auth_service.dart';
 import '../theme/tokens.dart';
+import 'shell_widgets.dart';
 
 /// Responsive navigation shell — the app's only primary navigation.
 ///
-/// * width < [AppTokens.breakpointTablet]: Material 3 [NavigationBar] (bottom).
-/// * width >= [AppTokens.breakpointTablet]: collapsed [NavigationRail] (icons + labels).
-/// * width >= [AppTokens.breakpointDesktop]: extended rail (permanent side nav).
+/// * width < [AppTokens.breakpointTablet]: floating glass nav pill (bottom).
+/// * width >= [AppTokens.breakpointTablet]: glass side rail (icons).
+/// * width >= [AppTokens.breakpointDesktop]: extended rail (icons + labels).
 ///
-/// Destinations are role-gated: Analytics is admin-only (as it was in the old
-/// drawer); admin tools (Users, Dropdowns) live under Settings → Admin.
-/// The legacy swipe-in drawer has been removed.
+/// Destinations are role-gated: Analytics is admin-only; admin tools (Users,
+/// Dropdowns) live under Settings → Admin.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
@@ -37,54 +37,60 @@ class _AppShellState extends ConsumerState<AppShell> {
   // Calendar is always index 1 — used by DashboardScreen to navigate to it.
   static const int _calendarTabIndex = 1;
 
+  void _select(int index) => setState(() => _selectedIndex = index);
+
   void _navigateToAnalytics(bool isAdmin) {
     final idx = _destinations(isAdmin).indexWhere((d) => d.label == 'Analytics');
-    if (idx >= 0) setState(() => _selectedIndex = idx);
+    if (idx >= 0) _select(idx);
   }
 
-  List<_ShellDestination> _destinations(bool isAdmin) {
+  List<ShellDestination> _destinations(bool isAdmin) {
     return [
-      _ShellDestination(
+      ShellDestination(
         label: 'Dashboard',
-        icon: Icons.dashboard_outlined,
-        selectedIcon: Icons.dashboard,
+        eyebrow: 'Today',
+        icon: Icons.space_dashboard_outlined,
+        selectedIcon: Icons.space_dashboard_rounded,
         body: DashboardScreen(
           embeddedInShell: true,
-          onNavigateToCalendar: () => setState(() => _selectedIndex = _calendarTabIndex),
+          onNavigateToCalendar: () => _select(_calendarTabIndex),
           onNavigateToAnalytics: () => _navigateToAnalytics(isAdmin),
         ),
       ),
-      const _ShellDestination(
+      const ShellDestination(
         label: 'Calendar',
-        icon: Icons.calendar_today_outlined,
-        selectedIcon: Icons.calendar_today,
+        eyebrow: 'Schedule',
+        icon: Icons.calendar_month_outlined,
+        selectedIcon: Icons.calendar_month_rounded,
         body: CalendarViewScreen(embeddedInShell: true),
       ),
-      const _ShellDestination(
+      const ShellDestination(
         label: 'Enquiries',
-        icon: Icons.list_alt_outlined,
-        selectedIcon: Icons.list_alt,
+        eyebrow: 'Pipeline',
+        icon: Icons.view_agenda_outlined,
+        selectedIcon: Icons.view_agenda_rounded,
         body: EnquiriesListScreen(embeddedInShell: true),
       ),
       if (isAdmin)
-        const _ShellDestination(
+        const ShellDestination(
           label: 'Analytics',
-          icon: Icons.bar_chart_outlined,
-          selectedIcon: Icons.bar_chart,
+          eyebrow: 'Insights',
+          icon: Icons.insights_outlined,
+          selectedIcon: Icons.insights_rounded,
           body: AnalyticsScreen(embeddedInShell: true),
         ),
-      const _ShellDestination(
+      const ShellDestination(
         label: 'Settings',
-        icon: Icons.settings_outlined,
-        selectedIcon: Icons.settings,
+        eyebrow: 'Workspace',
+        icon: Icons.tune_outlined,
+        selectedIcon: Icons.tune_rounded,
         body: SettingsScreen(embeddedInShell: true),
       ),
     ];
   }
 
-  bool _showFab(List<_ShellDestination> destinations) {
-    if (_selectedIndex >= destinations.length) return false;
-    final label = destinations[_selectedIndex].label;
+  bool _showFab(List<ShellDestination> destinations, int index) {
+    final label = destinations[index].label;
     return label == 'Dashboard' || label == 'Enquiries';
   }
 
@@ -130,80 +136,57 @@ class _AppShellState extends ConsumerState<AppShell> {
     final railExtended = width >= AppTokens.breakpointDesktop;
     final safeIndex = _selectedIndex.clamp(0, destinations.length - 1);
     final current = destinations[safeIndex];
+    final showFab = _showFab(destinations, safeIndex) && permissions.canCreateEnquiries;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: _AppBarTitle(label: current.label),
-        actions: [
-          _NotificationBell(isAdmin: isAdmin),
-          IconButton(icon: const Icon(Icons.logout), tooltip: 'Sign Out', onPressed: _signOut),
-        ],
-      ),
-      body: Row(
-        children: [
-          if (!useBottomNav) ...[
-            NavigationRail(
-              extended: railExtended,
-              selectedIndex: safeIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-              labelType: railExtended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-              leading: railExtended
-                  ? const Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        AppTokens.space4,
-                        AppTokens.space4,
-                        AppTokens.space4,
-                        AppTokens.space2,
-                      ),
-                      child: BrandMark(compact: false),
-                    )
-                  : const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppTokens.space3),
-                      child: BrandMark(compact: true),
-                    ),
-              destinations: [
-                for (final d in destinations)
-                  NavigationRailDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.selectedIcon),
-                    label: Text(d.label),
+    final actions = [
+      _NotificationBell(isAdmin: isAdmin),
+      const SizedBox(width: AppTokens.space2),
+      ShellIconButton(icon: Icons.logout_rounded, tooltip: 'Sign Out', onTap: _signOut),
+    ];
+
+    final pages = IndexedStack(index: safeIndex, children: [for (final d in destinations) d.body]);
+
+    return AmbientBackdrop(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        resizeToAvoidBottomInset: true,
+        appBar: ShellTopBar(
+          eyebrow: current.eyebrow,
+          title: current.label,
+          showBrand: useBottomNav || !railExtended,
+          actions: actions,
+        ),
+        body: useBottomNav
+            ? pages
+            : Row(
+                children: [
+                  ShellRail(
+                    destinations: destinations,
+                    selectedIndex: safeIndex,
+                    extended: railExtended,
+                    onSelected: _select,
                   ),
-              ],
-            ),
-            const VerticalDivider(width: 1, thickness: 1),
-          ],
-          Expanded(
-            child: IndexedStack(index: safeIndex, children: [for (final d in destinations) d.body]),
-          ),
-        ],
+                  Expanded(child: pages),
+                ],
+              ),
+        bottomNavigationBar: useBottomNav
+            ? ShellNavPill(
+                destinations: destinations,
+                selectedIndex: safeIndex,
+                onSelected: _select,
+              )
+            : null,
+        floatingActionButton: showFab
+            ? AccentFab(
+                onTap: _openNewEnquiry,
+                tooltip: 'Add New Enquiry',
+                label: railExtended ? 'New enquiry' : null,
+              )
+            : null,
       ),
-      bottomNavigationBar: useBottomNav
-          ? NavigationBar(
-              selectedIndex: safeIndex,
-              onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-              destinations: [
-                for (final d in destinations)
-                  NavigationDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.selectedIcon),
-                    label: d.label,
-                  ),
-              ],
-            )
-          : null,
-      floatingActionButton: _showFab(destinations) && permissions.canCreateEnquiries
-          ? FloatingActionButton(
-              onPressed: _openNewEnquiry,
-              tooltip: 'Add New Enquiry',
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }
-
-// ── Notification bell with badge ──────────────────────────────────────────────
 
 class _NotificationBell extends ConsumerWidget {
   const _NotificationBell({required this.isAdmin});
@@ -219,50 +202,13 @@ class _NotificationBell extends ConsumerWidget {
     final countAsync = ref.watch(unreadNotificationCountProvider(userId));
     final count = countAsync.valueOrNull ?? 0;
 
-    return IconButton(
+    return ShellIconButton(
+      icon: Icons.notifications_none_rounded,
       tooltip: 'Notifications',
-      onPressed: () => Navigator.of(
+      badgeCount: count,
+      onTap: () => Navigator.of(
         context,
       ).push<void>(MaterialPageRoute<void>(builder: (_) => const NotificationsScreen())),
-      icon: Badge(
-        isLabelVisible: count > 0,
-        label: Text(count > 99 ? '99+' : '$count'),
-        child: const Icon(Icons.notifications_outlined),
-      ),
-    );
-  }
-}
-
-// ── Shell destination ─────────────────────────────────────────────────────────
-
-class _ShellDestination {
-  const _ShellDestination({
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-    required this.body,
-  });
-
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-  final Widget body;
-}
-
-class _AppBarTitle extends StatelessWidget {
-  const _AppBarTitle({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const BrandMark(compact: true),
-        const SizedBox(width: AppTokens.space3),
-        Text(label),
-      ],
     );
   }
 }
