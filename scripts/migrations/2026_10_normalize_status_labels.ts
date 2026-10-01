@@ -52,12 +52,19 @@ function isCanonical(value: string): boolean {
   return Object.hasOwn(LABELS, value);
 }
 
+/** Misspelled values found in production data; fixed here only, not accepted by the app. */
+const TYPO_FIXES: Record<string, string> = {
+  not_intrested: "not_interested",
+};
+
 function canonicalStatus(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
   const normalized = normalizeKey(raw);
   const canonical = Object.hasOwn(LEGACY_ALIASES, normalized)
     ? LEGACY_ALIASES[normalized]
-    : normalized;
+    : Object.hasOwn(TYPO_FIXES, normalized)
+      ? TYPO_FIXES[normalized]
+      : normalized;
   return isCanonical(canonical) ? canonical : null;
 }
 
@@ -131,7 +138,8 @@ async function normalizeEnquiries(): Promise<void> {
 
 async function purgeInactiveLegacyStatusDropdowns(): Promise<void> {
   const snap = await firestore.collection("dropdowns").doc("statuses").collection("items").get();
-  const ops: Array<{ ref: DocumentReference; delete: true }> = [];
+  const ops: Array<{ ref: DocumentReference; data?: Record<string, unknown>; delete?: boolean }> =
+    [];
 
   console.log(`\nStatus dropdown items scanned: ${snap.size}`);
   for (const doc of snap.docs) {
@@ -141,15 +149,18 @@ async function purgeInactiveLegacyStatusDropdowns(): Promise<void> {
     if (data.active === false && !canonical) {
       console.log(`  delete: ${doc.id} (value=${value}, label=${data.label ?? "—"}, active=false)`);
       ops.push({ ref: doc.ref, delete: true });
+    } else if (Object.hasOwn(TYPO_FIXES, normalizeKey(value))) {
+      console.log(`  deactivate (misspelled): ${doc.id} (value=${value})`);
+      ops.push({ ref: doc.ref, data: { active: false } });
     } else if (!canonical) {
       console.log(`  keep (active non-canonical, review manually): ${doc.id} (value=${value})`);
     }
   }
-  console.log(`  to delete: ${ops.length}`);
+  console.log(`  to change: ${ops.length}`);
 
   if (apply && ops.length > 0) {
     await commitInBatches(ops);
-    console.log(`  Deleted ${ops.length} dropdown item(s).`);
+    console.log(`  Changed ${ops.length} dropdown item(s).`);
   }
 }
 
