@@ -53,13 +53,17 @@ class NotificationService {
     }
   }
 
-  /// Send notification when an enquiry is assigned
+  /// Send notification when an enquiry is assigned.
+  ///
+  /// Pass [notifyAdmins] false when the same save already notifies admins
+  /// (new enquiry, status change), so nobody gets two pushes for one action.
   Future<void> notifyEnquiryAssigned({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String assignedTo,
     required String assignedBy,
+    bool notifyAdmins = true,
   }) async {
     try {
       // Get assigned user details
@@ -69,24 +73,28 @@ class NotificationService {
         return;
       }
 
-      // Send notification to assigned staff member
-      await _sendNotificationToUser(
-        userId: assignedTo,
-        title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
-        data: {
-          'type': 'enquiry_assigned',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'assignedBy': assignedBy,
-        },
-      );
+      if (assignedTo != assignedBy) {
+        await _sendNotificationToUser(
+          userId: assignedTo,
+          title: 'Enquiry Assigned to You',
+          body: 'You have been assigned an enquiry from $customerName for $eventType',
+          data: {
+            'type': 'enquiry_assigned',
+            'enquiryId': enquiryId,
+            'customerName': customerName,
+            'eventType': eventType,
+            'assignedBy': assignedBy,
+          },
+        );
+      }
 
-      // Get all admin users EXCEPT the assigner
-      final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
+      if (!notifyAdmins) return;
 
-      // Send notification to all admins (excluding the assigner)
+      // Admins other than the assigner; the assignee already got their own push.
+      final adminUsers = (await _getAdminUsers(
+        excludeUserId: assignedBy,
+      )).where((admin) => admin.uid != assignedTo).toList();
+
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,

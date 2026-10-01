@@ -334,13 +334,14 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         newValue: _selectedAssignedTo!,
       );
 
-      // Send notification for assignment
+      // Admins already got "New Enquiry Created"; only the assignee hears about it here.
       await notificationService.notifyEnquiryAssigned(
         enquiryId: enquiryId,
         customerName: _nameController.text.trim(),
         eventType: _selectedEventType!,
         assignedTo: _selectedAssignedTo!,
         assignedBy: currentUser.uid,
+        notifyAdmins: false,
       );
     }
 
@@ -568,8 +569,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
-    // Send notifications
+    // Send notifications: at most one push per person for this save.
     final notificationService = ref.read(notificationServiceProvider);
+    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
+    final reassigned =
+        _selectedAssignedTo != null &&
+        _selectedAssignedTo!.isNotEmpty &&
+        _selectedAssignedTo != previousAssignee;
 
     // If status changed, send specific status update notification to admins
     if (statusDidChange) {
@@ -587,9 +593,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         oldStatus: oldStatusLabel,
         newStatus: statusLabel,
         updatedBy: currentUser.uid,
-        assignedTo: _selectedAssignedTo,
+        // A new assignee gets "Assigned to You" below instead.
+        assignedTo: reassigned ? null : _selectedAssignedTo,
       );
-    } else {
+    } else if (!reassigned) {
       // Only send generic enquiry update notification if status didn't change
       // (to avoid duplicate notifications when status changes)
       if (kDebugMode) {
@@ -607,17 +614,16 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       );
     }
 
-    // Re-assignment from the edit form: tell the new assignee (and other admins).
-    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
-    if (_selectedAssignedTo != null &&
-        _selectedAssignedTo!.isNotEmpty &&
-        _selectedAssignedTo != previousAssignee) {
+    // Re-assignment from the edit form: tell the new assignee, and other admins unless
+    // they were already told about the status change above.
+    if (reassigned) {
       await notificationService.notifyEnquiryAssigned(
         enquiryId: widget.enquiryId!,
         customerName: _nameController.text.trim(),
         eventType: eventTypeLabel,
         assignedTo: _selectedAssignedTo!,
         assignedBy: currentUser.uid,
+        notifyAdmins: !statusDidChange,
       );
     }
 
