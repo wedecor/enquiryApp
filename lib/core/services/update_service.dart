@@ -122,18 +122,18 @@ class UpdateService {
     }
   }
 
-  /// Launch download URL
-  static Future<void> downloadUpdate(String downloadUrl) async {
+  /// Opens the download URL in the browser. Returns false if no app could open it.
+  static Future<bool> downloadUpdate(String downloadUrl) async {
     try {
-      final uri = Uri.parse(downloadUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        Logger.info('Update download launched', tag: 'UpdateService');
-      } else {
-        throw Exception('Cannot launch download URL');
-      }
+      final launched = await launchUrl(
+        Uri.parse(downloadUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) Logger.info('Update download launched', tag: 'UpdateService');
+      return launched;
     } catch (e) {
       Logger.error('Failed to launch download', error: e, tag: 'UpdateService');
+      return false;
     }
   }
 
@@ -288,9 +288,20 @@ class UpdateDialog extends StatelessWidget {
           child: const Text('Copy Link'),
         ),
         ElevatedButton(
-          onPressed: () {
-            UpdateService.downloadUpdate(updateInfo.downloadUrl);
-            Navigator.of(context).pop(true);
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final navigator = Navigator.of(context);
+            final launched = await UpdateService.downloadUpdate(updateInfo.downloadUrl);
+            if (!launched) {
+              await UpdateService.copyDownloadUrl(updateInfo.downloadUrl);
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Couldn\'t open the browser. Link copied — paste it in Chrome.'),
+                ),
+              );
+              return;
+            }
+            navigator.pop(true);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: updateInfo.isForced

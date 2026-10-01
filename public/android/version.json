@@ -1,10 +1,10 @@
 {
-  "version": "2.0.12",
-  "buildNumber": 43,
+  "version": "2.0.13",
+  "buildNumber": 44,
   "releaseDate": "2026-10-01",
-  "releaseNotes": "✨ Fresh new design across every screen\n🏷️ Statuses are consistent everywhere (New, In Talks, Approved, Completed, Not Interested, Closed Lost, Cancelled)\n📅 'This week' counter, calendar conflicts and analytics date ranges fixed\n⚡ Long-press an enquiry for Add note, Share, Mark not interested and Request review",
+  "releaseNotes": "⬇️ The Download button in update prompts now opens the browser\n✨ Fresh new design across every screen\n🏷️ Statuses are consistent everywhere (New, In Talks, Approved, Completed, Not Interested, Closed Lost, Cancelled)\n📅 'This week' counter, calendar conflicts and analytics date ranges fixed\n⚡ Long-press an enquiry for Add note, Share, Mark not interested and Request review",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "020a89d469a7ff9860133fb54bd3a1678d013fda7d94d550acf418d162e03c44",
+  "sha256": "7fb1c3040debcb3835ee23664414718f8cb4f0d07b625c59c1a502ef1e68b4cb",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
@@ -18,6 +18,7 @@
     "IMPROVED: Enquiries list loads straight away on cold start"
   ],
   "bugFixes": [
+    "Fixed update prompt Download button doing nothing on Android 11+",
     "Fixed 'This week' counter missing today's events and counting lost enquiries",
     "Fixed analytics custom date range dropping the last day",
     "Fixed old status values (e.g. Quote Sent, Confirmed) showing wrong labels or missing from filters",
