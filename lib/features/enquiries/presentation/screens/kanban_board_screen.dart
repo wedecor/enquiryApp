@@ -125,10 +125,11 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               },
               onDrop: (enquiryId, newStatus) async {
                 setState(() => _hoverColumn = null);
+                final doc = docs.firstWhere((d) => d.id == enquiryId);
+                final currentStatus =
+                    (doc.data() as Map<String, dynamic>)['statusValue'] as String?;
+                if (EnquiryStatus.statusesMatch(currentStatus, newStatus)) return;
                 if (!isAdmin) {
-                  final doc = docs.firstWhere((d) => d.id == enquiryId);
-                  final data = doc.data() as Map<String, dynamic>;
-                  final currentStatus = data['statusValue'] as String?;
                   if (!EnquiryStatus.isStaffTransitionAllowed(currentStatus, newStatus)) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

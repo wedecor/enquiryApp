@@ -257,11 +257,12 @@ class DefaultDropdownValues {
 
   /// Default enquiry statuses
   static const List<String> statuses = [
-    'Enquired',
-    'In Progress',
-    'Quote Sent',
-    'Confirmed',
+    'New',
+    'In Talks',
+    'Approved',
     'Completed',
+    'Not Interested',
+    'Closed Lost',
     'Cancelled',
   ];
 

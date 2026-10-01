@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/services/firestore_service.dart';
 import 'dashboard_enquiry_utils.dart';
 import 'dashboard_metric_tiles.dart';
@@ -56,10 +57,10 @@ class DashboardTodaySection extends ConsumerWidget {
 
         for (final doc in docs) {
           final data = doc.data() as Map<String, dynamic>;
-          final status = (data['statusValue'] as String?)?.toLowerCase() ?? '';
+          final status = EnquiryStatus.fromValue(data['statusValue'] as String?);
           final eventDate = (data['eventDate'] as Timestamp?)?.toDate();
 
-          if (status == 'new') {
+          if (status == EnquiryStatus.newEnquiry) {
             newUncontacted++;
             final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
             if (createdAt != null && now.difference(createdAt).inDays > 3) staleNew++;

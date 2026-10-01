@@ -272,7 +272,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
                       widget.value != null &&
                           !_isLoading &&
                           _statuses.isNotEmpty &&
-                          !_statuses.any((status) => status['value'] == widget.value)
+                          _getValidValue(widget.value) == null
                       ? 'Current: ${widget.value}'
                       : null,
                   suffixIcon: _isLoading
@@ -294,7 +294,8 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             ),
             roleAsync.when(
               data: (role) {
-                if (role != UserRole.admin) {
+                // The status workflow is fixed in code; only labels/colours are editable.
+                if (role != UserRole.admin || widget.collectionName == 'statuses') {
                   return const SizedBox.shrink();
                 }
                 final s = AppSurfaces.of(context);

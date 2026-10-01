@@ -76,9 +76,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           Log.d('EnquiryFormScreen loaded event type', data: {'eventType': _selectedEventType});
 
           // Safely set dropdown values - ensure they exist in valid options
-          // Only use statusValue - standard field
           final statusValue = data['statusValue'] as String?;
-          _selectedStatus = statusValue;
+          _selectedStatus = EnquiryStatus.canonicalValue(statusValue) ?? statusValue;
 
           final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
@@ -319,6 +318,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     }
   }
 
+  static String _canonicalOldStatus(Map<String, dynamic> data) {
+    final raw = data['statusValue'] as String?;
+    return EnquiryStatus.canonicalValue(raw) ?? raw ?? 'new';
+  }
+
   Future<void> _updateEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
@@ -326,7 +330,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     // Fetch old enquiry data to compare changes
     final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
 
-    final statusValue = _selectedStatus ?? 'new';
+    final statusValue = EnquiryStatus.canonicalValue(_selectedStatus) ?? _selectedStatus ?? 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
 
     final eventTypeValue = _selectedEventType ?? 'event';
@@ -439,8 +443,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
 
     // Determine if status changed (needed for statusUpdatedAt below)
-    final oldStatusValueForUpdate = (oldEnquiryData['statusValue'] as String?) ?? 'new';
-    final statusDidChange = oldStatusValueForUpdate != statusValue;
+    final oldStatusValue = _canonicalOldStatus(oldEnquiryData);
+    final statusDidChange = oldStatusValue != statusValue;
 
     // Update the enquiry document — include images field with complete list
     await firestoreService.updateEnquiry(widget.enquiryId!, {
@@ -489,7 +493,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     // Record audit trail for individual field changes
     final auditService = ref.read(auditServiceProvider);
-    final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
     final changes = buildEnquiryAuditChanges(
       oldEnquiryData: oldEnquiryData,
       statusValue: statusValue,
@@ -514,7 +517,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final notificationService = ref.read(notificationServiceProvider);
 
     // If status changed, send specific status update notification to admins
-    if (oldStatusValue != statusValue) {
+    if (statusDidChange) {
       if (kDebugMode) {
         debugPrint('📝 EDIT FORM: Status changed via edit form');
         debugPrint('   OldStatus: $oldStatusValue → NewStatus: $statusValue');

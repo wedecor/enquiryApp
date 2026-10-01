@@ -197,6 +197,8 @@ class EnquiryListRow extends StatelessWidget {
   }
 
   static String _formatStatusLabel(String value) {
+    final canonical = EnquiryStatus.fromValue(value);
+    if (canonical != null) return canonical.label;
     return value
         .replaceAll('_', ' ')
         .split(' ')

@@ -87,11 +87,11 @@ class DropdownDefaults {
   static List<Map<String, String>> resolveStatusOptions(List<Map<String, String>> fetched) {
     final labelOverrides = <String, String>{};
     for (final item in fetched) {
-      final canonical = EnquiryStatus.fromValue(item['value']);
-      if (canonical == null) continue;
+      final value = item['value']?.trim();
+      if (!EnquiryStatus.values.any((s) => s.value == value)) continue;
       final label = item['label']?.trim();
       if (label != null && label.isNotEmpty) {
-        labelOverrides[canonical.value] = label;
+        labelOverrides[value!] = label;
       }
     }
     return EnquiryStatus.values
@@ -105,9 +105,9 @@ class DropdownDefaults {
       final canonical = valueLabelMapFor('statuses');
       if (fetched.isEmpty) return canonical;
       for (final entry in fetched.entries) {
-        final status = EnquiryStatus.fromValue(entry.key);
-        if (status != null && entry.value.trim().isNotEmpty) {
-          canonical[status.value] = entry.value;
+        final isCanonical = EnquiryStatus.values.any((s) => s.value == entry.key);
+        if (isCanonical && entry.value.trim().isNotEmpty) {
+          canonical[entry.key] = entry.value;
         }
       }
       return canonical;

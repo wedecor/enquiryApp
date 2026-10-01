@@ -63,7 +63,7 @@ class EnquiryRepository {
       }
 
       if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
-        query = query.where('statusValue', isEqualTo: status);
+        query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
       }
 
       if (lastDocument != null) {

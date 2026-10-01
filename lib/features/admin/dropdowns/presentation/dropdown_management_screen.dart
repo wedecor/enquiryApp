@@ -97,7 +97,8 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
                     ),
                   ),
                 ),
-                if (isAdmin) ...[
+                // Statuses are a fixed workflow: admins edit labels/colours, never add.
+                if (isAdmin && currentGroup != DropdownGroup.statuses) ...[
                   const SizedBox(width: AppTokens.space3),
                   Expanded(
                     flex: 2,
@@ -196,7 +197,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     return GlassStateMessage(
       icon: dropdownGroupIcon(group),
       title: 'No ${group.displayName.toLowerCase()} found',
-      message: isAdmin
+      message: isAdmin && group != DropdownGroup.statuses
           ? 'Tap "Add Item" to create your first dropdown item'
           : 'Contact an administrator to add dropdown items',
     );

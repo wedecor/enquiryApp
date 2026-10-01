@@ -47,13 +47,12 @@ async function createStatusesCollection(db) {
   
   const statuses = [
     {value: 'new', label: 'New', order: 1, active: true, color: '#FF9800'},
-    {value: 'in_progress', label: 'In Progress', order: 2, active: true, color: '#2196F3'},
-    {value: 'quote_sent', label: 'Quote Sent', order: 3, active: true, color: '#009688'},
-    {value: 'approved', label: 'Approved', order: 4, active: true, color: '#3F51B5'},
-    {value: 'scheduled', label: 'Scheduled', order: 5, active: true, color: '#9C27B0'},
-    {value: 'completed', label: 'Completed', order: 6, active: true, color: '#4CAF50'},
+    {value: 'in_talks', label: 'In Talks', order: 2, active: true, color: '#2196F3'},
+    {value: 'approved', label: 'Approved', order: 3, active: true, color: '#3F51B5'},
+    {value: 'completed', label: 'Completed', order: 4, active: true, color: '#4CAF50'},
+    {value: 'not_interested', label: 'Not Interested', order: 5, active: true, color: '#9E9E9E'},
+    {value: 'closed_lost', label: 'Closed Lost', order: 6, active: true, color: '#607D8B'},
     {value: 'cancelled', label: 'Cancelled', order: 7, active: true, color: '#F44336'},
-    {value: 'closed_lost', label: 'Closed Lost', order: 8, active: true, color: '#607D8B'},
   ];
   
   const promises = statuses.map(status => 

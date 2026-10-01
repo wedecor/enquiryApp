@@ -146,12 +146,7 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
 }
 
 bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
-  final statusValueRaw = enquiryData['statusValue'] as String?;
-  final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-      ? statusValueRaw!.trim().toLowerCase()
-      : 'new';
-
-  if (statusValue != 'in_talks') {
+  if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
     return false;
   }
 

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../../core/constants/status_vocabulary.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
@@ -39,7 +40,8 @@ class KanbanCard extends StatelessWidget {
     final createdAt = _ts(data['createdAt']) ?? DateTime.now();
     final countdown = _countdownLabel(eventDate);
     final ageLabel = _ageLabel(createdAt);
-    final statusValue = (data['statusValue'] as String?) ?? '';
+    final rawStatus = (data['statusValue'] as String?) ?? '';
+    final statusValue = EnquiryStatus.canonicalValue(rawStatus) ?? rawStatus;
 
     // Same shared row used everywhere else; status chip is implied by the column.
     EnquiryListRow row({EdgeInsetsGeometry? margin}) => EnquiryListRow(

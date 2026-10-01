@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../../core/constants/status_vocabulary.dart';
 import '../../../../../core/services/firestore_service.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../core/utils/status_colors.dart';
@@ -275,7 +276,9 @@ class ResultCountHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final counts = <String, int>{};
     for (final raw in statuses) {
-      final key = (raw?.trim().isNotEmpty ?? false) ? raw!.trim().toLowerCase() : 'new';
+      final key = (raw?.trim().isNotEmpty ?? false)
+          ? (EnquiryStatus.canonicalValue(raw) ?? raw!.trim().toLowerCase())
+          : 'new';
       counts[key] = (counts[key] ?? 0) + 1;
     }
     final segments = [

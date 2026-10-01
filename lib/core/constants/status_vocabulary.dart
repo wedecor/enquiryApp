@@ -74,6 +74,17 @@ enum EnquiryStatus {
     return staffTransitions[current]?.map((s) => s.value).toSet() ?? {};
   }
 
+  /// Every stored value that resolves to [canonical]: the canonical slug plus
+  /// its legacy aliases. Small enough (≤ 10) for a Firestore `whereIn`.
+  static List<String> rawValuesFor(String canonical) {
+    final slug = canonicalValue(canonical) ?? canonical;
+    return [
+      slug,
+      for (final entry in legacyAliases.entries)
+        if (entry.value == slug) entry.key,
+    ];
+  }
+
   /// Canonical slug for reads/filters, or null if unknown.
   static String? canonicalValue(String? raw) => fromValue(raw)?.value;
 

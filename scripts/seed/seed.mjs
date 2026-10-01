@@ -41,14 +41,12 @@ const EVENT_TYPES = [
 
 const STATUSES = [
   { label: 'New', value: 'new', order: 1 },
-  { label: 'Contacted', value: 'contacted', order: 2 },
-  { label: 'In Progress', value: 'in_progress', order: 3 },
-  { label: 'Quote Sent', value: 'quote_sent', order: 4 },
-  { label: 'Approved', value: 'approved', order: 5 },
-  { label: 'Scheduled', value: 'scheduled', order: 6 },
-  { label: 'Completed', value: 'completed', order: 7 },
-  { label: 'Closed - Lost', value: 'closed_lost', order: 8 },
-  { label: 'Cancelled', value: 'cancelled', order: 9 }
+  { label: 'In Talks', value: 'in_talks', order: 2 },
+  { label: 'Approved', value: 'approved', order: 3 },
+  { label: 'Completed', value: 'completed', order: 4 },
+  { label: 'Not Interested', value: 'not_interested', order: 5 },
+  { label: 'Closed Lost', value: 'closed_lost', order: 6 },
+  { label: 'Cancelled', value: 'cancelled', order: 7 }
 ];
 
 const PAYMENT_STATUSES = [

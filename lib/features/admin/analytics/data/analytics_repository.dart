@@ -109,7 +109,7 @@ class AnalyticsRepository {
     final statusCounts = <String, int>{};
 
     for (final data in raw) {
-      final status = (data['statusValue'] as String?) ?? 'unknown';
+      final status = EnquiryStatus.canonicalValue(data['statusValue'] as String?) ?? 'unknown';
       statusCounts[status] = (statusCounts[status] ?? 0) + 1;
     }
 
@@ -227,7 +227,10 @@ class AnalyticsRepository {
         date: createdAt,
         customerName: (data['customerName'] as String?) ?? 'Unknown',
         eventType: (data['eventType'] as String?) ?? 'Unknown',
-        status: (data['statusValue'] as String?) ?? 'Unknown', // Use statusValue only
+        status:
+            EnquiryStatus.canonicalValue(data['statusValue'] as String?) ??
+            (data['statusValue'] as String?) ??
+            'Unknown',
         source: (data['source'] as String?) ?? 'Unknown',
         priority: (data['priority'] as String?) ?? 'medium',
         totalCost: (data['totalCost'] as num?)?.toDouble(),
@@ -270,7 +273,7 @@ class AnalyticsRepository {
         query = query.where('eventTypeValue', isEqualTo: filters.eventType);
       }
       if (filters.status != null && filters.status!.isNotEmpty) {
-        query = query.where('statusValue', isEqualTo: filters.status);
+        query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(filters.status!));
       }
       if (filters.priority != null && filters.priority!.isNotEmpty) {
         query = query.where('priorityValue', isEqualTo: filters.priority);

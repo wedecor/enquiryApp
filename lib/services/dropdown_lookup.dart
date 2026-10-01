@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/dropdown_defaults.dart';
+import '../core/constants/status_vocabulary.dart';
 import '../core/services/firestore_service.dart';
 import '../core/utils/color_parsing.dart';
 
@@ -41,17 +42,24 @@ class DropdownLookup {
     for (final doc in statusSnapshot.docs) {
       final data = doc.data();
       final value = (data['value'] as String?)?.trim().toLowerCase();
-      final colorHex = data['color'] as String?;
-      if (value == null || value.isEmpty) continue;
-      final color = parseDropdownColor(colorHex);
-      if (color != null) colors[value] = color;
+      if (!EnquiryStatus.values.any((s) => s.value == value)) continue;
+      final color = parseDropdownColor(data['color'] as String?);
+      if (color != null) colors[value!] = color;
     }
     statusColorMap = colors;
 
     _loaded = true;
   }
 
-  String labelForStatus(String value) => statusMap[value] ?? DropdownLookup.titleCase(value);
+  /// Live display label for a stored status (canonical or legacy alias).
+  String labelForStatus(String value) => statusLabelOf(this, value);
+
+  /// Display label for a stored status without requiring a loaded lookup.
+  static String statusLabelOf(DropdownLookup? lookup, String? raw) {
+    final status = EnquiryStatus.fromValue(raw);
+    if (status == null) return DropdownLookup.titleCase(raw ?? '');
+    return lookup?.statusMap[status.value] ?? status.label;
+  }
 
   String labelForEventType(String value) => eventTypeMap[value] ?? DropdownLookup.titleCase(value);
 

@@ -2,6 +2,8 @@
 /// `EnquiryFormScreen._updateEnquiry` so the screen holds layout, not logic.
 library;
 
+import '../../../core/constants/status_vocabulary.dart';
+
 /// Confirmation text shown before saving a change to total cost / advance paid.
 String buildFinancialChangeMessage({
   required num? oldTotalCost,
@@ -49,10 +51,11 @@ Map<String, Map<String, dynamic>> buildEnquiryAuditChanges({
 }) {
   final changes = <String, Map<String, dynamic>>{};
 
-  // Track status change (store VALUES, not labels)
-  // Only use statusValue - standard field
-  final oldStatusValue = (oldEnquiryData['statusValue'] as String?) ?? 'new';
-  if (oldStatusValue != statusValue) {
+  // Track status change (store canonical VALUES, not labels). A legacy alias
+  // that resolves to the same canonical status is not a change.
+  final oldRaw = oldEnquiryData['statusValue'] as String?;
+  final oldStatusValue = EnquiryStatus.canonicalValue(oldRaw) ?? oldRaw ?? 'new';
+  if (oldStatusValue != (EnquiryStatus.canonicalValue(statusValue) ?? statusValue)) {
     changes['statusValue'] = {'old_value': oldStatusValue, 'new_value': statusValue};
   }
 

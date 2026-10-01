@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/firestore_schema.dart';
+import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
 
 /// Service class for handling all Firestore database operations.
@@ -410,7 +411,7 @@ class FirestoreService {
   /// ```
   Stream<QuerySnapshot> getEnquiriesByStatus(String status) {
     return _enquiriesCollection
-        .where('statusValue', isEqualTo: status)
+        .where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status))
         .orderBy('createdAt', descending: true)
         .snapshots();
   }
@@ -524,10 +525,22 @@ class FirestoreService {
   /// Value→label map for a dropdown kind (includes inactive items for history display).
   Future<Map<String, String>> fetchDropdownValueLabelMap(String kind) async {
     final snapshot = await _firestore.collection('dropdowns').doc(kind).collection('items').get();
+    return parseValueLabelMap(kind, snapshot.docs.map((doc) => (doc.id, doc.data())));
+  }
+
+  /// Value→label map from dropdown item docs: inactive items are skipped, and
+  /// for statuses only items whose own value is canonical count, so a legacy
+  /// alias (e.g. `quote_sent`) can never rename a canonical status.
+  static Map<String, String> parseValueLabelMap(
+    String kind,
+    Iterable<(String, Map<String, dynamic>)> docs,
+  ) {
     final map = <String, String>{};
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final value = (data['value'] ?? doc.id).toString();
+    for (final (id, data) in docs) {
+      if (data['active'] == false) continue;
+      final value = (data['value'] ?? id).toString().trim();
+      if (value.isEmpty) continue;
+      if (kind == 'statuses' && !EnquiryStatus.values.any((s) => s.value == value)) continue;
       final label = (data['label'] ?? value).toString();
       map[value] = label;
     }

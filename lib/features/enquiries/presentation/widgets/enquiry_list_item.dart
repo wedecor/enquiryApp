@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
@@ -35,7 +36,7 @@ class EnquiryListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statusValueRaw = data['statusValue'] as String?;
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-        ? statusValueRaw!.trim().toLowerCase()
+        ? (EnquiryStatus.canonicalValue(statusValueRaw) ?? statusValueRaw!.trim().toLowerCase())
         : 'new';
     final eventTypeValueRaw = (data['eventTypeValue'] ?? data['eventType']) as String?;
     final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
@@ -87,6 +88,7 @@ class EnquiryListItem extends ConsumerWidget {
     return EnquiryListRow(
       customerName: customerName,
       statusValue: statusValue,
+      statusLabel: DropdownLookup.statusLabelOf(dropdownLookup, statusValue),
       firestoreStatusColors: dropdownLookup?.statusColorMap,
       eventTypeLabel: eventTypeLabel,
       eventTypeValue: eventTypeValue,

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
@@ -40,7 +41,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
 
     final statusValueRaw = data['statusValue'] as String?;
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-        ? statusValueRaw!.trim().toLowerCase()
+        ? (EnquiryStatus.canonicalValue(statusValueRaw) ?? statusValueRaw!.trim().toLowerCase())
         : 'new';
     final eventTypeValueRaw = (data['eventTypeValue'] ?? data['eventType']) as String?;
     final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
@@ -82,11 +83,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
       onUpdateStatus: () => actions.onUpdateStatus(enquiryModel),
     );
 
-    final statusLabel =
-        (data['statusLabel'] as String?) ??
-        (dropdownLookup != null
-            ? dropdownLookup!.labelForStatus(statusValue)
-            : DropdownLookup.titleCase(statusValue));
+    final statusLabel = DropdownLookup.statusLabelOf(dropdownLookup, statusValue);
 
     return EnquiryListRow(
       customerName: customerName,

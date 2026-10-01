@@ -63,7 +63,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('statusDropdown')), findsNothing);
-      expect(find.text('new'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
     });
 
     testWidgets('assigned staff can change status to allowed next step', (tester) async {

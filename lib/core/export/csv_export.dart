@@ -8,10 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../utils/enquiry_fields.dart';
 import '../../features/admin/analytics/domain/analytics_models.dart';
+import '../../services/dropdown_lookup.dart';
 import '../auth/role_guards.dart';
 import '../theme/app_theme.dart';
+import '../utils/enquiry_fields.dart';
 
 /// Utility class for exporting data to CSV format
 class CsvExport {
@@ -25,6 +26,7 @@ class CsvExport {
     }
 
     final isAdminUser = isAdmin(ref);
+    final lookup = ref.read(dropdownLookupProvider).valueOrNull;
 
     // Log the export action
     await logAdminAction(ref, 'csv_export_enquiries', {
@@ -94,7 +96,7 @@ class CsvExport {
           enquiry['guestCount']?.toString() ?? '',
           enquiry['budgetRange']?.toString() ?? '',
           enquiryNotesFrom(enquiry) ?? '',
-          _labelOrValue(enquiry, 'statusLabel', 'statusValue'),
+          DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
           _labelOrValue(enquiry, 'paymentStatusLabel', 'paymentStatusValue', 'paymentStatus'),
           enquiry['totalCost']?.toString() ?? '',
           enquiry['advancePaid']?.toString() ?? '',
@@ -116,7 +118,7 @@ class CsvExport {
           enquiry['eventLocation']?.toString() ?? '',
           enquiry['guestCount']?.toString() ?? '',
           enquiryNotesFrom(enquiry) ?? '',
-          _labelOrValue(enquiry, 'statusLabel', 'statusValue'),
+          DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
           _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
           _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
           _formatTimestamp(enquiry['createdAt']),
@@ -169,7 +171,7 @@ class CsvExport {
         _dateFormat.format(enquiry.date),
         enquiry.customerName,
         enquiry.eventType,
-        enquiry.status,
+        DropdownLookup.statusLabelOf(null, enquiry.status),
         enquiry.source,
         enquiry.priority,
         enquiry.totalCost?.toString() ?? '',
@@ -253,7 +255,11 @@ class CsvExport {
         ['Status Breakdown'],
         ['Status', 'Count', 'Percentage'],
         ...statusBreakdown.map(
-          (item) => [item.key, item.count.toString(), '${item.percentage.toStringAsFixed(1)}%'],
+          (item) => [
+            DropdownLookup.statusLabelOf(null, item.key),
+            item.count.toString(),
+            '${item.percentage.toStringAsFixed(1)}%',
+          ],
         ),
         [''],
       ]);

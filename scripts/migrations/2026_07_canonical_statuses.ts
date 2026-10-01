@@ -1,16 +1,23 @@
 #!/usr/bin/env tsx
 /**
- * Migration: normalize enquiry statusValue to canonical vocabulary (D1).
+ * DEPRECATED — DO NOT RUN. Superseded by 2026_07_simplify_statuses.ts and
+ * 2026_10_normalize_status_labels.ts. This script maps quoted → quote_sent and treats
+ * quote_sent / contacted / scheduled as valid statuses, which conflicts with the
+ * canonical vocabulary in lib/core/constants/status_vocabulary.dart.
  *
- * Usage:
- *   export GOOGLE_APPLICATION_CREDENTIALS="$PWD/serviceAccountKey.json"
- *   npx tsx scripts/migrations/2026_07_canonical_statuses.ts           # dry-run (default)
- *   npx tsx scripts/migrations/2026_07_canonical_statuses.ts --apply
+ * Migration: normalize enquiry statusValue to canonical vocabulary (D1).
  */
 
 import "dotenv/config";
 import { db } from "../../src/lib/firebaseAdmin.js";
 import { FieldValue } from "firebase-admin/firestore";
+
+console.error(
+  "2026_07_canonical_statuses.ts is superseded and disabled (it maps quoted → quote_sent).\n" +
+    "Use scripts/migrations/2026_07_simplify_statuses.ts or\n" +
+    "scripts/migrations/2026_10_normalize_status_labels.ts instead.",
+);
+process.exit(1);
 
 const firestore = db();
 const BATCH_SIZE = 400;

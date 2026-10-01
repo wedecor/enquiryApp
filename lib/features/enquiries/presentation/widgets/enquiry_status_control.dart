@@ -179,7 +179,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   }
 
   Future<void> _handleStatusChange(String? value, String currentStatusValue) async {
-    if (value == null || value == currentStatusValue) return;
+    if (value == null || EnquiryStatus.statusesMatch(value, currentStatusValue)) return;
 
     final safeValue = (_selectedStatus ?? widget.currentStatusValue);
     if (!widget.isAdmin) {

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/constants/status_vocabulary.dart';
 import '../../../core/utils/enquiry_fields.dart';
 
 part 'enquiry.freezed.dart';
@@ -67,8 +68,9 @@ class Enquiry with _$Enquiry {
       guestCount: data['guestCount'] as int?,
       budgetRange: data['budgetRange'] as String?,
       description: enquiryNotesFrom(data),
-      status: (data['statusValue'] as String?) ?? 'new', // Only use statusValue
-      statusLabel: data['statusLabel'] as String?,
+      status: _canonicalStatus(data['statusValue'] as String?),
+      // Stored statusLabel may be a stale legacy name; always derive it.
+      statusLabel: EnquiryStatus.fromValue(data['statusValue'] as String?)?.label,
       paymentStatus: (data['paymentStatusValue'] ?? data['paymentStatus']) as String?,
       paymentStatusLabel: data['paymentStatusLabel'] as String?,
       totalCost: (data['totalCost'] as num?)?.toDouble(),
@@ -104,7 +106,12 @@ class Enquiry with _$Enquiry {
     );
   }
 
-  String get statusDisplay => statusLabel ?? status;
+  static String _canonicalStatus(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return 'new';
+    return EnquiryStatus.canonicalValue(raw) ?? raw.trim();
+  }
+
+  String get statusDisplay => EnquiryStatus.fromValue(status)?.label ?? status;
   String get eventTypeDisplay => eventTypeLabel ?? eventType;
   String? get paymentStatusDisplay => paymentStatusLabel ?? paymentStatus;
   String? get priorityDisplay => priorityLabel ?? priority;

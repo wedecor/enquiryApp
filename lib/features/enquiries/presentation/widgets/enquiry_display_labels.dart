@@ -1,10 +1,9 @@
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../services/dropdown_lookup.dart';
 
-/// Resolves display labels for an enquiry document, preferring the stored
-/// `*Label` field, then the dropdown lookup, then a title-cased value.
-///
-/// Moved verbatim out of `EnquiryDetailsScreen.build` so the screen is layout
-/// only; behaviour is unchanged.
+/// Resolves display labels for an enquiry document. Status always comes from
+/// the canonical value via the dropdown lookup; other fields prefer the stored
+/// `*Label` field, then the lookup, then a title-cased value.
 class EnquiryDisplayLabels {
   const EnquiryDisplayLabels._({
     required this.statusValue,
@@ -32,13 +31,9 @@ class EnquiryDisplayLabels {
 
     final statusValueRaw = enquiryData['statusValue'] as String?;
     final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-        ? statusValueRaw!.trim()
+        ? (EnquiryStatus.canonicalValue(statusValueRaw) ?? statusValueRaw!.trim())
         : 'new';
-    final statusLabel = labelOrLookup(
-      enquiryData['statusLabel'] as String?,
-      statusValue,
-      (l, v) => l.labelForStatus(v),
-    );
+    final statusLabel = DropdownLookup.statusLabelOf(dropdownLookup, statusValue);
 
     final eventTypeValueRaw =
         (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;

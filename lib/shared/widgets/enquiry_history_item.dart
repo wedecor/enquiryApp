@@ -366,9 +366,7 @@ class _ValueText extends ConsumerWidget {
       case 'status':
       case 'eventstatus':
       case 'statusvalue': // camelCase key stored in audit trail
-        return _text(
-          dropdownLookup?.labelForStatus(stringValue) ?? DropdownLookup.titleCase(stringValue),
-        );
+        return _text(DropdownLookup.statusLabelOf(dropdownLookup, stringValue));
       case 'eventtype':
       case 'eventtypevalue':
         return _text(
