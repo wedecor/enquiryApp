@@ -15,7 +15,15 @@ import '../providers/role_provider.dart';
 import '../services/firebase_auth_service.dart';
 import '../theme/tokens.dart';
 
-/// Responsive navigation shell: bottom bar (mobile), rail (tablet), expanded rail (desktop).
+/// Responsive navigation shell — the app's only primary navigation.
+///
+/// * width < [AppTokens.breakpointTablet]: Material 3 [NavigationBar] (bottom).
+/// * width >= [AppTokens.breakpointTablet]: collapsed [NavigationRail] (icons + labels).
+/// * width >= [AppTokens.breakpointDesktop]: extended rail (permanent side nav).
+///
+/// Destinations are role-gated: Analytics is admin-only (as it was in the old
+/// drawer); admin tools (Users, Dropdowns) live under Settings → Admin.
+/// The legacy swipe-in drawer has been removed.
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
@@ -142,11 +150,16 @@ class _AppShellState extends ConsumerState<AppShell> {
               labelType: railExtended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               leading: railExtended
                   ? const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      padding: EdgeInsets.fromLTRB(
+                        AppTokens.space4,
+                        AppTokens.space4,
+                        AppTokens.space4,
+                        AppTokens.space2,
+                      ),
                       child: BrandMark(compact: false),
                     )
                   : const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.symmetric(vertical: AppTokens.space3),
                       child: BrandMark(compact: true),
                     ),
               destinations: [
@@ -245,7 +258,11 @@ class _AppBarTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [const BrandMark(compact: true), const SizedBox(width: 10), Text(label)],
+      children: [
+        const BrandMark(compact: true),
+        const SizedBox(width: AppTokens.space3),
+        Text(label),
+      ],
     );
   }
 }

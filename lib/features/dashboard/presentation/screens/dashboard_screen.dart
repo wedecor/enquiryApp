@@ -7,22 +7,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/role_provider.dart';
-import '../../../../core/services/firebase_auth_service.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/past_enquiry_cleanup_service.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../../../shared/widgets/error_state.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
-import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
-import '../../../enquiries/presentation/widgets/status_inline_control.dart';
 import '../../../settings/providers/settings_providers.dart';
 import '../../../../core/theme/tokens.dart';
+import '../widgets/dashboard_action_sheets.dart';
 import '../widgets/dashboard_enquiries_tab.dart';
 import '../widgets/dashboard_enquiry_utils.dart';
-import '../widgets/dashboard_navigation_drawer.dart';
 import '../widgets/dashboard_tab_bar_delegate.dart';
 import '../widgets/dashboard_welcome_panel.dart';
 
@@ -35,7 +33,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
     this.onNavigateToAnalytics,
   });
 
-  /// When true, renders body only (no [Scaffold]); used inside [AppShell].
+  /// Retained for call-site compatibility; the dashboard is always rendered as a
+  /// body inside [AppShell] (no own [Scaffold]).
   final bool embeddedInShell;
 
   /// Called when the user taps the "this week" priority bucket, requesting
@@ -75,7 +74,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _tabs = _statusTabs
         .map(
           (tab) => Tab(
-            height: 40,
+            height: AppTokens.space10,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4),
               child: Text(tab['label']!),
@@ -184,7 +183,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     });
   }
 
-  TabBar _buildPillTabBar(BuildContext context) {
+  TabBar _buildStatusTabBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return TabBar(
       controller: _tabController,
@@ -192,12 +191,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       isScrollable: true,
       tabAlignment: TabAlignment.start,
       dividerColor: Colors.transparent,
-      indicatorSize: TabBarIndicatorSize.tab,
-      labelPadding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
-      indicatorPadding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
-      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space4, vertical: AppTokens.space2),
-      indicator: BoxDecoration(borderRadius: AppRadius.full, color: cs.primaryContainer),
-      labelColor: cs.onPrimaryContainer,
+      indicatorSize: TabBarIndicatorSize.label,
+      labelPadding: const EdgeInsets.symmetric(horizontal: AppTokens.space1),
+      padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2),
+      // Underline in the single brand accent — no pill-shaped indicator.
+      indicator: UnderlineTabIndicator(borderSide: BorderSide(color: cs.tertiary, width: 2)),
+      labelColor: cs.onSurface,
       unselectedLabelColor: cs.onSurfaceVariant,
       labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTokens.fontSizeBody),
       unselectedLabelStyle: const TextStyle(
@@ -221,49 +220,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       error: (Object error, StackTrace stack) => _buildErrorWidget(context, error),
     );
 
-    if (widget.embeddedInShell) {
-      return body;
-    }
-
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: const Text('We Decor Dashboard'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        automaticallyImplyLeading: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _signOut(ref),
-            tooltip: 'Sign Out',
-          ),
-        ],
-      ),
-      drawer: roleAsync.when(
-        data: (role) => DashboardNavigationDrawer(isAdmin: role == UserRole.admin),
-        loading: () => const DashboardNavigationDrawer(isAdmin: false),
-        error: (_, __) => const DashboardNavigationDrawer(isAdmin: false),
-      ),
-      body: body,
-      floatingActionButton: roleAsync.maybeWhen(
-        data: (role) => role == UserRole.admin
-            ? FloatingActionButton(
-                onPressed: () {
-                  Navigator.of(context).push<void>(
-                    MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()),
-                  );
-                },
-                tooltip: 'Add New Enquiry',
-                child: const Icon(Icons.add),
-              )
-            : null,
-        orElse: () => null,
-      ),
-    );
+    // Always hosted inside AppShell, which owns the Scaffold, AppBar, nav and FAB.
+    return body;
   }
 
   Widget _buildDashboardContent(BuildContext context, UserModel? user, bool isAdmin) {
-    final tabBar = _buildPillTabBar(context);
+    final tabBar = _buildStatusTabBar(context);
     final tabActions = DashboardEnquiryTabActions(
       onView: _openEnquiryDetails,
       onCall: _handleCall,
@@ -486,25 +448,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Update status', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              StatusInlineControl(enquiry: enquiry),
-              const SizedBox(height: 12),
-              Text(
-                'Changes are saved automatically.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => UpdateStatusSheet(enquiry: enquiry),
     );
   }
 
@@ -528,61 +472,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Future<void> _showNotesSheet(Enquiry enquiry) async {
     if (!mounted) return;
-    final controller = TextEditingController(text: enquiry.notes ?? '');
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) {
-        final viewInsets = MediaQuery.of(context).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + viewInsets),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Follow-up notes', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                minLines: 3,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  hintText: 'Add any internal notes or follow-up reminders',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: controller,
-                builder: (context, value, _) {
-                  final hasText = value.text.trim().isNotEmpty;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(null),
-                        child: const Text('Cancel'),
-                      ),
-                      if (hasText)
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(''),
-                          child: const Text('Clear'),
-                        ),
-                      FilledButton(
-                        onPressed: () => Navigator.of(context).pop(value.text.trim()),
-                        child: const Text('Save'),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => FollowUpNotesSheet(initialNotes: enquiry.notes),
     );
-    controller.dispose();
 
     if (!mounted || result == null) return;
 
@@ -667,34 +562,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Widget _buildErrorWidget(BuildContext context, Object error) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: colorScheme.error),
-          const SizedBox(height: 16),
-          const Text(
-            'Something went wrong',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            error.toString(),
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _signOut(WidgetRef ref) async {
-    try {
-      final authService = ref.read(firebaseAuthServiceProvider);
-      await authService.signOut();
-    } catch (e) {
-      // handled by auth service
-    }
+    return ErrorState(message: 'Something went wrong', error: error);
   }
 }
