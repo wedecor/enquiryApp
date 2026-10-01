@@ -14,11 +14,13 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../ui/components/sticky_bottom_bar.dart';
 import '../widgets/customer_info_section.dart';
+import '../widgets/enquiry_access_denied.dart';
 import '../widgets/enquiry_assignment_section.dart';
 import '../widgets/enquiry_detail_footer.dart';
 import '../widgets/enquiry_detail_info_row.dart';
 import '../widgets/enquiry_detail_section.dart';
 import '../widgets/enquiry_details_header.dart';
+import '../widgets/enquiry_display_labels.dart';
 import '../widgets/enquiry_images_section.dart';
 import '../widgets/event_details_section.dart';
 import '../widgets/payment_section.dart';
@@ -111,108 +113,20 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       .watch(dropdownLookupProvider)
                       .maybeWhen(data: (value) => value, orElse: () => null);
 
-                  String labelOrLookup(
-                    String? label,
-                    String value,
-                    String Function(DropdownLookup, String) resolver,
-                  ) {
-                    if (label != null && label.trim().isNotEmpty) return label;
-                    return dropdownLookup != null
-                        ? resolver(dropdownLookup, value)
-                        : DropdownLookup.titleCase(value);
-                  }
-
-                  final statusValueRaw = enquiryData['statusValue'] as String?;
-                  final statusValue = (statusValueRaw?.trim().isNotEmpty ?? false)
-                      ? statusValueRaw!.trim()
-                      : 'new';
-                  final statusLabel = labelOrLookup(
-                    enquiryData['statusLabel'] as String?,
-                    statusValue,
-                    (l, v) => l.labelForStatus(v),
-                  );
-
-                  final eventTypeValueRaw =
-                      (enquiryData['eventTypeValue'] ?? enquiryData['eventType']) as String?;
-                  final eventTypeValue = (eventTypeValueRaw?.trim().isNotEmpty ?? false)
-                      ? eventTypeValueRaw!.trim()
-                      : 'event';
-                  final eventTypeLabel = labelOrLookup(
-                    enquiryData['eventTypeLabel'] as String?,
-                    eventTypeValue,
-                    (l, v) => l.labelForEventType(v),
-                  );
-
-                  final priorityValueRaw =
-                      (enquiryData['priorityValue'] ?? enquiryData['priority']) as String?;
-                  final priorityValue = (priorityValueRaw?.trim().isNotEmpty ?? false)
-                      ? priorityValueRaw!.trim()
-                      : null;
-                  final priorityLabel = priorityValue != null
-                      ? labelOrLookup(
-                          enquiryData['priorityLabel'] as String?,
-                          priorityValue,
-                          (l, v) => l.labelForPriority(v),
-                        )
-                      : 'N/A';
-
-                  final paymentStatusValueRaw =
-                      (enquiryData['paymentStatusValue'] ?? enquiryData['paymentStatus'])
-                          as String?;
-                  final paymentStatusValue = (paymentStatusValueRaw?.trim().isNotEmpty ?? false)
-                      ? paymentStatusValueRaw!.trim()
-                      : null;
-                  final paymentStatusLabel = paymentStatusValue != null
-                      ? labelOrLookup(
-                          enquiryData['paymentStatusLabel'] as String?,
-                          paymentStatusValue,
-                          (l, v) => l.labelForPaymentStatus(v),
-                        )
-                      : 'N/A';
-
-                  final sourceValueRaw =
-                      (enquiryData['sourceValue'] ?? enquiryData['source']) as String?;
-                  final sourceValue = (sourceValueRaw?.trim().isNotEmpty ?? false)
-                      ? sourceValueRaw!.trim()
-                      : null;
-                  final sourceLabel = sourceValue != null
-                      ? labelOrLookup(
-                          enquiryData['sourceLabel'] as String?,
-                          sourceValue,
-                          (l, v) => l.labelForSource(v),
-                        )
-                      : 'N/A';
+                  final labels = EnquiryDisplayLabels.from(enquiryData, dropdownLookup);
+                  final statusValue = labels.statusValue;
+                  final statusLabel = labels.statusLabel;
+                  final eventTypeLabel = labels.eventTypeLabel;
+                  final priorityLabel = labels.priorityLabel;
+                  final paymentStatusLabel = labels.paymentStatusLabel;
+                  final sourceLabel = labels.sourceLabel;
 
                   if (userRole != UserRole.admin) {
                     final assignedTo = enquiryData['assignedTo'] as String?;
                     final currentUserId = user.uid;
 
                     if (assignedTo != null && assignedTo != currentUserId) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.lock,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: AppTokens.space4),
-                            const Text(
-                              'Access Denied',
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: AppTokens.space2),
-                            Text(
-                              'You can only view enquiries assigned to you.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      return const EnquiryAccessDenied();
                     }
                   }
 
