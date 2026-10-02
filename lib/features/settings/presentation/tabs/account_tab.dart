@@ -12,6 +12,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/glass_dialog.dart';
+import '../../../admin/users/presentation/user_management_screen.dart';
 import '../widgets/settings_layout.dart';
 import '../widgets/settings_tiles.dart';
 import 'widgets/account_sections.dart';
@@ -55,6 +56,22 @@ class AccountTab extends ConsumerWidget {
             ),
           ],
         ),
+        if (currentUserRole.valueOrNull == UserRole.admin)
+          SettingsGroup(
+            eyebrow: 'Team',
+            title: 'Manage Users',
+            children: [
+              SettingsTile(
+                icon: Icons.group_outlined,
+                title: 'Team members',
+                subtitle: 'Edit name, phone, role or deactivate anyone',
+                trailing: const SettingsChevron(),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const UserManagementScreen()),
+                ),
+              ),
+            ],
+          ),
         SettingsGroup(
           eyebrow: 'Security',
           title: 'Account Actions',

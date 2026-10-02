@@ -75,7 +75,11 @@ class UserMemberTile extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppTokens.space2),
-      child: GlassPanel(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // Admins can tap anywhere on the row to edit the user.
+        onTap: isAdmin ? () => onAction('edit') : null,
+        child: GlassPanel(
         padding: const EdgeInsets.fromLTRB(
           AppTokens.space4,
           AppTokens.space3,
@@ -101,6 +105,7 @@ class UserMemberTile extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }
