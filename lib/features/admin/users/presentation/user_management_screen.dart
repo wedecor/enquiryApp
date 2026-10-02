@@ -103,9 +103,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   sliver: SliverToBoxAdapter(
                     child: StaggerIn(
                       index: 1,
-                      child: UsersAdminActions(
-                        onInvite: () => _showInviteUserDialog(context),
-                      ),
+                      child: UsersAdminActions(onInvite: () => _showInviteUserDialog(context)),
                     ),
                   ),
                 ),

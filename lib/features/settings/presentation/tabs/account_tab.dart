@@ -66,9 +66,9 @@ class AccountTab extends ConsumerWidget {
                 title: 'Team members',
                 subtitle: 'Edit name, phone, role or deactivate anyone',
                 trailing: const SettingsChevron(),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const UserManagementScreen()),
-                ),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const UserManagementScreen())),
               ),
             ],
           ),

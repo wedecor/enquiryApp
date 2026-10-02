@@ -80,32 +80,32 @@ class UserMemberTile extends StatelessWidget {
         // Admins can tap anywhere on the row to edit the user.
         onTap: isAdmin ? () => onAction('edit') : null,
         child: GlassPanel(
-        padding: const EdgeInsets.fromLTRB(
-          AppTokens.space4,
-          AppTokens.space3,
-          AppTokens.space1,
-          AppTokens.space3,
-        ),
-        child: Row(
-          children: [
-            MonogramAvatar(name: user.name, dimmed: !user.isActive),
-            const SizedBox(width: AppTokens.space3),
-            if (wide) ...[
-              Expanded(flex: 3, child: identity),
+          padding: const EdgeInsets.fromLTRB(
+            AppTokens.space4,
+            AppTokens.space3,
+            AppTokens.space1,
+            AppTokens.space3,
+          ),
+          child: Row(
+            children: [
+              MonogramAvatar(name: user.name, dimmed: !user.isActive),
               const SizedBox(width: AppTokens.space3),
-              Expanded(flex: 3, child: _WideDetails(user: user)),
-              const SizedBox(width: AppTokens.space3),
-              UserRolePill(role: user.role),
-              const SizedBox(width: AppTokens.space3),
-              SizedBox(width: 92, child: UserStatusLabel(active: user.isActive)),
-              _InlineActions(user: user, isAdmin: isAdmin, onAction: onAction),
-            ] else ...[
-              Expanded(child: identity),
-              _ActionsMenu(user: user, isAdmin: isAdmin, onAction: onAction),
+              if (wide) ...[
+                Expanded(flex: 3, child: identity),
+                const SizedBox(width: AppTokens.space3),
+                Expanded(flex: 3, child: _WideDetails(user: user)),
+                const SizedBox(width: AppTokens.space3),
+                UserRolePill(role: user.role),
+                const SizedBox(width: AppTokens.space3),
+                SizedBox(width: 92, child: UserStatusLabel(active: user.isActive)),
+                _InlineActions(user: user, isAdmin: isAdmin, onAction: onAction),
+              ] else ...[
+                Expanded(child: identity),
+                _ActionsMenu(user: user, isAdmin: isAdmin, onAction: onAction),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
