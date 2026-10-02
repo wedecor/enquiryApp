@@ -1,13 +1,15 @@
 {
-  "version": "2.0.15",
-  "buildNumber": 46,
+  "version": "2.0.16",
+  "buildNumber": 47,
   "releaseDate": "2026-10-02",
-  "releaseNotes": "🔄 Enquiries list now updates live - new enquiries and status changes appear instantly\n💰 Amounts show as 50000, not 50000.0\n🔔 Push notifications fixed - status changes and assignments reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n⚠️ Everyone must update to keep receiving notifications",
+  "releaseNotes": "👥 Admins: manage team members from Settings → Account, tap anyone to edit\n➕ One \"Add / Invite User\" button - invited people get a set-password email\n🔄 Enquiries list now updates live - new enquiries and status changes appear instantly\n💰 Amounts show as 50000, not 50000.0\n🔔 Push notifications fixed - status changes and assignments reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n⚠️ Everyone must update to keep receiving notifications",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "bc83bd9333766404148850c5aad0bd64c61db62f05a1ce27658446999e24a665",
+  "sha256": "31fe4273287de3e08d19a204f0443e16ae32ee95e56d6903c0b6cc6cbf7d5f3f",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
+    "NEW: Settings → Account → Team members (admins) - tap a person to edit name, phone, role or deactivate",
+    "IMPROVED: Adding people always goes through invite, so every new user gets a working login",
     "NEW: Enquiries list updates live - no need to pull to refresh",
     "NEW: Analytics tabs - Overview, Pipeline (funnel, lost reasons, speed to lead), Team, Money, Trends, Breakdown and Tables",
     "NEW: Count analytics by enquiry date or event date",
@@ -18,6 +20,7 @@
     "IMPROVED: Status colours are the same on every screen"
   ],
   "bugFixes": [
+    "Fixed \"Add User\" creating profiles that could not sign in",
     "Fixed Enquiries list showing old statuses until refreshed",
     "Fixed list jumping back to the top after opening an enquiry",
     "Fixed amounts showing a trailing .0 in the edit form, history and CSV export",
