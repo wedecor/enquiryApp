@@ -48,6 +48,41 @@ class EnquiryRepository {
         .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
   }
 
+  /// Newest-first list query; staff are scoped to their own enquiries.
+  Query<Map<String, dynamic>> _listQuery({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+  }) {
+    Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
+
+    if (!isAdmin && assignedTo != null) {
+      query = query.where('assignedTo', isEqualTo: assignedTo);
+    }
+
+    if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
+      query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
+    }
+    return query;
+  }
+
+  /// Live view of the newest [limit] enquiries, scoped like [getPaginatedEnquiries].
+  ///
+  /// Includes metadata changes so listeners learn when a cache-only result has been
+  /// confirmed by the server.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchEnquiriesPage({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+    required int limit,
+  }) {
+    return _listQuery(
+      isAdmin: isAdmin,
+      assignedTo: assignedTo,
+      status: status,
+    ).limit(limit).snapshots(includeMetadataChanges: true);
+  }
+
   /// Get paginated enquiries (cursor-based pagination)
   Future<PaginationState> getPaginatedEnquiries({
     required bool isAdmin,
@@ -57,15 +92,7 @@ class EnquiryRepository {
     int pageSize = 20,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
-
-      if (!isAdmin && assignedTo != null) {
-        query = query.where('assignedTo', isEqualTo: assignedTo);
-      }
-
-      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
-        query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
-      }
+      var query = _listQuery(isAdmin: isAdmin, assignedTo: assignedTo, status: status);
 
       if (lastDocument != null) {
         query = query.startAfterDocument(lastDocument);

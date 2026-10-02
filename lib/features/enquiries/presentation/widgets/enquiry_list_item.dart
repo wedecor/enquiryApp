@@ -20,7 +20,6 @@ class EnquiryListItem extends ConsumerWidget {
     this.assigneeLabel,
     this.onEdit,
     this.compact = false,
-    this.onReturnFromDetail,
   });
 
   final String enquiryId;
@@ -30,7 +29,6 @@ class EnquiryListItem extends ConsumerWidget {
   final String? assigneeLabel;
   final VoidCallback? onEdit;
   final bool compact;
-  final VoidCallback? onReturnFromDetail;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,13 +54,9 @@ class EnquiryListItem extends ConsumerWidget {
     final location = (data['eventLocation'] as String?) ?? (data['location'] as String?);
 
     void openDetails() {
-      Navigator.of(context)
-          .push<void>(
-            MaterialPageRoute<void>(
-              builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId),
-            ),
-          )
-          .then((_) => onReturnFromDetail?.call());
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (context) => EnquiryDetailsScreen(enquiryId: enquiryId)),
+      );
     }
 
     final sheetActions = contactEnquiryRowActions(
