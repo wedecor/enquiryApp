@@ -98,8 +98,8 @@ class CsvExport {
           enquiryNotesFrom(enquiry) ?? '',
           DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
           _labelOrValue(enquiry, 'paymentStatusLabel', 'paymentStatusValue', 'paymentStatus'),
-          enquiry['totalCost']?.toString() ?? '',
-          enquiry['advancePaid']?.toString() ?? '',
+          amountText(enquiry['totalCost']),
+          amountText(enquiry['advancePaid']),
           enquiry['assignedTo']?.toString() ?? '',
           _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
           _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
@@ -174,7 +174,7 @@ class CsvExport {
         DropdownLookup.statusLabelOf(null, enquiry.status),
         enquiry.source,
         enquiry.priority,
-        enquiry.totalCost?.toString() ?? '',
+        amountText(enquiry.totalCost),
       ]);
     }
 

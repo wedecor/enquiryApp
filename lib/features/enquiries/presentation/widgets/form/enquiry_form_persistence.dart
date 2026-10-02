@@ -67,13 +67,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           _notesController.text = enquiryNotesFrom(data) ?? '';
 
           if (data['totalCost'] != null) {
-            _totalCostController.text = data['totalCost'].toString();
+            _totalCostController.text = amountText(data['totalCost']);
           }
           if (data['advancePaid'] != null) {
-            _advancePaidController.text = data['advancePaid'].toString();
+            _advancePaidController.text = amountText(data['advancePaid']);
           }
           if (data['quotedAmount'] != null) {
-            _quotedAmountController.text = data['quotedAmount'].toString();
+            _quotedAmountController.text = amountText(data['quotedAmount']);
           }
           final quotedAtRaw = data['quotedAt'];
           if (quotedAtRaw is Timestamp) _quotedAt = quotedAtRaw.toDate();

@@ -390,6 +390,11 @@ class _ValueText extends ConsumerWidget {
         );
       case 'lostreason':
         return _text(LostReason.labelOf(stringValue));
+      case 'totalcost':
+      case 'advancepaid':
+      case 'quotedamount':
+        final amount = value is num ? value as num : num.tryParse(stringValue);
+        return _text(amount == null ? stringValue : '₹${amount.toStringAsFixed(0)}');
       default:
         return _text(stringValue.isEmpty ? 'Not Set' : stringValue);
     }
