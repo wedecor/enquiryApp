@@ -1,24 +1,28 @@
 {
-  "version": "2.0.14",
-  "buildNumber": 45,
+  "version": "2.0.15",
+  "buildNumber": 46,
   "releaseDate": "2026-10-02",
-  "releaseNotes": "🔔 Push notifications fixed - status changes and assignments now reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n📝 Choose a reason when marking an enquiry Not Interested or Lost\n📞 Calls and WhatsApp from an enquiry are now tracked as contacts\n⚠️ Everyone must update to keep receiving notifications",
+  "releaseNotes": "🔄 Enquiries list now updates live - new enquiries and status changes appear instantly\n💰 Amounts show as 50000, not 50000.0\n🔔 Push notifications fixed - status changes and assignments reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n⚠️ Everyone must update to keep receiving notifications",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "db7a259f945b9491823ab4c059e6a4cc20ffa509fc49818e19e9e2ee33665bb9",
+  "sha256": "bc83bd9333766404148850c5aad0bd64c61db62f05a1ce27658446999e24a665",
   "forceUpdate": false,
   "minSupportedBuildNumber": 3,
   "features": [
+    "NEW: Enquiries list updates live - no need to pull to refresh",
     "NEW: Analytics tabs - Overview, Pipeline (funnel, lost reasons, speed to lead), Team, Money, Trends, Breakdown and Tables",
     "NEW: Count analytics by enquiry date or event date",
     "NEW: Lost-reason sheet when an enquiry is marked Not Interested, Closed Lost or Cancelled",
     "NEW: Calls and WhatsApp from an enquiry are recorded as contacts (first contact, last contact, count)",
     "NEW: Admins can record quoted amount and quote date",
-    "IMPROVED: Tapping a notification opens the enquiry; in-app banner with a View button when the app is open"
+    "IMPROVED: Tapping a notification opens the enquiry; in-app banner with a View button when the app is open",
+    "IMPROVED: Status colours are the same on every screen"
   ],
   "bugFixes": [
+    "Fixed Enquiries list showing old statuses until refreshed",
+    "Fixed list jumping back to the top after opening an enquiry",
+    "Fixed amounts showing a trailing .0 in the edit form, history and CSV export",
     "Fixed status-change and assignment notifications not being delivered",
-    "Fixed duplicate notifications for a single change",
-    "Fixed being notified about your own changes",
+    "Fixed duplicate notifications and being notified about your own changes",
     "Fixed status sheet staying open after changing a status",
     "Fixed lost reason showing as a raw code in the change history"
   ]
