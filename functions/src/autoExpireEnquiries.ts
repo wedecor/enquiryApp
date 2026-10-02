@@ -7,29 +7,11 @@ import {
   rawStatusValuesFor,
   statusLabel,
 } from "./statusVocabulary";
+import { IST_TIME_ZONE, istDayStart } from "./istTime";
 
 const PAGE_SIZE = 300;
 /** Firestore allows 500 writes per batch; each auto-change is 2 writes (enquiry + history). */
 const MAX_BATCH_WRITES = 400;
-
-const IST_TIME_ZONE = "Asia/Kolkata";
-/** India has no DST, so the offset is fixed at UTC+05:30. */
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
-
-const istDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: IST_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** UTC instant of 00:00 IST on the IST calendar day that contains [date]. */
-function istDayStart(date: Date): Date {
-  const parts = istDateFormatter.formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  return new Date(Date.UTC(part("year"), part("month") - 1, part("day")) - IST_OFFSET_MS);
-}
 
 type AutoCloseRule = {
   from: CanonicalStatus[];
@@ -104,7 +86,19 @@ export const autoExpireEnquiries = onSchedule(
           if (!eventDate) continue;
           if (istDayStart(eventDate).getTime() >= todayStart.getTime()) continue;
 
+          // First time this stage is reached (analytics stage timestamps).
+          const stageField = rule.to === "completed" ? "completedAt" : "lostAt";
+          const stageFields: Record<string, unknown> = doc.get(stageField)
+            ? {}
+            : { [stageField]: FieldValue.serverTimestamp() };
+          const lostFields: Record<string, unknown> =
+            rule.to === "not_interested"
+              ? { lostReason: "no_response", lostReasonNote: "Auto-closed after event date" }
+              : {};
+
           batch.update(doc.ref, {
+            ...stageFields,
+            ...lostFields,
             statusValue: rule.to,
             statusLabel: statusLabel(rule.to),
             statusUpdatedAt: FieldValue.serverTimestamp(),

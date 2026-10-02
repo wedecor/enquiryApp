@@ -7,10 +7,10 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/review_request_service.dart';
-import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
+import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'dashboard_action_sheets.dart';
 import 'dashboard_enquiry_tab_actions.dart';
@@ -141,20 +141,16 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     try {
       final repository = ref.read(enquiryRepositoryProvider);
 
-      final confirmed = await ConfirmationDialog.show(
-        context: context,
-        title: 'Mark as Not Interested',
-        message:
-            'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
-        confirmText: 'Mark as Not Interested',
-        cancelText: 'Cancel',
-        isDestructive: false,
-        icon: Icons.block,
+      // The reason sheet doubles as the confirmation step.
+      final lostPrompt = await promptLostReasonIfNeeded(context, 'not_interested');
+      if (!lostPrompt.proceed || !mounted) return;
+
+      await repository.updateStatus(
+        id: enquiryId,
+        nextStatus: 'not_interested',
+        userId: userId,
+        lostReason: lostPrompt.choice,
       );
-
-      if (!confirmed || !mounted) return;
-
-      await repository.updateStatus(id: enquiryId, nextStatus: 'not_interested', userId: userId);
 
       if (mounted) {
         showSnack('Enquiry marked as Not Interested');
@@ -264,6 +260,7 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       phone,
       prefillText: prefill,
       enquiryId: enquiryId,
+      contactType: ContactType.reminder,
     );
 
     switch (status) {

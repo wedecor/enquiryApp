@@ -31,6 +31,16 @@ class AnalyticsRepository {
     }
   }
 
+  /// Every enquiry (admin view) with its document id under `id`.
+  ///
+  /// Used by the pipeline analytics, which need lifetime data (forecast win
+  /// rate, upcoming money, open follow-ups) and apply the period client-side.
+  /// Fine for a few thousand enquiries; move to precomputed snapshots beyond that.
+  Future<List<Map<String, dynamic>>> fetchAllEnquiriesRaw() async {
+    final snapshot = await _firestore.collection('enquiries').get();
+    return snapshot.docs.map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()}).toList();
+  }
+
   /// Fetch all enquiry documents for a period in a single query.
   Future<List<Map<String, dynamic>>> fetchEnquiriesRaw({
     required DateRange dateRange,

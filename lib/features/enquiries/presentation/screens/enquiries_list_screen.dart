@@ -13,7 +13,6 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../ui/primitives/primitives.dart';
-import '../../data/enquiry_pagination_provider.dart';
 import '../../filters/filters_controller.dart';
 import '../../filters/filters_state.dart';
 import '../../filters/widgets/filters_bar.dart';
@@ -288,18 +287,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         break;
       case 'add':
         if (userRole != UserRole.admin) return;
-        Navigator.of(context)
-            .push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()))
-            .then((_) {
-              if (_view == _EnquiriesView.list) {
-                final filters = ref.read(enquiryFiltersProvider);
-                if (filters.searchQuery?.isNotEmpty ?? false) return;
-                final status = filters.statuses.length == 1 ? filters.statuses.first : null;
-                ref
-                    .read(paginatedEnquiriesProvider(PaginationParams(status: status)).notifier)
-                    .refresh();
-              }
-            });
+        Navigator.of(
+          context,
+        ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
         break;
     }
   }

@@ -9,6 +9,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
+import '../domain/enquiry_lifecycle.dart';
 import 'pagination_state.dart';
 
 /// Provider for enquiry repository
@@ -47,6 +48,41 @@ class EnquiryRepository {
         .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
   }
 
+  /// Newest-first list query; staff are scoped to their own enquiries.
+  Query<Map<String, dynamic>> _listQuery({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+  }) {
+    Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
+
+    if (!isAdmin && assignedTo != null) {
+      query = query.where('assignedTo', isEqualTo: assignedTo);
+    }
+
+    if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
+      query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
+    }
+    return query;
+  }
+
+  /// Live view of the newest [limit] enquiries, scoped like [getPaginatedEnquiries].
+  ///
+  /// Includes metadata changes so listeners learn when a cache-only result has been
+  /// confirmed by the server.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchEnquiriesPage({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+    required int limit,
+  }) {
+    return _listQuery(
+      isAdmin: isAdmin,
+      assignedTo: assignedTo,
+      status: status,
+    ).limit(limit).snapshots(includeMetadataChanges: true);
+  }
+
   /// Get paginated enquiries (cursor-based pagination)
   Future<PaginationState> getPaginatedEnquiries({
     required bool isAdmin,
@@ -56,15 +92,7 @@ class EnquiryRepository {
     int pageSize = 20,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
-
-      if (!isAdmin && assignedTo != null) {
-        query = query.where('assignedTo', isEqualTo: assignedTo);
-      }
-
-      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
-        query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
-      }
+      var query = _listQuery(isAdmin: isAdmin, assignedTo: assignedTo, status: status);
 
       if (lastDocument != null) {
         query = query.startAfterDocument(lastDocument);
@@ -95,6 +123,7 @@ class EnquiryRepository {
     required String id,
     required String nextStatus,
     required String userId,
+    LostReasonChoice? lostReason,
   }) async {
     final oldEnquiryDoc = await _enquiries.doc(id).get();
 
@@ -116,6 +145,7 @@ class EnquiryRepository {
     final statusLabel = lookup.labelForStatus(canonicalNext);
     final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
 
+    final isLost = EnquiryStatus.isLost(canonicalNext);
     final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
     final assignedTo = oldEnquiryData['assignedTo'] as String?;
 
@@ -128,6 +158,9 @@ class EnquiryRepository {
       'eventStatus': FieldValue.delete(),
       'status': FieldValue.delete(),
       'status_slug': FieldValue.delete(),
+      for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, canonicalNext))
+        field: FieldValue.serverTimestamp(),
+      if (isLost && lostReason != null) ...lostReason.toFields(),
     });
 
     await _auditService.recordChange(
@@ -137,6 +170,16 @@ class EnquiryRepository {
       newValue: canonicalNext,
       userId: userId,
     );
+
+    if (isLost && lostReason != null) {
+      await _auditService.recordChange(
+        enquiryId: id,
+        fieldChanged: 'lostReason',
+        oldValue: oldEnquiryData['lostReason'],
+        newValue: lostReason.reason.value,
+        userId: userId,
+      );
+    }
 
     try {
       await _notificationService.notifyStatusUpdated(

@@ -13,8 +13,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   final _budgetController = TextEditingController();
   final _totalCostController = TextEditingController();
   final _advancePaidController = TextEditingController();
+  final _quotedAmountController = TextEditingController();
 
   DateTime? _selectedDate;
+  DateTime? _quotedAt;
   String? _selectedEventType;
   String? _selectedStatus;
   String? _selectedPriority;
@@ -65,11 +67,16 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           _notesController.text = enquiryNotesFrom(data) ?? '';
 
           if (data['totalCost'] != null) {
-            _totalCostController.text = data['totalCost'].toString();
+            _totalCostController.text = amountText(data['totalCost']);
           }
           if (data['advancePaid'] != null) {
-            _advancePaidController.text = data['advancePaid'].toString();
+            _advancePaidController.text = amountText(data['advancePaid']);
           }
+          if (data['quotedAmount'] != null) {
+            _quotedAmountController.text = amountText(data['quotedAmount']);
+          }
+          final quotedAtRaw = data['quotedAt'];
+          if (quotedAtRaw is Timestamp) _quotedAt = quotedAtRaw.toDate();
 
           // Set dropdown values from database
           _selectedEventType = (data['eventTypeValue'] ?? data['eventType']) as String?;
@@ -156,7 +163,26 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     _budgetController.dispose();
     _totalCostController.dispose();
     _advancePaidController.dispose();
+    _quotedAmountController.dispose();
     super.dispose();
+  }
+
+  /// `quotedAmount` / `quotedAt` to write. `quotedAt` defaults to now the first
+  /// time an amount is entered. Returns only fields that differ from [oldData].
+  Map<String, Object?> _quoteFields(Map<String, dynamic> oldData) {
+    final amount = _parseDouble(_quotedAmountController.text);
+    final oldAmount = (oldData['quotedAmount'] as num?)?.toDouble();
+    final oldAtRaw = oldData['quotedAt'];
+    final oldAt = oldAtRaw is Timestamp ? oldAtRaw.toDate() : null;
+    if (amount == null) {
+      if (oldAmount == null) return const {};
+      return {'quotedAmount': null, 'quotedAt': null};
+    }
+    final at = _quotedAt ?? oldAt ?? DateTime.now();
+    return {
+      if (amount != oldAmount) 'quotedAmount': amount,
+      if (oldAt == null || at != oldAt) 'quotedAt': Timestamp.fromDate(at),
+    };
   }
 
   double? _parseDouble(String? value) {
@@ -257,6 +283,14 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       paymentStatusLabel: paymentStatusLabel,
     );
 
+    final quoteFields = _quoteFields(const {});
+    if (quoteFields.isNotEmpty) {
+      await firestoreService.updateEnquiry(enquiryId, {
+        ...quoteFields,
+        'updatedBy': currentUser.uid,
+      });
+    }
+
     // Upload reference images if any and save URLs
     if (_selectedImages.isNotEmpty) {
       try {
@@ -300,13 +334,14 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         newValue: _selectedAssignedTo!,
       );
 
-      // Send notification for assignment
+      // Admins already got "New Enquiry Created"; only the assignee hears about it here.
       await notificationService.notifyEnquiryAssigned(
         enquiryId: enquiryId,
         customerName: _nameController.text.trim(),
         eventType: _selectedEventType!,
         assignedTo: _selectedAssignedTo!,
         assignedBy: currentUser.uid,
+        notifyAdmins: false,
       );
     }
 
@@ -393,6 +428,16 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       }
     }
 
+    // Moving to a lost status asks why (same rule as every other status path).
+    LostReasonChoice? lostChoice;
+    final statusChanging = _canonicalOldStatus(oldEnquiryData) != statusValue;
+    if (statusChanging && EnquiryStatus.isLost(statusValue)) {
+      if (!mounted) return;
+      final prompt = await promptLostReasonIfNeeded(context, statusValue);
+      if (!prompt.proceed || !mounted) return;
+      lostChoice = prompt.choice;
+    }
+
     // Upload reference images if any and get URLs
     List<String> newImageUrls = [];
     if (_selectedImages.isNotEmpty) {
@@ -471,7 +516,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       if (statusDidChange) ...{
         'statusUpdatedAt': FieldValue.serverTimestamp(),
         'statusUpdatedBy': currentUser.uid,
+        for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, statusValue))
+          field: FieldValue.serverTimestamp(),
       },
+      if (lostChoice != null) ...lostChoice.toFields(),
+      ..._quoteFields(oldEnquiryData),
       'paymentStatus': paymentStatusValue,
       'paymentStatusValue': paymentStatusValue,
       'paymentStatusLabel': paymentStatusLabel,
@@ -508,13 +557,25 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       newAdvancePaid: newAdvancePaid,
     );
 
+    if (lostChoice != null) {
+      changes['lostReason'] = {
+        'old_value': oldEnquiryData['lostReason'],
+        'new_value': lostChoice.reason.value,
+      };
+    }
+
     // Record all changes at once
     if (changes.isNotEmpty) {
       await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
-    // Send notifications
+    // Send notifications: at most one push per person for this save.
     final notificationService = ref.read(notificationServiceProvider);
+    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
+    final reassigned =
+        _selectedAssignedTo != null &&
+        _selectedAssignedTo!.isNotEmpty &&
+        _selectedAssignedTo != previousAssignee;
 
     // If status changed, send specific status update notification to admins
     if (statusDidChange) {
@@ -532,9 +593,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         oldStatus: oldStatusLabel,
         newStatus: statusLabel,
         updatedBy: currentUser.uid,
-        assignedTo: _selectedAssignedTo,
+        // A new assignee gets "Assigned to You" below instead.
+        assignedTo: reassigned ? null : _selectedAssignedTo,
       );
-    } else {
+    } else if (!reassigned) {
       // Only send generic enquiry update notification if status didn't change
       // (to avoid duplicate notifications when status changes)
       if (kDebugMode) {
@@ -549,6 +611,19 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         eventType: eventTypeValue,
         updatedBy: currentUser.uid,
         assignedTo: _selectedAssignedTo,
+      );
+    }
+
+    // Re-assignment from the edit form: tell the new assignee, and other admins unless
+    // they were already told about the status change above.
+    if (reassigned) {
+      await notificationService.notifyEnquiryAssigned(
+        enquiryId: widget.enquiryId!,
+        customerName: _nameController.text.trim(),
+        eventType: eventTypeLabel,
+        assignedTo: _selectedAssignedTo!,
+        assignedBy: currentUser.uid,
+        notifyAdmins: !statusDidChange,
       );
     }
 

@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../ui/primitives/primitives.dart';
 import '../../domain/analytics_models.dart';
+import '../../domain/pipeline_metrics.dart';
 import '../analytics_controller.dart';
+import '../pipeline_controller.dart';
 import 'analytics_format.dart';
 import 'analytics_state_views.dart';
 import 'breakdown_charts.dart';
 import 'line_trend_chart.dart';
+import 'pipeline_sections.dart';
 import 'recent_enquiries_table.dart';
 import 'top_list_table.dart';
 
@@ -62,6 +65,7 @@ class AnalyticsOverviewTab extends StatelessWidget {
     return _AnalyticsTabBody(
       onRetry: onRetry,
       sections: (state) => [
+        const PipelineOverviewSection(),
         LineTrendChart(
           data: state.timeSeries,
           title: 'Enquiries Trend',
@@ -112,6 +116,7 @@ class AnalyticsBreakdownTab extends StatelessWidget {
         return [
           _Responsive(narrow: [status, eventTypes], wide: _pair(status, eventTypes)),
           sources,
+          const _PipelineSlot(builder: _demandSections),
         ];
       },
     );
@@ -173,5 +178,93 @@ class _Responsive extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+// ── Pipeline-backed tabs ─────────────────────────────────────────────────────
+
+class AnalyticsPipelineTab extends StatelessWidget {
+  const AnalyticsPipelineTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PipelineTabBody(
+      sections: (r) => [
+        FunnelSection(report: r),
+        _Responsive(
+          narrow: [
+            LostReasonsSection(report: r),
+            SpeedToLeadSection(report: r),
+          ],
+          wide: _pair(LostReasonsSection(report: r), SpeedToLeadSection(report: r)),
+        ),
+      ],
+    );
+  }
+}
+
+class AnalyticsTeamTab extends StatelessWidget {
+  const AnalyticsTeamTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PipelineTabBody(
+      sections: (r) => [TeamSection(report: r), FollowUpSection(report: r)],
+    );
+  }
+}
+
+class AnalyticsMoneyTab extends StatelessWidget {
+  const AnalyticsMoneyTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PipelineTabBody(
+      sections: (r) => [
+        ForecastSection(report: r),
+        MoneyByMonthSection(report: r),
+        OverdueSection(report: r),
+      ],
+    );
+  }
+}
+
+List<Widget> _demandSections(PipelineReport r) => [
+  SourcePerformanceSection(report: r),
+  _Responsive(
+    narrow: [
+      LeadTimeSection(report: r),
+      UpcomingDemandSection(report: r),
+    ],
+    wide: _pair(LeadTimeSection(report: r), UpcomingDemandSection(report: r)),
+  ),
+];
+
+/// Embeds pipeline-report sections inside a tab driven by the main controller.
+class _PipelineSlot extends ConsumerWidget {
+  const _PipelineSlot({required this.builder});
+
+  final List<Widget> Function(PipelineReport report) builder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref
+        .watch(pipelineReportProvider)
+        .when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (r) {
+            final children = builder(r);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) const SizedBox(height: _gap),
+                  children[i],
+                ],
+              ],
+            );
+          },
+        );
   }
 }

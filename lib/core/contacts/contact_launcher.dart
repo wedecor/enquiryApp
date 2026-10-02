@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../logging/logger.dart';
+import '../services/contact_log_service.dart';
+
+export '../services/contact_log_service.dart' show ContactType;
 
 /// Status of contact launch operations
 enum ContactLaunchStatus { opened, notInstalled, invalidNumber, failed }
@@ -9,15 +14,21 @@ enum ContactLaunchStatus { opened, notInstalled, invalidNumber, failed }
 /// Provider for the contact launcher service
 final contactLauncherProvider = Provider<ContactLauncher>((ref) {
   // Default to +91 (India) - can be made configurable later
-  return ContactLauncher(defaultCountryCode: '+91');
+  return ContactLauncher(
+    defaultCountryCode: '+91',
+    contactLog: ref.watch(contactLogServiceProvider),
+  );
 });
 
 /// Service for launching contact applications (phone, WhatsApp)
 /// Handles phone number normalization, URL scheme launching, and audit logging
 class ContactLauncher {
-  ContactLauncher({this.defaultCountryCode = '+91'});
+  ContactLauncher({this.defaultCountryCode = '+91', this.contactLog});
 
   final String defaultCountryCode;
+
+  /// Persists successful contacts against an enquiry (speed-to-lead analytics).
+  final ContactLogService? contactLog;
 
   /// Normalizes raw phone number to E.164-like format
   ///
@@ -140,21 +151,34 @@ class ContactLauncher {
     Logger.info('Contact action: $mode (success: $success)', tag: 'ContactLauncher');
   }
 
+  /// Records a successful contact against [enquiryId] without delaying the UI.
+  void _recordContact(String? enquiryId, ContactType type, ContactLaunchStatus status) {
+    if (enquiryId == null || enquiryId.isEmpty || status != ContactLaunchStatus.opened) return;
+    final log = contactLog;
+    if (log == null) return;
+    // Fire-and-forget: the service swallows its own errors.
+    unawaited(log.record(enquiryId: enquiryId, type: type));
+  }
+
   /// Launch phone call with audit logging
   Future<ContactLaunchStatus> callNumberWithAudit(String rawPhone, {String? enquiryId}) async {
     final status = await callNumber(rawPhone);
     _logContactAction('call', status == ContactLaunchStatus.opened);
+    _recordContact(enquiryId, ContactType.call, status);
     return status;
   }
 
-  /// Launch WhatsApp with audit logging
+  /// Launch WhatsApp with audit logging. [contactType] distinguishes reminders
+  /// and review requests from ordinary messages in the contact log.
   Future<ContactLaunchStatus> openWhatsAppWithAudit(
     String rawPhone, {
     String? prefillText,
     String? enquiryId,
+    ContactType contactType = ContactType.whatsapp,
   }) async {
     final status = await openWhatsApp(rawPhone, prefillText: prefillText);
     _logContactAction('whatsapp', status == ContactLaunchStatus.opened);
+    _recordContact(enquiryId, contactType, status);
     return status;
   }
 }

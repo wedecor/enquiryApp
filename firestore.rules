@@ -25,7 +25,7 @@ service cloud.firestore {
     // Staff may READ assigned enquiries in full (including totals/payment).
     // Write protection only — UI/export must hide financial data for staff (see csv_export_rbac).
     function isModifyingOnlyStaffEditableFields() {
-      let protectedFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel', 'assignedTo', 'createdBy', 'createdAt'];
+      let protectedFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel', 'assignedTo', 'createdBy', 'createdAt', 'quotedAmount', 'quotedAt'];
       let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
       return !modifiedFields.hasAny(protectedFields);
     }
@@ -111,6 +111,17 @@ service cloud.firestore {
         allow create, update: if isAdmin()
           || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
         allow delete: if isAdmin();
+      }
+
+      // Contact log (calls / WhatsApp made from the app) — append-only.
+      match /contacts/{contactId} {
+        allow read: if isAdmin()
+          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
+        allow create: if (isAdmin()
+            || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid))
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.type in ['call', 'whatsapp', 'reminder', 'review_request'];
+        allow update, delete: if false;
       }
     }
 

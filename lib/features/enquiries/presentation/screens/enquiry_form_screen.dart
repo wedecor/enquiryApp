@@ -20,6 +20,7 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
+import '../../domain/enquiry_lifecycle.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
@@ -28,6 +29,7 @@ import '../widgets/enquiry_form_section.dart';
 import '../widgets/enquiry_glass_bar.dart';
 import '../widgets/enquiry_sheet_header.dart';
 import '../widgets/form/enquiry_form_pipeline_fields.dart';
+import '../widgets/lost_reason_sheet.dart';
 
 part '../widgets/form/enquiry_form_persistence.dart';
 
@@ -176,6 +178,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         selectedPaymentStatus: _selectedPaymentStatus,
         onPaymentStatusChanged: (value) => setState(() => _selectedPaymentStatus = value),
         parseDouble: _parseDouble,
+        quotedAmountController: _quotedAmountController,
+        quotedAt: _quotedAt,
+        onQuotedAtChanged: (value) => setState(() => _quotedAt = value),
       ),
       EnquiryFormSection(
         eyebrow: 'Notes',

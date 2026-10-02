@@ -12,9 +12,11 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/glass_dialog.dart';
+import '../../../admin/users/presentation/user_management_screen.dart';
 import '../widgets/settings_layout.dart';
 import '../widgets/settings_tiles.dart';
 import 'widgets/account_sections.dart';
+import 'widgets/change_password_dialog.dart';
 
 class AccountTab extends ConsumerWidget {
   const AccountTab({super.key});
@@ -55,6 +57,22 @@ class AccountTab extends ConsumerWidget {
             ),
           ],
         ),
+        if (currentUserRole.valueOrNull == UserRole.admin)
+          SettingsGroup(
+            eyebrow: 'Team',
+            title: 'Manage Users',
+            children: [
+              SettingsTile(
+                icon: Icons.group_outlined,
+                title: 'Team members',
+                subtitle: 'Edit name, phone, role or deactivate anyone',
+                trailing: const SettingsChevron(),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const UserManagementScreen())),
+              ),
+            ],
+          ),
         SettingsGroup(
           eyebrow: 'Security',
           title: 'Account Actions',
@@ -62,9 +80,9 @@ class AccountTab extends ConsumerWidget {
             SettingsTile(
               icon: Icons.lock_reset_rounded,
               title: 'Change Password',
-              subtitle: 'Send password reset email',
+              subtitle: 'Enter your current password and pick a new one',
               trailing: const SettingsChevron(),
-              onTap: () => _sendPasswordReset(context),
+              onTap: () => _changePassword(context),
             ),
             SettingsTile(
               icon: Icons.system_update_rounded,
@@ -81,6 +99,17 @@ class AccountTab extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _changePassword(BuildContext context) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) => ChangePasswordDialog(onForgotPassword: () => _sendPasswordReset(context)),
+    );
+    if (changed == true && context.mounted) {
+      safeLog('password_changed', {'method': 'settings_account_tab'});
+      _showSnackBar(context, 'Password updated');
+    }
   }
 
   Future<void> _sendPasswordReset(BuildContext context) async {

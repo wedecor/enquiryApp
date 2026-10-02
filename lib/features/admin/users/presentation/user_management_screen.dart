@@ -103,10 +103,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   sliver: SliverToBoxAdapter(
                     child: StaggerIn(
                       index: 1,
-                      child: UsersAdminActions(
-                        onInvite: () => _showInviteUserDialog(context),
-                        onAddUser: () => _showAddUserDialog(context),
-                      ),
+                      child: UsersAdminActions(onInvite: () => _showInviteUserDialog(context)),
                     ),
                   ),
                 ),
@@ -240,7 +237,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         child: GlassStateMessage(
           icon: Icons.people_outline_rounded,
           title: isAdmin
-              ? 'No users found. Use "Add User" to create one.'
+              ? 'No users found. Use "Add / Invite User" to add one.'
               : 'No users to show or you lack permissions to modify.',
           message: isAdmin
               ? 'Start by adding your first user to the system.'
@@ -290,10 +287,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       ref.read(paginationStateProvider.notifier).setLoading(true);
       ref.read(usersFilterProvider.notifier).loadMore(users.last.email);
     }
-  }
-
-  void _showAddUserDialog(BuildContext context) {
-    showDialog<void>(context: context, builder: (context) => const UserFormDialog());
   }
 
   void _showInviteUserDialog(BuildContext context) {

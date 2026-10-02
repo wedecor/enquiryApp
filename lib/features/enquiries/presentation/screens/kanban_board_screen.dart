@@ -13,6 +13,7 @@ import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
 import '../widgets/list/kanban_lane.dart';
+import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -139,12 +140,19 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
+                final lostPrompt = await promptLostReasonIfNeeded(context, newStatus);
+                if (!lostPrompt.proceed) return;
                 try {
                   // Use repository so audit history, statusLabel, notifications
                   // and legacy-field cleanup all happen — same as dashboard tabs.
                   await ref
                       .read(enquiryRepositoryProvider)
-                      .updateStatus(id: enquiryId, nextStatus: newStatus, userId: user.uid);
+                      .updateStatus(
+                        id: enquiryId,
+                        nextStatus: newStatus,
+                        userId: user.uid,
+                        lostReason: lostPrompt.choice,
+                      );
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(

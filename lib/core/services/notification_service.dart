@@ -53,13 +53,17 @@ class NotificationService {
     }
   }
 
-  /// Send notification when an enquiry is assigned
+  /// Send notification when an enquiry is assigned.
+  ///
+  /// Pass [notifyAdmins] false when the same save already notifies admins
+  /// (new enquiry, status change), so nobody gets two pushes for one action.
   Future<void> notifyEnquiryAssigned({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String assignedTo,
     required String assignedBy,
+    bool notifyAdmins = true,
   }) async {
     try {
       // Get assigned user details
@@ -69,24 +73,28 @@ class NotificationService {
         return;
       }
 
-      // Send notification to assigned staff member
-      await _sendNotificationToUser(
-        userId: assignedTo,
-        title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
-        data: {
-          'type': 'enquiry_assigned',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'assignedBy': assignedBy,
-        },
-      );
+      if (assignedTo != assignedBy) {
+        await _sendNotificationToUser(
+          userId: assignedTo,
+          title: 'Enquiry Assigned to You',
+          body: 'You have been assigned an enquiry from $customerName for $eventType',
+          data: {
+            'type': 'enquiry_assigned',
+            'enquiryId': enquiryId,
+            'customerName': customerName,
+            'eventType': eventType,
+            'assignedBy': assignedBy,
+          },
+        );
+      }
 
-      // Get all admin users EXCEPT the assigner
-      final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
+      if (!notifyAdmins) return;
 
-      // Send notification to all admins (excluding the assigner)
+      // Admins other than the assigner; the assignee already got their own push.
+      final adminUsers = (await _getAdminUsers(
+        excludeUserId: assignedBy,
+      )).where((admin) => admin.uid != assignedTo).toList();
+
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,
@@ -491,7 +499,13 @@ class NotificationService {
     }
   }
 
-  /// Send notification to a specific user via their FCM token
+  /// Queues a notification for [userId] by writing `users/{userId}/notifications`.
+  ///
+  /// The `sendNotificationToUser` Cloud Function picks the document up, looks up
+  /// the recipient's device tokens and sends the push. The app must NOT read
+  /// another user's tokens itself: `users/{uid}/private/**` is owner-only in the
+  /// security rules, so that read failed with permission-denied and — because it
+  /// ran before this write — silently stopped every cross-user notification.
   Future<void> _sendNotificationToUser({
     required String userId,
     required String title,
@@ -499,111 +513,34 @@ class NotificationService {
     required Map<String, dynamic> data,
   }) async {
     try {
-      // Get user's FCM token
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) return;
-
-      // Read tokens from private subcollection to check if user has tokens
-      final tokensSnapshot = await _firestore
+      final notificationRef = await _firestore
           .collection('users')
           .doc(userId)
-          .collection('private')
-          .doc('notifications')
-          .collection('tokens')
-          .limit(10)
-          .get();
-
-      final tokenCount = tokensSnapshot.docs.length;
-      final tokens = tokensSnapshot.docs
-          .map((doc) => doc.get('token') as String?)
-          .where((token) => token != null && token.isNotEmpty)
-          .cast<String>()
-          .toList();
+          .collection('notifications')
+          .add({
+            'title': title,
+            'body': body,
+            'data': data,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       Log.i(
-        'NotificationService: checking tokens for user',
-        data: {
-          'userId': userId,
-          'tokenDocumentCount': tokenCount,
-          'validTokenCount': tokens.length,
-        },
-      );
-
-      // Store notification in Firestore for the user
-      // This will trigger the Cloud Function sendNotificationToUser
-      // We store it even if there are no tokens - the Cloud Function will handle it
-      DocumentReference? notificationRef;
-      try {
-        notificationRef = await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .add({
-              'title': title,
-              'body': body,
-              'data': data,
-              'read': false,
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-
-        if (kDebugMode) {
-          debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
-        }
-      } catch (firestoreError, stackTrace) {
-        if (kDebugMode) {
-          debugPrint('❌ ERROR storing notification: $firestoreError');
-        }
-        Log.e(
-          'NotificationService: CRITICAL ERROR storing notification in Firestore',
-          error: firestoreError,
-          stackTrace: stackTrace,
-          data: {'userId': userId, 'title': title},
-        );
-        rethrow; // Re-throw so we know it failed
-      }
-
-      if (kDebugMode) {
-        final hasPushTargets = tokens.isNotEmpty;
-        final pushTargetCount = tokens.length;
-        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
-        debugPrint('   UserId: $userId');
-        debugPrint('   NotificationId: ${notificationRef.id}');
-        debugPrint('   Title: $title');
-        debugPrint('   Body: $body');
-        debugPrint('   HasPushTargets: $hasPushTargets');
-        debugPrint('   PushTargetCount: $pushTargetCount');
-        if (tokens.isEmpty) {
-          debugPrint(
-            '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
-          );
-        }
-      }
-
-      Log.i(
-        'NotificationService: notification stored in Firestore',
+        'NotificationService: notification queued',
         data: {
           'userId': userId,
           'notificationId': notificationRef.id,
           'title': title,
-          'body': body,
-          'hasTokens': tokens.isNotEmpty,
-          'tokenCount': tokens.length,
-          'data': data,
+          'type': data['type'],
         },
       );
-
-      if (tokens.isEmpty) {
-        Log.w(
-          'NotificationService: notification stored but user has no FCM tokens',
-          data: {
-            'userId': userId,
-            'notificationId': notificationRef.id,
-            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
-          },
-        );
-      }
     } catch (e, st) {
-      Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: failed to queue notification',
+        error: e,
+        stackTrace: st,
+        data: {'userId': userId, 'title': title},
+      );
     }
   }
 

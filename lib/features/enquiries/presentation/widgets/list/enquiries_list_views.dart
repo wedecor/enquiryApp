@@ -237,7 +237,6 @@ class _EnquiriesPaginatedListState extends ConsumerState<EnquiriesPaginatedList>
               data: enquiryData,
               dropdownLookup: widget.dropdownLookup,
               showAssignee: widget.userRole == UserRole.admin && assignedTo != null,
-              onReturnFromDetail: _refreshPagination,
             ),
           );
         },

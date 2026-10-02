@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/admin/users/presentation/users_providers.dart' as users_providers;
+import '../../features/enquiries/domain/enquiry_lifecycle.dart';
 import '../../services/dropdown_lookup.dart';
 import '../../ui/primitives/primitives.dart';
 import 'enquiry_history_widget.dart';
@@ -387,6 +388,13 @@ class _ValueText extends ConsumerWidget {
         return _text(
           dropdownLookup?.labelForSource(stringValue) ?? DropdownLookup.titleCase(stringValue),
         );
+      case 'lostreason':
+        return _text(LostReason.labelOf(stringValue));
+      case 'totalcost':
+      case 'advancepaid':
+      case 'quotedamount':
+        final amount = value is num ? value as num : num.tryParse(stringValue);
+        return _text(amount == null ? stringValue : '₹${amount.toStringAsFixed(0)}');
       default:
         return _text(stringValue.isEmpty ? 'Not Set' : stringValue);
     }

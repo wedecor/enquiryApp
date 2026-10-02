@@ -72,6 +72,9 @@ TabBar buildAnalyticsTabBar({required BuildContext context, required TabControll
 
   return TabBar(
     controller: controller,
+    // Seven tabs: scroll sideways on phones instead of squeezing labels.
+    isScrollable: true,
+    tabAlignment: TabAlignment.start,
     dividerColor: Colors.transparent,
     indicatorSize: TabBarIndicatorSize.tab,
     labelPadding: const EdgeInsets.symmetric(horizontal: 2),
@@ -85,6 +88,14 @@ TabBar buildAnalyticsTabBar({required BuildContext context, required TabControll
     unselectedLabelColor: cs.onSurfaceVariant,
     labelStyle: label?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.1),
     unselectedLabelStyle: label?.copyWith(fontWeight: FontWeight.w500),
-    tabs: [tab('Overview'), tab('Trends'), tab('Breakdown'), tab('Tables')],
+    tabs: [
+      tab('Overview'),
+      tab('Pipeline'),
+      tab('Team'),
+      tab('Money'),
+      tab('Trends'),
+      tab('Breakdown'),
+      tab('Tables'),
+    ],
   );
 }
