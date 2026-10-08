@@ -35,6 +35,14 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   String? _initialAssignedTo;
   List<String> _initialImageUrls = const [];
 
+  // Customer lookup (create mode): existing customer + open-enquiry duplicate warning.
+  Timer? _lookupDebounce;
+  String? _whatsappNumber; // from prefill / "Use details"; no form field of its own
+  String? _whatsappForPhone; // normalized phone [_whatsappNumber] belongs to
+  String? _lookupPhone; // normalized phone of the last lookup
+  CustomerLookupResult? _customerLookup; // non-null only for a known customer
+  String? _duplicateDismissedForPhone;
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +56,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       _selectedStatus = 'new';
       _selectedPriority = 'medium';
       _selectedPaymentStatus = 'pending';
+      _applyPrefill(widget.prefill);
       _hydrated = true;
+      _phoneController.addListener(_onPhoneChanged);
+      _onPhoneChanged();
       Log.d('EnquiryFormScreen skip load (create mode)');
     } else if (widget.enquiryId != null) {
       Log.d(
@@ -160,8 +171,226 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     }
   }
 
+  void _applyPrefill(EnquiryPrefill? prefill) {
+    if (prefill == null) return;
+    _nameController.text = prefill.customerName ?? '';
+    _phoneController.text = prefill.customerPhone ?? '';
+    _emailController.text = prefill.customerEmail ?? '';
+    _locationController.text = prefill.eventLocation ?? '';
+    _whatsappNumber = prefill.whatsappNumber;
+    _whatsappForPhone = normalizePhone(prefill.customerPhone);
+    final source = prefill.source?.trim();
+    if (source != null && source.isNotEmpty) _selectedSource = source;
+    // "Add another event": the user already said this is a different event.
+    if (prefill.fromEnquiryId != null) {
+      _duplicateDismissedForPhone = normalizePhone(prefill.customerPhone);
+    }
+  }
+
+  bool get _isCreateMode => widget.mode != 'edit';
+
+  /// WhatsApp number to save — only while the phone still belongs to that customer.
+  String? get _currentWhatsapp =>
+      _whatsappForPhone != null && normalizePhone(_phoneController.text) == _whatsappForPhone
+      ? _whatsappNumber
+      : null;
+
+  /// Debounced lookup once the phone has enough digits (create mode only).
+  void _onPhoneChanged() {
+    if (!_isCreateMode) return;
+    final text = _phoneController.text;
+    final normalized = normalizePhone(text);
+    if (phoneDigitCount(text) < CustomerLookupService.minDigits) {
+      _lookupDebounce?.cancel();
+      _lookupPhone = null;
+      if (_customerLookup != null) setState(() => _customerLookup = null);
+      return;
+    }
+    if (normalized == _lookupPhone) return;
+    _lookupDebounce?.cancel();
+    // A different number: drop the previous customer's cards straight away.
+    if (_customerLookup != null) setState(() => _customerLookup = null);
+    _lookupDebounce = Timer(
+      const Duration(milliseconds: 500),
+      () => _runCustomerLookup(normalized),
+    );
+  }
+
+  /// Never throws: a failed lookup just shows no cards.
+  Future<void> _runCustomerLookup(String normalized) async {
+    _lookupPhone = normalized;
+    final result = await ref
+        .read(customerLookupServiceProvider)
+        .lookupOrNull(_phoneController.text.trim());
+    if (!mounted) return;
+    if (normalizePhone(_phoneController.text) != normalized) return; // phone changed meanwhile
+    if (result == null) {
+      // Allow a retry on the next edit.
+      _lookupPhone = null;
+    }
+    setState(() {
+      _customerLookup = (result?.isKnownCustomer ?? false) ? result : null;
+    });
+  }
+
+  /// The lookup result for the phone currently typed, if any.
+  CustomerLookupResult? get _currentCustomerLookup {
+    final lookup = _customerLookup;
+    if (lookup == null) return null;
+    if (normalizePhone(_phoneController.text) != _lookupPhone) return null;
+    return lookup;
+  }
+
+  bool get _duplicateWarningDismissed =>
+      _duplicateDismissedForPhone != null && _duplicateDismissedForPhone == _lookupPhone;
+
+  void _dismissDuplicateWarning() {
+    setState(() => _duplicateDismissedForPhone = _lookupPhone);
+  }
+
+  /// Fields "Use details" would change: empty ones are filled, typed ones differ.
+  ({bool fillsEmpty, List<String> conflicts}) _customerDetailsDiff(CustomerSummary customer) {
+    var fillsEmpty = false;
+    final conflicts = <String>[];
+    void check(String label, String current, String? incoming) {
+      final value = incoming?.trim() ?? '';
+      if (value.isEmpty) return;
+      if (current.trim().isEmpty) {
+        fillsEmpty = true;
+      } else if (current.trim().toLowerCase() != value.toLowerCase()) {
+        conflicts.add(label);
+      }
+    }
+
+    check('Name', _nameController.text, customer.name);
+    check('Email', _emailController.text, customer.email);
+    check('WhatsApp', _currentWhatsapp ?? '', customer.whatsappNumber);
+    return (fillsEmpty: fillsEmpty, conflicts: conflicts);
+  }
+
+  bool _canUseCustomerDetails(CustomerSummary customer) {
+    final diff = _customerDetailsDiff(customer);
+    return diff.fillsEmpty || diff.conflicts.isNotEmpty;
+  }
+
+  /// Fills empty name / email / WhatsApp; asks before replacing typed values.
+  Future<void> _useCustomerDetails(CustomerSummary customer) async {
+    final diff = _customerDetailsDiff(customer);
+    var overwrite = false;
+    if (diff.conflicts.isNotEmpty) {
+      overwrite = await ConfirmationDialog.show(
+        context: context,
+        title: 'Replace typed details?',
+        message:
+            '${diff.conflicts.join(', ')} already filled in differently. Replace with the '
+            'details from ${customer.name}\'s earlier enquiry?',
+        confirmText: 'Replace',
+        cancelText: 'Keep mine',
+        icon: Icons.person_search_outlined,
+      );
+      if (!mounted) return;
+    }
+    String pick(String current, String? incoming) {
+      final value = incoming?.trim() ?? '';
+      if (value.isEmpty) return current;
+      if (current.trim().isEmpty || overwrite) return value;
+      return current;
+    }
+
+    setState(() {
+      _nameController.text = pick(_nameController.text, customer.name);
+      _emailController.text = pick(_emailController.text, customer.email);
+      final whatsapp = pick(_currentWhatsapp ?? '', customer.whatsappNumber);
+      _whatsappNumber = whatsapp.isEmpty ? null : whatsapp;
+      _whatsappForPhone = _lookupPhone;
+    });
+  }
+
+  /// Opens an existing enquiry if the user may read it (admin or assignee).
+  void _openExistingEnquiry(CustomerEvent event) {
+    final isAdmin = ref.read(isAdminProvider);
+    if (!event.canOpen(isAdmin: isAdmin)) {
+      final who = event.assignedToName;
+      final message = who == null
+          ? 'Ask an admin — it\'s unassigned'
+          : 'Ask an admin — it\'s assigned to $who';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => EnquiryDetailsScreen(enquiryId: event.id)),
+    );
+  }
+
+  /// In create mode, confirms before saving when the customer has an open enquiry
+  /// and the warning wasn't dismissed. Lookup problems never block the save.
+  Future<bool> _confirmPossibleDuplicate() async {
+    if (!_isCreateMode) return true;
+    if (_lookupDebounce?.isActive ?? false) {
+      // Saved before the debounced lookup ran: check now, but never wait long.
+      _lookupDebounce!.cancel();
+      try {
+        await _runCustomerLookup(
+          normalizePhone(_phoneController.text),
+        ).timeout(const Duration(seconds: 4));
+      } catch (e) {
+        Log.w('EnquiryFormScreen: duplicate check skipped', data: {'error': e.toString()});
+      }
+      if (!mounted) return false;
+    }
+    final lookup = _currentCustomerLookup;
+    if (lookup == null || _duplicateWarningDismissed) return true;
+    final open = lookup.openEventList;
+    if (open.isEmpty) return true;
+    final first = open.first;
+    final assignee = first.assignedToName;
+    final confirmed = await ConfirmationDialog.show(
+      context: context,
+      title: 'Possible duplicate — create anyway?',
+      message:
+          '${lookup.customer?.name ?? 'This customer'} already has an open enquiry: '
+          '${customerEventSummary(first)}${assignee != null ? ' (assigned to $assignee)' : ''}.',
+      confirmText: 'Create anyway',
+      cancelText: 'Cancel',
+      icon: Icons.warning_amber_rounded,
+    );
+    return confirmed && mounted;
+  }
+
+  /// Existing-customer / open-enquiry cards under the phone field (create mode).
+  Widget? _customerMatchCards() {
+    if (!_isCreateMode) return null;
+    final lookup = _currentCustomerLookup;
+    final customer = lookup?.customer;
+    if (lookup == null || customer == null) return null;
+    final open = lookup.openEventList;
+    final showWarning = open.isNotEmpty && !_duplicateWarningDismissed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExistingCustomerCard(
+          result: lookup,
+          onUseDetails: _canUseCustomerDetails(customer)
+              ? () => _useCustomerDetails(customer)
+              : null,
+        ),
+        if (showWarning) ...[
+          const SizedBox(height: AppTokens.space2),
+          OpenEnquiryWarningCard(
+            customerName: customer.name,
+            openEvents: open,
+            onOpen: _openExistingEnquiry,
+            onDismiss: _dismissDuplicateWarning,
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   void dispose() {
+    _lookupDebounce?.cancel();
+    _phoneController.removeListener(_onPhoneChanged);
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -212,6 +441,9 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
       return;
     }
+
+    if (!await _confirmPossibleDuplicate()) return;
+    if (!mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -289,6 +521,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       priorityLabel: priorityLabel,
       sourceLabel: sourceLabel,
       paymentStatusLabel: paymentStatusLabel,
+      whatsappNumber: _currentWhatsapp,
     );
 
     final quoteFields = _quoteFields(const {});

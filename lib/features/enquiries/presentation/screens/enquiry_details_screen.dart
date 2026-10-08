@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,9 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../data/customer_lookup_service.dart';
+import '../../data/enquiry_merge_service.dart';
+import '../../domain/enquiry_prefill.dart';
 import '../widgets/enquiry_access_denied.dart';
 import '../widgets/enquiry_detail_footer.dart';
 import '../widgets/enquiry_details_body.dart';
@@ -19,6 +24,7 @@ import '../widgets/enquiry_display_labels.dart';
 import '../widgets/enquiry_glass_bar.dart';
 import '../widgets/enquiry_round_button.dart';
 import '../widgets/enquiry_sheet_header.dart';
+import '../widgets/form/enquiry_customer_match_cards.dart';
 import 'enquiry_form_screen.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
@@ -155,6 +161,24 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     final customerPhone = enquiryData['customerPhone'] as String?;
     final eventDateTs = enquiryData['eventDate'];
     final eventDate = eventDateTs is Timestamp ? eventDateTs.toDate() : null;
+    final isAdmin = userRole == UserRole.admin;
+    final phone = customerPhone?.trim() ?? '';
+    final otherEvents = phone.isEmpty
+        ? null
+        : ref
+              .watch(
+                customerOtherEventsProvider((phone: phone, excludeEnquiryId: widget.enquiryId)),
+              )
+              .valueOrNull;
+    final loadedActions = [
+      ...actions,
+      if (isAdmin)
+        EnquiryRoundButton(
+          icon: Icons.more_horiz_rounded,
+          tooltip: 'More actions',
+          onTap: _isUpdatingStatus ? null : () => _showMoreActions(enquiryData),
+        ),
+    ];
 
     return Stack(
       children: [
@@ -170,7 +194,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               eventDate: eventDate,
               statusValue: labels.statusValue,
               statusLabel: labels.statusLabel,
-              actions: actions,
+              actions: loadedActions,
+              repeatCustomer: (otherEvents?.totalEvents ?? 0) >= 1,
             ),
             EnquiryDetailsBody(
               enquiryId: widget.enquiryId,
@@ -180,6 +205,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               currentUserId: currentUserId,
               canViewImages: _canViewImages(userRole, enquiryData, currentUserId),
               bottomClearance: enquiryGlassBarClearance(context) + AppTokens.space4,
+              onAddEvent: isAdmin ? () => _addAnotherEvent(enquiryData) : null,
+              onOpenCustomerEvent: (event) => _openCustomerEvent(event, isAdmin: isAdmin),
             ),
           ],
         ),
@@ -229,6 +256,186 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         builder: (context) => EnquiryFormScreen(enquiryId: widget.enquiryId, mode: 'edit'),
       ),
     );
+  }
+
+  /// New enquiry for the same customer, with their details filled in.
+  void _addAnotherEvent(Map<String, dynamic> enquiryData) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => EnquiryFormScreen(
+          mode: 'create',
+          prefill: EnquiryPrefill.fromEnquiryData(enquiryData, enquiryId: widget.enquiryId),
+        ),
+      ),
+    );
+  }
+
+  /// Opens another enquiry of this customer if the user may read it.
+  void _openCustomerEvent(CustomerEvent event, {required bool isAdmin}) {
+    if (!event.canOpen(isAdmin: isAdmin)) {
+      final who = event.assignedToName;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(who == null ? 'Not assigned to you' : 'Assigned to $who')),
+      );
+      return;
+    }
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (context) => EnquiryDetailsScreen(enquiryId: event.id)),
+    );
+  }
+
+  Future<void> _showMoreActions(Map<String, dynamic> enquiryData) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.event_available_outlined),
+              title: const Text('Add another event'),
+              subtitle: const Text('New enquiry with this customer\'s details'),
+              onTap: () => Navigator.of(sheetContext).pop('add_event'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.merge_type_rounded),
+              title: const Text('Mark as duplicate of…'),
+              subtitle: const Text('Close this enquiry and merge it into another'),
+              onTap: () => Navigator.of(sheetContext).pop('merge'),
+            ),
+            const SizedBox(height: AppTokens.space2),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case 'add_event':
+        _addAnotherEvent(enquiryData);
+      case 'merge':
+        await _markAsDuplicate(enquiryData);
+    }
+  }
+
+  /// Admin: pick another enquiry of this customer, confirm, merge, then open it.
+  Future<void> _markAsDuplicate(Map<String, dynamic> enquiryData) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (enquiryData['mergedInto'] != null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('This enquiry is already marked as a duplicate')),
+      );
+      return;
+    }
+    final phone = (enquiryData['customerPhone'] as String?)?.trim() ?? '';
+    if (phone.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('This enquiry has no phone number to match on')),
+      );
+      return;
+    }
+
+    final result = await ref.read(customerLookupServiceProvider).lookupOrNull(
+      phone,
+      excludeEnquiryId: widget.enquiryId,
+    );
+    if (!mounted) return;
+    if (result == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not load this customer\'s enquiries. Try again.')),
+      );
+      return;
+    }
+    if (result.events.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No other enquiries for this customer')),
+      );
+      return;
+    }
+
+    final target = await showModalBottomSheet<CustomerEvent>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: AppTokens.space4),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTokens.space4,
+                  0,
+                  AppTokens.space4,
+                  AppTokens.space2,
+                ),
+                child: Text(
+                  'Duplicate of which enquiry?',
+                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                ),
+              ),
+              for (final event in result.events)
+                ListTile(
+                  title: Text(customerEventSummary(event)),
+                  subtitle: Text(
+                    event.assignedToName == null
+                        ? 'Unassigned'
+                        : 'Assigned to ${event.assignedToName}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(sheetContext).pop(event),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || target == null) return;
+
+    final confirmed = await ConfirmationDialog.show(
+      context: context,
+      title: 'Mark as duplicate?',
+      message:
+          'This enquiry will be closed as Closed Lost (Duplicate enquiry). Its notes and '
+          'images will be added to ${customerEventSummary(target)}.',
+      confirmText: 'Mark duplicate',
+      cancelText: 'Cancel',
+      isDestructive: true,
+      icon: Icons.merge_type_rounded,
+    );
+    if (!confirmed || !mounted) return;
+
+    final user = ref.read(currentUserWithFirestoreProvider).valueOrNull;
+    if (user == null) return;
+
+    setState(() => _isUpdatingStatus = true);
+    try {
+      await ref
+          .read(enquiryMergeServiceProvider)
+          .markAsDuplicate(sourceId: widget.enquiryId, targetId: target.id, userId: user.uid);
+      ref.invalidate(customerOtherEventsProvider);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Marked as duplicate — showing the kept enquiry')),
+      );
+      unawaited(
+        Navigator.of(context).pushReplacement<void, void>(
+          MaterialPageRoute<void>(
+            builder: (context) => EnquiryDetailsScreen(enquiryId: target.id),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text('Could not mark as duplicate: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
   }
 
   bool _canViewImages(UserRole? role, Map<String, dynamic> data, String meUid) {

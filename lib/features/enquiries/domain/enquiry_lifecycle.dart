@@ -8,12 +8,20 @@ enum LostReason {
   noResponse('no_response', 'No response'),
   eventCancelled('event_cancelled', 'Event cancelled / postponed'),
   outOfScope('out_of_scope', 'Not something we do'),
-  other('other', 'Other');
+  other('other', 'Other'),
+
+  /// Set only by "Mark as duplicate of…" (merge). Not offered in the lost-reason
+  /// sheet, and excluded from analytics (a duplicate is not a lead).
+  duplicate('duplicate', 'Duplicate enquiry');
 
   const LostReason(this.value, this.label);
 
   final String value;
   final String label;
+
+  /// Reasons a user can pick when closing an enquiry by hand.
+  static List<LostReason> get manualChoices =>
+      values.where((r) => r != LostReason.duplicate).toList(growable: false);
 
   static LostReason? fromValue(String? raw) {
     if (raw == null) return null;

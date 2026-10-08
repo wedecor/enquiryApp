@@ -23,6 +23,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     required this.statusValue,
     required this.statusLabel,
     this.actions = const [],
+    this.repeatCustomer = false,
   });
 
   final String enquiryId;
@@ -34,6 +35,9 @@ class EnquiryDetailsHeader extends StatelessWidget {
   final String statusValue;
   final String statusLabel;
   final List<Widget> actions;
+
+  /// Shows a small "Repeat customer" badge beside the status.
+  final bool repeatCustomer;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +72,10 @@ class EnquiryDetailsHeader extends StatelessWidget {
               style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
+          if (repeatCustomer) ...[
+            const SizedBox(width: AppTokens.space3),
+            const _RepeatCustomerBadge(),
+          ],
         ],
       ),
       footerHeight: EnquiryRoundAction.circleSize + 6 + 18 * textScale,
@@ -89,6 +97,32 @@ class EnquiryDetailsHeader extends StatelessWidget {
               enquiryId: enquiryId,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small pill marking a customer who has other enquiries.
+class _RepeatCustomerBadge extends StatelessWidget {
+  const _RepeatCustomerBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final ink = AppSurfaces.of(context).accentInk;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ink.withValues(alpha: 0.10),
+        borderRadius: AppRadius.full,
+        border: Border.all(color: ink.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: 2),
+        child: Text(
+          'Repeat customer',
+          maxLines: 1,
+          style: t.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }

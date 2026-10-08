@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -14,14 +16,17 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/enquiry_fields.dart';
+import '../../../../core/utils/phone_normalizer.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
+import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
 import '../../domain/enquiry_lifecycle.dart';
+import '../../domain/enquiry_prefill.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
@@ -29,8 +34,10 @@ import '../widgets/enquiry_form_images_section.dart';
 import '../widgets/enquiry_form_section.dart';
 import '../widgets/enquiry_glass_bar.dart';
 import '../widgets/enquiry_sheet_header.dart';
+import '../widgets/form/enquiry_customer_match_cards.dart';
 import '../widgets/form/enquiry_form_pipeline_fields.dart';
 import '../widgets/lost_reason_sheet.dart';
+import 'enquiry_details_screen.dart';
 
 part '../widgets/form/enquiry_form_persistence.dart';
 
@@ -39,10 +46,12 @@ class EnquiryFormScreen extends ConsumerStatefulWidget {
   /// Creates an EnquiryFormScreen
   /// [enquiryId] is required for editing mode
   /// [mode] can be 'create' or 'edit'
-  const EnquiryFormScreen({super.key, this.enquiryId, this.mode = 'create'});
+  /// [prefill] seeds the customer fields in create mode (ignored when editing)
+  const EnquiryFormScreen({super.key, this.enquiryId, this.mode = 'create', this.prefill});
 
   final String? enquiryId;
   final String mode;
+  final EnquiryPrefill? prefill;
 
   @override
   ConsumerState<EnquiryFormScreen> createState() => _EnquiryFormScreenState();
@@ -174,6 +183,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         phoneController: _phoneController,
         emailController: _emailController,
         locationController: _locationController,
+        phoneFooter: _customerMatchCards(),
       ),
       EnquiryFormEventFields(
         selectedDate: _selectedDate,

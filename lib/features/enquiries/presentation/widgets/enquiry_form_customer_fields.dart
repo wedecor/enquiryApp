@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/tokens.dart';
 import 'enquiry_form_section.dart';
 
 /// Customer name, phone, email, and location fields for the enquiry form.
@@ -10,12 +11,16 @@ class EnquiryFormCustomerFields extends StatelessWidget {
     required this.phoneController,
     required this.emailController,
     required this.locationController,
+    this.phoneFooter,
   });
 
   final TextEditingController nameController;
   final TextEditingController phoneController;
   final TextEditingController emailController;
   final TextEditingController locationController;
+
+  /// Shown under the phone / email row (e.g. existing-customer and duplicate cards).
+  final Widget? phoneFooter;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +82,7 @@ class EnquiryFormCustomerFields extends StatelessWidget {
             },
           ),
         ),
+        if (phoneFooter != null) ...[const SizedBox(height: AppTokens.space3), phoneFooter!],
         const SizedBox(height: kEnquiryFieldGap),
         TextFormField(
           controller: locationController,

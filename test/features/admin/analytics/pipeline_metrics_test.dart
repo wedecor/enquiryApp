@@ -383,4 +383,55 @@ void main() {
     );
     expect(byEvent.bookedValueInPeriod, 2000);
   });
+
+  group('duplicates', () {
+    Map<String, dynamic> dup(String id) =>
+        row(id, 'closed_lost', lostReason: 'duplicate')..['mergedInto'] = 'target';
+
+    test('are recognised by lost reason or mergedInto', () {
+      expect(isDuplicateRow(row('a', 'closed_lost', lostReason: 'duplicate')), isTrue);
+      expect(isDuplicateRow(row('b', 'closed_lost')..['mergedInto'] = 'x'), isTrue);
+      expect(isDuplicateRow(row('c', 'closed_lost', lostReason: 'price_too_high')), isFalse);
+      expect(isDuplicateRow(row('d', 'new')), isFalse);
+    });
+
+    test('are not leads in the funnel', () {
+      final f = computeFunnel([row('1', 'new'), row('2', 'approved'), dup('3')]);
+      expect(f.total, 2);
+      expect(f.lost, 0);
+      expect(f.open, 1);
+    });
+
+    test('are left out of lost reasons', () {
+      final r = computeLostReasons([
+        row('1', 'not_interested', lostReason: 'price_too_high'),
+        dup('2'),
+        dup('3'),
+      ]);
+      expect(r.map((e) => e.key), ['price_too_high']);
+    });
+
+    test('do not lower win rates', () {
+      final sources = computeSourcePerformance([row('1', 'approved'), dup('2')], now);
+      expect(sources.single.leads, 1);
+      expect(sources.single.lost, 0);
+      expect(sources.single.winRate, 1);
+    });
+
+    test('buildPipelineReport drops them from every count', () {
+      final report = buildPipelineReport(
+        allRows: [
+          row('1', 'new', created: DateTime(2026, 10, 2)),
+          dup('2')..['createdAt'] = DateTime(2026, 10, 3),
+        ],
+        start: DateTime(2026, 10, 1),
+        end: DateTime(2026, 11, 1),
+        attribution: AnalyticsAttribution.enquiryDate,
+        now: now,
+      );
+      expect(report.periodCount, 1);
+      expect(report.funnel.total, 1);
+      expect(report.lostReasons, isEmpty);
+    });
+  });
 }

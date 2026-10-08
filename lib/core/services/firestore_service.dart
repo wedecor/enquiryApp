@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
+import '../utils/phone_normalizer.dart';
 
 /// Status slice of the enquiries collection loaded by a role-scoped listener.
 enum EnquiryScope {
@@ -61,8 +62,8 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get enquiriesCollection =>
       _enquiriesCollection as CollectionReference<Map<String, dynamic>>;
 
-  static String _normalizePhone(String? phone) =>
-      phone == null ? '' : phone.replaceAll(RegExp(r'[^0-9]'), '');
+  /// Customer identity key (last 10 digits) — see [normalizePhone].
+  static String _normalizePhone(String? phone) => normalizePhone(phone);
 
   static String _makeTextIndex({
     required String name,
@@ -315,11 +316,14 @@ class FirestoreService {
     String? priorityLabel,
     String? sourceLabel,
     String? paymentStatusLabel,
+    String? whatsappNumber,
   }) async {
     final enquiryData = {
       'customerName': customerName,
       if (customerEmail.trim().isNotEmpty) 'customerEmail': customerEmail.toLowerCase(),
       'customerPhone': customerPhone,
+      if (whatsappNumber != null && whatsappNumber.trim().isNotEmpty)
+        'whatsappNumber': whatsappNumber.trim(),
       'eventType': eventType,
       'eventDate': eventDate,
       'eventLocation': eventLocation,

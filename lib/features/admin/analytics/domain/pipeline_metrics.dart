@@ -13,6 +13,8 @@ import '../../../enquiries/domain/enquiry_lifecycle.dart';
 /// * Win rate = won ÷ (won + lost), same as the existing conversion KPI.
 /// * "Won" = approved or completed. "Lost" = not interested / closed lost / cancelled.
 /// * Booked value = `totalCost` of won enquiries.
+/// * Duplicates (merged enquiries, lost reason `duplicate`) are not leads and are
+///   dropped up front ([leadRows]).
 
 // ── Field helpers ────────────────────────────────────────────────────────────
 
@@ -30,6 +32,16 @@ EnquiryStatus? metricStatus(Map<String, dynamic> row) =>
 bool isWon(Map<String, dynamic> row) => metricStatus(row)?.category == StatusCategory.won;
 
 bool isLostRow(Map<String, dynamic> row) => metricStatus(row)?.category == StatusCategory.lost;
+
+/// Closed by "Mark as duplicate of…" (lost reason `duplicate` or `mergedInto` set).
+/// A duplicate is not a lead: it is left out of every count and rate.
+bool isDuplicateRow(Map<String, dynamic> row) =>
+    (row['lostReason'] as String?)?.trim() == LostReason.duplicate.value ||
+    row['mergedInto'] != null;
+
+/// [rows] without duplicates (see [isDuplicateRow]).
+List<Map<String, dynamic>> leadRows(List<Map<String, dynamic>> rows) =>
+    rows.where((row) => !isDuplicateRow(row)).toList();
 
 /// Open = a known active canonical status (new / in talks). Unknown or
 /// missing statuses are not counted as open leads.
@@ -150,7 +162,8 @@ int furthestStage(Map<String, dynamic> row) {
   return rank;
 }
 
-FunnelReport computeFunnel(List<Map<String, dynamic>> rows) {
+FunnelReport computeFunnel(List<Map<String, dynamic>> allRows) {
+  final rows = leadRows(allRows);
   var inTalks = 0, approved = 0, completed = 0;
   var lostBefore = 0, lostAfterTalks = 0, lostAfterApproved = 0, open = 0;
   for (final row in rows) {
@@ -195,7 +208,7 @@ class LabeledCount {
 /// Lost enquiries grouped by `lostReason` ("not_recorded" when missing), largest first.
 List<LabeledCount> computeLostReasons(List<Map<String, dynamic>> rows) {
   final counts = <String, int>{};
-  for (final row in rows.where(isLostRow)) {
+  for (final row in leadRows(rows).where(isLostRow)) {
     final raw = (row['lostReason'] as String?)?.trim();
     final key = (raw == null || raw.isEmpty) ? 'not_recorded' : raw;
     counts[key] = (counts[key] ?? 0) + 1;
@@ -273,7 +286,7 @@ SpeedToLeadReport computeSpeedToLead(List<Map<String, dynamic>> rows) {
   final won = List<int>.filled(5, 0);
   final lost = List<int>.filled(5, 0);
 
-  for (final row in rows) {
+  for (final row in leadRows(rows)) {
     int? bucket;
     if (row['firstContactEstimated'] == true) {
       estimated++;
@@ -377,7 +390,7 @@ List<PerformanceRow> _groupPerformance(
   DateTime now,
 ) {
   final groups = <String, List<Map<String, dynamic>>>{};
-  for (final row in rows) {
+  for (final row in leadRows(rows)) {
     groups.putIfAbsent(keyOf(row), () => []).add(row);
   }
   final result = groups.entries.map((e) {
@@ -770,6 +783,7 @@ PipelineReport buildPipelineReport({
   required AnalyticsAttribution attribution,
   required DateTime now,
 }) {
+  allRows = leadRows(allRows);
   final period = rowsInPeriod(allRows, start: start, end: end, attribution: attribution);
   return PipelineReport(
     attribution: attribution,

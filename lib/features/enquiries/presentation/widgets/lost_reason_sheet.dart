@@ -90,7 +90,7 @@ class _LostReasonSheetState extends State<LostReasonSheet> {
                 style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: AppTokens.space3),
-              for (final reason in LostReason.values)
+              for (final reason in LostReason.manualChoices)
                 ListTile(
                   key: ValueKey('lost-reason-${reason.value}'),
                   contentPadding: EdgeInsets.zero,

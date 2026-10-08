@@ -7,8 +7,10 @@ import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../data/customer_lookup_service.dart';
 import '../../domain/enquiry_lifecycle.dart';
 import 'customer_info_section.dart';
+import 'customer_other_events_section.dart';
 import 'enquiry_assignment_section.dart';
 import 'enquiry_detail_info_row.dart';
 import 'enquiry_detail_section.dart';
@@ -28,6 +30,8 @@ class EnquiryDetailsBody extends StatelessWidget {
     required this.currentUserId,
     required this.canViewImages,
     required this.bottomClearance,
+    this.onAddEvent,
+    this.onOpenCustomerEvent,
   });
 
   final String enquiryId;
@@ -38,11 +42,18 @@ class EnquiryDetailsBody extends StatelessWidget {
   final bool canViewImages;
   final double bottomClearance;
 
+  /// "Add another event" for this customer (admins only).
+  final VoidCallback? onAddEvent;
+
+  /// Opens one of the customer's other enquiries; null hides that section.
+  final ValueChanged<CustomerEvent>? onOpenCustomerEvent;
+
   static const double _maxContentWidth = 760;
 
   @override
   Widget build(BuildContext context) {
     final images = (enquiryData['images'] as List?)?.cast<dynamic>() ?? const [];
+    final customerPhone = (enquiryData['customerPhone'] as String?)?.trim() ?? '';
     final width = MediaQuery.sizeOf(context).width;
     final side = ((width - _maxContentWidth) / 2).clamp(AppTokens.space4, double.infinity);
 
@@ -73,6 +84,7 @@ class EnquiryDetailsBody extends StatelessWidget {
           location:
               (enquiryData['eventLocation'] as String?) ??
               (enquiryData['location'] as String? ?? 'N/A'),
+          onAddEvent: onAddEvent,
         ),
         minor: EnquiryAssignmentSection(
           userRole: userRole,
@@ -81,6 +93,12 @@ class EnquiryDetailsBody extends StatelessWidget {
           currentUserId: currentUserId,
         ),
       ),
+      if (onOpenCustomerEvent != null && customerPhone.isNotEmpty)
+        CustomerOtherEventsSection(
+          enquiryId: enquiryId,
+          customerPhone: customerPhone,
+          onOpenEvent: onOpenCustomerEvent!,
+        ),
       if (canViewImages) EnquiryImagesSection(images: images),
       _AsymmetricPair(
         major: EnquiryDetailSection(
