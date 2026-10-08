@@ -9,7 +9,7 @@
   "scripts": {
     "clean": "rimraf lib dist node_modules .turbo .parcel-cache .cache || true",
     "build": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\" && tsc -p tsconfig.json",
-    "deploy": "firebase deploy --only functions:inviteUser,functions:adminUpdateUser,functions:autoExpireEnquiries,functions:sendNotificationToUser,functions:lookupCustomer",
+    "deploy": "firebase deploy --only functions:inviteUser,functions:adminUpdateUser,functions:autoExpireEnquiries,functions:sendNotificationToUser,functions:lookupCustomer,functions:approvedOnDate",
     "lint": "echo \"(optional) add eslint if needed\"",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

@@ -13,6 +13,7 @@ import '../../../dashboard/presentation/dashboard_providers.dart';
 import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
+import '../widgets/approved_date_clash_prompt.dart';
 import '../widgets/list/kanban_lane.dart';
 import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
@@ -155,6 +156,21 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
+                // Approving: warn when other approved bookings share the event date.
+                if (EnquiryStatus.isApproved(newStatus)) {
+                  final eventDate = _ts((doc.data() as Map<String, dynamic>)['eventDate']);
+                  if (eventDate != null) {
+                    final proceed = await confirmApprovedDateClash(
+                      context,
+                      ref,
+                      eventDate: eventDate,
+                      excludeEnquiryId: enquiryId,
+                      isDateChange: false,
+                    );
+                    if (!proceed || !context.mounted) return;
+                  }
+                }
+                if (!context.mounted) return;
                 final lostPrompt = await promptLostReasonIfNeeded(context, newStatus);
                 if (!lostPrompt.proceed) return;
                 try {

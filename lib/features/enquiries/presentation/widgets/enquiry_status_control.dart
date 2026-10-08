@@ -12,6 +12,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
+import 'approved_date_clash_prompt.dart';
 import 'enquiry_status_parts.dart';
 import 'lost_reason_sheet.dart';
 
@@ -238,12 +239,37 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
       );
       if (!proceed || !mounted) return;
     }
+    // Approving: warn when other approved bookings already fall on the event date.
+    var clashWarningAccepted = false;
+    if (EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue)) {
+      final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
+      if (eventDate != null && eventDate.year > 1971) {
+        setState(() => _isUpdatingStatus = true);
+        final decision = await approvedDateClashDecision(
+          context,
+          ref,
+          eventDate: eventDate,
+          excludeEnquiryId: widget.enquiryId,
+          isDateChange: false,
+        );
+        if (!mounted) return;
+        setState(() => _isUpdatingStatus = false);
+        if (!decision.proceed) {
+          setState(() => _selectedStatus = currentStatusValue);
+          return;
+        }
+        clashWarningAccepted = decision.shown;
+      }
+    }
     // Lost statuses ask for a reason; the reason sheet doubles as confirmation.
     final lostPrompt = await promptLostReasonIfNeeded(context, value);
     if (!mounted) return;
     final bool confirmed;
     if (EnquiryStatus.isLost(value)) {
       confirmed = lostPrompt.proceed;
+    } else if (clashWarningAccepted) {
+      // "Approve anyway" already confirmed this change.
+      confirmed = true;
     } else {
       confirmed = await ConfirmationDialog.show(
         context: context,

@@ -222,6 +222,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     }
 
     return Positioned(
+      left: 1,
+      right: 1,
       bottom: 3,
       child: CalendarDayMarkers(
         colors: [
@@ -230,6 +232,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         ],
         total: events.length,
         hasConflict: _conflicts.containsKey(dayKey),
+        // Approved bookings in the loaded (role-scoped) data — no extra query.
+        booked: statusCounts[EnquiryStatus.approved.value] ?? 0,
       ),
     );
   }

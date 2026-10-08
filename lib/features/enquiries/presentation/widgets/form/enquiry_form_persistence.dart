@@ -706,6 +706,29 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       }
     }
 
+    // Approved bookings: warn about other approved events on the same day when this
+    // save approves the enquiry, or moves an approved enquiry to a different day.
+    if (EnquiryStatus.isApproved(statusValue) && _selectedDate != null) {
+      final approving = statusDidChange;
+      final oldDate = parseEnquiryDateTime(oldEnquiryData['eventDate']);
+      final newDate = _selectedDate!;
+      final dateChanged =
+          oldDate == null ||
+          oldDate.year != newDate.year ||
+          oldDate.month != newDate.month ||
+          oldDate.day != newDate.day;
+      if (approving || dateChanged) {
+        final proceed = await confirmApprovedDateClash(
+          context,
+          ref,
+          eventDate: newDate,
+          excludeEnquiryId: widget.enquiryId,
+          isDateChange: !approving,
+        );
+        if (!proceed || !mounted) return;
+      }
+    }
+
     // Moving to a lost status asks why (same rule as every other status path).
     LostReasonChoice? lostChoice;
     if (statusDidChange && EnquiryStatus.isLost(statusValue)) {

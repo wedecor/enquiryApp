@@ -630,5 +630,6 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
 
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
+export { approvedOnDate } from "./bookings";
 // Removed: migrateStatusFields - Migration complete, no longer needed
 // Removed: notifyOverdueInTalks - 4-hour scheduled reminders disabled
