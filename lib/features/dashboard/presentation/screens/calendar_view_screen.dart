@@ -5,7 +5,6 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
-import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -13,6 +12,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../../enquiries/presentation/widgets/enquiry_list_item.dart';
+import '../dashboard_providers.dart';
 import '../widgets/calendar_day_agenda.dart';
 import '../widgets/calendar_day_markers.dart';
 import '../widgets/calendar_event.dart';
@@ -40,11 +40,38 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   final Map<DateTime, List<CalendarEvent>> _conflicts = {};
   final Map<DateTime, Map<String, int>> _statusCounts = {};
 
+  /// Months loaded either side of [_windowAnchor] (13-month event-date window).
+  static const int _windowMonthsBefore = 6;
+  static const int _windowMonthsAfter = 7;
+
+  /// First day of the month the loaded event-date window is centred on.
+  late DateTime _windowAnchor;
+
+  /// Last loaded documents, shown while a re-centred window is loading.
+  List<QueryDocumentSnapshot<Object?>>? _lastEnquiries;
+
   @override
   void initState() {
     super.initState();
     _selectedDay = DateTime.now();
     _focusedDay = DateTime.now();
+    _windowAnchor = DateTime(_focusedDay.year, _focusedDay.month);
+  }
+
+  DateTime get _windowStart =>
+      DateTime(_windowAnchor.year, _windowAnchor.month - _windowMonthsBefore);
+
+  DateTime get _windowEnd => DateTime(_windowAnchor.year, _windowAnchor.month + _windowMonthsAfter);
+
+  /// Re-centres the loaded window once [focusedDay] gets within a month of
+  /// either edge, so paging the calendar never shows an unloaded month.
+  void _ensureWindowCovers(DateTime focusedDay) {
+    final month = DateTime(focusedDay.year, focusedDay.month);
+    final safeStart = DateTime(_windowStart.year, _windowStart.month + 1);
+    final safeEnd = DateTime(_windowEnd.year, _windowEnd.month - 1);
+    if (month.isBefore(safeStart) || !month.isBefore(safeEnd)) {
+      setState(() => _windowAnchor = month);
+    }
   }
 
   @override
@@ -96,18 +123,25 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       return const Center(child: Text('User not found'));
     }
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(isAdmin, userId),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+    final enquiriesAsync = ref.watch(
+      calendarEnquiriesProvider((
+        isAdmin: isAdmin,
+        uid: userId,
+        start: _windowStart,
+        end: _windowEnd,
+      )),
+    );
+    return Builder(
+      builder: (context) {
+        if (enquiriesAsync.hasError) {
+          return Center(child: Text('Error: ${enquiriesAsync.error}'));
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final enquiries = enquiriesAsync.valueOrNull ?? _lastEnquiries;
+        if (enquiries == null) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        final enquiries = snapshot.data?.docs ?? [];
+        _lastEnquiries = enquiries;
         _processEnquiries(enquiries);
 
         final selectedDayKey = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
@@ -143,6 +177,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                     },
                     onPageChanged: (focusedDay) {
                       _focusedDay = focusedDay;
+                      _ensureWindowCovers(focusedDay);
                     },
                     onFormatChanged: (format) {
                       setState(() {
@@ -309,11 +344,5 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     if (value is DateTime) return value;
     if (value is Timestamp) return value.toDate();
     return null;
-  }
-
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String userId) {
-    return ref
-        .read(firestoreServiceProvider)
-        .watchEnquiriesForRoleByEventDate(isAdmin: isAdmin, assignedToUid: userId);
   }
 }

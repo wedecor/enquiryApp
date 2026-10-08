@@ -25,6 +25,7 @@ void main() {
     DateTime? lastContact,
     int? contactCount,
     int? reminders,
+    String? payment,
   }) => {
     'id': id,
     'customerName': 'Customer $id',
@@ -46,6 +47,7 @@ void main() {
     if (lastContact != null) 'lastContactAt': lastContact,
     if (contactCount != null) 'contactCount': contactCount,
     if (reminders != null) 'reminderClickCount': reminders,
+    if (payment != null) 'paymentStatusValue': payment,
   };
 
   group('statuses', () {
@@ -53,6 +55,18 @@ void main() {
       expect(isWon(row('a', 'confirmed')), isTrue);
       expect(isOpen(row('b', 'quote_sent')), isTrue);
       expect(furthestStage(row('c', 'quote_sent')), 1);
+    });
+
+    test('only known active statuses are open', () {
+      expect(isOpen(row('a', 'new')), isTrue);
+      expect(isOpen(row('b', 'in_talks')), isTrue);
+      expect(isOpen(row('c', 'approved')), isFalse);
+      expect(isOpen(row('d', 'not_interested')), isFalse);
+      expect(isOpen(row('e', 'not_intrested')), isFalse); // legacy typo → lost
+      expect(isLostRow(row('e', 'not_intrested')), isTrue);
+      expect(isOpen(row('f', 'mystery_status')), isFalse);
+      expect(isOpen(row('g', '')), isFalse);
+      expect(isOpen({'id': 'h'}), isFalse);
     });
 
     test('lost enquiries use stage timestamps for how far they got', () {
@@ -221,6 +235,54 @@ void main() {
       expect(overdue.length, 1);
       expect(overdue.first.id, '4');
       expect(overdue.first.outstanding, 50000);
+    });
+
+    test('paid enquiries are fully collected', () {
+      final paidPast = row(
+        '1',
+        'completed',
+        event: DateTime(2026, 9, 1),
+        total: 80000,
+        advance: 30000,
+        payment: 'paid',
+      );
+      final paidUpcoming = row(
+        '2',
+        'approved',
+        event: DateTime(2026, 10, 25),
+        total: 100000,
+        advance: 40000,
+        payment: 'Paid',
+      );
+      final partial = row(
+        '3',
+        'approved',
+        event: DateTime(2026, 10, 26),
+        total: 20000,
+        advance: 5000,
+        payment: 'partial',
+      );
+      final legacyField = {
+        ...row('4', 'completed', event: DateTime(2026, 9, 2), total: 10000),
+        'paymentStatus': 'paid',
+      };
+
+      expect(isFullyPaid(paidPast), isTrue);
+      expect(isFullyPaid(paidUpcoming), isTrue);
+      expect(isFullyPaid(partial), isFalse);
+      expect(isFullyPaid(legacyField), isTrue);
+      expect(outstandingOf(paidPast), 0);
+      expect(outstandingOf(partial), 15000);
+      expect(collectedOf(paidUpcoming), 100000);
+      expect(collectedOf(partial), 5000);
+
+      final months = computeMoneyByMonth([paidUpcoming, partial], now);
+      expect(months[0].booked, 120000);
+      expect(months[0].collected, 105000);
+      expect(months[0].outstanding, 15000);
+
+      final overdue = computeOverdue([paidPast, legacyField, partial], now);
+      expect(overdue, isEmpty);
     });
   });
 

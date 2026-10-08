@@ -9,6 +9,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
+import '../../../dashboard/presentation/dashboard_providers.dart';
 import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
@@ -51,7 +52,6 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
     final dropdownLookup = ref
         .watch(dropdownLookupProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
-    final firestoreService = ref.watch(firestoreServiceProvider);
 
     return currentUser.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -61,20 +61,27 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
         if (user == null) return const Center(child: Text('Not logged in'));
         final isAdmin = user.role == UserRole.admin;
 
-        return StreamBuilder<QuerySnapshot>(
-          stream: firestoreService.watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: user.uid),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
+        // Same shared listeners as the dashboard: every column's slice.
+        final enquiriesAsync = watchRoleScopedEnquiries(
+          ref,
+          isAdmin: isAdmin,
+          uid: user.uid,
+          scopes: EnquiryScope.values,
+        );
+        return Builder(
+          builder: (context) {
+            if (enquiriesAsync.hasError) {
               return ErrorState(
                 message: 'Couldn\'t load the board.\nPlease check your connection and try again.',
-                error: snapshot.error,
+                error: enquiriesAsync.error,
               );
             }
+            final loadedDocs = enquiriesAsync.valueOrNull;
+            if (loadedDocs == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            final docs = (snapshot.data?.docs ?? []).where((doc) {
+            final docs = loadedDocs.where((doc) {
               if (widget.filters == null) return true;
               return matchesEnquiryFilters(
                 doc.data() as Map<String, dynamic>,
@@ -126,7 +133,15 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               },
               onDrop: (enquiryId, newStatus) async {
                 setState(() => _hoverColumn = null);
-                final doc = docs.firstWhere((d) => d.id == enquiryId);
+                QueryDocumentSnapshot<Object?>? doc;
+                for (final d in docs) {
+                  if (d.id == enquiryId) {
+                    doc = d;
+                    break;
+                  }
+                }
+                // Card vanished from the live data (deleted / filtered) mid-drag.
+                if (doc == null) return;
                 final currentStatus =
                     (doc.data() as Map<String, dynamic>)['statusValue'] as String?;
                 if (EnquiryStatus.statusesMatch(currentStatus, newStatus)) return;

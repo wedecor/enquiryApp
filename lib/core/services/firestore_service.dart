@@ -4,6 +4,18 @@ import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
 
+/// Status slice of the enquiries collection loaded by a role-scoped listener.
+enum EnquiryScope {
+  /// New, In Talks and Approved — the open pipeline (unbounded).
+  active,
+
+  /// Completed enquiries (most recent only).
+  completed,
+
+  /// Not Interested, Closed Lost and Cancelled (most recent only).
+  lost,
+}
+
 /// Service class for handling all Firestore database operations.
 ///
 /// This service provides a clean abstraction over Firebase Firestore,
@@ -416,15 +428,73 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Default cap for [watchEnquiriesForRole] (most recent by `createdAt`).
+  static const int recentEnquiriesLimit = 500;
+
+  /// Cap for the terminal (completed / lost) slices in [watchEnquiriesForRoleScope].
+  static const int terminalEnquiriesLimit = 200;
+
+  /// Stored `statusValue`s (canonical + legacy aliases) covered by [scope].
+  ///
+  /// Active work is New, In Talks and Approved (booked, not yet delivered).
+  static List<String> rawStatusValuesForScope(EnquiryScope scope) {
+    final statuses = switch (scope) {
+      EnquiryScope.active => const [
+        EnquiryStatus.newEnquiry,
+        EnquiryStatus.inTalks,
+        EnquiryStatus.approved,
+      ],
+      EnquiryScope.completed => const [EnquiryStatus.completed],
+      EnquiryScope.lost => [
+        for (final status in EnquiryStatus.values)
+          if (status.category == StatusCategory.lost) status,
+      ],
+    };
+    return [for (final status in statuses) ...EnquiryStatus.rawValuesFor(status.value)];
+  }
+
   /// Real-time enquiries stream scoped by role (admin: all, staff: assigned only).
-  Stream<QuerySnapshot> watchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
-    if (isAdmin) {
-      return getEnquiries();
+  ///
+  /// Bounded to the most recent [limit] enquiries by `createdAt` (pass `null`
+  /// for no cap). Dashboard / Kanban use [watchEnquiriesForRoleScope] instead.
+  Stream<QuerySnapshot> watchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+    int? limit = recentEnquiriesLimit,
+  }) {
+    Query query = _enquiriesCollection;
+    if (!isAdmin) {
+      query = query.where('assignedTo', isEqualTo: assignedToUid);
     }
-    return _enquiriesCollection
-        .where('assignedTo', isEqualTo: assignedToUid)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    query = query.orderBy('createdAt', descending: true);
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+    return query.snapshots();
+  }
+
+  /// Role-scoped stream of one status slice of the enquiries collection.
+  ///
+  /// [EnquiryScope.active] is unbounded (the open pipeline is small and must be
+  /// complete); the terminal slices are capped at [terminalEnquiriesLimit],
+  /// newest first. Uses the `statusValue + createdAt DESC` indexes (staff:
+  /// `assignedTo + statusValue + createdAt DESC`).
+  Stream<QuerySnapshot> watchEnquiriesForRoleScope({
+    required bool isAdmin,
+    String? assignedToUid,
+    required EnquiryScope scope,
+  }) {
+    Query query = _enquiriesCollection;
+    if (!isAdmin) {
+      query = query.where('assignedTo', isEqualTo: assignedToUid);
+    }
+    query = query
+        .where('statusValue', whereIn: rawStatusValuesForScope(scope))
+        .orderBy('createdAt', descending: true);
+    if (scope != EnquiryScope.active) {
+      query = query.limit(terminalEnquiriesLimit);
+    }
+    return query.snapshots();
   }
 
   /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
@@ -560,16 +630,23 @@ class FirestoreService {
   Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveStatusDropdownItems() =>
       watchActiveDropdownItems('statuses');
 
-  /// Calendar view: enquiries ordered by event date (role-scoped).
+  /// Calendar view: enquiries with `eventDate` in [[start], [end]), ordered by
+  /// event date (role-scoped). Staff uses the `assignedTo + eventDate` index.
   Stream<QuerySnapshot> watchEnquiriesForRoleByEventDate({
     required bool isAdmin,
     String? assignedToUid,
+    required DateTime start,
+    required DateTime end,
   }) {
     Query query = _enquiriesCollection;
     if (!isAdmin && assignedToUid != null) {
       query = query.where('assignedTo', isEqualTo: assignedToUid);
     }
-    return query.orderBy('eventDate', descending: false).snapshots();
+    return query
+        .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('eventDate', isLessThan: Timestamp.fromDate(end))
+        .orderBy('eventDate', descending: false)
+        .snapshots();
   }
 
   /// Updates an existing enquiry document.

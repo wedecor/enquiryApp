@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -216,34 +218,54 @@ class AnalyticsRepository {
       ..sort((a, b) => a.x.compareTo(b.x));
   }
 
-  /// Get recent enquiries for table display
-  Future<List<RecentEnquiry>> getRecentEnquiries({
+  /// Recent enquiries for table display: newest [limit] rows of [raw] by `createdAt`.
+  ///
+  /// Sorts in memory, so no `createdAt DESC` composite index is needed.
+  static List<RecentEnquiry> aggregateRecentEnquiries(
+    List<Map<String, dynamic>> raw, {
+    int limit = 20,
+  }) {
+    DateTime? createdOf(Map<String, dynamic> row) => (row['createdAt'] as Timestamp?)?.toDate();
+    final sorted = raw.where((row) => createdOf(row) != null).toList()
+      ..sort((a, b) => createdOf(b)!.compareTo(createdOf(a)!));
+    return sorted.take(limit).map(recentEnquiryFromRaw).toList();
+  }
+
+  /// Maps a raw enquiry row (with `id`) to a [RecentEnquiry].
+  static RecentEnquiry recentEnquiryFromRaw(Map<String, dynamic> data) {
+    final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+
+    return RecentEnquiry(
+      id: (data['id'] as String?) ?? '',
+      date: createdAt,
+      customerName: (data['customerName'] as String?) ?? 'Unknown',
+      eventType: (data['eventType'] as String?) ?? 'Unknown',
+      status:
+          EnquiryStatus.canonicalValue(data['statusValue'] as String?) ??
+          (data['statusValue'] as String?) ??
+          'Unknown',
+      source: (data['source'] as String?) ?? 'Unknown',
+      priority: (data['priority'] as String?) ?? 'medium',
+      totalCost: (data['totalCost'] as num?)?.toDouble(),
+    );
+  }
+
+  /// Rows created inside [dateRange] that match the non-date [filters].
+  ///
+  /// Client-side equivalent of [fetchEnquiriesRaw], applied to the cached
+  /// [analyticsRawRowsProvider] rows.
+  static List<Map<String, dynamic>> rowsInPeriod(
+    List<Map<String, dynamic>> rows, {
     required DateRange dateRange,
     AnalyticsFilters? filters,
-    int limit = 20,
-  }) async {
-    Query query = _buildBaseQuery(dateRange, filters);
-    query = query.orderBy('createdAt', descending: true).limit(limit);
-
-    final snapshot = await query.get();
-
-    return snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-
-      return RecentEnquiry(
-        id: doc.id,
-        date: createdAt,
-        customerName: (data['customerName'] as String?) ?? 'Unknown',
-        eventType: (data['eventType'] as String?) ?? 'Unknown',
-        status:
-            EnquiryStatus.canonicalValue(data['statusValue'] as String?) ??
-            (data['statusValue'] as String?) ??
-            'Unknown',
-        source: (data['source'] as String?) ?? 'Unknown',
-        priority: (data['priority'] as String?) ?? 'medium',
-        totalCost: (data['totalCost'] as num?)?.toDouble(),
-      );
+  }) {
+    return rows.where((row) {
+      final createdAt = (row['createdAt'] as Timestamp?)?.toDate();
+      if (createdAt == null) return false;
+      if (createdAt.isBefore(dateRange.start) || !createdAt.isBefore(dateRange.end)) {
+        return false;
+      }
+      return filters == null || matchesAnalyticsFilters(row, filters);
     }).toList();
   }
 
@@ -257,14 +279,16 @@ class AnalyticsRepository {
     return lookup.statusMap.keys.toList()..sort();
   }
 
-  /// Get all available sources for filters
-  Future<List<String>> getSources() async {
-    return _getUniqueCanonicalValues('sourceValue', 'source');
+  /// Get all available sources for filters from canonical lookup
+  /// (`dropdowns/sources/items`).
+  List<String> getSources(DropdownLookup lookup) {
+    return lookup.sourceMap.keys.toList()..sort();
   }
 
-  /// Get all available priorities for filters
-  Future<List<String>> getPriorities() async {
-    return _getUniqueCanonicalValues('priorityValue', 'priority');
+  /// Get all available priorities for filters from canonical lookup
+  /// (`dropdowns/priorities/items`).
+  List<String> getPriorities(DropdownLookup lookup) {
+    return lookup.priorityMap.keys.toList()..sort();
   }
 
   /// Build base query with date range and filters
@@ -293,21 +317,6 @@ class AnalyticsRepository {
     }
 
     return query;
-  }
-
-  Future<List<String>> _getUniqueCanonicalValues(String canonical, String legacy) async {
-    final snapshot = await _firestore.collection('enquiries').limit(1000).get();
-    final values = <String>{};
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final canonicalVal = data[canonical] as String?;
-      if (canonicalVal != null && canonicalVal.isNotEmpty) values.add(canonicalVal);
-      final legacyVal = data[legacy] as String?;
-      if (legacyVal != null && legacyVal.isNotEmpty) values.add(legacyVal);
-    }
-
-    return values.toList()..sort();
   }
 
   static DateTime _truncateToTimeBucketStatic(DateTime date, TimeBucket bucket) {
@@ -339,3 +348,46 @@ class AnalyticsRepository {
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
   return AnalyticsRepository(firestore: ref.watch(firestoreServiceProvider).firestore);
 });
+
+/// How long [analyticsRawRowsProvider] keeps its rows once nothing watches it.
+const Duration analyticsRawRowsTtl = Duration(minutes: 5);
+
+/// Every enquiry row (see [AnalyticsRepository.fetchAllEnquiriesRaw]), cached
+/// so filter changes and tab switches reuse one download.
+///
+/// Kept alive for [analyticsRawRowsTtl] after a successful fetch; the analytics
+/// refresh button invalidates it. Errors are not cached.
+final analyticsRawRowsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final repository = ref.watch(analyticsRepositoryProvider);
+  final link = ref.keepAlive();
+  Timer? expiry;
+  ref.onDispose(() => expiry?.cancel());
+  try {
+    final rows = await repository.fetchAllEnquiriesRaw();
+    expiry = Timer(analyticsRawRowsTtl, link.close);
+    return rows;
+  } catch (_) {
+    link.close();
+    rethrow;
+  }
+});
+
+/// Applies the non-date analytics filters (event type, status, priority, source)
+/// client-side, with legacy status values resolved to canonical.
+bool matchesAnalyticsFilters(Map<String, dynamic> row, AnalyticsFilters filters) {
+  bool matches(String? filter, String primary, String legacy) {
+    if (filter == null || filter.isEmpty) return true;
+    final value = (row[primary] ?? row[legacy])?.toString().trim();
+    return value == filter;
+  }
+
+  if (filters.status != null && filters.status!.isNotEmpty) {
+    final rowStatus = EnquiryStatus.canonicalValue(row['statusValue'] as String?);
+    if (rowStatus != EnquiryStatus.canonicalValue(filters.status)) return false;
+  }
+  return matches(filters.eventType, 'eventTypeValue', 'eventType') &&
+      matches(filters.priority, 'priorityValue', 'priority') &&
+      matches(filters.source, 'sourceValue', 'source');
+}

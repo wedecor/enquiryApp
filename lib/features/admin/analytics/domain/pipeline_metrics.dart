@@ -31,9 +31,15 @@ bool isWon(Map<String, dynamic> row) => metricStatus(row)?.category == StatusCat
 
 bool isLostRow(Map<String, dynamic> row) => metricStatus(row)?.category == StatusCategory.lost;
 
-bool isOpen(Map<String, dynamic> row) {
-  final s = metricStatus(row);
-  return s == null || s.category == StatusCategory.active;
+/// Open = a known active canonical status (new / in talks). Unknown or
+/// missing statuses are not counted as open leads.
+bool isOpen(Map<String, dynamic> row) => metricStatus(row)?.category == StatusCategory.active;
+
+/// True when the payment status (`paymentStatusValue`, legacy `paymentStatus`)
+/// is `paid`: the enquiry is fully collected whatever `advancePaid` says.
+bool isFullyPaid(Map<String, dynamic> row) {
+  final raw = row['paymentStatusValue'] ?? row['paymentStatus'];
+  return raw is String && raw.trim().toLowerCase() == 'paid';
 }
 
 String _canonicalField(Map<String, dynamic> row, String primary, String legacy) {
@@ -433,11 +439,21 @@ class OverdueItem {
   final double outstanding;
 }
 
+/// Balance still due: `totalCost - advancePaid`, or 0 once marked paid.
 double outstandingOf(Map<String, dynamic> row) {
+  if (isFullyPaid(row)) return 0;
   final total = metricNum(row['totalCost']) ?? 0;
   final advance = metricNum(row['advancePaid']) ?? 0;
   final o = total - advance;
   return o > 0 ? o : 0;
+}
+
+/// Amount received: `advancePaid`, or the full `totalCost` once marked paid.
+double collectedOf(Map<String, dynamic> row) {
+  final advance = metricNum(row['advancePaid']) ?? 0;
+  if (!isFullyPaid(row)) return advance;
+  final total = metricNum(row['totalCost']) ?? 0;
+  return total > advance ? total : advance;
 }
 
 /// Won enquiries by event month, from the current month for [months] months.
@@ -458,7 +474,7 @@ List<MoneyMonth> computeMoneyByMonth(
     final index = (event.year - start.year) * 12 + (event.month - start.month);
     if (index < 0 || index >= months) continue;
     booked[index] += metricNum(row['totalCost']) ?? 0;
-    collected[index] += metricNum(row['advancePaid']) ?? 0;
+    collected[index] += collectedOf(row);
     count[index]++;
   }
   return [
