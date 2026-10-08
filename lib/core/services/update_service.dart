@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -16,24 +17,39 @@ class UpdateService {
   static const String _lastDismissedKey = 'last_dismissed_update';
   static const String _lastCheckedKey = 'last_update_check';
 
-  /// Check for available updates
+  /// Build number that was last reported as a *required* update. While the
+  /// installed build is below it, the hourly rate limit is skipped so a
+  /// forced update can't be dodged by restarting the app.
+  static const String _forcedBuildKey = 'forced_update_build';
+
+  /// The sideloaded-APK updater only makes sense on the Android app (not the
+  /// website, not other platforms).
+  static bool get isSupportedPlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Check for available updates. Returns null when up to date, on
+  /// unsupported platforms, when rate limited, or on any error.
   static Future<UpdateInfo?> checkForUpdate({bool forceCheck = false}) async {
+    if (!isSupportedPlatform) return null;
+
     try {
-      // Rate limit: only check once per hour
       final prefs = await SharedPreferences.getInstance();
       final lastChecked = prefs.getInt(_lastCheckedKey) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-
-      if (!forceCheck && now - lastChecked < 3600000) {
-        // 1 hour
-        Logger.debug('Update check skipped - rate limited', tag: 'UpdateService');
-        return null;
-      }
 
       // Get current app version
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
       final currentBuildNumber = int.tryParse(packageInfo.buildNumber) ?? 0;
+
+      // Rate limit: only check once per hour, unless a required update is
+      // still pending for this build.
+      final forcedBuild = prefs.getInt(_forcedBuildKey) ?? 0;
+      final forcedPending = forcedBuild > currentBuildNumber;
+      if (!forceCheck && !forcedPending && now - lastChecked < 3600000) {
+        Logger.debug('Update check skipped - rate limited', tag: 'UpdateService');
+        return null;
+      }
 
       Logger.info(
         'Checking for updates - current: $currentVersion+$currentBuildNumber',
@@ -52,9 +68,13 @@ class UpdateService {
 
       final versionData = json.decode(response.body) as Map<String, dynamic>;
       final remoteVersion = versionData['version'] as String?;
-      final remoteBuildNumber = versionData['buildNumber'] as int?;
+      final remoteBuildNumber = (versionData['buildNumber'] as num?)?.toInt();
       final releaseNotes = versionData['releaseNotes'] as String?;
-      final isForced = versionData['forceUpdate'] as bool? ?? false;
+      final forceFlag = versionData['forceUpdate'] as bool? ?? false;
+      final minSupportedBuild = (versionData['minSupportedBuildNumber'] as num?)?.toInt();
+      // Published for reference only: the APK is downloaded by the browser,
+      // so the app can't verify it. Not enforced.
+      final sha256 = versionData['sha256'] as String?;
       String downloadUrl = versionData['downloadUrl'] as String? ?? _downloadUrl;
       // Convert relative URLs to absolute URLs
       if (downloadUrl.isNotEmpty && !downloadUrl.startsWith('http')) {
@@ -71,7 +91,21 @@ class UpdateService {
 
       // Check if update is available
       if (remoteBuildNumber > currentBuildNumber) {
-        Logger.info('Update available: $remoteVersion+$remoteBuildNumber', tag: 'UpdateService');
+        // Required when flagged, or when this build is below the minimum
+        // supported build.
+        final belowMinimum = minSupportedBuild != null && currentBuildNumber < minSupportedBuild;
+        final isForced = forceFlag || belowMinimum;
+
+        if (isForced) {
+          await prefs.setInt(_forcedBuildKey, remoteBuildNumber);
+        } else {
+          await prefs.remove(_forcedBuildKey);
+        }
+
+        Logger.info(
+          'Update available: $remoteVersion+$remoteBuildNumber (forced: $isForced)',
+          tag: 'UpdateService',
+        );
 
         return UpdateInfo(
           currentVersion: currentVersion,
@@ -81,9 +115,11 @@ class UpdateService {
           releaseNotes: releaseNotes ?? 'Bug fixes and improvements',
           downloadUrl: downloadUrl,
           isForced: isForced,
+          sha256: sha256,
         );
       }
 
+      await prefs.remove(_forcedBuildKey);
       Logger.info('App is up to date', tag: 'UpdateService');
       return null;
     } catch (e) {
@@ -158,6 +194,9 @@ class UpdateInfo {
   final String downloadUrl;
   final bool isForced;
 
+  /// SHA-256 of the APK from version.json (informational; not verified).
+  final String? sha256;
+
   UpdateInfo({
     required this.currentVersion,
     required this.currentBuildNumber,
@@ -166,6 +205,7 @@ class UpdateInfo {
     required this.releaseNotes,
     required this.downloadUrl,
     required this.isForced,
+    this.sha256,
   });
 
   String get currentVersionString => '$currentVersion+$currentBuildNumber';
@@ -182,6 +222,14 @@ class UpdateDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // A required update can't be dismissed with back / predictive back.
+    return PopScope(
+      canPop: !updateInfo.isForced,
+      child: _buildDialog(context, theme),
+    );
+  }
+
+  Widget _buildDialog(BuildContext context, ThemeData theme) {
     return AlertDialog(
       title: Row(
         children: [
@@ -301,7 +349,8 @@ class UpdateDialog extends StatelessWidget {
               );
               return;
             }
-            navigator.pop(true);
+            // A required update keeps the dialog up: the user must install.
+            if (!updateInfo.isForced) navigator.pop(true);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: updateInfo.isForced

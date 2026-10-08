@@ -79,10 +79,22 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   final Ref ref;
 
+  /// Runs [action], mirrors the outcome in [state] and rethrows on failure
+  /// so callers can show an error instead of a false success message.
+  Future<void> _run(Future<void> Function() action) async {
+    state = const AsyncLoading();
+    try {
+      await action();
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
   /// Create a new dropdown item
   Future<void> createItem(DropdownGroup group, DropdownItemInput input) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.create(group, input);
     });
@@ -90,8 +102,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   /// Update an existing dropdown item
   Future<void> updateItem(DropdownGroup group, String value, Map<String, dynamic> patch) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.update(group, value, patch);
     });
@@ -99,8 +110,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   /// Toggle active status of a dropdown item
   Future<void> toggleActive(DropdownGroup group, String value, bool active) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.toggleActive(group, value, active);
     });
@@ -108,8 +118,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   /// Delete a dropdown item
   Future<void> deleteItem(DropdownGroup group, String value) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.delete(group, value);
     });
@@ -117,8 +126,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   /// Reorder dropdown items
   Future<void> reorderItems(DropdownGroup group, List<String> orderedValues) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.reorder(group, orderedValues);
     });
@@ -126,8 +134,7 @@ class DropdownFormController extends StateNotifier<AsyncValue<void>> {
 
   /// Replace a dropdown value in all enquiries
   Future<void> replaceInEnquiries(DropdownGroup group, String oldValue, String newValue) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    await _run(() async {
       final repository = ref.read(dropdownsRepositoryProvider);
       await repository.replaceInEnquiries(group, oldValue, newValue);
     });

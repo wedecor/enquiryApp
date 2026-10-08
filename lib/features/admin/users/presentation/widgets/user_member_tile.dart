@@ -9,7 +9,8 @@ import '../../domain/user_model.dart' as domain;
 /// Floating glass member row: monogram avatar, name/email, role pill and
 /// active status. [wide] shows phone/dates and inline action buttons; narrow
 /// layouts collapse the actions into a menu. Actions are reported through
-/// [onAction] as `edit`, `activate` or `deactivate`.
+/// [onAction] as `edit`, `activate` or `deactivate`. When [isSelf] is true
+/// (the signed-in user's own row) activate/deactivate is not offered.
 class UserMemberTile extends StatelessWidget {
   const UserMemberTile({
     super.key,
@@ -17,11 +18,13 @@ class UserMemberTile extends StatelessWidget {
     required this.isAdmin,
     required this.wide,
     required this.onAction,
+    this.isSelf = false,
   });
 
   final domain.UserModel user;
   final bool isAdmin;
   final bool wide;
+  final bool isSelf;
   final ValueChanged<String> onAction;
 
   @override
@@ -98,10 +101,10 @@ class UserMemberTile extends StatelessWidget {
                 UserRolePill(role: user.role),
                 const SizedBox(width: AppTokens.space3),
                 SizedBox(width: 92, child: UserStatusLabel(active: user.isActive)),
-                _InlineActions(user: user, isAdmin: isAdmin, onAction: onAction),
+                _InlineActions(user: user, isAdmin: isAdmin, isSelf: isSelf, onAction: onAction),
               ] else ...[
                 Expanded(child: identity),
-                _ActionsMenu(user: user, isAdmin: isAdmin, onAction: onAction),
+                _ActionsMenu(user: user, isAdmin: isAdmin, isSelf: isSelf, onAction: onAction),
               ],
             ],
           ),
@@ -148,10 +151,16 @@ class _WideDetails extends StatelessWidget {
 }
 
 class _InlineActions extends StatelessWidget {
-  const _InlineActions({required this.user, required this.isAdmin, required this.onAction});
+  const _InlineActions({
+    required this.user,
+    required this.isAdmin,
+    required this.isSelf,
+    required this.onAction,
+  });
 
   final domain.UserModel user;
   final bool isAdmin;
+  final bool isSelf;
   final ValueChanged<String> onAction;
 
   @override
@@ -166,8 +175,14 @@ class _InlineActions extends StatelessWidget {
         ),
         IconButton(
           icon: Icon(user.isActive ? Icons.block : Icons.check_circle_outline),
-          onPressed: isAdmin ? () => onAction(user.isActive ? 'deactivate' : 'activate') : null,
-          tooltip: isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only',
+          onPressed: isAdmin && !isSelf
+              ? () => onAction(user.isActive ? 'deactivate' : 'activate')
+              : null,
+          tooltip: isSelf
+              ? "You can't change your own status"
+              : isAdmin
+              ? (user.isActive ? 'Deactivate' : 'Activate')
+              : 'Admin only',
         ),
       ],
     );
@@ -175,10 +190,16 @@ class _InlineActions extends StatelessWidget {
 }
 
 class _ActionsMenu extends StatelessWidget {
-  const _ActionsMenu({required this.user, required this.isAdmin, required this.onAction});
+  const _ActionsMenu({
+    required this.user,
+    required this.isAdmin,
+    required this.isSelf,
+    required this.onAction,
+  });
 
   final domain.UserModel user;
   final bool isAdmin;
+  final bool isSelf;
   final ValueChanged<String> onAction;
 
   @override
@@ -198,17 +219,18 @@ class _ActionsMenu extends StatelessWidget {
             ],
           ),
         ),
-        PopupMenuItem(
-          value: user.isActive ? 'deactivate' : 'activate',
-          enabled: isAdmin,
-          child: Row(
-            children: [
-              Icon(user.isActive ? Icons.block : Icons.check_circle_outline),
-              const SizedBox(width: AppTokens.space2),
-              Text(isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only'),
-            ],
+        if (!isSelf)
+          PopupMenuItem(
+            value: user.isActive ? 'deactivate' : 'activate',
+            enabled: isAdmin,
+            child: Row(
+              children: [
+                Icon(user.isActive ? Icons.block : Icons.check_circle_outline),
+                const SizedBox(width: AppTokens.space2),
+                Text(isAdmin ? (user.isActive ? 'Deactivate' : 'Activate') : 'Admin only'),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

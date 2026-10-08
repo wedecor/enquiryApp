@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart' as auth_providers;
@@ -11,81 +12,99 @@ final usersRepositoryProvider = Provider<UsersRepository>((ref) {
   return UsersRepository(ref.watch(firestoreServiceProvider).firestore);
 });
 
+/// Users list filter. All filtering is client-side over the full list.
+typedef UsersFilterState = ({String search, String role, bool? isActive});
+
+const UsersFilterState _defaultUsersFilter = (search: '', role: 'All', isActive: null);
+
 // Filter state for users list
-class UsersFilter extends StateNotifier<Map<String, dynamic>> {
-  UsersFilter()
-    : super({
-        'search': '',
-        'role': 'All',
-        'active': null, // null means "All"
-        'limit': 20,
-        'startAfterEmail': null,
-      });
+class UsersFilter extends StateNotifier<UsersFilterState> {
+  UsersFilter() : super(_defaultUsersFilter);
 
   void updateSearch(String search) {
-    state = {...state, 'search': search, 'startAfterEmail': null};
+    state = (search: search, role: state.role, isActive: state.isActive);
   }
 
   void updateRole(String role) {
-    state = {...state, 'role': role, 'startAfterEmail': null};
+    state = (search: state.search, role: role, isActive: state.isActive);
   }
 
-  void updateActive(bool? active) {
-    state = {...state, 'active': active, 'startAfterEmail': null};
-  }
-
-  void loadMore(String lastEmail) {
-    state = {...state, 'startAfterEmail': lastEmail};
+  /// `null` means "All".
+  void updateActive(bool? isActive) {
+    state = (search: state.search, role: state.role, isActive: isActive);
   }
 
   void reset() {
-    state = {'search': '', 'role': 'All', 'active': null, 'limit': 20, 'startAfterEmail': null};
+    state = _defaultUsersFilter;
   }
 }
 
-final usersFilterProvider = StateNotifierProvider<UsersFilter, Map<String, dynamic>>((ref) {
+final usersFilterProvider = StateNotifierProvider<UsersFilter, UsersFilterState>((ref) {
   return UsersFilter();
 });
 
-// Users stream provider
-final usersStreamProvider = StreamProvider.family<List<UserModel>, Map<String, dynamic>>((
-  ref,
-  filter,
-) {
-  final repository = ref.read(usersRepositoryProvider);
-
-  return repository.watchUsers(
-    search: filter['search'] as String?,
-    role: filter['role'] as String?,
-    active: filter['active'] as bool?,
-    limit: filter['limit'] as int,
-    startAfterEmail: filter['startAfterEmail'] as String?,
-  );
+/// Live stream of all users (small team: no paging, no server-side filters).
+final usersStreamProvider = StreamProvider.autoDispose<List<UserModel>>((ref) {
+  return ref.watch(usersRepositoryProvider).watchUsers();
 });
 
-// User form controller for create/edit operations
+/// [usersStreamProvider] with the current [usersFilterProvider] applied.
+final filteredUsersProvider = Provider.autoDispose<AsyncValue<List<UserModel>>>((ref) {
+  final filter = ref.watch(usersFilterProvider);
+  return ref.watch(usersStreamProvider).whenData((users) => applyUsersFilter(users, filter));
+});
+
+/// Applies search (name/email), role and active filters. Active state is
+/// already `isActive ?? active` in [UserModel.fromFirestore], so legacy docs
+/// filter correctly.
+List<UserModel> applyUsersFilter(List<UserModel> users, UsersFilterState filter) {
+  final search = filter.search.trim().toLowerCase();
+  final role = filter.role;
+  final isActive = filter.isActive;
+  return users.where((user) {
+    if (role.isNotEmpty && role != 'All' && user.role.toLowerCase() != role) {
+      return false;
+    }
+    if (isActive != null && user.isActive != isActive) {
+      return false;
+    }
+    if (search.isNotEmpty &&
+        !user.name.toLowerCase().contains(search) &&
+        !user.email.toLowerCase().contains(search)) {
+      return false;
+    }
+    return true;
+  }).toList();
+}
+
+/// User-facing message for a failed admin user update. Uses the callable's
+/// human-readable message (e.g. "You can't change your own role").
+String userAdminErrorMessage(Object error) {
+  if (error is FirebaseFunctionsException) {
+    final message = error.message;
+    if (message != null && message.isNotEmpty) return message;
+    return 'Request failed (${error.code})';
+  }
+  return error.toString();
+}
+
+// User form controller for edit / activate operations. Errors are stored in
+// state AND rethrown so callers can show a failure message.
 class UserFormController extends StateNotifier<AsyncValue<void>> {
   UserFormController(this._repository) : super(const AsyncValue.data(null));
 
   final UsersRepository _repository;
 
-  Future<void> createUser(UserModel user) async {
+  /// Sends only the changed fields (`name`, `phone`, `role`, `isActive`) to
+  /// the `adminUpdateUser` callable.
+  Future<void> updateUser(String uid, Map<String, dynamic> changes) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.createUserDoc(user);
+      await _repository.adminUpdateUser(uid, changes);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> updateUser(String uid, Map<String, dynamic> updates) async {
-    state = const AsyncValue.loading();
-    try {
-      await _repository.updateUserDoc(uid, updates);
-      state = const AsyncValue.data(null);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
+      rethrow;
     }
   }
 
@@ -96,6 +115,7 @@ class UserFormController extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
+      rethrow;
     }
   }
 
@@ -135,29 +155,6 @@ final isCurrentUserAdminProvider = Provider<bool>((ref) {
   return ref.watch(isAdminProvider);
 });
 
-// Pagination state
-class PaginationState {
-  final bool hasMore;
-  final bool isLoading;
-  final String? lastEmail;
-
-  const PaginationState({this.hasMore = false, this.isLoading = false, this.lastEmail});
-
-  PaginationState copyWith({bool? hasMore, bool? isLoading, String? lastEmail}) {
-    return PaginationState(
-      hasMore: hasMore ?? this.hasMore,
-      isLoading: isLoading ?? this.isLoading,
-      lastEmail: lastEmail ?? this.lastEmail,
-    );
-  }
-}
-
-final paginationStateProvider = StateNotifierProvider<PaginationStateNotifier, PaginationState>((
-  ref,
-) {
-  return PaginationStateNotifier();
-});
-
 /// Display name lookup (name · phone with fallbacks)
 final userDisplayNameProvider = FutureProvider.family<String, String>((ref, userId) async {
   final repository = ref.watch(usersRepositoryProvider);
@@ -189,23 +186,3 @@ final userDisplayNameProvider = FutureProvider.family<String, String>((ref, user
 
   return parts.join(' · ');
 });
-
-class PaginationStateNotifier extends StateNotifier<PaginationState> {
-  PaginationStateNotifier() : super(const PaginationState());
-
-  void setHasMore(bool hasMore) {
-    state = state.copyWith(hasMore: hasMore);
-  }
-
-  void setLoading(bool loading) {
-    state = state.copyWith(isLoading: loading);
-  }
-
-  void setLastEmail(String email) {
-    state = state.copyWith(lastEmail: email);
-  }
-
-  void reset() {
-    state = const PaginationState();
-  }
-}

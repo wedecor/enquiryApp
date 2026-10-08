@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/firebase_auth_service.dart' show firebaseAuthServiceProvider;
 import '../../../../core/services/update_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
@@ -95,7 +96,7 @@ class AccountTab extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(top: AppTokens.space8),
-          child: AccountSignOutButton(onTap: () => _signOut(context)),
+          child: AccountSignOutButton(onTap: () => _signOut(context, ref)),
         ),
       ],
     );
@@ -143,6 +144,10 @@ class AccountTab extends ConsumerWidget {
   }
 
   Future<void> _checkForUpdates(BuildContext context) async {
+    if (!UpdateService.isSupportedPlatform) {
+      _showSnackBar(context, 'In-app updates are available only in the Android app.');
+      return;
+    }
     try {
       // Show loading indicator
       unawaited(
@@ -230,13 +235,16 @@ class AccountTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
-      await FirebaseAuth.instance.signOut();
+      // Goes through FirebaseAuthService so the FCM token is removed and the
+      // next person on this device doesn't receive this user's pushes.
+      await ref.read(firebaseAuthServiceProvider).signOut();
       safeLog('user_signed_out', {'method': 'settings_account_tab'});
 
+      // AuthGate shows the login screen; drop any pushed routes above it.
       if (context.mounted) {
-        unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false));
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       safeLog('sign_out_error', {'error': e.toString(), 'errorType': e.runtimeType.toString()});

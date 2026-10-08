@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:we_decor_enquiries/features/admin/users/domain/user_model.dart';
 import 'package:we_decor_enquiries/features/admin/users/presentation/users_providers.dart';
 
 void main() {
@@ -9,176 +10,81 @@ void main() {
       filter = UsersFilter();
     });
 
-    test('should initialize with default values', () {
-      final state = filter.state;
-
-      expect(state['search'], '');
-      expect(state['role'], 'All');
-      expect(state['active'], null);
-      expect(state['limit'], 20);
-      expect(state['startAfterEmail'], null);
+    tearDown(() {
+      filter.dispose();
     });
 
-    test('should update search correctly', () {
-      filter.updateSearch('john');
-
-      final state = filter.state;
-      expect(state['search'], 'john');
-      expect(state['startAfterEmail'], null); // should reset pagination
+    test('starts with default values', () {
+      expect(filter.state.search, '');
+      expect(filter.state.role, 'All');
+      expect(filter.state.isActive, isNull);
     });
 
-    test('should update role correctly', () {
+    test('updates each field without touching the others', () {
+      filter.updateSearch('ali');
       filter.updateRole('admin');
-
-      final state = filter.state;
-      expect(state['role'], 'admin');
-      expect(state['startAfterEmail'], null); // should reset pagination
-    });
-
-    test('should update active status correctly', () {
       filter.updateActive(true);
-
-      final state = filter.state;
-      expect(state['active'], true);
-      expect(state['startAfterEmail'], null); // should reset pagination
+      expect(filter.state.search, 'ali');
+      expect(filter.state.role, 'admin');
+      expect(filter.state.isActive, isTrue);
 
       filter.updateActive(null);
-
-      final newState = filter.state;
-      expect(newState['active'], null);
+      expect(filter.state.search, 'ali');
+      expect(filter.state.role, 'admin');
+      expect(filter.state.isActive, isNull);
     });
 
-    test('should load more correctly', () {
-      filter.loadMore('last@example.com');
-
-      final state = filter.state;
-      expect(state['startAfterEmail'], 'last@example.com');
-      expect(state['search'], ''); // other filters should remain unchanged
-      expect(state['role'], 'All');
-      expect(state['active'], null);
-    });
-
-    test('should reset to default values', () {
-      // First modify some values
-      filter.updateSearch('test');
+    test('reset restores defaults', () {
+      filter.updateSearch('x');
       filter.updateRole('staff');
-      filter.updateActive(true);
-      filter.loadMore('test@example.com');
-
-      // Then reset
+      filter.updateActive(false);
       filter.reset();
-
-      final state = filter.state;
-      expect(state['search'], '');
-      expect(state['role'], 'All');
-      expect(state['active'], null);
-      expect(state['limit'], 20);
-      expect(state['startAfterEmail'], null);
-    });
-
-    test('should handle role filter combinations', () {
-      // Test all role combinations
-      const roles = ['All', 'admin', 'staff'];
-
-      for (final role in roles) {
-        filter.updateRole(role);
-        expect(filter.state['role'], role);
-      }
-    });
-
-    test('should handle active filter combinations', () {
-      // Test all active combinations
-      const activeValues = [null, true, false];
-
-      for (final active in activeValues) {
-        filter.updateActive(active);
-        expect(filter.state['active'], active);
-      }
+      expect(filter.state.search, '');
+      expect(filter.state.role, 'All');
+      expect(filter.state.isActive, isNull);
     });
   });
 
-  group('PaginationState', () {
-    test('should initialize with default values', () {
-      const state = PaginationState();
+  group('applyUsersFilter', () {
+    final now = DateTime(2026, 10, 1);
+    UserModel user(String uid, String name, String email, String role, bool active) => UserModel(
+      uid: uid,
+      name: name,
+      email: email,
+      role: role,
+      isActive: active,
+      createdAt: now,
+      updatedAt: now,
+    );
 
-      expect(state.hasMore, false);
-      expect(state.isLoading, false);
-      expect(state.lastEmail, null);
+    final users = [
+      user('1', 'Ayesha Khan', 'ayesha@wedecor.in', 'admin', true),
+      user('2', 'Ravi Kumar', 'ravi@wedecor.in', 'staff', true),
+      user('3', 'Old Staff', 'old@wedecor.in', 'staff', false),
+    ];
+
+    test('no filters returns everyone', () {
+      final r = applyUsersFilter(users, (search: '', role: 'All', isActive: null));
+      expect(r.length, 3);
     });
 
-    test('should copyWith correctly', () {
-      const original = PaginationState();
-
-      final updated = original.copyWith(
-        hasMore: true,
-        isLoading: true,
-        lastEmail: 'test@example.com',
+    test('filters by role, active and search together', () {
+      expect(
+        applyUsersFilter(users, (search: '', role: 'staff', isActive: null)).map((u) => u.uid),
+        ['2', '3'],
       );
-
-      expect(updated.hasMore, true);
-      expect(updated.isLoading, true);
-      expect(updated.lastEmail, 'test@example.com');
-    });
-
-    test('should copyWith with partial updates', () {
-      const original = PaginationState(
-        hasMore: true,
-        isLoading: false,
-        lastEmail: 'original@example.com',
+      expect(
+        applyUsersFilter(users, (search: '', role: 'staff', isActive: true)).map((u) => u.uid),
+        ['2'],
       );
-
-      final updated = original.copyWith(isLoading: true);
-
-      expect(updated.hasMore, true); // unchanged
-      expect(updated.isLoading, true); // changed
-      expect(updated.lastEmail, 'original@example.com'); // unchanged
-    });
-  });
-
-  group('PaginationStateNotifier', () {
-    late PaginationStateNotifier notifier;
-
-    setUp(() {
-      notifier = PaginationStateNotifier();
-    });
-
-    test('should set hasMore correctly', () {
-      notifier.setHasMore(true);
-      expect(notifier.state.hasMore, true);
-
-      notifier.setHasMore(false);
-      expect(notifier.state.hasMore, false);
-    });
-
-    test('should set loading state correctly', () {
-      notifier.setLoading(true);
-      expect(notifier.state.isLoading, true);
-
-      notifier.setLoading(false);
-      expect(notifier.state.isLoading, false);
-    });
-
-    test('should set last email correctly', () {
-      notifier.setLastEmail('test@example.com');
-      expect(notifier.state.lastEmail, 'test@example.com');
-
-      notifier.setLastEmail('another@example.com');
-      expect(notifier.state.lastEmail, 'another@example.com');
-    });
-
-    test('should reset to default state', () {
-      // First set some values
-      notifier.setHasMore(true);
-      notifier.setLoading(true);
-      notifier.setLastEmail('test@example.com');
-
-      // Then reset
-      notifier.reset();
-
-      final state = notifier.state;
-      expect(state.hasMore, false);
-      expect(state.isLoading, false);
-      expect(state.lastEmail, null);
+      expect(
+        applyUsersFilter(users, (search: 'AYESHA', role: 'All', isActive: null)).map((u) => u.uid),
+        ['1'],
+      );
+      expect(
+        applyUsersFilter(users, (search: 'wedecor', role: 'All', isActive: false)).map((u) => u.uid),
+        ['3'],
+      );
     });
   });
 }
