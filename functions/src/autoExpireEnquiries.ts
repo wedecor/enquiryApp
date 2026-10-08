@@ -8,6 +8,8 @@ import {
   statusLabel,
 } from "./statusVocabulary";
 import { IST_TIME_ZONE, istDayStart } from "./istTime";
+import { planOccasionStamps, stampFields } from "./occasionStamping";
+import { OccasionStamp } from "./reengagementLogic";
 
 const PAGE_SIZE = 300;
 /**
@@ -132,7 +134,22 @@ export const autoExpireEnquiries = onSchedule(
           if (typeof assignedTo === "string" && assignedTo) recipientIds.add(assignedTo);
           const recipients: Recipient[] = Array.from(recipientIds).map((uid) => ({ uid }));
 
-          const opsForDoc = 2 + recipients.length;
+          // Yearly re-engagement stamp in the same write (the stamping trigger then
+          // sees the fields and does nothing). Wedding-family siblings of the same
+          // customer may be re-stamped to the wedding date as extra writes.
+          let occasionStamps = new Map<string, OccasionStamp>();
+          if (rule.to === "completed" && !doc.get("occasionManual")) {
+            try {
+              occasionStamps = await planOccasionStamps(db, doc.id, doc.data(), "completed");
+            } catch (error: any) {
+              logger.warn("Auto-complete: occasion stamping failed", { enquiryId: doc.id, error: error?.message });
+            }
+          }
+          const ownStamp = occasionStamps.get(doc.id);
+          const occasionFields: Record<string, unknown> = ownStamp ? stampFields(ownStamp) : {};
+          const siblingStamps = Array.from(occasionStamps.entries()).filter(([id]) => id !== doc.id);
+
+          const opsForDoc = 2 + recipients.length + siblingStamps.length;
           if (pendingWrites > 0 && pendingWrites + opsForDoc > MAX_BATCH_WRITES) {
             await batch.commit();
             batch = db.batch();
@@ -142,6 +159,7 @@ export const autoExpireEnquiries = onSchedule(
           batch.update(doc.ref, {
             ...stageFields,
             ...lostFields,
+            ...occasionFields,
             statusValue: rule.to,
             statusLabel: statusLabel(rule.to),
             statusUpdatedAt: FieldValue.serverTimestamp(),
@@ -151,6 +169,10 @@ export const autoExpireEnquiries = onSchedule(
             eventStatus: FieldValue.delete(),
             status_slug: FieldValue.delete(),
           });
+
+          for (const [siblingId, stamp] of siblingStamps) {
+            batch.update(db.collection("enquiries").doc(siblingId), stampFields(stamp));
+          }
 
           // Same shape as AuditService.recordChange (lib/core/services/audit_service.dart).
           batch.set(doc.ref.collection("history").doc(), {

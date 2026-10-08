@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../ui/primitives/primitives.dart';
+import '../../../../reengagement/presentation/reengagement_analytics_card.dart';
 import '../../domain/analytics_models.dart';
 import '../../domain/pipeline_metrics.dart';
 import '../analytics_controller.dart';
@@ -209,7 +210,11 @@ class AnalyticsTeamTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PipelineTabBody(
-      sections: (r) => [TeamSection(report: r), FollowUpSection(report: r)],
+      sections: (r) => [
+        TeamSection(report: r),
+        FollowUpSection(report: r),
+        const ReengagementAnalyticsCard(),
+      ],
     );
   }
 }

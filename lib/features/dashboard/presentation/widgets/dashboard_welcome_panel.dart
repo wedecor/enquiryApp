@@ -5,6 +5,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../../reengagement/presentation/upcoming_occasions_section.dart';
 import 'dashboard_today_section.dart';
 
 /// Editorial dashboard hero: date eyebrow, split-weight greeting and the
@@ -82,6 +83,8 @@ class DashboardWelcomePanel extends StatelessWidget {
             userId: user?.uid,
             onBucketTap: onPriorityBucketTap,
           ),
+          // Yearly re-engagement reminders; renders nothing when there are none.
+          const UpcomingOccasionsSection(),
         ],
       ),
     );

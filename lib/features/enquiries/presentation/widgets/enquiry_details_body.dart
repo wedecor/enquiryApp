@@ -7,6 +7,7 @@ import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/enquiry_history_widget.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../../reengagement/presentation/widgets/yearly_reminder_card.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../domain/enquiry_lifecycle.dart';
 import 'customer_info_section.dart';
@@ -77,6 +78,13 @@ class EnquiryDetailsBody extends StatelessWidget {
           eyebrow: 'Outcome',
           title: 'Quote & Outcome',
           children: _outcomeRows(isAdmin: userRole == UserRole.admin),
+        ),
+      if (EnquiryStatus.fromValue(enquiryData['statusValue'] as String?) ==
+          EnquiryStatus.completed)
+        YearlyReminderCard(
+          enquiryId: enquiryId,
+          enquiryData: enquiryData,
+          isAdmin: userRole == UserRole.admin,
         ),
       _AsymmetricPair(
         major: CustomerInfoSection(

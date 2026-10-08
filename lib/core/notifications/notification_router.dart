@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/reengagement/presentation/upcoming_occasions_screen.dart';
 
 /// App-wide keys so push notifications can be shown and opened without a
 /// BuildContext. Wired into [MaterialApp] in main.dart.
@@ -10,12 +11,16 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<ScaffoldMessengerState> appScaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 
+/// Notification `type` of the daily yearly-reminder summary.
+const String reengagementNotificationType = 'reengagement';
+
 /// Shows and routes push notifications.
 ///
 /// * Foreground: Android/iOS do not display FCM notifications while the app is
 ///   open, so we show an in-app banner (SnackBar) with a "View" action.
 /// * Tapped from the system tray: opens the enquiry it refers to (or the
-///   notifications list when there is no enquiry).
+///   notifications list when there is no enquiry); yearly-reminder summaries
+///   open Upcoming occasions.
 class NotificationRouter {
   NotificationRouter._();
 
@@ -49,6 +54,13 @@ class NotificationRouter {
   static void open(RemoteMessage message) {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
+    // Daily yearly-reminder summary (scheduleReengagements) → the reminders list.
+    if (message.data['type']?.toString() == reengagementNotificationType) {
+      navigator.push<void>(
+        MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen()),
+      );
+      return;
+    }
     final enquiryId = message.data['enquiryId']?.toString();
     if (enquiryId != null && enquiryId.isNotEmpty) {
       navigator.push<void>(

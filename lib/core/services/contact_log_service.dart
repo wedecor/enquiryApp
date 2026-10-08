@@ -10,7 +10,10 @@ enum ContactType {
   call('call'),
   whatsapp('whatsapp'),
   reminder('reminder'),
-  reviewRequest('review_request');
+  reviewRequest('review_request'),
+
+  /// Yearly re-engagement wish ("same time next year").
+  reengagement('reengagement');
 
   const ContactType(this.value);
 

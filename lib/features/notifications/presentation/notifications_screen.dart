@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/notifications/notification_router.dart';
 import '../../../core/providers/notification_provider.dart';
 import '../../../core/providers/role_provider.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../ui/primitives/primitives.dart';
-import '../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../ui/components/glass_page_scaffold.dart';
 import '../../../ui/components/glass_state_message.dart';
+import '../../enquiries/presentation/screens/enquiry_details_screen.dart';
+import '../../reengagement/presentation/upcoming_occasions_screen.dart';
 import 'widgets/notification_timeline_tile.dart';
 
 class NotificationsScreen extends ConsumerWidget {
@@ -117,6 +119,15 @@ class _NotificationsBody extends ConsumerWidget {
     // Mark as read
     if (notification['read'] != true) {
       service.markNotificationAsRead(userId, notifId);
+    }
+
+    // Yearly-reminder summary → Upcoming occasions.
+    final type = notification['type'] ?? notification['data']?['type'];
+    if (type == reengagementNotificationType && context.mounted) {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen()),
+      );
+      return;
     }
 
     // Navigate to enquiry if available
