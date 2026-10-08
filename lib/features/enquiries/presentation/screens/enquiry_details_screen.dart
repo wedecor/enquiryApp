@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/auth/role_guards.dart' show logAdminAction;
 import '../../../../core/contacts/contact_launcher.dart';
-import '../../../../core/providers/audit_provider.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
@@ -249,22 +249,18 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       icon: Icons.warning_amber_rounded,
     );
 
-    if (!confirmed) return;
+    if (!confirmed || !mounted) return;
 
     try {
       setState(() {
         _isUpdatingStatus = true;
       });
 
-      final auditService = ref.read(auditServiceProvider);
-      await auditService.recordChange(
-        enquiryId: widget.enquiryId,
-        fieldChanged: 'deleted',
-        oldValue: 'exists',
-        newValue: 'deleted',
-      );
-
       await ref.read(firestoreServiceProvider).deleteEnquiry(widget.enquiryId);
+
+      // The enquiry's history subcollection goes with it, so the delete is recorded in
+      // the top-level admin_audit log instead (non-fatal; logged on failure).
+      await logAdminAction(ref, 'enquiry_deleted', {'enquiryId': widget.enquiryId});
 
       if (mounted) {
         Navigator.of(context).pop();

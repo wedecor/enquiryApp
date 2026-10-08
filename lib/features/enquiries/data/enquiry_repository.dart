@@ -118,77 +118,101 @@ class EnquiryRepository {
     }
   }
 
-  /// Update status fields with server timestamps (rules-compliant for staff)
+  /// Update status fields with server timestamps (rules-compliant for staff).
+  ///
+  /// The read, stage stamping, update and history entries run in one transaction, so
+  /// concurrent status changes can't stamp the wrong stage or log a stale "from" status.
   Future<void> updateStatus({
     required String id,
     required String nextStatus,
     required String userId,
     LostReasonChoice? lostReason,
   }) async {
-    final oldEnquiryDoc = await _enquiries.doc(id).get();
-
-    if (!oldEnquiryDoc.exists) {
-      throw Exception('Enquiry not found: $id');
-    }
-
-    final oldEnquiryData = oldEnquiryDoc.data()!;
-    final oldStatusValue =
-        EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
-        (oldEnquiryData['statusValue'] as String? ?? 'new');
-    final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
-
-    if (oldStatusValue == canonicalNext) {
-      return;
-    }
-
     final lookup = await _dropdownLookupFuture;
+    final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
     final statusLabel = lookup.labelForStatus(canonicalNext);
-    final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
-
     final isLost = EnquiryStatus.isLost(canonicalNext);
-    final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
-    final assignedTo = oldEnquiryData['assignedTo'] as String?;
+    final clearLost = EnquiryStageFields.clearsLostFields(canonicalNext);
+    final docRef = _enquiries.doc(id);
 
-    await _enquiries.doc(id).update({
-      'statusValue': canonicalNext,
-      'statusLabel': statusLabel,
-      'statusUpdatedAt': FieldValue.serverTimestamp(),
-      'statusUpdatedBy': userId,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'eventStatus': FieldValue.delete(),
-      'status': FieldValue.delete(),
-      'status_slug': FieldValue.delete(),
-      for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, canonicalNext))
-        field: FieldValue.serverTimestamp(),
-      if (isLost && lostReason != null) ...lostReason.toFields(),
+    final result = await _firestoreService.firestore.runTransaction<_StatusChangeResult?>((
+      transaction,
+    ) async {
+      final oldEnquiryDoc = await transaction.get(docRef);
+      if (!oldEnquiryDoc.exists) {
+        throw Exception('Enquiry not found: $id');
+      }
+
+      final oldEnquiryData = oldEnquiryDoc.data()!;
+      final oldStatusValue =
+          EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
+          (oldEnquiryData['statusValue'] as String? ?? 'new');
+
+      if (oldStatusValue == canonicalNext) return null;
+
+      transaction.update(docRef, {
+        'statusValue': canonicalNext,
+        'statusLabel': statusLabel,
+        'statusUpdatedAt': FieldValue.serverTimestamp(),
+        'statusUpdatedBy': userId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'eventStatus': FieldValue.delete(),
+        'status': FieldValue.delete(),
+        'status_slug': FieldValue.delete(),
+        for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, canonicalNext))
+          field: FieldValue.serverTimestamp(),
+        if (isLost && lostReason != null) ...lostReason.toFields(),
+        if (clearLost)
+          for (final field in EnquiryStageFields.lostOnlyFields) field: FieldValue.delete(),
+      });
+
+      transaction.set(
+        _auditService.newHistoryRef(id),
+        _auditService.buildHistoryEntry(
+          fieldChanged: 'statusValue',
+          oldValue: oldStatusValue,
+          newValue: canonicalNext,
+        ),
+      );
+
+      final oldLostReason = oldEnquiryData['lostReason'];
+      if (isLost && lostReason != null) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'lostReason',
+            oldValue: oldLostReason,
+            newValue: lostReason.reason.value,
+          ),
+        );
+      } else if (clearLost && oldLostReason != null) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'lostReason',
+            oldValue: oldLostReason,
+            newValue: null,
+          ),
+        );
+      }
+
+      return _StatusChangeResult(
+        oldStatusValue: oldStatusValue,
+        customerName: oldEnquiryData['customerName'] as String? ?? 'Unknown Customer',
+        assignedTo: oldEnquiryData['assignedTo'] as String?,
+      );
     });
 
-    await _auditService.recordChange(
-      enquiryId: id,
-      fieldChanged: 'statusValue',
-      oldValue: oldStatusValue,
-      newValue: canonicalNext,
-      userId: userId,
-    );
-
-    if (isLost && lostReason != null) {
-      await _auditService.recordChange(
-        enquiryId: id,
-        fieldChanged: 'lostReason',
-        oldValue: oldEnquiryData['lostReason'],
-        newValue: lostReason.reason.value,
-        userId: userId,
-      );
-    }
+    if (result == null) return;
 
     try {
       await _notificationService.notifyStatusUpdated(
         enquiryId: id,
-        customerName: customerName,
-        oldStatus: oldStatusLabel,
+        customerName: result.customerName,
+        oldStatus: lookup.labelForStatus(result.oldStatusValue),
         newStatus: statusLabel,
         updatedBy: userId,
-        assignedTo: assignedTo,
+        assignedTo: result.assignedTo,
       );
     } catch (_) {
       // Status update already succeeded; notification errors are non-fatal.
@@ -199,4 +223,17 @@ class EnquiryRepository {
   Future<String> createEnquiry(Map<String, dynamic> data) {
     return _firestoreService.createEnquiryFromData(data);
   }
+}
+
+/// What [EnquiryRepository.updateStatus] needs from inside its transaction afterwards.
+class _StatusChangeResult {
+  const _StatusChangeResult({
+    required this.oldStatusValue,
+    required this.customerName,
+    required this.assignedTo,
+  });
+
+  final String oldStatusValue;
+  final String customerName;
+  final String? assignedTo;
 }

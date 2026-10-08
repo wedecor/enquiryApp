@@ -20,8 +20,19 @@ import '../enquiry_list_item.dart';
 /// Leaves room for the floating nav pill and FAB below the last row.
 const EdgeInsets _kListPadding = EdgeInsets.only(top: AppTokens.space1, bottom: 96);
 
-/// Live (non-paginated) list used while a search query is active.
-class EnquiriesStreamList extends StatelessWidget {
+/// True when [filters] include anything the paginated query can't apply server-side
+/// (search, event type, assignee, date range, or more than one status). Those filters are
+/// evaluated client-side, so they must run over the full live list rather than one page.
+bool needsLiveEnquiryList(EnquiryFilters filters) {
+  return (filters.searchQuery?.trim().isNotEmpty ?? false) ||
+      filters.statuses.length > 1 ||
+      filters.eventTypes.isNotEmpty ||
+      filters.assigneeId != null ||
+      filters.dateRange != null;
+}
+
+/// Live (non-paginated) list used while a client-side filter or search is active.
+class EnquiriesStreamList extends StatefulWidget {
   const EnquiriesStreamList({
     super.key,
     required this.firestoreService,
@@ -42,9 +53,44 @@ class EnquiriesStreamList extends StatelessWidget {
   final VoidCallback onClearFilters;
 
   @override
+  State<EnquiriesStreamList> createState() => _EnquiriesStreamListState();
+}
+
+class _EnquiriesStreamListState extends State<EnquiriesStreamList> {
+  late Stream<QuerySnapshot> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = _createStream();
+  }
+
+  @override
+  void didUpdateWidget(covariant EnquiriesStreamList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only resubscribe when the access scope changes, not on every keystroke/rebuild.
+    if (oldWidget.isAdmin != widget.isAdmin ||
+        oldWidget.userUid != widget.userUid ||
+        !identical(oldWidget.firestoreService, widget.firestoreService)) {
+      _stream = _createStream();
+    }
+  }
+
+  Stream<QuerySnapshot> _createStream() => widget.firestoreService.watchEnquiriesForRole(
+    isAdmin: widget.isAdmin,
+    assignedToUid: widget.userUid,
+    // Filters/search run client-side here, so they must see every enquiry.
+    limit: null,
+  );
+
+  @override
   Widget build(BuildContext context) {
+    final userRole = widget.userRole;
+    final filters = widget.filters;
+    final userUid = widget.userUid;
+    final dropdownLookup = widget.dropdownLookup;
     return StreamBuilder<QuerySnapshot>(
-      stream: firestoreService.watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userUid),
+      stream: _stream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return ErrorState(
@@ -53,14 +99,14 @@ class EnquiriesStreamList extends StatelessWidget {
           );
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
         final empty = EnquiriesListEmpty(
           userRole: userRole,
           filters: filters,
-          onClearFilters: onClearFilters,
+          onClearFilters: widget.onClearFilters,
         );
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return empty;
 
@@ -159,7 +205,7 @@ class _EnquiriesPaginatedListState extends ConsumerState<EnquiriesPaginatedList>
   @override
   Widget build(BuildContext context) {
     ref.listen<EnquiryFilters>(enquiryFiltersProvider, (previous, next) {
-      if (next.searchQuery?.isNotEmpty ?? false) return;
+      if (needsLiveEnquiryList(next)) return;
       if (previous == next) return;
       _refreshPagination();
     });
@@ -187,6 +233,7 @@ class _EnquiriesPaginatedListState extends ConsumerState<EnquiriesPaginatedList>
       return RefreshIndicator(
         onRefresh: () => ref.read(paginatedEnquiriesProvider(_params).notifier).refresh(),
         child: ListView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(top: AppTokens.space8, bottom: 96),
           children: [

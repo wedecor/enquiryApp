@@ -1,6 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../core/constants/status_vocabulary.dart';
+import '../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import 'filters_state.dart';
 
 /// Client-side filter for enquiry documents (avoids composite Firestore indexes).
@@ -39,8 +38,9 @@ bool matchesEnquiryFilters(
     if (eventDate.isBefore(start) || !eventDate.isBefore(end)) return false;
   }
 
-  final query = filters.searchQuery?.trim().toLowerCase();
-  if (query != null && query.isNotEmpty) {
+  final rawQuery = filters.searchQuery?.trim();
+  final query = rawQuery?.toLowerCase();
+  if (rawQuery != null && query != null && query.isNotEmpty) {
     final haystack = [
       data['customerName'],
       data['customerPhone'],
@@ -50,7 +50,9 @@ bool matchesEnquiryFilters(
       data['eventTypeLabel'],
       data['eventType'],
     ].whereType<String>().join(' ').toLowerCase();
-    if (!haystack.contains(query)) return false;
+    // Shared matcher adds digit-only phone matching ("98765 43210" vs "+919876543210")
+    // against customerPhone / whatsappNumber / phoneNormalized, plus textIndex.
+    if (!haystack.contains(query) && !matchesEnquirySearchQuery(data, rawQuery)) return false;
   }
 
   return true;
@@ -62,10 +64,4 @@ String _fieldString(Map<String, dynamic> data, String primary, String fallback) 
   return value.toString().trim();
 }
 
-DateTime? _parseDate(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+DateTime? _parseDate(dynamic value) => parseEnquiryDateTime(value);

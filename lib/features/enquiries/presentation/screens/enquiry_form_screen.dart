@@ -18,6 +18,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
 import '../../domain/enquiry_lifecycle.dart';
@@ -56,21 +57,47 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
   Future<void> _selectDate() async {
     // In edit mode, allow past dates so staff can correct wrong entries.
     final isEdit = widget.mode == 'edit';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final defaultLast = today.add(const Duration(days: 730));
+    var initialDate = _selectedDate ?? today;
+    if (!isEdit && initialDate.isBefore(today)) initialDate = today;
+    // showDatePicker asserts firstDate <= initialDate <= lastDate.
+    final earliest = DateTime(2020, 1, 1);
+    final firstDate = isEdit
+        ? (initialDate.isBefore(earliest) ? initialDate : earliest)
+        : today;
+    final lastDate = initialDate.isAfter(defaultLast) ? initialDate : defaultLast;
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: isEdit ? DateTime(2020, 1, 1) : DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 730)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
+    if (!mounted) return;
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
+      final status = EnquiryStatus.fromValue(_selectedStatus);
+      final isActive =
+          !EnquiryStatus.isLost(_selectedStatus) && status != EnquiryStatus.completed;
+      if (isEdit && isActive && picked.isBefore(today)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This event date is in the past — an active enquiry with a past date is '
+              'auto-closed overnight.',
+            ),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
+    if (!mounted) return;
     if (images.isNotEmpty) {
       setState(() {
         _selectedImages.addAll(images);

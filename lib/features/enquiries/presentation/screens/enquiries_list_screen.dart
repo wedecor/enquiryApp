@@ -57,7 +57,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         final Widget content;
         if (_view == _EnquiriesView.board) {
           content = KanbanBoardScreen(embeddedInShell: true, filters: filters);
-        } else if (filters.searchQuery?.isNotEmpty ?? false) {
+        } else if (needsLiveEnquiryList(filters)) {
           content = EnquiriesStreamList(
             firestoreService: firestoreService,
             isAdmin: userRole == UserRole.admin,

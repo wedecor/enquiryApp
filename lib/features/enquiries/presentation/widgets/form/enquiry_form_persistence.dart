@@ -28,6 +28,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   bool _isLoading = false;
   bool _hydrated = false;
 
+  // Values as loaded when the edit form opened. Status / assignee / images are only
+  // written back if the user changed them, so a save can't undo a change someone else
+  // made while this form was open.
+  String? _initialStatus;
+  String? _initialAssignedTo;
+  List<String> _initialImageUrls = const [];
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +65,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       final firestoreService = ref.read(firestoreServiceProvider);
       final data = await firestoreService.getEnquiry(widget.enquiryId!);
 
+      if (!mounted) return;
       if (data != null) {
         setState(() {
           _nameController.text = (data['customerName'] as String?) ?? '';
@@ -76,7 +84,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
             _quotedAmountController.text = amountText(data['quotedAmount']);
           }
           final quotedAtRaw = data['quotedAt'];
-          if (quotedAtRaw is Timestamp) _quotedAt = quotedAtRaw.toDate();
+          _quotedAt = parseEnquiryDateTime(quotedAtRaw);
 
           // Set dropdown values from database
           _selectedEventType = (data['eventTypeValue'] ?? data['eventType']) as String?;
@@ -85,6 +93,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           // Safely set dropdown values - ensure they exist in valid options
           final statusValue = data['statusValue'] as String?;
           _selectedStatus = EnquiryStatus.canonicalValue(statusValue) ?? statusValue;
+          _initialStatus = _selectedStatus;
 
           final priority = (data['priorityValue'] ?? data['priority']) as String?;
           _selectedPriority = priority;
@@ -93,6 +102,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           _selectedPaymentStatus = paymentStatus;
 
           _selectedAssignedTo = data['assignedTo'] as String?;
+          _initialAssignedTo = _selectedAssignedTo;
 
           final sourceValue = (data['sourceValue'] ?? data['source']) as String?;
           if (sourceValue != null && sourceValue.trim().isNotEmpty) {
@@ -108,10 +118,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
             _budgetController.text = budget;
           }
 
-          if (data['eventDate'] != null) {
-            final timestamp = data['eventDate'] as Timestamp;
-            _selectedDate = timestamp.toDate();
-          }
+          _selectedDate = parseEnquiryDateTime(data['eventDate']);
 
           // Load existing images
           _existingImageUrls.clear();
@@ -133,6 +140,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           } else {
             Log.d('EnquiryFormScreen no images field found in document');
           }
+          _initialImageUrls = List.unmodifiable(_existingImageUrls);
 
           _hydrated = true;
         });
@@ -301,9 +309,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
             'updatedBy': currentUser.uid,
           });
           // Clear selected images after successful upload
-          setState(() {
-            _selectedImages.clear();
-          });
+          if (mounted) {
+            setState(() {
+              _selectedImages.clear();
+            });
+          }
         }
       } catch (e) {
         Log.e('Error uploading images', error: e);
@@ -335,14 +345,21 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       );
 
       // Admins already got "New Enquiry Created"; only the assignee hears about it here.
-      await notificationService.notifyEnquiryAssigned(
-        enquiryId: enquiryId,
-        customerName: _nameController.text.trim(),
-        eventType: _selectedEventType!,
-        assignedTo: _selectedAssignedTo!,
-        assignedBy: currentUser.uid,
-        notifyAdmins: false,
-      );
+      // An admin assignee (other than the creator) was in that push already — don't
+      // send them a second one.
+      final assignee = _selectedAssignedTo!;
+      final assigneeAlreadyNotified =
+          assignee != currentUser.uid && await _isAdminUser(firestoreService, assignee);
+      if (!assigneeAlreadyNotified) {
+        await notificationService.notifyEnquiryAssigned(
+          enquiryId: enquiryId,
+          customerName: _nameController.text.trim(),
+          eventType: _selectedEventType!,
+          assignedTo: assignee,
+          assignedBy: currentUser.uid,
+          notifyAdmins: false,
+        );
+      }
     }
 
     if (mounted) {
@@ -358,15 +375,42 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     return EnquiryStatus.canonicalValue(raw) ?? raw ?? 'new';
   }
 
+  /// Whether [uid] is an admin (admins already receive the generic admin pushes).
+  static Future<bool> _isAdminUser(FirestoreService firestoreService, String uid) async {
+    try {
+      final data = await firestoreService.getUser(uid);
+      return data?['role'] == 'admin';
+    } catch (e) {
+      Log.w('EnquiryFormScreen: could not look up user role', data: {'error': e.toString()});
+      return false;
+    }
+  }
+
   Future<void> _updateEnquiry(UserModel currentUser) async {
     final firestoreService = ref.read(firestoreServiceProvider);
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
     // Fetch old enquiry data to compare changes
     final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
+    if (!mounted) return;
 
-    final statusValue = EnquiryStatus.canonicalValue(_selectedStatus) ?? _selectedStatus ?? 'new';
+    // Status: only the user's own change is written. If they didn't touch the status
+    // control, keep whatever is stored now (it may have been changed elsewhere since the
+    // form opened) and don't log history or send a status push.
+    final oldStatusValue = _canonicalOldStatus(oldEnquiryData);
+    final initialStatus = EnquiryStatus.canonicalValue(_initialStatus) ?? _initialStatus ?? 'new';
+    final selectedStatus =
+        EnquiryStatus.canonicalValue(_selectedStatus) ?? _selectedStatus ?? 'new';
+    final userChangedStatus = selectedStatus != initialStatus;
+    final statusValue = userChangedStatus ? selectedStatus : oldStatusValue;
+    final statusDidChange = userChangedStatus && oldStatusValue != statusValue;
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
+    final reopening = statusDidChange && EnquiryStageFields.clearsLostFields(statusValue);
+
+    // Assignee: same rule as status.
+    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
+    final userChangedAssignee = _selectedAssignedTo != _initialAssignedTo;
+    final assignedTo = userChangedAssignee ? _selectedAssignedTo : previousAssignee;
 
     final eventTypeValue = _selectedEventType ?? 'event';
     final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
@@ -386,7 +430,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     final newCustomerName = _nameController.text.trim();
     final newCustomerEmail = _emailController.text.trim();
-    final newGuestCount = int.tryParse(_guestCountController.text.trim());
+    final guestCountText = _guestCountController.text.trim();
+    final newGuestCount = int.tryParse(guestCountText);
     final newBudgetRange = _budgetController.text.trim();
     final newCustomerPhone = _phoneController.text.trim();
     final newEventLocation = _locationController.text.trim();
@@ -430,13 +475,15 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     // Moving to a lost status asks why (same rule as every other status path).
     LostReasonChoice? lostChoice;
-    final statusChanging = _canonicalOldStatus(oldEnquiryData) != statusValue;
-    if (statusChanging && EnquiryStatus.isLost(statusValue)) {
+    if (statusDidChange && EnquiryStatus.isLost(statusValue)) {
       if (!mounted) return;
       final prompt = await promptLostReasonIfNeeded(context, statusValue);
       if (!prompt.proceed || !mounted) return;
       lostChoice = prompt.choice;
     }
+
+    // Did the user remove images in this form (vs what was loaded / last persisted)?
+    final imagesEditedLocally = !listEquals(_existingImageUrls, _initialImageUrls);
 
     // Upload reference images if any and get URLs
     List<String> newImageUrls = [];
@@ -450,9 +497,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           );
           newImageUrls = urls;
           // Clear selected images after successful upload
-          setState(() {
-            _selectedImages.clear();
-          });
+          if (mounted) {
+            setState(() {
+              _selectedImages.clear();
+            });
+          }
         }
       } catch (e) {
         Log.e('Error uploading images', error: e);
@@ -470,7 +519,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final allImageUrls = <String>[..._existingImageUrls, ...newImageUrls];
 
     // Update UI state to include new images for immediate display
-    if (newImageUrls.isNotEmpty) {
+    if (newImageUrls.isNotEmpty && mounted) {
       setState(() {
         _existingImageUrls.addAll(newImageUrls);
       });
@@ -480,54 +529,76 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       'EnquiryFormScreen updating images field',
       data: {
         'enquiryId': widget.enquiryId,
-        'existingCount': _existingImageUrls.length,
+        'editedLocally': imagesEditedLocally,
         'newCount': newImageUrls.length,
         'totalCount': allImageUrls.length,
-        'allUrls': allImageUrls,
       },
     );
 
-    // Determine if status changed (needed for statusUpdatedAt below)
-    final oldStatusValue = _canonicalOldStatus(oldEnquiryData);
-    final statusDidChange = oldStatusValue != statusValue;
+    final quoteFields = _quoteFields(oldEnquiryData);
 
-    // Update the enquiry document — include images field with complete list
+    // Update the enquiry document. Status / assignee / images are written only when the
+    // user changed them; cleared optional fields are deleted rather than left stale.
     await firestoreService.updateEnquiry(widget.enquiryId!, {
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
-      if (newCustomerEmail.isNotEmpty) 'customerEmail': newCustomerEmail.toLowerCase(),
+      if (newCustomerEmail.isNotEmpty)
+        'customerEmail': newCustomerEmail.toLowerCase()
+      else
+        'customerEmail': FieldValue.delete(),
       'eventLocation': newEventLocation,
-      ...enquiryNotesFields(newDescription),
+      if (newDescription.isNotEmpty)
+        ...enquiryNotesFields(newDescription)
+      else ...{
+        'notes': FieldValue.delete(),
+        'description': FieldValue.delete(),
+      },
       'eventType': eventTypeValue,
       'eventTypeValue': eventTypeValue,
       'eventTypeLabel': eventTypeLabel,
       'eventDate': Timestamp.fromDate(_selectedDate!),
-      if (newGuestCount != null && newGuestCount >= 0) 'guestCount': newGuestCount,
-      if (newBudgetRange.isNotEmpty) 'budgetRange': newBudgetRange,
+      if (guestCountText.isEmpty)
+        'guestCount': FieldValue.delete()
+      else if (newGuestCount != null && newGuestCount >= 0)
+        'guestCount': newGuestCount,
+      if (newBudgetRange.isNotEmpty)
+        'budgetRange': newBudgetRange
+      else
+        'budgetRange': FieldValue.delete(),
       'source': sourceValue,
       'sourceValue': sourceValue,
       'sourceLabel': sourceLabel,
       'priority': priorityValue,
       'priorityValue': priorityValue,
       'priorityLabel': priorityLabel,
-      'statusValue': statusValue,
-      'statusLabel': statusLabel,
       // Keep statusUpdatedAt / statusUpdatedBy in sync when status changes via form
       if (statusDidChange) ...{
+        'statusValue': statusValue,
+        'statusLabel': statusLabel,
         'statusUpdatedAt': FieldValue.serverTimestamp(),
         'statusUpdatedBy': currentUser.uid,
         for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, statusValue))
           field: FieldValue.serverTimestamp(),
       },
+      if (reopening)
+        for (final field in EnquiryStageFields.lostOnlyFields) field: FieldValue.delete(),
       if (lostChoice != null) ...lostChoice.toFields(),
-      ..._quoteFields(oldEnquiryData),
-      'paymentStatus': paymentStatusValue,
-      'paymentStatusValue': paymentStatusValue,
-      'paymentStatusLabel': paymentStatusLabel,
-      'assignedTo': _selectedAssignedTo,
-      'totalCost': newTotalCost,
-      'advancePaid': newAdvancePaid,
-      'images': allImageUrls,
+      ...quoteFields,
+      // Financial fields are admin-only in the rules: write them only when they
+      // actually change, so a staff save that leaves them untouched isn't denied.
+      if ((oldEnquiryData['paymentStatusValue'] ?? oldEnquiryData['paymentStatus'] ?? 'pending') !=
+          paymentStatusValue) ...{
+        'paymentStatus': paymentStatusValue,
+        'paymentStatusValue': paymentStatusValue,
+        'paymentStatusLabel': paymentStatusLabel,
+      },
+      if (userChangedAssignee) 'assignedTo': _selectedAssignedTo,
+      if (oldTotalCost != newTotalCost) 'totalCost': newTotalCost,
+      if (oldAdvancePaid != newAdvancePaid) 'advancePaid': newAdvancePaid,
+      if (imagesEditedLocally)
+        'images': allImageUrls
+      else if (newImageUrls.isNotEmpty)
+        'images': FieldValue.arrayUnion(newImageUrls),
       'updatedBy': currentUser.uid,
       ...FirestoreService.searchIndexFieldsFor(
         customerName: newCustomerName,
@@ -542,10 +613,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     // Record audit trail for individual field changes
     final auditService = ref.read(auditServiceProvider);
+    final oldImages = oldEnquiryData['images'];
     final changes = buildEnquiryAuditChanges(
       oldEnquiryData: oldEnquiryData,
       statusValue: statusValue,
-      assignedTo: _selectedAssignedTo,
+      assignedTo: assignedTo,
       priorityValue: priorityValue,
       paymentStatusValue: paymentStatusValue,
       newCustomerName: newCustomerName,
@@ -555,6 +627,18 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       newTotalCost: newTotalCost,
       oldAdvancePaid: oldAdvancePaid,
       newAdvancePaid: newAdvancePaid,
+      newEventDate: _selectedDate,
+      eventTypeValue: eventTypeValue,
+      newGuestCount: guestCountText.isEmpty ? null : newGuestCount,
+      newBudgetRange: newBudgetRange,
+      newCustomerEmail: newCustomerEmail.toLowerCase(),
+      newNotes: newDescription,
+      sourceValue: sourceValue,
+      quoteFields: quoteFields,
+      oldImageCount: oldImages is List ? oldImages.length : _initialImageUrls.length,
+      newImageCount: imagesEditedLocally
+          ? allImageUrls.length
+          : (oldImages is List ? oldImages.length : 0) + newImageUrls.length,
     );
 
     if (lostChoice != null) {
@@ -562,6 +646,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         'old_value': oldEnquiryData['lostReason'],
         'new_value': lostChoice.reason.value,
       };
+    } else if (reopening && oldEnquiryData['lostReason'] != null) {
+      changes['lostReason'] = {'old_value': oldEnquiryData['lostReason'], 'new_value': null};
     }
 
     // Record all changes at once
@@ -571,11 +657,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     // Send notifications: at most one push per person for this save.
     final notificationService = ref.read(notificationServiceProvider);
-    final previousAssignee = oldEnquiryData['assignedTo'] as String?;
     final reassigned =
-        _selectedAssignedTo != null &&
-        _selectedAssignedTo!.isNotEmpty &&
-        _selectedAssignedTo != previousAssignee;
+        userChangedAssignee &&
+        assignedTo != null &&
+        assignedTo.isNotEmpty &&
+        assignedTo != previousAssignee;
 
     // If status changed, send specific status update notification to admins
     if (statusDidChange) {
@@ -585,16 +671,15 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         debugPrint('   EnquiryId: ${widget.enquiryId}');
       }
 
-      final lookup = await ref.read(dropdownLookupProvider.future);
-      final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
+      final oldStatusLabel = dropdownLookup.labelForStatus(oldStatusValue);
       await notificationService.notifyStatusUpdated(
         enquiryId: widget.enquiryId!,
-        customerName: _nameController.text.trim(),
+        customerName: newCustomerName,
         oldStatus: oldStatusLabel,
         newStatus: statusLabel,
         updatedBy: currentUser.uid,
         // A new assignee gets "Assigned to You" below instead.
-        assignedTo: reassigned ? null : _selectedAssignedTo,
+        assignedTo: reassigned ? null : assignedTo,
       );
     } else if (!reassigned) {
       // Only send generic enquiry update notification if status didn't change
@@ -607,24 +692,32 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
       await notificationService.notifyEnquiryUpdated(
         enquiryId: widget.enquiryId!,
-        customerName: _nameController.text.trim(),
+        customerName: newCustomerName,
         eventType: eventTypeValue,
         updatedBy: currentUser.uid,
-        assignedTo: _selectedAssignedTo,
+        assignedTo: assignedTo,
       );
     }
 
     // Re-assignment from the edit form: tell the new assignee, and other admins unless
-    // they were already told about the status change above.
+    // they were already told about the status change above. An admin assignee already got
+    // the status push (it goes to every admin but the updater), so skip a second one.
     if (reassigned) {
-      await notificationService.notifyEnquiryAssigned(
-        enquiryId: widget.enquiryId!,
-        customerName: _nameController.text.trim(),
-        eventType: eventTypeLabel,
-        assignedTo: _selectedAssignedTo!,
-        assignedBy: currentUser.uid,
-        notifyAdmins: !statusDidChange,
-      );
+      final newAssignee = assignedTo!;
+      final assigneeAlreadyNotified =
+          statusDidChange &&
+          newAssignee != currentUser.uid &&
+          await _isAdminUser(firestoreService, newAssignee);
+      if (!assigneeAlreadyNotified) {
+        await notificationService.notifyEnquiryAssigned(
+          enquiryId: widget.enquiryId!,
+          customerName: newCustomerName,
+          eventType: eventTypeLabel,
+          assignedTo: newAssignee,
+          assignedBy: currentUser.uid,
+          notifyAdmins: !statusDidChange,
+        );
+      }
     }
 
     if (mounted) {
@@ -652,6 +745,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   Future<void> _removeExistingImage(int index) async {
     if (index < 0 || index >= _existingImageUrls.length) return;
     final removedUrl = _existingImageUrls[index];
+    final firestoreService = ref.read(firestoreServiceProvider);
     setState(() {
       _existingImageUrls.removeAt(index);
     });
@@ -669,9 +763,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     }
 
     try {
-      await ref.read(firestoreServiceProvider).updateEnquiry(widget.enquiryId!, {
-        'images': _existingImageUrls,
+      await firestoreService.updateEnquiry(widget.enquiryId!, {
+        'images': List<String>.of(_existingImageUrls),
       });
+      // Persisted: a later form save no longer needs to rewrite the whole list.
+      _initialImageUrls = List.unmodifiable(_existingImageUrls);
     } catch (e) {
       Log.e('Failed to update enquiry images after removal', error: e);
       if (mounted) {

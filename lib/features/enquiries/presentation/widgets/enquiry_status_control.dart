@@ -10,6 +10,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
 import 'enquiry_status_parts.dart';
 import 'lost_reason_sheet.dart';
@@ -55,6 +56,25 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
 class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   String? _selectedStatus;
   bool _isUpdatingStatus = false;
+
+  @override
+  void didUpdateWidget(covariant EnquiryStatusControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Follow live updates: a status saved elsewhere replaces any stale local selection.
+    if (oldWidget.currentStatusValue != widget.currentStatusValue ||
+        oldWidget.enquiryId != widget.enquiryId) {
+      _selectedStatus = null;
+    }
+  }
+
+  /// True when reopening a lost enquiry whose event date has already passed —
+  /// the nightly auto-close would close it again unless the date is updated.
+  bool _isReopeningPastEvent(String fromStatus, String toStatus) {
+    if (!EnquiryStatus.isLost(fromStatus) || EnquiryStatus.isLost(toStatus)) return false;
+    final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
+    if (eventDate == null) return false;
+    return eventDayOffset(eventDate, DateTime.now()) < 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +226,18 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     final oldStatusLabel = lookup.labelForStatus(currentStatusValue);
 
     if (!mounted) return;
+    if (_isReopeningPastEvent(currentStatusValue, value)) {
+      final proceed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Event date has passed',
+        message:
+            'Event date has passed — it will be auto-closed again unless you update the date. Continue?',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        icon: Icons.event_busy_outlined,
+      );
+      if (!proceed || !mounted) return;
+    }
     // Lost statuses ask for a reason; the reason sheet doubles as confirmation.
     final lostPrompt = await promptLostReasonIfNeeded(context, value);
     if (!mounted) return;
@@ -225,7 +257,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
       );
     }
 
-    if (!confirmed || !mounted) {
+    if (!mounted) return;
+    if (!confirmed) {
       setState(() {
         _selectedStatus = currentStatusValue;
       });
@@ -260,10 +293,10 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         widget.onStatusChanged?.call();
       }
     } catch (e) {
-      setState(() {
-        _selectedStatus = currentStatusValue;
-      });
       if (mounted) {
+        setState(() {
+          _selectedStatus = currentStatusValue;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update status: $e'),

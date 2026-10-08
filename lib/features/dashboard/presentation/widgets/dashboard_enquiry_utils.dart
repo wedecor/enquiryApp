@@ -8,6 +8,8 @@ DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
   if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
   return null;
 }
 
@@ -243,7 +245,7 @@ String buildReminderMessage(
   DateTime? eventDate,
 ) {
   final now = DateTime.now();
-  final daysUntilEvent = eventDate?.difference(now).inDays;
+  final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
 
   String urgencyMessage;
   if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {

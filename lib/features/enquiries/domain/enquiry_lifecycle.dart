@@ -76,6 +76,16 @@ class EnquiryStageFields {
     }
   }
 
+  /// Lost-only fields. They are deleted when an enquiry moves to a non-lost status
+  /// (reopen), so a reopened enquiry doesn't keep a stale reason / lost timestamp.
+  static const List<String> lostOnlyFields = ['lostReason', 'lostReasonNote', lostAt];
+
+  /// True when moving to [nextStatus] should delete [lostOnlyFields].
+  static bool clearsLostFields(String nextStatus) {
+    final canonical = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
+    return !EnquiryStatus.isLost(canonical);
+  }
+
   /// Stage fields that should be stamped when moving to [nextStatus], given the
   /// enquiry's current data. Only fields not already set are returned, so the
   /// first time a stage is reached is preserved. Intermediate stages that were

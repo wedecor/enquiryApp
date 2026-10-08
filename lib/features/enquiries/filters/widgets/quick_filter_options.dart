@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/current_user_role_provider.dart';
+import '../date_range_presets.dart';
 import '../filters_controller.dart';
 import '../filters_state.dart';
 
@@ -50,30 +51,15 @@ List<QuickFilterOption> quickFilterOptions(WidgetRef ref, EnquiryFilters filters
   ];
 }
 
-bool isTodayRange(FilterDateRange? range) {
-  if (range == null) return false;
-  final today = _todayRange();
-  return range.start.isAtSameMomentAs(today.start) && range.end.isAtSameMomentAs(today.end);
-}
+bool isTodayRange(FilterDateRange? range) =>
+    DateRangePreset.keyFor(range) == DateRangePreset.today;
 
-bool isThisWeekRange(FilterDateRange? range) {
-  if (range == null) return false;
-  final week = _thisWeekRange();
-  return range.start.isAtSameMomentAs(week.start) && range.end.isAtSameMomentAs(week.end);
-}
+bool isThisWeekRange(FilterDateRange? range) =>
+    DateRangePreset.keyFor(range) == DateRangePreset.thisWeek;
 
-FilterDateRange _todayRange() {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  return FilterDateRange(start: today, end: today.add(const Duration(days: 1)));
-}
+FilterDateRange _todayRange() => DateRangePreset.todayRange();
 
-FilterDateRange _thisWeekRange() {
-  final now = DateTime.now();
-  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-  final startOfWeekDay = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
-  return FilterDateRange(start: startOfWeekDay, end: startOfWeekDay.add(const Duration(days: 7)));
-}
+FilterDateRange _thisWeekRange() => DateRangePreset.thisWeekRange();
 
 void _toggleAssignedToMe(WidgetRef ref) {
   final currentFilters = ref.read(enquiryFiltersProvider);
