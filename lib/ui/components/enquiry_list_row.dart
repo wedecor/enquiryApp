@@ -42,6 +42,7 @@ class EnquiryListRow extends StatelessWidget {
     this.onLongPress,
     this.compact = false,
     this.showStatusChip = true,
+    this.locationPending = false,
     this.showChevron = true,
     this.bordered = false,
     this.margin,
@@ -70,6 +71,9 @@ class EnquiryListRow extends StatelessWidget {
 
   /// Hide where the status is already implied (e.g. inside a Kanban column).
   final bool showStatusChip;
+
+  /// Approved without a known location: a small "Location pending" pill on line 2.
+  final bool locationPending;
 
   /// Kept for call-site compatibility; the tile has no chevron.
   final bool showChevron;
@@ -144,16 +148,26 @@ class EnquiryListRow extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (line2.isNotEmpty) ...[
+                if (line2.isNotEmpty || locationPending) ...[
                   const SizedBox(height: 3),
-                  Text(
-                    line2,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w300,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          line2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ),
+                      if (locationPending) ...[
+                        const SizedBox(width: AppTokens.space2),
+                        const _LocationPendingPill(),
+                      ],
+                    ],
                   ),
                 ],
                 if (showMeta) ...[
@@ -285,6 +299,34 @@ class _DateBlock extends StatelessWidget {
         border: Border.all(color: s.microBorder),
       ),
       child: inner,
+    );
+  }
+}
+
+/// Amber "Location pending" pill for approved enquiries without an area.
+class _LocationPendingPill extends StatelessWidget {
+  const _LocationPendingPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ink = theme.brightness == Brightness.dark
+        ? AppColorScheme.warningDark
+        : AppColorScheme.onWarningContainerLight;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ink.withValues(alpha: 0.10),
+        borderRadius: AppRadius.full,
+        border: Border.all(color: ink.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: 1),
+        child: Text(
+          'Location pending',
+          maxLines: 1,
+          style: theme.textTheme.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
+        ),
+      ),
     );
   }
 }

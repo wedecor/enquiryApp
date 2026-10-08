@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/logging/logger.dart';
 import '../domain/enquiry_location.dart';
 
-/// One venue suggestion from the `placesAutocomplete` callable.
+/// One area or venue suggestion from the `placesAutocomplete` callable.
 class PlaceSuggestion {
   const PlaceSuggestion({required this.placeId, required this.mainText, this.secondaryText = ''});
 
@@ -55,6 +55,7 @@ class PlaceDetails {
     this.lng,
     this.area,
     this.city,
+    this.isArea = false,
   });
 
   final String placeId;
@@ -63,6 +64,10 @@ class PlaceDetails {
   final double? lng;
   final String? area;
   final String? city;
+
+  /// The picked place is itself an area (e.g. "JP Nagar"), not a venue; [area] is
+  /// then that area's own name.
+  final bool isArea;
 
   /// Null when the response has no place id.
   static PlaceDetails? fromResponse(Object? data) {
@@ -77,6 +82,7 @@ class PlaceDetails {
       lng: _number(map['lng']),
       area: _string(map['area']),
       city: _string(map['city']),
+      isArea: map['isArea'] == true,
     );
   }
 

@@ -12,6 +12,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
+import 'approval_location_prompt.dart';
 import 'approved_date_clash_prompt.dart';
 import 'enquiry_status_parts.dart';
 import 'lost_reason_sheet.dart';
@@ -239,9 +240,29 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
       );
       if (!proceed || !mounted) return;
     }
+    final approving =
+        EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue);
+    // Approving requires a location (area at minimum) — asked before the date check.
+    Map<String, Object?>? locationFields;
+    if (approving) {
+      setState(() => _isUpdatingStatus = true);
+      final location = await ensureApprovalLocation(
+        context,
+        ref,
+        enquiryId: widget.enquiryId,
+        data: widget.enquiryData,
+      );
+      if (!mounted) return;
+      setState(() => _isUpdatingStatus = false);
+      if (!location.proceed) {
+        setState(() => _selectedStatus = currentStatusValue);
+        return;
+      }
+      locationFields = location.fields;
+    }
     // Approving: warn when other approved bookings already fall on the event date.
     var clashWarningAccepted = false;
-    if (EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue)) {
+    if (approving) {
       final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
       if (eventDate != null && eventDate.year > 1971) {
         setState(() => _isUpdatingStatus = true);
@@ -267,8 +288,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     final bool confirmed;
     if (EnquiryStatus.isLost(value)) {
       confirmed = lostPrompt.proceed;
-    } else if (clashWarningAccepted) {
-      // "Approve anyway" already confirmed this change.
+    } else if (clashWarningAccepted || locationFields != null) {
+      // "Approve anyway" / "Save & approve" already confirmed this change.
       confirmed = true;
     } else {
       confirmed = await ConfirmationDialog.show(
@@ -307,6 +328,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
             nextStatus: value,
             userId: userId,
             lostReason: lostPrompt.choice,
+            extraFields: locationFields,
           );
 
       if (mounted) {

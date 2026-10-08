@@ -61,6 +61,7 @@ void main() {
       expect(details.lng, 77.592);
       expect(details.area, 'Vasanth Nagar');
       expect(details.city, 'Bengaluru');
+      expect(details.isArea, isFalse);
 
       final place = details.toEnquiryPlace();
       expect(place.placeId, 'ChIJ1');
@@ -80,6 +81,18 @@ void main() {
       expect(details.lat, 13.0);
       expect(details.area, isNull);
       expect(details.city, isNull);
+    });
+
+    test('reads isArea for an area pick', () {
+      final details = PlaceDetails.fromResponse(<Object?, Object?>{
+        'placeId': 'ChIJjp',
+        'area': 'JP Nagar',
+        'city': 'Bengaluru',
+        'isArea': true,
+      })!;
+      expect(details.isArea, isTrue);
+      expect(details.area, 'JP Nagar');
+      expect(PlaceDetails.fromResponse({'placeId': 'p', 'isArea': 'yes'})!.isArea, isFalse);
     });
 
     test('returns null without a place id', () {

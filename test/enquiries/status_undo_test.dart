@@ -88,6 +88,8 @@ void main() {
         id: 'E2',
         customerName: 'Bob',
         eventType: 'Wedding',
+        // Approval needs a known location, else the Confirm location sheet appears.
+        eventLocation: 'JP Nagar',
         eventDate: DateTime.now().add(const Duration(days: 30)),
         status: 'in_talks',
         assignedTo: 'staff1',

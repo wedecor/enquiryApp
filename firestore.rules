@@ -105,6 +105,39 @@ service cloud.firestore {
           && newStatus in staffStatusTransitions().get(oldStatus, []));
     }
 
+    // Approval requires a known location. Mirrors isVagueLocation / isLocationKnown in
+    // lib/features/enquiries/domain/enquiry_location.dart (keep the name list in sync):
+    // a value is vague when it is empty, only spaces / punctuation / symbols, or just
+    // the city / state / country name ("Bangalore", "BLR.", "Bengaluru, Karnataka").
+    function vagueLocationRegex() {
+      return '(?i)[\\s\\p{Z}\\p{P}\\p{S}]*'
+        + '((bangalore|bengaluru)([\\s\\p{Z}\\p{P}\\p{S}]+(city|urban|karnataka))?'
+        + '|banglore|bangaluru|blr|karnataka|india)?'
+        + '[\\s\\p{Z}\\p{P}\\p{S}]*';
+    }
+
+    function isKnownLocationValue(value) {
+      return value is string && value.size() > 0 && !value.matches(vagueLocationRegex());
+    }
+
+    // Raw statusValues that mean Approved (canonical + legacyStatusAliases).
+    function approvedStatusValues() {
+      return ['approved', 'confirmed', 'scheduled'];
+    }
+
+    // An update moving the enquiry INTO Approved must leave a known location: a
+    // non-vague locationArea or eventLocation. Re-saving a legacy approved alias
+    // (confirmed → approved) and edits that don't change the status are unaffected.
+    function hasLocationIfApproving() {
+      let oldStatus = resource.data.get('statusValue', '');
+      let newStatus = request.resource.data.get('statusValue', '');
+      let approving = newStatus in approvedStatusValues()
+        && !(oldStatus in approvedStatusValues());
+      return !approving
+        || isKnownLocationValue(request.resource.data.get('locationArea', ''))
+        || isKnownLocationValue(request.resource.data.get('eventLocation', ''));
+    }
+
     // Public-ish profile (NO tokens here)
     // D6: active users may read colleague profiles (name/email/phone) — accepted 2026-07.
     // The owner can always read their own doc so the app can show "Access disabled".
@@ -153,7 +186,8 @@ service cloud.firestore {
       allow delete: if isAdmin();
       
       // Update: Admin can update anything, Staff can only update non-financial fields
-      allow update: if isAdmin()
+      // Both roles: moving into Approved needs a known location (hasLocationIfApproving).
+      allow update: if hasLocationIfApproving() && (isAdmin()
         || (
           // Staff can update if:
           // 1. They are assigned to the enquiry
@@ -164,7 +198,7 @@ service cloud.firestore {
           && isModifyingOnlyStaffEditableFields()
           && isAllowedStaffStatusChange()
           && isStaffStatusBookkeepingValid()
-        );
+        ));
       
       // Enquiry History — append-only audit trail (AuditService writes `user_id`).
       // Cloud Functions write `user_id: 'system'` via the Admin SDK, bypassing rules.

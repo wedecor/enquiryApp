@@ -38,6 +38,7 @@ import '../widgets/enquiry_glass_bar.dart';
 import '../widgets/enquiry_sheet_header.dart';
 import '../widgets/form/enquiry_customer_match_cards.dart';
 import '../widgets/form/enquiry_form_pipeline_fields.dart';
+import '../widgets/form/enquiry_location_field.dart';
 import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
 
@@ -187,6 +188,11 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         locationController: _locationController,
         locationPlace: _locationPlace,
         onLocationPlaceChanged: (place) => setState(() => _locationPlace = place),
+        // Approving in this save needs the area, not just "Bangalore". Already-approved
+        // enquiries can still be edited (they show a "Location pending" chip instead).
+        requireKnownLocation: widget.mode == 'edit' &&
+            EnquiryStatus.isApproved(_selectedStatus) &&
+            !EnquiryStatus.isApproved(_initialStatus),
         phoneFooter: _customerMatchCards(),
       ),
       EnquiryFormEventFields(

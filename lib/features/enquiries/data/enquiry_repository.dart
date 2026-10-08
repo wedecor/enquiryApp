@@ -10,6 +10,7 @@ import '../../../core/services/notification_service.dart' as notification_servic
 import '../../../services/dropdown_lookup.dart';
 import '../domain/enquiry.dart';
 import '../domain/enquiry_lifecycle.dart';
+import '../domain/enquiry_location.dart';
 import 'pagination_state.dart';
 
 /// Provider for enquiry repository
@@ -122,11 +123,17 @@ class EnquiryRepository {
   ///
   /// The read, stage stamping, update and history entries run in one transaction, so
   /// concurrent status changes can't stamp the wrong stage or log a stale "from" status.
+  ///
+  /// [extraFields] are written in the same update (e.g. the location confirmed in the
+  /// approve sheet). Approving requires a known location (see [isLocationKnown]) in the
+  /// resulting document; otherwise [ApprovalLocationRequiredException] is thrown
+  /// before anything is written (firestore.rules enforce the same rule).
   Future<void> updateStatus({
     required String id,
     required String nextStatus,
     required String userId,
     LostReasonChoice? lostReason,
+    Map<String, Object?>? extraFields,
   }) async {
     final lookup = await _dropdownLookupFuture;
     final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
@@ -150,7 +157,21 @@ class EnquiryRepository {
 
       if (oldStatusValue == canonicalNext) return null;
 
+      final extras = extraFields ?? const <String, Object?>{};
+      if (EnquiryStatus.isApproved(canonicalNext) && !EnquiryStatus.isApproved(oldStatusValue)) {
+        final merged = <String, dynamic>{...oldEnquiryData};
+        extras.forEach((key, value) {
+          if (value is FieldValue) {
+            merged.remove(key); // only deletes are staged here
+          } else {
+            merged[key] = value;
+          }
+        });
+        if (!isLocationKnownInData(merged)) throw const ApprovalLocationRequiredException();
+      }
+
       transaction.update(docRef, {
+        ...extras,
         'statusValue': canonicalNext,
         'statusLabel': statusLabel,
         'statusUpdatedAt': FieldValue.serverTimestamp(),
@@ -174,6 +195,19 @@ class EnquiryRepository {
           newValue: canonicalNext,
         ),
       );
+
+      final newLocation = extras['eventLocation'];
+      final oldLocation = oldEnquiryData['eventLocation'];
+      if (newLocation is String && newLocation != oldLocation) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'eventLocation',
+            oldValue: oldLocation,
+            newValue: newLocation,
+          ),
+        );
+      }
 
       final oldLostReason = oldEnquiryData['lostReason'];
       if (isLost && lostReason != null) {
@@ -223,6 +257,15 @@ class EnquiryRepository {
   Future<String> createEnquiry(Map<String, dynamic> data) {
     return _firestoreService.createEnquiryFromData(data);
   }
+}
+
+/// Thrown by [EnquiryRepository.updateStatus] when approving an enquiry whose
+/// location is only the city (or empty).
+class ApprovalLocationRequiredException implements Exception {
+  const ApprovalLocationRequiredException();
+
+  @override
+  String toString() => 'Add the area (e.g. JP Nagar) or the venue before approving.';
 }
 
 /// What [EnquiryRepository.updateStatus] needs from inside its transaction afterwards.

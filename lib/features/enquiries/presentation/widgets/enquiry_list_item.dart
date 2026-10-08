@@ -7,6 +7,7 @@ import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
+import '../../domain/enquiry_location.dart';
 import '../screens/enquiry_details_screen.dart';
 
 /// Maps Firestore enquiry data to the shared [EnquiryListRow].
@@ -92,6 +93,12 @@ class EnquiryListItem extends ConsumerWidget {
       ageLabel: compact ? null : _formatAgeLabel(createdAt),
       assigneeLabel: compact || !showAssignee ? null : assigneeLabel?.trim(),
       compact: compact,
+      locationPending:
+          !compact &&
+          isApprovedLocationPending(
+            statusIsApproved: EnquiryStatus.isApproved(statusValue),
+            data: data,
+          ),
       onTap: onEdit ?? openDetails,
       onLongPress: sheetActions.isEmpty
           ? null

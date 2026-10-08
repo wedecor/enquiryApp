@@ -178,6 +178,7 @@ export const placeDetails = onCall<PlaceDetailsRequest, Promise<PlaceDetailsResu
     logger.info("placeDetails completed", {
       by: uid,
       hasArea: result.area !== null,
+      isArea: result.isArea,
       hasLocation: result.lat !== null,
     });
     return result;

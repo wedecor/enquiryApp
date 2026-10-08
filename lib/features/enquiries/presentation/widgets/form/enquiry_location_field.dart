@@ -16,7 +16,7 @@ class _LocationOption {
   final String? typed;
 }
 
-/// Event Location with Google Maps venue search. Free text is always allowed:
+/// Event Location with Google Maps search for areas ("JP Nagar") and venues. Free text is always allowed:
 /// suggestions only appear while typing and nothing forces a pick.
 ///
 /// Picking a venue fetches its details and attaches an [EnquiryPlace] through
@@ -27,9 +27,20 @@ class EnquiryLocationField extends ConsumerStatefulWidget {
     required this.controller,
     required this.place,
     required this.onPlaceChanged,
+    this.requireKnownLocation = false,
+    this.autofocus = false,
   });
 
+  /// Shown by the validator when [requireKnownLocation] and the location is only
+  /// the city (see [isLocationKnown]).
+  static const String approvalRequiredMessage = 'Location is required to approve — add the area';
+
   final TextEditingController controller;
+
+  /// The enquiry is (or will be) approved: validation also rejects a city-only
+  /// location such as "Bangalore".
+  final bool requireKnownLocation;
+  final bool autofocus;
 
   /// The place attached to the current text, if any.
   final EnquiryPlace? place;
@@ -139,7 +150,11 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
       setState(() => _resolving = false);
       return;
     }
-    final text = pickedLocationText(suggestion.mainText, details.area);
+    final text = pickedLocationText(
+      suggestion.mainText,
+      details.area,
+      isArea: details.isArea,
+    );
     _pickedText = text;
     widget.controller.value = TextEditingValue(
       text: text,
@@ -172,7 +187,7 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
 
   String? _helper() {
     final place = widget.place;
-    if (place == null) return 'Search a venue, or type any location';
+    if (place == null) return 'Search an area or venue, or type any location';
     final address = place.address;
     return address == null ? 'Pinned on Maps' : 'Pinned on Maps · $address';
   }
@@ -191,6 +206,7 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
         return TextFormField(
           controller: controller,
           focusNode: focusNode,
+          autofocus: widget.autofocus,
           scrollPadding: kEnquiryFieldScrollPadding,
           textInputAction: TextInputAction.next,
           decoration: InputDecoration(
@@ -203,6 +219,10 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
               return 'Please enter event location';
+            }
+            if (widget.requireKnownLocation &&
+                !isLocationKnown(area: widget.place?.area, eventLocation: value)) {
+              return EnquiryLocationField.approvalRequiredMessage;
             }
             return null;
           },

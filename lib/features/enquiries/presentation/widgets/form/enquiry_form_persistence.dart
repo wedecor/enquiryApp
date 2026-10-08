@@ -429,11 +429,33 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   /// Maps place fields to write on edit: the picked place (absent parts deleted),
   /// or deletes for all of them when the place was removed. Nothing when the
   /// enquiry never had a place and still has none.
-  Map<String, Object> _locationPlaceFields(Map<String, dynamic> oldData) {
+  ///
+  /// Free text (no place) on an approved enquiry also stores the text as
+  /// `locationArea` (same as the approve sheet) so area analytics groups it.
+  Map<String, Object> _locationPlaceFields(
+    Map<String, dynamic> oldData, {
+    required String locationText,
+    required bool approved,
+  }) {
     final place = _locationPlace;
     if (place == null) {
+      final typedArea = approved && !isVagueLocation(locationText) ? locationText.trim() : null;
       final hadPlace = EnquiryPlace.fieldKeys.any(oldData.containsKey);
+      if (typedArea != null) {
+        return {
+          for (final key in EnquiryPlace.fieldKeys)
+            if (key == EnquiryPlace.areaField)
+              key: typedArea
+            else if (oldData.containsKey(key))
+              key: FieldValue.delete(),
+        };
+      }
       if (!hadPlace) return const {};
+      // A typed area (no place id) stays while the text it came from is unchanged.
+      final oldText = ((oldData['eventLocation'] as String?) ?? '').trim();
+      if (!oldData.containsKey(EnquiryPlace.placeIdField) && oldText == locationText.trim()) {
+        return const {};
+      }
       return {for (final key in EnquiryPlace.fieldKeys) key: FieldValue.delete()};
     }
     final fields = place.toFields();
@@ -732,6 +754,17 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       }
     }
 
+    // Approving needs a known location (area at minimum), matching the rules, which
+    // only check the move into Approved. Checked before the date-clash warning.
+    if (statusDidChange &&
+        EnquiryStatus.isApproved(statusValue) &&
+        !isLocationKnown(area: _locationPlace?.area, eventLocation: newEventLocation)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(EnquiryLocationField.approvalRequiredMessage)),
+      );
+      return;
+    }
+
     // Approved bookings: warn about other approved events on the same day when this
     // save approves the enquiry, or moves an approved enquiry to a different day.
     if (EnquiryStatus.isApproved(statusValue) && _selectedDate != null) {
@@ -818,7 +851,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
 
     final quoteFields = _quoteFields(oldEnquiryData);
-    final locationPlaceFields = _locationPlaceFields(oldEnquiryData);
+    final locationPlaceFields = _locationPlaceFields(
+      oldEnquiryData,
+      locationText: newEventLocation,
+      approved: EnquiryStatus.isApproved(statusValue),
+    );
 
     // Update the enquiry document. Status / assignee / images are written only when the
     // user changed them; cleared optional fields are deleted rather than left stale.

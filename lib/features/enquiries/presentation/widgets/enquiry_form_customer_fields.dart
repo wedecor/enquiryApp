@@ -15,6 +15,7 @@ class EnquiryFormCustomerFields extends StatelessWidget {
     required this.locationController,
     required this.locationPlace,
     required this.onLocationPlaceChanged,
+    this.requireKnownLocation = false,
     this.phoneFooter,
   });
 
@@ -26,6 +27,9 @@ class EnquiryFormCustomerFields extends StatelessWidget {
   /// Google Maps place attached to the location text (null for free text).
   final EnquiryPlace? locationPlace;
   final ValueChanged<EnquiryPlace?> onLocationPlaceChanged;
+
+  /// The enquiry will be saved as approved: a city-only location is rejected.
+  final bool requireKnownLocation;
 
   /// Shown under the phone / email row (e.g. existing-customer and duplicate cards).
   final Widget? phoneFooter;
@@ -96,6 +100,7 @@ class EnquiryFormCustomerFields extends StatelessWidget {
           controller: locationController,
           place: locationPlace,
           onPlaceChanged: onLocationPlaceChanged,
+          requireKnownLocation: requireKnownLocation,
         ),
       ],
     );

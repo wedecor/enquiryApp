@@ -24,6 +24,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     required this.statusLabel,
     this.actions = const [],
     this.repeatCustomer = false,
+    this.locationPending = false,
   });
 
   final String enquiryId;
@@ -38,6 +39,10 @@ class EnquiryDetailsHeader extends StatelessWidget {
 
   /// Shows a small "Repeat customer" badge beside the status.
   final bool repeatCustomer;
+
+  /// Approved without a known location (only "Bangalore" or empty): shows a
+  /// "Location pending" badge so an admin can add the area.
+  final bool locationPending;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +81,10 @@ class EnquiryDetailsHeader extends StatelessWidget {
             const SizedBox(width: AppTokens.space3),
             const _RepeatCustomerBadge(),
           ],
+          if (locationPending) ...[
+            const SizedBox(width: AppTokens.space2),
+            const Flexible(child: LocationPendingBadge()),
+          ],
         ],
       ),
       footerHeight: EnquiryRoundAction.circleSize + 6 + 18 * textScale,
@@ -108,8 +117,36 @@ class _RepeatCustomerBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _HeaderBadge(label: 'Repeat customer', ink: AppSurfaces.of(context).accentInk);
+  }
+}
+
+/// Small amber pill on an approved enquiry whose location is only the city.
+class LocationPendingBadge extends StatelessWidget {
+  const LocationPendingBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: 'Add the area or venue',
+      child: _HeaderBadge(
+        label: 'Location pending',
+        ink: dark ? AppColorScheme.warningDark : AppColorScheme.onWarningContainerLight,
+      ),
+    );
+  }
+}
+
+class _HeaderBadge extends StatelessWidget {
+  const _HeaderBadge({required this.label, required this.ink});
+
+  final String label;
+  final Color ink;
+
+  @override
+  Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final ink = AppSurfaces.of(context).accentInk;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: ink.withValues(alpha: 0.10),
@@ -119,8 +156,9 @@ class _RepeatCustomerBadge extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: 2),
         child: Text(
-          'Repeat customer',
+          label,
           maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: t.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
         ),
       ),

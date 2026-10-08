@@ -13,6 +13,7 @@ import '../../../dashboard/presentation/dashboard_providers.dart';
 import '../../data/enquiry_repository.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
+import '../widgets/approval_location_prompt.dart';
 import '../widgets/approved_date_clash_prompt.dart';
 import '../widgets/list/kanban_lane.dart';
 import '../widgets/lost_reason_sheet.dart';
@@ -156,6 +157,18 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
+                // Approving needs a location (area at minimum), then the date check.
+                Map<String, Object?>? locationFields;
+                if (EnquiryStatus.isApproved(newStatus)) {
+                  final location = await ensureApprovalLocation(
+                    context,
+                    ref,
+                    enquiryId: enquiryId,
+                    data: doc.data() as Map<String, dynamic>,
+                  );
+                  if (!location.proceed || !context.mounted) return;
+                  locationFields = location.fields;
+                }
                 // Approving: warn when other approved bookings share the event date.
                 if (EnquiryStatus.isApproved(newStatus)) {
                   final eventDate = _ts((doc.data() as Map<String, dynamic>)['eventDate']);
@@ -183,6 +196,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                         nextStatus: newStatus,
                         userId: user.uid,
                         lostReason: lostPrompt.choice,
+                        extraFields: locationFields,
                       );
                 } catch (e) {
                   if (context.mounted) {

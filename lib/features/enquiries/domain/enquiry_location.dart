@@ -76,13 +76,93 @@ double? _number(Object? raw) {
   return value.isFinite ? value : null;
 }
 
-/// `eventLocation` text for a picked venue: "{mainText}, {area}" when the area is
-/// known and not already part of the name, else just the venue name.
-String pickedLocationText(String mainText, String? area) {
+/// Lower-cased [text] with every run of spaces / punctuation / symbols collapsed
+/// to one space, e.g. " Bangalore,  Karnataka. " → "bangalore karnataka".
+String _normalizedLocation(String text) =>
+    text.toLowerCase().replaceAll(_locationSeparators, ' ').trim();
+
+String _compactLocation(String text) => text.toLowerCase().replaceAll(_locationSeparators, '');
+
+/// Whitespace, separators, punctuation and symbols. Mirrored in firestore.rules
+/// (`vagueLocationRegex`) — keep both in sync.
+final RegExp _locationSeparators = RegExp(r'[\s\p{Z}\p{P}\p{S}]+', unicode: true);
+
+/// Names that only say "Bangalore" — not where the event actually is. Mirrored in
+/// firestore.rules (`vagueLocationRegex`) — keep both in sync.
+const List<String> vagueLocationNames = [
+  'bangalore',
+  'bengaluru',
+  'banglore',
+  'bangaluru',
+  'blr',
+  'bangalore city',
+  'bengaluru city',
+  'bangalore urban',
+  'bengaluru urban',
+  'karnataka',
+  'india',
+  'bangalore karnataka',
+  'bengaluru karnataka',
+];
+
+/// True when [text] doesn't tell us where in the city the event is: empty, only
+/// punctuation, or just the city / state / country name ("Bangalore", "BLR.",
+/// "Bengaluru, Karnataka").
+bool isVagueLocation(String? text) {
+  final normalized = _normalizedLocation(text ?? '');
+  return normalized.isEmpty || vagueLocationNames.contains(normalized);
+}
+
+/// The approval rule (mirrored in firestore.rules): the location is known when an
+/// area is stored (from a Maps pick, or typed in the approve sheet) or the
+/// location text is more specific than the city name.
+bool isLocationKnown({String? area, String? eventLocation}) =>
+    !isVagueLocation(area) || !isVagueLocation(eventLocation);
+
+/// [isLocationKnown] for a raw enquiry document.
+bool isLocationKnownInData(Map<String, dynamic> data) {
+  final area = data[EnquiryPlace.areaField];
+  final location = data['eventLocation'] ?? data['location'];
+  return isLocationKnown(
+    area: area is String ? area : null,
+    eventLocation: location is String ? location : null,
+  );
+}
+
+/// Whether an enquiry in [statusIsApproved] state should show "Location pending".
+bool isApprovedLocationPending({
+  required bool statusIsApproved,
+  required Map<String, dynamic> data,
+}) => statusIsApproved && !isLocationKnownInData(data);
+
+/// "Save & approve" in the Confirm location sheet: enabled once the typed text
+/// (or the place attached to it) passes [isLocationKnown].
+bool canSaveApprovalLocation({required String text, EnquiryPlace? place}) =>
+    isLocationKnown(area: place?.area, eventLocation: text);
+
+/// Fields the Confirm location sheet writes together with the approval.
+///
+/// With a picked [place]: the text plus every place field it has. Typed only: the
+/// text, and the same text as `locationArea` so area analytics still groups it.
+/// Place keys absent from the result should be cleared by the caller.
+Map<String, Object> approvalLocationFields({required String text, EnquiryPlace? place}) {
+  final location = text.trim();
+  if (place != null) return {'eventLocation': location, ...place.toFields()};
+  return {'eventLocation': location, EnquiryPlace.areaField: location};
+}
+
+/// `eventLocation` text for a picked place.
+///
+/// An area pick ([isArea], e.g. "JP Nagar") is just its name. A venue is
+/// "{mainText}, {area}" when the area is known and not already part of the name,
+/// else just the venue name.
+String pickedLocationText(String mainText, String? area, {bool isArea = false}) {
   final name = mainText.trim();
   final a = area?.trim() ?? '';
+  if (isArea) return name.isNotEmpty ? name : a;
   if (a.isEmpty || name.isEmpty) return name;
-  if (name.toLowerCase().contains(a.toLowerCase())) return name;
+  // Compare without spaces / punctuation so "J. P. Nagar" matches "JP Nagar".
+  if (_compactLocation(name).contains(_compactLocation(a))) return name;
   return '$name, $a';
 }
 

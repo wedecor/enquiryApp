@@ -266,6 +266,8 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
           customerName: 'Transition Test',
           eventType: 'Wedding',
           eventDate: new Date('2026-12-01'),
+          // Approving needs a known location (see 📍 Approval needs a location).
+          eventLocation: 'JP Nagar',
           statusValue,
           assignedTo,
           createdAt: new Date(),
@@ -456,6 +458,122 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     test('✅ Staff can correct the event date (edit form allows it)', async () => {
       await seed('in_talks');
       await assertSucceeds(staffDoc().update({ eventDate: new Date('2026-12-05'), updatedAt: new Date() }));
+    });
+  });
+
+  describe('📍 Approval needs a location', () => {
+    const seed = async (statusValue, extra = {}, assignedTo = STAFF_UID) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('location-doc').set({
+          customerName: 'Location Test',
+          eventType: 'Wedding',
+          eventDate: new Date('2026-12-01'),
+          statusValue,
+          assignedTo,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+          ...extra,
+        });
+      });
+    };
+    const docAs = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('location-doc');
+    const approve = (uid, role, extra = {}) =>
+      docAs(uid, role).update({
+        statusValue: 'approved',
+        statusUpdatedBy: uid,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+        ...extra,
+      });
+
+    test.each([
+      ['Bangalore'],
+      ['bengaluru.'],
+      ['  BLR  '],
+      ['Bengaluru, Karnataka'],
+      ['Bangalore Urban'],
+      ['India'],
+      [''],
+      [' , '],
+    ])('❌ Admin cannot approve with location %p', async (location) => {
+      await seed('in_talks', { eventLocation: location });
+      await assertFails(approve(ADMIN_UID, 'admin'));
+    });
+
+    test('❌ Admin cannot approve with no location at all', async () => {
+      await seed('in_talks');
+      await assertFails(approve(ADMIN_UID, 'admin'));
+    });
+
+    test('❌ Staff cannot approve with Bangalore', async () => {
+      await seed('in_talks', { eventLocation: 'Bangalore' });
+      await assertFails(approve(STAFF_UID, 'staff'));
+    });
+
+    test('❌ Approving via a legacy alias (confirmed) is checked too', async () => {
+      await seed('in_talks', { eventLocation: 'Bangalore' });
+      await assertFails(
+        docAs(ADMIN_UID, 'admin').update({ statusValue: 'confirmed', updatedAt: new Date() })
+      );
+    });
+
+    test.each([['JP Nagar'], ['Whitefield, Bangalore'], ['Palace Grounds, Vasanth Nagar']])(
+      '✅ Admin can approve with location %p',
+      async (location) => {
+        await seed('in_talks', { eventLocation: location });
+        await assertSucceeds(approve(ADMIN_UID, 'admin'));
+      }
+    );
+
+    test('✅ Staff can approve with JP Nagar', async () => {
+      await seed('in_talks', { eventLocation: 'JP Nagar' });
+      await assertSucceeds(approve(STAFF_UID, 'staff'));
+    });
+
+    test('✅ A stored locationArea is enough even when the text is Bangalore', async () => {
+      await seed('in_talks', { eventLocation: 'Bangalore', locationArea: 'Indiranagar' });
+      await assertSucceeds(approve(ADMIN_UID, 'admin'));
+    });
+
+    test('✅ The location can be added in the same write as the approval', async () => {
+      await seed('in_talks', { eventLocation: 'Bangalore' });
+      await assertSucceeds(
+        approve(STAFF_UID, 'staff', { eventLocation: 'JP Nagar', locationArea: 'JP Nagar' })
+      );
+    });
+
+    test('❌ A vague locationArea does not count', async () => {
+      await seed('in_talks', { eventLocation: 'Bangalore' });
+      await assertFails(approve(ADMIN_UID, 'admin', { locationArea: 'Bengaluru' }));
+    });
+
+    test('✅ Non-approval edits are unaffected', async () => {
+      await seed('approved', { eventLocation: 'Bangalore' });
+      await assertSucceeds(docAs(ADMIN_UID, 'admin').update({ notes: 'x', updatedAt: new Date() }));
+      await assertSucceeds(docAs(STAFF_UID, 'staff').update({ notes: 'y', updatedAt: new Date() }));
+      await seed('in_talks', { eventLocation: 'Bangalore' });
+      await assertSucceeds(
+        docAs(STAFF_UID, 'staff').update({
+          statusValue: 'closed_lost',
+          statusUpdatedBy: STAFF_UID,
+          lostAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('✅ Re-saving a legacy approved alias as approved is unaffected', async () => {
+      await seed('confirmed', { eventLocation: 'Bangalore' });
+      await assertSucceeds(
+        docAs(ADMIN_UID, 'admin').update({ statusValue: 'approved', updatedAt: new Date() })
+      );
+    });
+
+    test('✅ Moving an approved enquiry on (completed) is unaffected', async () => {
+      await seed('approved', { eventLocation: 'Bangalore' });
+      await assertSucceeds(approve(ADMIN_UID, 'admin', { statusValue: 'completed' }));
     });
   });
 

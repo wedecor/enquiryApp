@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../../../../ui/components/enquiry_list_row.dart';
+import '../../../domain/enquiry_location.dart';
 
 /// Kanban card: the shared [EnquiryListRow] (tight variant) made draggable.
 /// While dragging, the card lifts — slight tilt, scale and a status-coloured
@@ -57,6 +58,10 @@ class KanbanCard extends StatelessWidget {
       ageLabel: hasEventDate && countdown != null ? '$countdown · $ageLabel' : ageLabel,
       onTap: onTap,
       showStatusChip: false,
+      locationPending: isApprovedLocationPending(
+        statusIsApproved: EnquiryStatus.isApproved(statusValue),
+        data: data,
+      ),
       showChevron: false,
       bordered: true,
       margin: margin,

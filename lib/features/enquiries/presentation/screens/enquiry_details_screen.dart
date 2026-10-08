@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/role_guards.dart' show logAdminAction;
+import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_merge_service.dart';
+import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
 import '../widgets/enquiry_access_denied.dart';
 import '../widgets/enquiry_detail_footer.dart';
@@ -196,6 +198,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               statusLabel: labels.statusLabel,
               actions: loadedActions,
               repeatCustomer: (otherEvents?.totalEvents ?? 0) >= 1,
+              locationPending: isApprovedLocationPending(
+                statusIsApproved: EnquiryStatus.isApproved(labels.statusValue),
+                data: enquiryData,
+              ),
             ),
             EnquiryDetailsBody(
               enquiryId: widget.enquiryId,
