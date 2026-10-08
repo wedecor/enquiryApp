@@ -236,6 +236,7 @@ class AnalyticsMoneyTab extends StatelessWidget {
 
 List<Widget> _demandSections(PipelineReport r) => [
   SourcePerformanceSection(report: r),
+  AreaBreakdownSection(report: r),
   _Responsive(
     narrow: [
       LeadTimeSection(report: r),

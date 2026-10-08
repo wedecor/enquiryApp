@@ -10,6 +10,7 @@ import '../../../../ui/primitives/primitives.dart';
 import '../../../reengagement/presentation/widgets/yearly_reminder_card.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../domain/enquiry_lifecycle.dart';
+import '../../domain/enquiry_location.dart';
 import 'customer_info_section.dart';
 import 'customer_other_events_section.dart';
 import 'enquiry_assignment_section.dart';
@@ -58,6 +59,7 @@ class EnquiryDetailsBody extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final side = ((width - _maxContentWidth) / 2).clamp(AppTokens.space4, double.infinity);
 
+    final place = EnquiryPlace.fromData(enquiryData);
     final sections = <Widget>[
       EventDetailsSection(
         eventTypeLabel: labels.eventTypeLabel,
@@ -92,6 +94,13 @@ class EnquiryDetailsBody extends StatelessWidget {
           location:
               (enquiryData['eventLocation'] as String?) ??
               (enquiryData['location'] as String? ?? 'N/A'),
+          locationAddress: place?.address,
+          mapsUri: mapsSearchUri(
+            eventLocation:
+                (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
+            address: place?.address,
+            placeId: place?.placeId,
+          ),
           onAddEvent: onAddEvent,
         ),
         minor: EnquiryAssignmentSection(

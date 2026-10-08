@@ -735,6 +735,82 @@ FollowUpReport computeFollowUp({
   );
 }
 
+// ── 10. Bookings by area ─────────────────────────────────────────────────────
+
+class AreaRow {
+  const AreaRow({
+    required this.key,
+    required this.label,
+    required this.bookings,
+    required this.bookedValue,
+  });
+
+  /// Key used for an enquiry without `locationArea`.
+  static const String notSpecifiedKey = '';
+
+  /// Lower-cased, whitespace-collapsed area ('' = not specified).
+  final String key;
+  final String label;
+  final int bookings;
+  final double bookedValue;
+
+  bool get isNotSpecified => key == notSpecifiedKey;
+}
+
+/// Lower-cased, whitespace-collapsed `locationArea` ('' when missing).
+String areaKeyOf(Map<String, dynamic> row) {
+  final raw = row['locationArea'];
+  if (raw is! String) return AreaRow.notSpecifiedKey;
+  return raw.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+}
+
+/// Title case for display; short all-caps words (HSR, BTM, JP) are kept.
+String areaDisplayLabel(String raw) {
+  return raw
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .map((w) {
+        if (w.length <= 4 && w == w.toUpperCase() && w != w.toLowerCase()) return w;
+        return w[0].toUpperCase() + w.substring(1).toLowerCase();
+      })
+      .join(' ');
+}
+
+/// Approved + completed enquiries grouped by `locationArea` (case-insensitive),
+/// most bookings first, with a "Not specified" row last for those without one.
+List<AreaRow> computeAreaBreakdown(List<Map<String, dynamic>> rows) {
+  final labels = <String, String>{};
+  final counts = <String, int>{};
+  final values = <String, double>{};
+  for (final row in leadRows(rows).where(isWon)) {
+    final key = areaKeyOf(row);
+    if (key != AreaRow.notSpecifiedKey) {
+      labels.putIfAbsent(key, () => areaDisplayLabel(row['locationArea'] as String));
+    }
+    counts[key] = (counts[key] ?? 0) + 1;
+    values[key] = (values[key] ?? 0) + (metricNum(row['totalCost']) ?? 0);
+  }
+  final list = [
+    for (final key in counts.keys)
+      AreaRow(
+        key: key,
+        label: key == AreaRow.notSpecifiedKey ? 'Not specified' : labels[key]!,
+        bookings: counts[key]!,
+        bookedValue: values[key]!,
+      ),
+  ];
+  list.sort((a, b) {
+    if (a.isNotSpecified != b.isNotSpecified) return a.isNotSpecified ? 1 : -1;
+    final byCount = b.bookings.compareTo(a.bookings);
+    if (byCount != 0) return byCount;
+    final byValue = b.bookedValue.compareTo(a.bookedValue);
+    if (byValue != 0) return byValue;
+    return a.label.compareTo(b.label);
+  });
+  return list;
+}
+
 // ── Full report ──────────────────────────────────────────────────────────────
 
 class PipelineReport {
@@ -753,6 +829,7 @@ class PipelineReport {
     required this.upcomingDemand,
     required this.followUp,
     required this.bookedValueInPeriod,
+    this.areas = const [],
   });
 
   final AnalyticsAttribution attribution;
@@ -771,6 +848,9 @@ class PipelineReport {
 
   /// Booked value of won enquiries in the period (by the chosen attribution).
   final double bookedValueInPeriod;
+
+  /// Approved + completed enquiries in the period by area ([computeAreaBreakdown]).
+  final List<AreaRow> areas;
 }
 
 /// Builds every Phase-1 metric. [allRows] = every enquiry visible to the admin
@@ -802,5 +882,6 @@ PipelineReport buildPipelineReport({
     bookedValueInPeriod: period
         .where(isWon)
         .fold<double>(0, (total, r) => total + (metricNum(r['totalCost']) ?? 0)),
+    areas: computeAreaBreakdown(period),
   );
 }

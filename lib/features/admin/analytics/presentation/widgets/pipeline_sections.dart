@@ -960,3 +960,49 @@ class UpcomingDemandSection extends ConsumerWidget {
     );
   }
 }
+
+/// Approved + completed bookings in the period by venue area (from Maps picks).
+class AreaBreakdownSection extends StatelessWidget {
+  const AreaBreakdownSection({super.key, required this.report});
+
+  final PipelineReport report;
+
+  static const int _maxRows = 15;
+
+  @override
+  Widget build(BuildContext context) {
+    final named = report.areas.where((a) => !a.isNotSpecified).toList();
+    final unspecified = report.areas.where((a) => a.isNotSpecified).toList();
+    final shown = [...named.take(_maxRows), ...unspecified];
+    final total = report.areas.fold<int>(0, (a, b) => a + b.bookings);
+    return AnalyticsSectionCard(
+      eyebrow: 'Geography',
+      title: 'By area',
+      subtitle: named.length > _maxRows
+          ? 'Approved + completed in this period · top $_maxRows of ${named.length} areas'
+          : 'Approved + completed in this period · area from the Maps venue pick',
+      child: total == 0
+          ? const AnalyticsEmptyState(
+              icon: Icons.map_outlined,
+              message: 'No bookings in this period',
+            )
+          : MetricTable(
+              columns: const [
+                MetricColumn('Area', flex: 3, numeric: false),
+                MetricColumn('Bookings'),
+                MetricColumn('Share'),
+                MetricColumn('Booked', flex: 2),
+              ],
+              rows: [
+                for (final a in shown)
+                  [
+                    a.label,
+                    '${a.bookings}',
+                    formatPercent(a.bookings / total),
+                    _money(a.bookedValue),
+                  ],
+              ],
+            ),
+    );
+  }
+}

@@ -317,7 +317,14 @@ class FirestoreService {
     String? sourceLabel,
     String? paymentStatusLabel,
     String? whatsappNumber,
+    String? locationPlaceId,
+    String? locationAddress,
+    double? locationLat,
+    double? locationLng,
+    String? locationArea,
+    String? locationCity,
   }) async {
+    final placeId = locationPlaceId?.trim() ?? '';
     final enquiryData = {
       'customerName': customerName,
       if (customerEmail.trim().isNotEmpty) 'customerEmail': customerEmail.toLowerCase(),
@@ -327,6 +334,20 @@ class FirestoreService {
       'eventType': eventType,
       'eventDate': eventDate,
       'eventLocation': eventLocation,
+      // Optional Google Maps place picked in the Location field.
+      if (placeId.isNotEmpty) ...{
+        'locationPlaceId': placeId,
+        if (locationAddress != null && locationAddress.trim().isNotEmpty)
+          'locationAddress': locationAddress.trim(),
+        if (locationLat != null && locationLng != null) ...{
+          'locationLat': locationLat,
+          'locationLng': locationLng,
+        },
+        if (locationArea != null && locationArea.trim().isNotEmpty)
+          'locationArea': locationArea.trim(),
+        if (locationCity != null && locationCity.trim().isNotEmpty)
+          'locationCity': locationCity.trim(),
+      },
       if (guestCount > 0) 'guestCount': guestCount,
       if (budgetRange.trim().isNotEmpty) 'budgetRange': budgetRange,
       ...enquiryNotesFields(description),

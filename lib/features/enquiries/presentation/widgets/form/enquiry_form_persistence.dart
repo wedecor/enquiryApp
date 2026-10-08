@@ -28,6 +28,9 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   bool _isLoading = false;
   bool _hydrated = false;
 
+  /// Google Maps place picked for the location text; null for free text.
+  EnquiryPlace? _locationPlace;
+
   // Values as loaded when the edit form opened. Status / assignee / images are only
   // written back if the user changed them, so a save can't undo a change someone else
   // made while this form was open.
@@ -83,6 +86,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           _phoneController.text = (data['customerPhone'] as String?) ?? '';
           _emailController.text = (data['customerEmail'] as String?) ?? '';
           _locationController.text = (data['eventLocation'] as String?) ?? '';
+          _locationPlace = EnquiryPlace.fromData(data);
           _notesController.text = enquiryNotesFrom(data) ?? '';
 
           if (data['totalCost'] != null) {
@@ -422,6 +426,22 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     };
   }
 
+  /// Maps place fields to write on edit: the picked place (absent parts deleted),
+  /// or deletes for all of them when the place was removed. Nothing when the
+  /// enquiry never had a place and still has none.
+  Map<String, Object> _locationPlaceFields(Map<String, dynamic> oldData) {
+    final place = _locationPlace;
+    if (place == null) {
+      final hadPlace = EnquiryPlace.fieldKeys.any(oldData.containsKey);
+      if (!hadPlace) return const {};
+      return {for (final key in EnquiryPlace.fieldKeys) key: FieldValue.delete()};
+    }
+    final fields = place.toFields();
+    return {
+      for (final key in EnquiryPlace.fieldKeys) key: fields[key] ?? FieldValue.delete(),
+    };
+  }
+
   double? _parseDouble(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     return double.tryParse(value.trim());
@@ -522,6 +542,12 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       sourceLabel: sourceLabel,
       paymentStatusLabel: paymentStatusLabel,
       whatsappNumber: _currentWhatsapp,
+      locationPlaceId: _locationPlace?.placeId,
+      locationAddress: _locationPlace?.address,
+      locationLat: _locationPlace?.lat,
+      locationLng: _locationPlace?.lng,
+      locationArea: _locationPlace?.area,
+      locationCity: _locationPlace?.city,
     );
 
     final quoteFields = _quoteFields(const {});
@@ -792,6 +818,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
 
     final quoteFields = _quoteFields(oldEnquiryData);
+    final locationPlaceFields = _locationPlaceFields(oldEnquiryData);
 
     // Update the enquiry document. Status / assignee / images are written only when the
     // user changed them; cleared optional fields are deleted rather than left stale.
@@ -803,6 +830,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       else
         'customerEmail': FieldValue.delete(),
       'eventLocation': newEventLocation,
+      ...locationPlaceFields,
       if (newDescription.isNotEmpty)
         ...enquiryNotesFields(newDescription)
       else ...{

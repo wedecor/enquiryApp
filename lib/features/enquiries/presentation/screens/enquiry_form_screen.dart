@@ -26,6 +26,7 @@ import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
 import '../../domain/enquiry_lifecycle.dart';
+import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
 import '../widgets/approved_date_clash_prompt.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
@@ -184,6 +185,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         phoneController: _phoneController,
         emailController: _emailController,
         locationController: _locationController,
+        locationPlace: _locationPlace,
+        onLocationPlaceChanged: (place) => setState(() => _locationPlace = place),
         phoneFooter: _customerMatchCards(),
       ),
       EnquiryFormEventFields(

@@ -15,7 +15,7 @@ type ApprovedOnDateRequest = {
 
 type ApprovedOnDateEvent = {
   id: string;
-  /** `eventLocation`, or null when blank. */
+  /** `locationArea` (Maps-picked area), else `eventLocation`; null when both blank. */
   area: string | null;
   eventType: string;
 };
@@ -137,7 +137,7 @@ export const approvedOnDate = onCall<ApprovedOnDateRequest, Promise<ApprovedOnDa
         const data = d.data();
         return {
           id: d.id,
-          area: stringOrNull(data.eventLocation),
+          area: stringOrNull(data.locationArea) ?? stringOrNull(data.eventLocation),
           eventType: eventTypeLabelOf(data),
         };
       });

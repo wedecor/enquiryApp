@@ -65,6 +65,47 @@ cd functions && npm ci && npm run build && cd ..
 firebase deploy --only functions
 ```
 
+## Google Maps search
+
+The enquiry **Event Location** field suggests venues from Google Maps as you type
+(Bangalore-biased, India only). It's optional: free text such as "Bangalore" still
+saves as typed. The API key lives only in Secret Manager — the app calls the
+`placesAutocomplete` / `placeDetails` callables (asia-south1), never Google directly.
+Until the key is set, the field silently behaves as plain text.
+
+One-time setup (Google Cloud console, same project as Firebase):
+
+1. **APIs & Services → Library**: enable **Places API (New)**. A billing account must be
+   linked to the project.
+2. **APIs & Services → Credentials → Create credentials → API key**. Under *API
+   restrictions* choose **Restrict key → Places API (New)** only. No application
+   restriction is needed — the key is only used server-side by Cloud Functions.
+3. Store it as a secret:
+
+   ```bash
+   firebase functions:secrets:set GOOGLE_MAPS_API_KEY
+   ```
+
+4. **Billing → Budgets & alerts**: add a budget alert (e.g. ₹500/month).
+   **APIs & Services → Places API (New) → Quotas**: set a per-day cap on requests
+   (e.g. 1,000/day for Autocomplete and for Place Details).
+5. Deploy the two functions:
+
+   ```bash
+   cd functions && npm ci && npm run build && cd ..
+   firebase deploy --only functions:placesAutocomplete,functions:placeDetails
+   ```
+
+Cost per search: keystrokes are debounced (350 ms, from 3 characters) and grouped into
+one session token. Picking a venue ends the session with one **Place Details
+Essentials** call (field mask `id,formattedAddress,location,addressComponents` — no
+`displayName`, which is a Pro field), and the session's Autocomplete requests are then
+not billed separately. Searches abandoned without a pick are billed per Autocomplete
+request. India pricing includes **70,000 free Autocomplete requests** and **70,000 free
+Place Details Essentials** calls per month — far above this app's volume.
+
+"Open in Maps" on the enquiry page is a plain `google.com/maps/search` link and is free.
+
 ## Firestore rules tests
 
 ```bash

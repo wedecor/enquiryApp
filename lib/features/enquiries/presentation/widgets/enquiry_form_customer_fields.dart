@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/tokens.dart';
+import '../../domain/enquiry_location.dart';
 import 'enquiry_form_section.dart';
+import 'form/enquiry_location_field.dart';
 
 /// Customer name, phone, email, and location fields for the enquiry form.
 class EnquiryFormCustomerFields extends StatelessWidget {
@@ -11,6 +13,8 @@ class EnquiryFormCustomerFields extends StatelessWidget {
     required this.phoneController,
     required this.emailController,
     required this.locationController,
+    required this.locationPlace,
+    required this.onLocationPlaceChanged,
     this.phoneFooter,
   });
 
@@ -18,6 +22,10 @@ class EnquiryFormCustomerFields extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController emailController;
   final TextEditingController locationController;
+
+  /// Google Maps place attached to the location text (null for free text).
+  final EnquiryPlace? locationPlace;
+  final ValueChanged<EnquiryPlace?> onLocationPlaceChanged;
 
   /// Shown under the phone / email row (e.g. existing-customer and duplicate cards).
   final Widget? phoneFooter;
@@ -84,19 +92,10 @@ class EnquiryFormCustomerFields extends StatelessWidget {
         ),
         if (phoneFooter != null) ...[const SizedBox(height: AppTokens.space3), phoneFooter!],
         const SizedBox(height: kEnquiryFieldGap),
-        TextFormField(
+        EnquiryLocationField(
           controller: locationController,
-          scrollPadding: kEnquiryFieldScrollPadding,
-          decoration: const InputDecoration(
-            labelText: 'Event Location *',
-            prefixIcon: Icon(Icons.location_on_outlined),
-          ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter event location';
-            }
-            return null;
-          },
+          place: locationPlace,
+          onPlaceChanged: onLocationPlaceChanged,
         ),
       ],
     );
