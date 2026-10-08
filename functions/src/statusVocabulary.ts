@@ -25,6 +25,7 @@ export const LEGACY_STATUS_ALIASES: Readonly<Record<string, CanonicalStatus>> = 
   confirmed: "approved",
   scheduled: "approved",
   enquired: "new",
+  not_intrested: "not_interested",
 };
 
 /** Resolves a raw Firestore status (incl. legacy aliases) to canonical, or null if unknown. */

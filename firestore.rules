@@ -24,10 +24,53 @@ service cloud.firestore {
     
     // Staff may READ assigned enquiries in full (including totals/payment).
     // Write protection only — UI/export must hide financial data for staff (see csv_export_rbac).
+    // eventDate stays staff-editable: the edit form lets staff correct wrong event dates.
     function isModifyingOnlyStaffEditableFields() {
       let protectedFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel', 'assignedTo', 'createdBy', 'createdAt', 'quotedAmount', 'quotedAt'];
       let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
       return !modifiedFields.hasAny(protectedFields);
+    }
+
+    // Stage / lost bookkeeping written by EnquiryRepository.updateStatus and the edit
+    // form only together with a status change (EnquiryStageFields + LostReasonChoice).
+    function statusBookkeepingFields() {
+      return ['lostReason', 'lostReasonNote', 'lostAt', 'completedAt', 'inTalksAt', 'approvedAt', 'statusUpdatedBy'];
+    }
+
+    // Mirrors EnquiryStatus.legacyAliases. Re-saving a legacy doc from the edit form
+    // rewrites statusValue to its canonical value without stamping anything.
+    function legacyStatusAliases() {
+      return {
+        'contacted': 'in_talks',
+        'quote_sent': 'in_talks',
+        'quoted': 'in_talks',
+        'in_progress': 'in_talks',
+        'assigned': 'in_talks',
+        'confirmed': 'approved',
+        'scheduled': 'approved',
+        'enquired': 'new',
+        'not_intrested': 'not_interested'
+      };
+    }
+
+    // Staff may only touch stage/lost fields in the same write as a real status change,
+    // and that write must record them as the person who changed the status.
+    function isStaffStatusBookkeepingValid() {
+      let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
+      let oldStatus = resource.data.get('statusValue', '');
+      let newStatus = request.resource.data.get('statusValue', '');
+      let statusChanging = modifiedFields.hasAny(['statusValue']);
+      let isNormalisation = oldStatus is string
+        && legacyStatusAliases().get(oldStatus, '') == newStatus;
+      return (
+          (!statusChanging || isNormalisation)
+          && !modifiedFields.hasAny(statusBookkeepingFields())
+        )
+        || (
+          statusChanging
+          && !isNormalisation
+          && request.resource.data.get('statusUpdatedBy', '') == request.auth.uid
+        );
     }
 
     // Mirrors EnquiryStatus.staffTransitions (lib/core/constants/status_vocabulary.dart).
@@ -60,9 +103,10 @@ service cloud.firestore {
     }
 
     // Public-ish profile (NO tokens here)
-    // D6: signed-in users may read colleague profiles (name/email/phone) — accepted 2026-07
+    // D6: active users may read colleague profiles (name/email/phone) — accepted 2026-07.
+    // The owner can always read their own doc so the app can show "Access disabled".
     match /users/{uid} {
-      allow read: if isSignedIn();                     // profile-safe fields only
+      allow read: if isSignedIn() && (request.auth.uid == uid || isActiveUser());
       allow create, update, delete: if isAdmin();
     }
 
@@ -71,12 +115,26 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // User notifications - allow creation by any authenticated user (for notification service)
-    // Users can read their own notifications, admins can read any
+    // User notifications — queued by NotificationService (runs as the acting app user) and
+    // pushed by the sendNotificationToUser function. Keys/limits are a cross-agent contract.
+    function isValidNotificationCreate() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['title', 'body', 'type', 'data', 'enquiryId', 'read', 'createdAt', 'createdBy', 'senderId'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+        && d.body is string && d.body.size() > 0 && d.body.size() <= 500
+        && (!('read' in d) || d.read == false)
+        && (!('data' in d) || d.data is map)
+        && (!('createdBy' in d) || d.createdBy == request.auth.uid)
+        && (!('senderId' in d) || d.senderId == request.auth.uid);
+    }
+
+    // Owner reads; admins can read any. Owner may only flip read/readAt (markAsRead / markAll).
     match /users/{uid}/notifications/{notificationId} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn(); // Allow any authenticated user to create (notification service runs as the app user)
-      allow update, delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isActiveUser() && isValidNotificationCreate();
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+      allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Enquiries - Admins see all, Staff only see assigned enquiries
@@ -102,14 +160,18 @@ service cloud.firestore {
           && resource.data.assignedTo == request.auth.uid
           && isModifyingOnlyStaffEditableFields()
           && isAllowedStaffStatusChange()
+          && isStaffStatusBookkeepingValid()
         );
       
-      // Enquiry History - same permissions as parent enquiry
+      // Enquiry History — append-only audit trail (AuditService writes `user_id`).
+      // Cloud Functions write `user_id: 'system'` via the Admin SDK, bypassing rules.
       match /history/{historyId} {
         allow read: if isAdmin()
           || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
-        allow create, update: if isAdmin()
-          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
+        allow create: if (isAdmin()
+            || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid))
+          && request.resource.data.user_id == request.auth.uid;
+        allow update: if false;
         allow delete: if isAdmin();
       }
 
@@ -131,15 +193,15 @@ service cloud.firestore {
       allow create: if isAdmin(); // created by CF with admin privileges
     }
 
-    // Dropdowns - authenticated users can read, admin can manage
+    // Dropdowns - active users can read, admin can manage
     match /dropdowns/{group}/items/{value} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow create, update, delete: if isAdmin();
     }
 
-    // Analytics read-only for signed-in users
+    // Analytics — admin-only, read-only (written by back-end jobs)
     match /analytics/{doc=**} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin();
     }
 
     // User Settings - users can manage their own, admins can manage any
@@ -154,9 +216,9 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && (isOwner(uid) || isAdmin());
     }
 
-    // App Config - read for all signed-in users, write for admins only
+    // App Config - read for active users, write for admins only
     match /app_config/{docId} {
-      allow read: if isSignedIn();
+      allow read: if isActiveUser();
       allow write: if isAdmin();
     }
 

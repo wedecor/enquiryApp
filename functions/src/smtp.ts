@@ -2,6 +2,13 @@ import { logger } from "firebase-functions/v2";
 import * as nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
+/**
+ * SMTP configuration:
+ * - SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_FROM_EMAIL: plain env vars loaded by the Firebase CLI
+ *   from functions/.env (see functions/.env.example). `functions.env` in firebase.json is ignored.
+ * - SMTP_PASS: Secret Manager (`firebase functions:secrets:set SMTP_PASS`).
+ */
+
 /** Secret names bound to functions that send email (see inviteUser). */
 export const SMTP_SECRET_NAMES = ["SMTP_PASS"] as const;
 
@@ -22,7 +29,7 @@ export function createEmailTransporter(): Transporter | null {
   if (!user || !pass) {
     logger.warn(
       "SMTP not configured — invitation emails will be skipped. " +
-        "Set SMTP_USER and SMTP_PASS (Firebase Secret Manager) then redeploy functions."
+        "Set SMTP_USER in functions/.env and SMTP_PASS in Secret Manager, then redeploy functions."
     );
     return null;
   }

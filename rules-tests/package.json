@@ -6,10 +6,9 @@
     "test": "jest spec/rbac_stable.spec.js --testEnvironment=node --runInBand",
     "test:verbose": "jest --testEnvironment=node --verbose --runInBand",
     "test:watch": "jest --testEnvironment=node --watch",
-    "emulators:start": "firebase emulators:start --only firestore --project demo-test --import=./seed --export-on-exit --quiet",
-    "ci": "concurrently -k -s first \"npm:emulators:start\" \"npm:wait-then-test\"",
-    "wait-then-test": "wait-on tcp:8080 && npm run test",
-    "emulator:stop": "firebase emulators:exec --only firestore --project demo-test 'echo stopped'"
+    "emulators:start": "firebase emulators:start --only firestore --project demo-test",
+    "ci": "npm run test:emulator",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-test \"npm test\""
   },
   "dependencies": {
     "@firebase/rules-unit-testing": "3.0.3",

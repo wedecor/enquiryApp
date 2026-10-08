@@ -281,7 +281,9 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
         .firestore()
         .collection('enquiries')
         .doc(id)
-        .update({ statusValue, updatedAt: new Date() });
+        // Real clients (EnquiryRepository.updateStatus / edit form) always stamp
+        // statusUpdatedBy with the caller's uid when the status changes.
+        .update({ statusValue, statusUpdatedBy: uid, updatedAt: new Date() });
 
     test.each([
       ['new', 'in_talks'],
@@ -373,6 +375,252 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     ])('✅ Admin can move %s → %s', async (from, to) => {
       await seedStatus('transition-doc', from);
       await assertSucceeds(updateStatus(ADMIN_UID, 'admin', 'transition-doc', to));
+    });
+  });
+
+  describe('🧾 Staff status bookkeeping fields', () => {
+    const seed = async (statusValue, extra = {}) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('bookkeeping-doc').set({
+          customerName: 'Bookkeeping Test',
+          eventType: 'Wedding',
+          eventDate: new Date('2026-12-01'),
+          statusValue,
+          assignedTo: STAFF_UID,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+          ...extra,
+        });
+      });
+    };
+    const staffDoc = () =>
+      testEnv
+        .authenticatedContext(STAFF_UID, { role: 'staff' })
+        .firestore()
+        .collection('enquiries')
+        .doc('bookkeeping-doc');
+
+    test.each([
+      ['lostReason', 'no_response'],
+      ['lostReasonNote', 'forged'],
+      ['lostAt', new Date('2020-01-01')],
+      ['completedAt', new Date('2020-01-01')],
+      ['inTalksAt', new Date('2020-01-01')],
+      ['approvedAt', new Date('2020-01-01')],
+      ['statusUpdatedBy', OTHER_STAFF_UID],
+    ])('❌ Staff cannot change %s without a status change', async (field, value) => {
+      await seed('in_talks');
+      await assertFails(staffDoc().update({ [field]: value, updatedAt: new Date() }));
+    });
+
+    test('✅ Staff can stamp stage + lost fields together with a status change', async () => {
+      await seed('in_talks');
+      await assertSucceeds(
+        staffDoc().update({
+          statusValue: 'closed_lost',
+          statusUpdatedBy: STAFF_UID,
+          lostAt: new Date(),
+          lostReason: 'budget',
+          lostReasonNote: null,
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Status change must record the caller as statusUpdatedBy', async () => {
+      await seed('new');
+      await assertFails(
+        staffDoc().update({
+          statusValue: 'in_talks',
+          statusUpdatedBy: OTHER_STAFF_UID,
+          inTalksAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+      await assertFails(staffDoc().update({ statusValue: 'in_talks', updatedAt: new Date() }));
+    });
+
+    test('✅ Re-saving a legacy status as canonical needs no bookkeeping', async () => {
+      await seed('enquired', { statusUpdatedBy: OTHER_STAFF_UID });
+      await assertSucceeds(staffDoc().update({ statusValue: 'new', updatedAt: new Date() }));
+    });
+
+    test('❌ Legacy normalisation cannot smuggle bookkeeping fields', async () => {
+      await seed('enquired');
+      await assertFails(
+        staffDoc().update({ statusValue: 'new', lostReason: 'budget', updatedAt: new Date() })
+      );
+    });
+
+    test('✅ Staff can correct the event date (edit form allows it)', async () => {
+      await seed('in_talks');
+      await assertSucceeds(staffDoc().update({ eventDate: new Date('2026-12-05'), updatedAt: new Date() }));
+    });
+  });
+
+  describe('🕘 Enquiry history (append-only)', () => {
+    const history = (uid, role) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history');
+
+    const entry = (userId) => ({
+      field_changed: 'statusValue',
+      old_value: 'new',
+      new_value: 'in_talks',
+      user_id: userId,
+      timestamp: new Date(),
+      user_email: 'staff@example.com',
+    });
+
+    test('✅ Assigned staff can append history as themselves', async () => {
+      await assertSucceeds(history(STAFF_UID, 'staff').add(entry(STAFF_UID)));
+    });
+
+    test('❌ History cannot be written under another uid (staff or admin)', async () => {
+      await assertFails(history(STAFF_UID, 'staff').add(entry(OTHER_STAFF_UID)));
+      await assertFails(history(ADMIN_UID, 'admin').add(entry(STAFF_UID)));
+    });
+
+    test('❌ History entries cannot be edited, even by admins', async () => {
+      let id;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const ref = await context
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('history')
+          .add(entry(STAFF_UID));
+        id = ref.id;
+      });
+      await assertFails(history(STAFF_UID, 'staff').doc(id).update({ new_value: 'approved' }));
+      await assertFails(history(ADMIN_UID, 'admin').doc(id).update({ new_value: 'approved' }));
+      await assertFails(history(STAFF_UID, 'staff').doc(id).delete());
+    });
+  });
+
+  describe('🔔 User notifications', () => {
+    const notifications = (uid, role, targetUid) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('users')
+        .doc(targetUid)
+        .collection('notifications');
+
+    const valid = () => ({
+      title: 'Enquiry Status Updated',
+      body: 'Status changed from New to In Talks for John Doe',
+      data: { type: 'status_update', enquiryId: 'enquiry-assigned-to-staff' },
+      read: false,
+      createdAt: new Date(),
+    });
+
+    test('✅ Active user can queue a notification for a colleague', async () => {
+      await assertSucceeds(notifications(STAFF_UID, 'staff', ADMIN_UID).add(valid()));
+    });
+
+    test('✅ Contract keys type/enquiryId/createdBy/senderId are accepted', async () => {
+      await assertSucceeds(
+        notifications(STAFF_UID, 'staff', ADMIN_UID).add({
+          ...valid(),
+          type: 'status_update',
+          enquiryId: 'enquiry-assigned-to-staff',
+          createdBy: STAFF_UID,
+          senderId: STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Inactive user cannot queue notifications', async () => {
+      await assertFails(notifications(INACTIVE_STAFF_UID, 'staff', ADMIN_UID).add(valid()));
+    });
+
+    test('❌ Extra keys are rejected', async () => {
+      await assertFails(
+        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), imageUrl: 'https://evil.example' })
+      );
+    });
+
+    test('❌ Title over 120 chars / body over 500 chars is rejected', async () => {
+      await assertFails(
+        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), title: 'x'.repeat(121) })
+      );
+      await assertFails(
+        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), body: 'x'.repeat(501) })
+      );
+    });
+
+    test('✅ Owner can mark read; ❌ owner cannot rewrite content', async () => {
+      let id;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const ref = await context
+          .firestore()
+          .collection('users')
+          .doc(STAFF_UID)
+          .collection('notifications')
+          .add(valid());
+        id = ref.id;
+      });
+      await assertSucceeds(
+        notifications(STAFF_UID, 'staff', STAFF_UID).doc(id).update({ read: true, readAt: new Date() })
+      );
+      await assertFails(
+        notifications(STAFF_UID, 'staff', STAFF_UID).doc(id).update({ title: 'changed' })
+      );
+    });
+  });
+
+  describe('🚫 Inactive users', () => {
+    test('✅ Inactive user can still read their own profile (Access disabled screen)', async () => {
+      const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(firestore.collection('users').doc(INACTIVE_STAFF_UID).get());
+    });
+
+    test('❌ Inactive user cannot read other profiles', async () => {
+      const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();
+      await assertFails(firestore.collection('users').doc(ADMIN_UID).get());
+      await assertFails(firestore.collection('users').get());
+    });
+
+    test('✅ Active user can read colleague profiles (D6)', async () => {
+      const firestore = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(firestore.collection('users').doc(ADMIN_UID).get());
+    });
+
+    test('❌ Inactive user cannot read dropdowns or app config', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('dropdowns').doc('statuses').collection('items').doc('new').set({ label: 'New' });
+        await context.firestore().collection('app_config').doc('update').set({ latestBuild: 1 });
+      });
+      const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();
+      await assertFails(firestore.collection('dropdowns').doc('statuses').collection('items').doc('new').get());
+      await assertFails(firestore.collection('app_config').doc('update').get());
+
+      const active = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(active.collection('dropdowns').doc('statuses').collection('items').doc('new').get());
+    });
+
+    test('❌ Signed-in account with no users doc cannot read users or dropdowns', async () => {
+      const firestore = testEnv.authenticatedContext('stranger-000', {}).firestore();
+      await assertFails(firestore.collection('users').doc(STAFF_UID).get());
+      await assertFails(firestore.collection('dropdowns').doc('statuses').collection('items').doc('new').get());
+    });
+
+    test('❌ Analytics is admin-only', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('analytics').doc('summary').set({ total: 1 });
+      });
+      await assertFails(
+        testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore().collection('analytics').doc('summary').get()
+      );
+      await assertSucceeds(
+        testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore().collection('analytics').doc('summary').get()
+      );
     });
   });
 

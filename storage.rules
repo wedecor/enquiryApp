@@ -10,33 +10,27 @@ service firebase.storage {
       return /databases/(default)/documents/users/$(request.auth.uid);
     }
 
-    // Ternary branches short-circuit — avoid firestore.get() when not needed.
-    function _userRole() {
-      return isSignedIn() && firestore.exists(_userDoc())
-        ? firestore.get(_userDoc()).data.role
-        : null;
+    // Mirrors firestore.rules isActiveUser(): profile exists and isActive (legacy `active`) != false.
+    function isActiveUser() {
+      return isSignedIn()
+        && firestore.exists(_userDoc())
+        && firestore.get(_userDoc()).data.get('isActive', firestore.get(_userDoc()).data.get('active', true)) == true;
     }
 
+    // Mirrors firestore.rules isAdmin(): role comes from the Firestore profile only.
     function isAdmin() {
-      // Prefer Auth custom claims if configured; fall back to Firestore profile.
-      // (Some clients may rely on claims during token lifetime.)
-      return (request.auth.token.role == 'admin')
-        || (request.auth.token.admin == true)
-        // Be tolerant of legacy casing/variants.
-        || _userRole() == 'admin'
-        || _userRole() == 'Admin';
+      return isActiveUser()
+        && firestore.get(_userDoc()).data.role == 'admin';
     }
 
     // Admins: full access. Staff: only when Firestore allows them to read the enquiry.
     function canAccessEnquiry(enquiryId) {
-      return isAdmin()
-        ? true
-        : isAssignedToEnquiry(enquiryId);
+      return isAdmin() || isAssignedToEnquiry(enquiryId);
     }
 
     function isAssignedToEnquiry(enquiryId) {
       let enquiryPath = /databases/(default)/documents/enquiries/$(enquiryId);
-      return isSignedIn()
+      return isActiveUser()
         && firestore.exists(enquiryPath)
         && (
           firestore.get(enquiryPath).data.assignedTo == request.auth.uid
@@ -63,14 +57,14 @@ service firebase.storage {
 
     match /attachments/{enquiryId}/{fileName} {
       allow read: if canAccessEnquiry(enquiryId);
-      allow write: if canAccessEnquiry(enquiryId) && isValidAttachmentWrite();
-      allow delete: if canAccessEnquiry(enquiryId);
+      allow create, update: if canAccessEnquiry(enquiryId) && isValidAttachmentWrite();
+      allow delete: if isAdmin();
     }
 
     match /enquiries/{enquiryId}/images/{fileName} {
       allow read: if canAccessEnquiry(enquiryId);
-      allow write: if canAccessEnquiry(enquiryId) && isValidImageWrite();
-      allow delete: if canAccessEnquiry(enquiryId);
+      allow create, update: if canAccessEnquiry(enquiryId) && isValidImageWrite();
+      allow delete: if isAdmin();
     }
   }
 }

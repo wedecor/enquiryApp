@@ -8,9 +8,10 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "rimraf lib dist node_modules .turbo .parcel-cache .cache || true",
-    "build": "tsc -p tsconfig.json",
-    "deploy": "firebase deploy --only functions:inviteUser,functions:autoExpireEnquiries,functions:sendNotificationToUser,functions:sendNotificationToTopic",
-    "lint": "echo \"(optional) add eslint if needed\""
+    "build": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "deploy": "firebase deploy --only functions:inviteUser,functions:adminUpdateUser,functions:autoExpireEnquiries,functions:sendNotificationToUser",
+    "lint": "echo \"(optional) add eslint if needed\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

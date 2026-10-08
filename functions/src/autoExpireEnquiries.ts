@@ -10,8 +10,29 @@ import {
 import { IST_TIME_ZONE, istDayStart } from "./istTime";
 
 const PAGE_SIZE = 300;
-/** Firestore allows 500 writes per batch; each auto-change is 2 writes (enquiry + history). */
-const MAX_BATCH_WRITES = 400;
+/**
+ * Firestore allows 500 writes per batch. Each auto-change is 2 writes (enquiry + history)
+ * plus one notification doc per recipient; a batch is committed before it would overflow.
+ */
+const MAX_BATCH_WRITES = 450;
+const SYSTEM_USER = "system";
+
+type Recipient = { uid: string };
+
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
+
+/** Users docs written before the isActive migration may still carry `active`. */
+function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  const isActive = data?.isActive ?? data?.active ?? true;
+  return isActive !== false;
+}
+
+async function loadActiveAdminIds(db: FirebaseFirestore.Firestore): Promise<string[]> {
+  const snap = await db.collection("users").where("role", "==", "admin").get();
+  return snap.docs.filter((d) => isActiveUserData(d.data())).map((d) => d.id);
+}
 
 type AutoCloseRule = {
   from: CanonicalStatus[];
@@ -50,6 +71,15 @@ export const autoExpireEnquiries = onSchedule(
     const counts: Record<string, number> = {};
     let scanned = 0;
     let changed = 0;
+    let notificationsQueued = 0;
+
+    // Admins are notified of every auto-change; loaded once per run.
+    let activeAdminIds: string[] = [];
+    try {
+      activeAdminIds = await loadActiveAdminIds(db);
+    } catch (error: any) {
+      logger.error("Auto-expire: failed to load admins for notifications", { error: error?.message });
+    }
 
     for (const rule of AUTO_CLOSE_RULES) {
       // Canonical values + legacy aliases (≤ 10 values for the `in` filter).
@@ -96,6 +126,19 @@ export const autoExpireEnquiries = onSchedule(
               ? { lostReason: "no_response", lostReasonNote: "Auto-closed after event date" }
               : {};
 
+          // Assignee + all active admins (deduped). sendNotificationToUser skips inactive users.
+          const assignedTo = doc.get("assignedTo");
+          const recipientIds = new Set<string>(activeAdminIds);
+          if (typeof assignedTo === "string" && assignedTo) recipientIds.add(assignedTo);
+          const recipients: Recipient[] = Array.from(recipientIds).map((uid) => ({ uid }));
+
+          const opsForDoc = 2 + recipients.length;
+          if (pendingWrites > 0 && pendingWrites + opsForDoc > MAX_BATCH_WRITES) {
+            await batch.commit();
+            batch = db.batch();
+            pendingWrites = 0;
+          }
+
           batch.update(doc.ref, {
             ...stageFields,
             ...lostFields,
@@ -114,13 +157,46 @@ export const autoExpireEnquiries = onSchedule(
             field_changed: "statusValue",
             old_value: oldStatus,
             new_value: rule.to,
-            user_id: "system",
+            user_id: SYSTEM_USER,
             timestamp: FieldValue.serverTimestamp(),
-            user_email: "system",
+            user_email: SYSTEM_USER,
           });
 
-          pendingWrites += 2;
+          // Same doc shape as NotificationService (users/{uid}/notifications); the
+          // sendNotificationToUser trigger turns each one into a push.
+          const customerName = (doc.get("customerName") as string | undefined) || "Unknown Customer";
+          const oldLabel = statusLabel(oldStatus);
+          const newLabel = statusLabel(rule.to);
+          const title = rule.to === "completed" ? "Enquiry Auto-Completed" : "Enquiry Auto-Closed";
+          const body = truncate(
+            `Status changed from ${oldLabel} to ${newLabel} for ${customerName} (event date passed)`,
+            500
+          );
+          for (const recipient of recipients) {
+            batch.set(
+              db.collection("users").doc(recipient.uid).collection("notifications").doc(),
+              {
+                title: truncate(title, 120),
+                body,
+                type: "status_update",
+                enquiryId: doc.id,
+                data: {
+                  type: "status_update",
+                  enquiryId: doc.id,
+                  customerName,
+                  oldStatus: oldLabel,
+                  newStatus: newLabel,
+                  updatedBy: rule.updatedBy,
+                },
+                read: false,
+                createdAt: FieldValue.serverTimestamp(),
+              }
+            );
+          }
+
+          pendingWrites += opsForDoc;
           changed += 1;
+          notificationsQueued += recipients.length;
           const key = `${oldRaw}->${rule.to}`;
           counts[key] = (counts[key] ?? 0) + 1;
 
@@ -145,6 +221,7 @@ export const autoExpireEnquiries = onSchedule(
     logger.info("Auto-expire enquiries completed", {
       scanned,
       changed,
+      notificationsQueued,
       counts,
       todayStartIst: todayStart.toISOString(),
       asOf: now.toISOString(),
