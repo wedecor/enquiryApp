@@ -69,7 +69,10 @@ class NotificationService {
       // Get assigned user details
       final assignedUser = await _getUserById(assignedTo);
       if (assignedUser == null) {
-        Log.w('NotificationService: assigned user not found', data: {'assignedTo': assignedTo});
+        Log.w(
+          'NotificationService: assigned user not found or inactive',
+          data: {'assignedTo': assignedTo},
+        );
         return;
       }
 
@@ -166,7 +169,7 @@ class NotificationService {
           'NotificationService: no admin users found to notify',
           data: {'updatedBy': updatedBy},
         );
-        return;
+        // No early return: the assignee below must still be notified.
       }
 
       if (kDebugMode) {
@@ -303,7 +306,7 @@ class NotificationService {
           'NotificationService: no admin users found to notify for enquiry update',
           data: {'updatedBy': updatedBy},
         );
-        return;
+        // No early return: the assignee below must still be notified.
       }
 
       if (kDebugMode) {
@@ -486,6 +489,9 @@ class NotificationService {
       if (!doc.exists) return null;
 
       final data = doc.data() as Map<String, dynamic>;
+      // Never notify deactivated users (legacy docs use `active`).
+      final isActive = data['isActive'] ?? data['active'] ?? true;
+      if (isActive == false) return null;
       return UserModel(
         uid: doc.id,
         name: data['name'] as String? ?? '',
@@ -497,6 +503,15 @@ class NotificationService {
       Log.e('NotificationService: error getting user by ID', error: e, stackTrace: st);
       return null;
     }
+  }
+
+  static const int _maxTitleLength = 120;
+  static const int _maxBodyLength = 500;
+
+  /// Cuts [value] to at most [max] characters (rules reject longer strings).
+  static String _truncate(String value, int max) {
+    if (value.length <= max) return value;
+    return '${value.substring(0, max - 1)}…';
   }
 
   /// Queues a notification for [userId] by writing `users/{userId}/notifications`.
@@ -513,14 +528,20 @@ class NotificationService {
     required Map<String, dynamic> data,
   }) async {
     try {
+      // Only keys allowed by the notification contract (security rules):
+      // title, body, type, data, enquiryId, read, createdAt, createdBy, senderId.
+      final type = data['type'];
+      final enquiryId = data['enquiryId'];
       final notificationRef = await _firestore
           .collection('users')
           .doc(userId)
           .collection('notifications')
           .add({
-            'title': title,
-            'body': body,
+            'title': _truncate(title, _maxTitleLength),
+            'body': _truncate(body, _maxBodyLength),
+            if (type is String) 'type': type,
             'data': data,
+            if (enquiryId is String) 'enquiryId': enquiryId,
             'read': false,
             'createdAt': FieldValue.serverTimestamp(),
           });
@@ -556,13 +577,18 @@ class NotificationService {
         .map((snap) => snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
-  /// Real-time stream of unread notification count
+  /// Cap for the unread badge query; the UI shows "99+" above 99.
+  static const int unreadCountCap = 100;
+
+  /// Real-time stream of unread notification count, capped at [unreadCountCap]
+  /// so the badge never streams every unread document.
   Stream<int> watchUnreadCount(String userId) {
     return _firestore
         .collection('users')
         .doc(userId)
         .collection('notifications')
         .where('read', isEqualTo: false)
+        .limit(unreadCountCap)
         .snapshots()
         .map((snap) => snap.docs.length);
   }
@@ -619,7 +645,6 @@ class NotificationService {
   /// Mark all notifications as read for a user
   Future<void> markAllNotificationsAsRead(String userId) async {
     try {
-      final batch = _firestore.batch();
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -627,11 +652,17 @@ class NotificationService {
           .where('read', isEqualTo: false)
           .get();
 
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+      // Firestore batches hold at most 500 writes; commit in chunks.
+      const chunkSize = 450;
+      final docs = snapshot.docs;
+      for (var start = 0; start < docs.length; start += chunkSize) {
+        final end = start + chunkSize < docs.length ? start + chunkSize : docs.length;
+        final batch = _firestore.batch();
+        for (final doc in docs.sublist(start, end)) {
+          batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+        }
+        await batch.commit();
       }
-
-      await batch.commit();
     } catch (e, st) {
       Log.e(
         'NotificationService: error marking all notifications as read',

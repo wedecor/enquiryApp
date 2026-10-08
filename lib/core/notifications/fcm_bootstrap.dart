@@ -25,7 +25,8 @@ class _FcmBootstrapState extends ConsumerState<FcmBootstrap> {
     super.initState();
     _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
-        FcmTokenManager.ensureFcmRegistered(ref.read(firestoreServiceProvider));
+        // ensureFcmRegistered never throws; listeners are wired before the token.
+        unawaited(FcmTokenManager.ensureFcmRegistered(ref.read(firestoreServiceProvider)));
       } else {
         unawaited(FcmTokenManager.dispose());
       }
@@ -35,7 +36,7 @@ class _FcmBootstrapState extends ConsumerState<FcmBootstrap> {
   @override
   void dispose() {
     _authSubscription?.cancel();
-    unawaited(FcmTokenManager.dispose());
+    unawaited(FcmTokenManager.cancelListeners());
     super.dispose();
   }
 
