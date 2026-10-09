@@ -19,6 +19,10 @@ class StatusDropdown extends ConsumerStatefulWidget {
   final String? Function(String?)? validator;
   final bool required;
 
+  /// Type-to-search field instead of a plain dropdown. Defaults to on for
+  /// event types, whose list keeps growing.
+  final bool? searchable;
+
   const StatusDropdown({
     super.key,
     this.value,
@@ -27,7 +31,10 @@ class StatusDropdown extends ConsumerStatefulWidget {
     required this.collectionName,
     this.validator,
     this.required = false,
+    this.searchable,
   });
+
+  bool get isSearchable => searchable ?? collectionName == 'event_types';
 
   @override
   ConsumerState<StatusDropdown> createState() => _StatusDropdownState();
@@ -40,16 +47,26 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
   final TextEditingController _addController = TextEditingController();
   final _fieldKey = GlobalKey<FormFieldState<String>>();
 
+  // Searchable mode only.
+  static const _addSentinel = '__add_new__';
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _statuses = DropdownDefaults.forCollection(widget.collectionName);
+    _searchFocus.addListener(_onSearchFocusChanged);
+    _syncSearchText();
     _loadStatuses();
   }
 
   @override
   void dispose() {
     _addController.dispose();
+    _searchFocus.removeListener(_onSearchFocusChanged);
+    _searchFocus.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -58,8 +75,71 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     super.didUpdateWidget(oldWidget);
     // Only rebuild if the value actually changed and we have data loaded
     if (oldWidget.value != widget.value && _statuses.isNotEmpty) {
+      _syncSearchText();
       setState(() {});
     }
+  }
+
+  String _labelFor(String? value) {
+    if (value == null) return '';
+    for (final status in _statuses) {
+      if (status['value'] == value) return status['label'] ?? value;
+    }
+    return '';
+  }
+
+  /// Shows the selected option's label in the search box (not while typing).
+  void _syncSearchText() {
+    if (!widget.isSearchable || _searchFocus.hasFocus) return;
+    final current = _fieldKey.currentState?.value ?? _getValidValue(widget.value);
+    final label = _labelFor(current);
+    if (_searchController.text != label) _searchController.text = label;
+  }
+
+  /// Leaving the field without picking restores the selected label.
+  void _onSearchFocusChanged() {
+    if (!_searchFocus.hasFocus) _syncSearchText();
+  }
+
+  /// Prefix matches first, then other matches; the full list when the box is
+  /// empty or still shows the current selection. Admins get "Add …" when
+  /// nothing matches exactly.
+  Iterable<Map<String, String>> _searchOptions(String rawQuery, bool isAdmin) {
+    final query = rawQuery.trim().toLowerCase();
+    final selectedLabel = _labelFor(_fieldKey.currentState?.value).toLowerCase();
+    if (query.isEmpty || query == selectedLabel) return _statuses;
+
+    final prefix = <Map<String, String>>[];
+    final contains = <Map<String, String>>[];
+    var exact = false;
+    for (final status in _statuses) {
+      final label = (status['label'] ?? '').toLowerCase();
+      final value = (status['value'] ?? '').toLowerCase();
+      if (label == query || value == query) exact = true;
+      if (label.startsWith(query) || value.startsWith(query)) {
+        prefix.add(status);
+      } else if (label.contains(query) || value.contains(query.replaceAll(' ', '_'))) {
+        contains.add(status);
+      }
+    }
+    return [
+      ...prefix,
+      ...contains,
+      if (isAdmin && !exact) {'value': _addSentinel, 'label': rawQuery.trim()},
+    ];
+  }
+
+  void _selectSearchOption(FormFieldState<String> field, Map<String, String> option) {
+    if (option['value'] == _addSentinel) {
+      _addController.text = option['label'] ?? '';
+      _addNewStatus();
+      return;
+    }
+    final value = option['value'];
+    field.didChange(value);
+    _searchController.text = option['label'] ?? value ?? '';
+    _searchFocus.unfocus();
+    widget.onChanged(value);
   }
 
   Future<void> _loadStatuses() async {
@@ -72,11 +152,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           .read(firestoreServiceProvider)
           .fetchActiveDropdownOptions(widget.collectionName);
 
+      if (!mounted) return;
       setState(() {
         _statuses = DropdownDefaults.resolve(options, widget.collectionName);
         _isLoading = false;
       });
       _syncFieldValueAfterLoad();
+      _syncSearchText();
     } catch (e, st) {
       // Fallback to default values if Firestore is not available
       Log.w(
@@ -84,11 +166,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         data: {'collection': widget.collectionName, 'error': e.runtimeType.toString()},
       );
       Log.d('StatusDropdown fallback stack', data: st);
+      if (!mounted) return;
       setState(() {
         _statuses = DropdownDefaults.forCollection(widget.collectionName);
         _isLoading = false;
       });
       _syncFieldValueAfterLoad();
+      _syncSearchText();
     }
   }
 
@@ -105,6 +189,7 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       if (_fieldKey.currentState?.value == null) {
         _fieldKey.currentState?.didChange(canonical);
       }
+      _syncSearchText();
     });
   }
 
@@ -178,6 +263,12 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
 
       // Set the new value
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _fieldKey.currentState?.didChange(newValue);
+        if (widget.isSearchable) {
+          _searchController.text = newStatus;
+          _searchFocus.unfocus();
+        }
         widget.onChanged(newValue);
       });
 
@@ -199,9 +290,11 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
         );
       }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
       _addController.clear();
     }
   }
@@ -257,6 +350,9 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
       children: [
         Row(
           children: [
+            if (widget.isSearchable)
+              Expanded(child: _buildSearchField(context, roleAsync.valueOrNull == UserRole.admin))
+            else
             Expanded(
               child: DropdownButtonFormField<String>(
                 key: _fieldKey,
@@ -295,7 +391,10 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             roleAsync.when(
               data: (role) {
                 // The status workflow is fixed in code; only labels/colours are editable.
-                if (role != UserRole.admin || widget.collectionName == 'statuses') {
+                // Searchable fields offer "Add …" inside the list instead.
+                if (role != UserRole.admin ||
+                    widget.collectionName == 'statuses' ||
+                    widget.isSearchable) {
                   return const SizedBox.shrink();
                 }
                 final s = AppSurfaces.of(context);
@@ -337,6 +436,85 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context, bool isAdmin) {
+    final s = AppSurfaces.of(context);
+    return FormField<String>(
+      key: _fieldKey,
+      initialValue: _getValidValue(widget.value),
+      validator: widget.validator,
+      builder: (field) {
+        return RawAutocomplete<Map<String, String>>(
+          textEditingController: _searchController,
+          focusNode: _searchFocus,
+          displayStringForOption: (option) => option['value'] == _addSentinel
+              ? (option['label'] ?? '')
+              : (option['label'] ?? option['value'] ?? ''),
+          optionsBuilder: (textValue) => _searchOptions(textValue.text, isAdmin),
+          onSelected: (option) => _selectSearchOption(field, option),
+          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+            return TextField(
+              controller: controller,
+              focusNode: focusNode,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: widget.required ? '${widget.label} *' : widget.label,
+                hintText:
+                    widget.value != null &&
+                        !_isLoading &&
+                        _statuses.isNotEmpty &&
+                        _getValidValue(widget.value) == null
+                    ? 'Current: ${widget.value} — type to search'
+                    : 'Type to search',
+                prefixIcon: Icon(_getIconForStatus(), size: AppTokens.iconMedium),
+                suffixIcon: _isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.search_rounded),
+                errorText: field.errorText,
+              ),
+              onSubmitted: (_) => onFieldSubmitted(),
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 6,
+                color: s.glassFillStrong,
+                borderRadius: AppRadius.large,
+                clipBehavior: Clip.antiAlias,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280, maxWidth: 520),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: AppTokens.space1),
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      final isAdd = option['value'] == _addSentinel;
+                      return ListTile(
+                        dense: true,
+                        leading: isAdd ? const Icon(Icons.add_rounded) : null,
+                        title: Text(
+                          isAdd
+                              ? 'Add "${option['label']}" as a new ${widget.label.toLowerCase()}'
+                              : (option['label'] ?? option['value'] ?? ''),
+                        ),
+                        onTap: () => onSelected(option),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
