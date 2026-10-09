@@ -342,8 +342,7 @@ const Map<String, Object?> clearFunctionFields = {
 
 /// Whether a single remaining function carries data the legacy fields can't hold.
 bool needsFunctionArray(List<EventFunction> functions) =>
-    functions.length > 1 ||
-    functions.any((f) => _text(f.time) != null || _text(f.notes) != null);
+    functions.length > 1 || functions.any((f) => _text(f.time) != null || _text(f.notes) != null);
 
 /// Everything to write when a booking's functions are saved (null = delete):
 /// [functionSyncFields] for 2+ functions (or one with a time / notes); a single plain

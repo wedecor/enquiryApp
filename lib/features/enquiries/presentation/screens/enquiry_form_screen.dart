@@ -79,9 +79,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
     if (!isEdit && initialDate.isBefore(today)) initialDate = today;
     // showDatePicker asserts firstDate <= initialDate <= lastDate.
     final earliest = DateTime(2020, 1, 1);
-    final firstDate = isEdit
-        ? (initialDate.isBefore(earliest) ? initialDate : earliest)
-        : today;
+    final firstDate = isEdit ? (initialDate.isBefore(earliest) ? initialDate : earliest) : today;
     final lastDate = initialDate.isAfter(defaultLast) ? initialDate : defaultLast;
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -95,8 +93,7 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         _selectedDate = picked;
       });
       final status = EnquiryStatus.fromValue(_selectedStatus);
-      final isActive =
-          !EnquiryStatus.isLost(_selectedStatus) && status != EnquiryStatus.completed;
+      final isActive = !EnquiryStatus.isLost(_selectedStatus) && status != EnquiryStatus.completed;
       if (isEdit && isActive && picked.isBefore(today)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -220,7 +217,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         onLocationPlaceChanged: (place) => setState(() => _locationPlace = place),
         // Approving in this save needs the area, not just "Bangalore". Already-approved
         // enquiries can still be edited (they show a "Location pending" chip instead).
-        requireKnownLocation: widget.mode == 'edit' &&
+        requireKnownLocation:
+            widget.mode == 'edit' &&
             EnquiryStatus.isApproved(_selectedStatus) &&
             !EnquiryStatus.isApproved(_initialStatus),
         phoneFooter: _customerMatchCards(),

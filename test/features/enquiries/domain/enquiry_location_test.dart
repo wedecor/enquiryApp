@@ -4,7 +4,10 @@ import 'package:we_decor_enquiries/features/enquiries/domain/enquiry_location.da
 void main() {
   group('pickedLocationText', () {
     test('appends the area when known', () {
-      expect(pickedLocationText('Palace Grounds', 'Vasanth Nagar'), 'Palace Grounds, Vasanth Nagar');
+      expect(
+        pickedLocationText('Palace Grounds', 'Vasanth Nagar'),
+        'Palace Grounds, Vasanth Nagar',
+      );
     });
 
     test('venue name only when area is missing or blank', () {
@@ -14,8 +17,10 @@ void main() {
 
     test('does not repeat an area already in the name (case-insensitive)', () {
       expect(pickedLocationText('Indiranagar Club', 'indiranagar'), 'Indiranagar Club');
-      expect(pickedLocationText('The Leela, Old Airport Road', 'Old Airport Road'),
-          'The Leela, Old Airport Road');
+      expect(
+        pickedLocationText('The Leela, Old Airport Road', 'Old Airport Road'),
+        'The Leela, Old Airport Road',
+      );
     });
 
     test('area pick is just the area name (no "JP Nagar, JP Nagar")', () {
@@ -31,8 +36,10 @@ void main() {
     });
 
     test('trims the inputs', () {
-      expect(pickedLocationText('  Taj West End ', ' Race Course Road '),
-          'Taj West End, Race Course Road');
+      expect(
+        pickedLocationText('  Taj West End ', ' Race Course Road '),
+        'Taj West End, Race Course Road',
+      );
     });
   });
 

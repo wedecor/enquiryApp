@@ -63,10 +63,7 @@ class YearlyReminderCard extends ConsumerWidget {
                 style: t.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               ),
             ),
-            Switch(
-              value: occasion.remindersOn,
-              onChanged: (on) => _toggle(context, ref, on),
-            ),
+            Switch(value: occasion.remindersOn, onChanged: (on) => _toggle(context, ref, on)),
           ],
         ),
       ],

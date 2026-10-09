@@ -42,10 +42,7 @@ class EnquiryFormEventFields extends StatelessWidget {
       eyebrow: 'When & what',
       title: 'Event Details',
       children: [
-        if (functionsEditor != null)
-          functionsEditor!
-        else
-          ..._singleEventFields(context),
+        if (functionsEditor != null) functionsEditor! else ..._singleEventFields(context),
         const SizedBox(height: kEnquiryFieldGap),
         EnquiryFieldPair(
           first: TextFormField(

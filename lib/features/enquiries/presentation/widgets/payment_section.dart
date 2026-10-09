@@ -94,7 +94,9 @@ class PaymentSection extends StatelessWidget {
             if (balance != null)
               EnquiryDetailInfoRow(
                 label: 'Balance',
-                value: overpaid ? 'Overpaid ${_formatCurrency(-balance)}' : _formatCurrency(balance),
+                value: overpaid
+                    ? 'Overpaid ${_formatCurrency(-balance)}'
+                    : _formatCurrency(balance),
                 leading: overpaid ? StatusDot(color: cs.error) : null,
               ),
             EnquiryDetailInfoRow(

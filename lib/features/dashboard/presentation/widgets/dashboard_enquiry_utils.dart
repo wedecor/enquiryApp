@@ -132,7 +132,8 @@ Set<String> phoneSearchVariants(String digits, {String rawQuery = ''}) {
   if (raw.startsWith('+91') && digits.length > 2) variants.add(digits.substring(2));
   if (digits.startsWith('0091') && digits.length > 4) variants.add(digits.substring(4));
   // Trunk zero ("098765…"): mobiles never start with 0.
-  if (digits.startsWith('0') && digits.length > 1) variants.add(digits.replaceFirst(RegExp('^0+'), ''));
+  if (digits.startsWith('0') && digits.length > 1)
+    variants.add(digits.replaceFirst(RegExp('^0+'), ''));
   variants.remove('');
   return variants;
 }

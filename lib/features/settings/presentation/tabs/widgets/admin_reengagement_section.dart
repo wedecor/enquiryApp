@@ -119,11 +119,7 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(AppTokens.space1, AppTokens.space5, 0, 0),
-              child: SplitHeading(
-                light: 'Same time',
-                bold: 'Next Year',
-                style: t.headlineMedium,
-              ),
+              child: SplitHeading(light: 'Same time', bold: 'Next Year', style: t.headlineMedium),
             ),
             SettingsGroup(
               eyebrow: 'Yearly reminders',

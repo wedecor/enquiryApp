@@ -24,8 +24,7 @@ class UpdateService {
 
   /// The sideloaded-APK updater only makes sense on the Android app (not the
   /// website, not other platforms).
-  static bool get isSupportedPlatform =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get isSupportedPlatform => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// Check for available updates. Returns null when up to date, on
   /// unsupported platforms, when rate limited, or on any error.
@@ -223,10 +222,7 @@ class UpdateDialog extends StatelessWidget {
     final theme = Theme.of(context);
 
     // A required update can't be dismissed with back / predictive back.
-    return PopScope(
-      canPop: !updateInfo.isForced,
-      child: _buildDialog(context, theme),
-    );
+    return PopScope(canPop: !updateInfo.isForced, child: _buildDialog(context, theme));
   }
 
   Widget _buildDialog(BuildContext context, ThemeData theme) {

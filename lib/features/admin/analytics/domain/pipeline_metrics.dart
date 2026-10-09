@@ -890,7 +890,8 @@ List<AreaRow> computeAreaBreakdown(
   final events = <String, int>{};
   final values = <String, double>{};
   void label(String key, Object? raw) {
-    if (key != AreaRow.notSpecifiedKey) labels.putIfAbsent(key, () => areaDisplayLabel(raw as String));
+    if (key != AreaRow.notSpecifiedKey)
+      labels.putIfAbsent(key, () => areaDisplayLabel(raw as String));
   }
 
   for (final row in won) {

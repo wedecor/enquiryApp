@@ -68,9 +68,9 @@ class AuditService {
   }) async {
     try {
       _warnIfForeignUserId(userId);
-      await newHistoryRef(enquiryId).set(
-        buildHistoryEntry(fieldChanged: fieldChanged, oldValue: oldValue, newValue: newValue),
-      );
+      await newHistoryRef(
+        enquiryId,
+      ).set(buildHistoryEntry(fieldChanged: fieldChanged, oldValue: oldValue, newValue: newValue));
 
       Log.d('AuditService: recorded change', data: {'field': fieldChanged, 'enquiryId': enquiryId});
     } catch (e, st) {
@@ -113,11 +113,7 @@ class AuditService {
     } catch (e, st) {
       Log.w(
         'AuditService: history entries NOT recorded',
-        data: {
-          'fields': changes.keys.toList(),
-          'enquiryId': enquiryId,
-          'error': e.toString(),
-        },
+        data: {'fields': changes.keys.toList(), 'enquiryId': enquiryId, 'error': e.toString()},
       );
       Log.e('AuditService: error recording multiple changes', error: e, stackTrace: st);
     }

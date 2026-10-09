@@ -97,8 +97,7 @@ class EnquiryDetailsBody extends StatelessWidget {
           title: 'Quote & Outcome',
           children: _outcomeRows(isAdmin: userRole == UserRole.admin),
         ),
-      if (EnquiryStatus.fromValue(enquiryData['statusValue'] as String?) ==
-          EnquiryStatus.completed)
+      if (EnquiryStatus.fromValue(enquiryData['statusValue'] as String?) == EnquiryStatus.completed)
         YearlyReminderCard(
           enquiryId: enquiryId,
           enquiryData: enquiryData,

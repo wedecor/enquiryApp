@@ -86,7 +86,9 @@ class _EventFunctionsSectionState extends ConsumerState<EventFunctionsSection> {
     // Approved booking: warn about other approved events on any new or moved day.
     if (EnquiryStatus.isApproved(status)) {
       final oldDays = functionDaysOf(data).toSet();
-      final newDays = {for (final f in functions) f.day}.where((d) => !oldDays.contains(d)).toList();
+      final newDays = {
+        for (final f in functions) f.day,
+      }.where((d) => !oldDays.contains(d)).toList();
       if (newDays.isNotEmpty) {
         final proceed = await confirmApprovedDateClash(
           context,
@@ -246,10 +248,7 @@ class _FunctionTimelineTile extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  when,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                ),
+                Text(when, style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
                 if (place.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Row(

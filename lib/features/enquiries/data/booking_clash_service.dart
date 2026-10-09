@@ -97,8 +97,7 @@ List<ApprovedDayClash> approvedDayClashesFromResponse(Object? data, List<DateTim
 
 /// Distinct calendar days (local midnight) of [dates], ascending.
 List<DateTime> distinctBookingDays(Iterable<DateTime> dates) {
-  final days = <DateTime>{for (final d in dates) DateTime(d.year, d.month, d.day)}.toList()
-    ..sort();
+  final days = <DateTime>{for (final d in dates) DateTime(d.year, d.month, d.day)}.toList()..sort();
   return days;
 }
 
@@ -192,7 +191,10 @@ class BookingClashService {
   const BookingClashService();
 
   /// Throws [FirebaseFunctionsException] on failure; see [approvedOnDateOrNull].
-  Future<ApprovedOnDateResult> approvedOnDate(DateTime eventDate, {String? excludeEnquiryId}) async {
+  Future<ApprovedOnDateResult> approvedOnDate(
+    DateTime eventDate, {
+    String? excludeEnquiryId,
+  }) async {
     final callable = FirebaseFunctions.instanceFor(
       region: 'asia-south1',
     ).httpsCallable('approvedOnDate');

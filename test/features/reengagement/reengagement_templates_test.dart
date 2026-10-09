@@ -110,7 +110,10 @@ void main() {
       expect(config.enabled, isFalse);
       expect(config.leadDays, 30);
       expect(config.templateFor(OccasionKind.birthday), 'Custom {name}');
-      expect(config.templateFor(OccasionKind.home), ReengagementTemplates.defaults[OccasionKind.home]);
+      expect(
+        config.templateFor(OccasionKind.home),
+        ReengagementTemplates.defaults[OccasionKind.home],
+      );
       expect(config.toMap()['templates'], {'birthday': 'Custom {name}'});
     });
 

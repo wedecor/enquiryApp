@@ -146,7 +146,13 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     Consumer(
                       builder: (context, ref, child) {
                         final usersAsync = ref.watch(filteredUsersProvider);
-                        return _buildUsersListArea(usersAsync, true, true, wide: wide, padding: hPad);
+                        return _buildUsersListArea(
+                          usersAsync,
+                          true,
+                          true,
+                          wide: wide,
+                          padding: hPad,
+                        );
                       },
                     ),
                   ];

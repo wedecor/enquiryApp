@@ -343,7 +343,8 @@ class FirestoreService {
     final placeId = locationPlaceId?.trim() ?? '';
     // Multi-function booking (or one function with a time / notes): write the
     // functions and their synced top-level fields over the single-event ones.
-    final functionFields = functions != null && functions.isNotEmpty && needsFunctionArray(functions)
+    final functionFields =
+        functions != null && functions.isNotEmpty && needsFunctionArray(functions)
         ? (Map<String, Object?>.of(functionSyncFields(functions))
             ..removeWhere((key, value) => value == null))
         : const <String, Object?>{};

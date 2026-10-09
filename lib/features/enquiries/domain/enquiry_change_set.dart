@@ -161,20 +161,22 @@ Map<String, Map<String, dynamic>> buildEnquiryAuditChanges({
 
   // Track event type change (VALUES, like status)
   if (eventTypeValue != null) {
-    final oldEventType = (oldEnquiryData['eventTypeValue'] ?? oldEnquiryData['eventType']) as String?;
+    final oldEventType =
+        (oldEnquiryData['eventTypeValue'] ?? oldEnquiryData['eventType']) as String?;
     if (oldEventType != eventTypeValue) {
-      changes['eventType'] = {
-        'old_value': oldEventType ?? 'Not Set',
-        'new_value': eventTypeValue,
-      };
+      changes['eventType'] = {'old_value': oldEventType ?? 'Not Set', 'new_value': eventTypeValue};
     }
   }
 
   // Track guest count change (null = cleared / not set)
   final oldGuestRaw = oldEnquiryData['guestCount'];
-  final oldGuestCount = oldGuestRaw is num ? oldGuestRaw.toInt() : int.tryParse('${oldGuestRaw ?? ''}');
+  final oldGuestCount = oldGuestRaw is num
+      ? oldGuestRaw.toInt()
+      : int.tryParse('${oldGuestRaw ?? ''}');
   final guestTracked = newGuestCount != null || oldGuestCount != null;
-  if (guestTracked && oldGuestCount != newGuestCount && !(newGuestCount == null && oldGuestCount == 0)) {
+  if (guestTracked &&
+      oldGuestCount != newGuestCount &&
+      !(newGuestCount == null && oldGuestCount == 0)) {
     changes['guestCount'] = {
       'old_value': oldGuestCount ?? 'Not Set',
       'new_value': newGuestCount ?? 'Not Set',
@@ -264,5 +266,4 @@ DateTime? _asDateTime(Object? value) {
   return null;
 }
 
-bool _sameDay(DateTime a, DateTime b) =>
-    a.year == b.year && a.month == b.month && a.day == b.day;
+bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;

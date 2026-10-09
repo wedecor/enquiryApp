@@ -54,9 +54,7 @@ class UpcomingOccasionsScreen extends ConsumerWidget {
                   AppTokens.space2,
                   AppTokens.space2,
                 ),
-                child: Column(
-                  children: [for (final r in reminders) OccasionRow(reminder: r)],
-                ),
+                child: Column(children: [for (final r in reminders) OccasionRow(reminder: r)]),
               ),
             ],
           );

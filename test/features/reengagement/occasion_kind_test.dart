@@ -56,7 +56,10 @@ void main() {
 
     test('every event gets a kind, never null', () {
       expect(OccasionKind.forEventType(null), OccasionKind.celebration);
-      expect(OccasionKind.forEventType('unknown_value', 'Something else'), OccasionKind.celebration);
+      expect(
+        OccasionKind.forEventType('unknown_value', 'Something else'),
+        OccasionKind.celebration,
+      );
     });
 
     test('values round-trip and match the server strings', () {
@@ -81,7 +84,21 @@ void main() {
     test('suffixes', () {
       expect(
         [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101, 111, 112].map(OccasionKind.ordinal).toList(),
-        ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st', '111th', '112th'],
+        [
+          '1st',
+          '2nd',
+          '3rd',
+          '4th',
+          '11th',
+          '12th',
+          '13th',
+          '21st',
+          '22nd',
+          '23rd',
+          '101st',
+          '111th',
+          '112th',
+        ],
       );
     });
   });

@@ -25,21 +25,13 @@ Future<EventFunctionSheetResult?> showEventFunctionSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => EventFunctionSheet(
-      initial: initial,
-      canDelete: canDelete,
-      suggestedDate: suggestedDate,
-    ),
+    builder: (context) =>
+        EventFunctionSheet(initial: initial, canDelete: canDelete, suggestedDate: suggestedDate),
   );
 }
 
 class EventFunctionSheet extends ConsumerStatefulWidget {
-  const EventFunctionSheet({
-    super.key,
-    this.initial,
-    this.canDelete = false,
-    this.suggestedDate,
-  });
+  const EventFunctionSheet({super.key, this.initial, this.canDelete = false, this.suggestedDate});
 
   final EventFunction? initial;
   final bool canDelete;
@@ -143,10 +135,7 @@ class _EventFunctionSheetState extends ConsumerState<EventFunctionSheet> {
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: AppTokens.space2),
-                    FilledButton(
-                      onPressed: _saving ? null : _save,
-                      child: const Text('Save'),
-                    ),
+                    FilledButton(onPressed: _saving ? null : _save, child: const Text('Save')),
                   ],
                 ),
               ],

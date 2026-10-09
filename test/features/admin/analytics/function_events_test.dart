@@ -142,7 +142,13 @@ void main() {
     final demand = computeUpcomingDemand([wedding, birthday, openLead], now);
     final dec = demand.firstWhere((m) => m.month == DateTime(2026, 12));
     expect(dec.total, 5);
-    expect(dec.byEventType, {'haldi': 1, 'mehendi': 1, 'wedding': 1, 'reception': 1, 'birthday': 1});
+    expect(dec.byEventType, {
+      'haldi': 1,
+      'mehendi': 1,
+      'wedding': 1,
+      'reception': 1,
+      'birthday': 1,
+    });
     final jan = demand.firstWhere((m) => m.month == DateTime(2027, 1));
     expect(jan.byEventType, {'engagement': 1, 'wedding': 1});
 

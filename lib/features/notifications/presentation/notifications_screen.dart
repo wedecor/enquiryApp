@@ -124,9 +124,9 @@ class _NotificationsBody extends ConsumerWidget {
     // Yearly-reminder summary → Upcoming occasions.
     final type = notification['type'] ?? notification['data']?['type'];
     if (type == reengagementNotificationType && context.mounted) {
-      Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen()),
-      );
+      Navigator.of(
+        context,
+      ).push<void>(MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen()));
       return;
     }
 

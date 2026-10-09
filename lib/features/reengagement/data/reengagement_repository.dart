@@ -99,17 +99,17 @@ class ReengagementRepository {
     required String? person,
   }) {
     final fields = EnquiryOccasion.adminEditFields(kind: kind, day: day, person: person);
-    return _enquiry(enquiryId).update({
-      for (final e in fields.entries) e.key: e.value ?? FieldValue.delete(),
-    });
+    return _enquiry(
+      enquiryId,
+    ).update({for (final e in fields.entries) e.key: e.value ?? FieldValue.delete()});
   }
 
   /// Staff (and admin) edit of whose occasion it is. Empty clears it.
   Future<void> setOccasionPerson(String enquiryId, String? person) {
     final value = person?.trim() ?? '';
-    return _enquiry(enquiryId).update({
-      EnquiryOccasion.personField: value.isEmpty ? FieldValue.delete() : value,
-    });
+    return _enquiry(
+      enquiryId,
+    ).update({EnquiryOccasion.personField: value.isEmpty ? FieldValue.delete() : value});
   }
 
   /// Yearly reminders on/off for one enquiry.

@@ -80,10 +80,7 @@ void main() {
 
   test('lost bookings and old completed functions are skipped', () {
     expect(expand({...booking, 'statusValue': 'cancelled'}), isEmpty);
-    final completed = expand(
-      {...booking, 'statusValue': 'completed'},
-      now: DateTime(2027, 1, 11),
-    );
+    final completed = expand({...booking, 'statusValue': 'completed'}, now: DateTime(2027, 1, 11));
     // 10 & 11 Dec are more than 30 days before 11 Jan.
     expect(completed.map((e) => e.eventType), ['Wedding (3/4)', 'Reception (4/4)']);
   });

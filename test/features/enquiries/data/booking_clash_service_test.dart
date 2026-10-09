@@ -149,39 +149,45 @@ void main() {
     });
 
     test('parses days for the requested dates (Android nested maps too)', () {
-      final clashes = approvedDayClashesFromResponse(<Object?, Object?>{
-        'count': 3,
-        'events': <Object?>[],
-        'days': [
-          <Object?, Object?>{
-            'date': '2026-12-12',
-            'count': 2,
-            'events': [
-              {'id': 'a', 'area': 'Whitefield', 'eventType': 'Haldi'},
-              {'id': 'b', 'area': 'Yelahanka', 'eventType': 'Wedding'},
-            ],
-          },
-          {
-            'date': '2026-12-13',
-            'count': 1,
-            'events': [
-              {'id': 'c', 'area': 'Taj West End', 'eventType': 'Reception'},
-            ],
-          },
-        ],
-      }, [dec12, dec13, DateTime(2026, 12, 14)]);
+      final clashes = approvedDayClashesFromResponse(
+        <Object?, Object?>{
+          'count': 3,
+          'events': <Object?>[],
+          'days': [
+            <Object?, Object?>{
+              'date': '2026-12-12',
+              'count': 2,
+              'events': [
+                {'id': 'a', 'area': 'Whitefield', 'eventType': 'Haldi'},
+                {'id': 'b', 'area': 'Yelahanka', 'eventType': 'Wedding'},
+              ],
+            },
+            {
+              'date': '2026-12-13',
+              'count': 1,
+              'events': [
+                {'id': 'c', 'area': 'Taj West End', 'eventType': 'Reception'},
+              ],
+            },
+          ],
+        },
+        [dec12, dec13, DateTime(2026, 12, 14)],
+      );
       expect(clashes.map((c) => c.count), [2, 1, 0]);
       expect(clashes.first.events.map((e) => e.eventType), ['Haldi', 'Wedding']);
       expect(clashes.last.hasClash, isFalse);
     });
 
     test('older server (no days) answers for the first date only', () {
-      final clashes = approvedDayClashesFromResponse(<String, dynamic>{
-        'count': 1,
-        'events': [
-          {'id': 'a', 'area': 'HSR'},
-        ],
-      }, [dec12, dec13]);
+      final clashes = approvedDayClashesFromResponse(
+        <String, dynamic>{
+          'count': 1,
+          'events': [
+            {'id': 'a', 'area': 'HSR'},
+          ],
+        },
+        [dec12, dec13],
+      );
       expect(clashes, hasLength(1));
       expect(clashes.single.date, dec12);
       expect(clashes.single.count, 1);
@@ -215,7 +221,10 @@ void main() {
     test('a single clashing day reads like the classic message', () {
       expect(
         approvedDatesClashMessage(
-          clashes: [clash(dec12, ['Whitefield']), clash(dec13, [])],
+          clashes: [
+            clash(dec12, ['Whitefield']),
+            clash(dec13, []),
+          ],
           isDateChange: true,
           now: now,
         ),
@@ -226,7 +235,10 @@ void main() {
     test('date change question for several days', () {
       expect(
         approvedDatesClashMessage(
-          clashes: [clash(dec12, [null]), clash(dec13, ['HSR'])],
+          clashes: [
+            clash(dec12, [null]),
+            clash(dec13, ['HSR']),
+          ],
           isDateChange: true,
           now: now,
         ),

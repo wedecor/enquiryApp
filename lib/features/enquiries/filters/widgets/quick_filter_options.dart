@@ -51,8 +51,7 @@ List<QuickFilterOption> quickFilterOptions(WidgetRef ref, EnquiryFilters filters
   ];
 }
 
-bool isTodayRange(FilterDateRange? range) =>
-    DateRangePreset.keyFor(range) == DateRangePreset.today;
+bool isTodayRange(FilterDateRange? range) => DateRangePreset.keyFor(range) == DateRangePreset.today;
 
 bool isThisWeekRange(FilterDateRange? range) =>
     DateRangePreset.keyFor(range) == DateRangePreset.thisWeek;

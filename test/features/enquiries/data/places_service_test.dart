@@ -112,10 +112,7 @@ void main() {
 
     test('differs between calls', () {
       final random = Random(42);
-      expect(
-        newPlacesSessionToken(random: random),
-        isNot(newPlacesSessionToken(random: random)),
-      );
+      expect(newPlacesSessionToken(random: random), isNot(newPlacesSessionToken(random: random)));
     });
   });
 }

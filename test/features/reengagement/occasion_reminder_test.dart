@@ -43,7 +43,10 @@ void main() {
         OccasionKind.celebration.describe(nth: 2, eventTypeLabel: 'Diwali Party'),
         '2 years since Diwali Party',
       );
-      expect(OccasionKind.baby.describe(nth: 1, eventTypeLabel: 'Baby Shower'), '1 year since Baby Shower');
+      expect(
+        OccasionKind.baby.describe(nth: 1, eventTypeLabel: 'Baby Shower'),
+        '1 year since Baby Shower',
+      );
       expect(OccasionKind.home.describe(nth: 3), '3rd housewarming anniversary');
     });
 
@@ -100,7 +103,10 @@ void main() {
       );
       expect(fields['occasionKind'], 'birthday');
       expect(fields['occasionMonthDay'], '02-29');
-      expect((fields['occasionDate']! as Timestamp).toDate().toUtc(), DateTime.utc(2024, 2, 28, 18, 30));
+      expect(
+        (fields['occasionDate']! as Timestamp).toDate().toUtc(),
+        DateTime.utc(2024, 2, 28, 18, 30),
+      );
       expect(fields['occasionManual'], isTrue);
     });
   });

@@ -150,11 +150,7 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
       setState(() => _resolving = false);
       return;
     }
-    final text = pickedLocationText(
-      suggestion.mainText,
-      details.area,
-      isArea: details.isArea,
-    );
+    final text = pickedLocationText(suggestion.mainText, details.area, isArea: details.isArea);
     _pickedText = text;
     widget.controller.value = TextEditingValue(
       text: text,

@@ -219,8 +219,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onAddEvent: isAdmin ? () => _addAnotherEvent(enquiryData) : null,
               onOpenCustomerEvent: (event) => _openCustomerEvent(event, isAdmin: isAdmin),
               // Functions are staff-editable on their own enquiry (not protected in the rules).
-              canEditFunctions:
-                  isAdmin || (enquiryData['assignedTo'] as String?) == currentUserId,
+              canEditFunctions: isAdmin || (enquiryData['assignedTo'] as String?) == currentUserId,
             ),
           ],
         ),
@@ -350,10 +349,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       return;
     }
 
-    final result = await ref.read(customerLookupServiceProvider).lookupOrNull(
-      phone,
-      excludeEnquiryId: widget.enquiryId,
-    );
+    final result = await ref
+        .read(customerLookupServiceProvider)
+        .lookupOrNull(phone, excludeEnquiryId: widget.enquiryId);
     if (!mounted) return;
     if (result == null) {
       messenger.showSnackBar(
@@ -362,9 +360,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       return;
     }
     if (result.events.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('No other enquiries for this customer')),
-      );
+      messenger.showSnackBar(const SnackBar(content: Text('No other enquiries for this customer')));
       return;
     }
 
@@ -438,9 +434,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       );
       unawaited(
         Navigator.of(context).pushReplacement<void, void>(
-          MaterialPageRoute<void>(
-            builder: (context) => EnquiryDetailsScreen(enquiryId: target.id),
-          ),
+          MaterialPageRoute<void>(builder: (context) => EnquiryDetailsScreen(enquiryId: target.id)),
         ),
       );
     } catch (e) {

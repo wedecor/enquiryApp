@@ -152,9 +152,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           _hadFunctionArray = rawFunctions is List && rawFunctions.isNotEmpty;
           final storedFunctions = _hadFunctionArray ? functionsOf(data) : const <EventFunction>[];
           if (storedFunctions.length > 1) {
-            _functionDrafts = [
-              for (final f in storedFunctions) EventFunctionDraft.fromFunction(f),
-            ];
+            _functionDrafts = [for (final f in storedFunctions) EventFunctionDraft.fromFunction(f)];
           } else if (storedFunctions.length == 1) {
             _soloFunction = storedFunctions.first;
           }
@@ -581,9 +579,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       return {for (final key in EnquiryPlace.fieldKeys) key: FieldValue.delete()};
     }
     final fields = place.toFields();
-    return {
-      for (final key in EnquiryPlace.fieldKeys) key: fields[key] ?? FieldValue.delete(),
-    };
+    return {for (final key in EnquiryPlace.fieldKeys) key: fields[key] ?? FieldValue.delete()};
   }
 
   double? _parseDouble(String? value) {
@@ -937,9 +933,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         multi ? [for (final f in functions!) f.day] : [newEventDate],
       );
       final oldDays = functionDaysOf(oldEnquiryData).toSet();
-      final daysToCheck = approving
-          ? newDays
-          : newDays.where((d) => !oldDays.contains(d)).toList();
+      final daysToCheck = approving ? newDays : newDays.where((d) => !oldDays.contains(d)).toList();
       if (daysToCheck.isNotEmpty) {
         final proceed = await confirmApprovedDateClash(
           context,

@@ -211,7 +211,9 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       final customerName = (current['customerName'] as String?) ?? enquiry.customerName;
       final customerPhone = (current['customerPhone'] as String?) ?? enquiry.customerPhone;
       final customerEmail = (current['customerEmail'] as String?) ?? enquiry.customerEmail;
-      final emailOrNull = (customerEmail?.trim().isNotEmpty ?? false) ? customerEmail!.trim() : null;
+      final emailOrNull = (customerEmail?.trim().isNotEmpty ?? false)
+          ? customerEmail!.trim()
+          : null;
       final indexFields = FirestoreService.searchIndexFieldsFor(
         customerName: customerName,
         customerPhone: customerPhone,

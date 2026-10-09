@@ -353,41 +353,41 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
             if (widget.isSearchable)
               Expanded(child: _buildSearchField(context, roleAsync.valueOrNull == UserRole.admin))
             else
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                key: _fieldKey,
-                // CRITICAL: Always ensure value is valid or null
-                initialValue: _getValidValue(widget.value),
-                borderRadius: AppRadius.large,
-                dropdownColor: AppSurfaces.of(context).glassFillStrong,
-                icon: const Icon(Icons.expand_more_rounded),
-                decoration: InputDecoration(
-                  labelText: widget.required ? '${widget.label} *' : widget.label,
-                  prefixIcon: Icon(_getIconForStatus(), size: AppTokens.iconMedium),
-                  hintText:
-                      widget.value != null &&
-                          !_isLoading &&
-                          _statuses.isNotEmpty &&
-                          _getValidValue(widget.value) == null
-                      ? 'Current: ${widget.value}'
-                      : null,
-                  suffixIcon: _isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : null,
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: _fieldKey,
+                  // CRITICAL: Always ensure value is valid or null
+                  initialValue: _getValidValue(widget.value),
+                  borderRadius: AppRadius.large,
+                  dropdownColor: AppSurfaces.of(context).glassFillStrong,
+                  icon: const Icon(Icons.expand_more_rounded),
+                  decoration: InputDecoration(
+                    labelText: widget.required ? '${widget.label} *' : widget.label,
+                    prefixIcon: Icon(_getIconForStatus(), size: AppTokens.iconMedium),
+                    hintText:
+                        widget.value != null &&
+                            !_isLoading &&
+                            _statuses.isNotEmpty &&
+                            _getValidValue(widget.value) == null
+                        ? 'Current: ${widget.value}'
+                        : null,
+                    suffixIcon: _isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                  ),
+                  items: _statuses.map((status) {
+                    return DropdownMenuItem<String>(
+                      value: status['value'],
+                      child: Text(status['label'] ?? status['value'] ?? ''),
+                    );
+                  }).toList(),
+                  onChanged: widget.onChanged,
+                  validator: widget.validator,
                 ),
-                items: _statuses.map((status) {
-                  return DropdownMenuItem<String>(
-                    value: status['value'],
-                    child: Text(status['label'] ?? status['value'] ?? ''),
-                  );
-                }).toList(),
-                onChanged: widget.onChanged,
-                validator: widget.validator,
               ),
-            ),
             roleAsync.when(
               data: (role) {
                 // The status workflow is fixed in code; only labels/colours are editable.

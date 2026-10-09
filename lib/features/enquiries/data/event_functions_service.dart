@@ -16,7 +16,11 @@ import '../domain/event_functions.dart';
 /// the search index, then a "Functions" history entry and an update push.
 /// None of these fields are staff-protected in firestore.rules.
 class EventFunctionsService {
-  const EventFunctionsService(this._firestoreService, this._auditService, this._notificationService);
+  const EventFunctionsService(
+    this._firestoreService,
+    this._auditService,
+    this._notificationService,
+  );
 
   final FirestoreService _firestoreService;
   final AuditService _auditService;

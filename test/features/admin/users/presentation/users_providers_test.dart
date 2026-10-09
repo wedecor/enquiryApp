@@ -82,7 +82,11 @@ void main() {
         ['1'],
       );
       expect(
-        applyUsersFilter(users, (search: 'wedecor', role: 'All', isActive: false)).map((u) => u.uid),
+        applyUsersFilter(users, (
+          search: 'wedecor',
+          role: 'All',
+          isActive: false,
+        )).map((u) => u.uid),
         ['3'],
       );
     });

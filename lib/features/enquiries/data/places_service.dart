@@ -86,14 +86,8 @@ class PlaceDetails {
     );
   }
 
-  EnquiryPlace toEnquiryPlace() => EnquiryPlace(
-    placeId: placeId,
-    address: address,
-    lat: lat,
-    lng: lng,
-    area: area,
-    city: city,
-  );
+  EnquiryPlace toEnquiryPlace() =>
+      EnquiryPlace(placeId: placeId, address: address, lat: lat, lng: lng, area: area, city: city);
 }
 
 Map<String, dynamic>? _map(Object? raw) {
