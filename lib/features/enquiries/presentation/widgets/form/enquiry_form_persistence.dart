@@ -658,11 +658,11 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     // (main function, last date) — see functionSyncFields.
     final functions = _functionsToSave(dropdownLookup);
     final multi = _functionsMode && functions != null;
-    final main = multi ? mainFunctionOf(functions!) : null;
-    final syncLocation = multi ? functionSyncFields(functions!)['eventLocation'] as String? : null;
+    final main = multi ? mainFunctionOf(functions) : null;
+    final syncLocation = multi ? functionSyncFields(functions)['eventLocation'] as String? : null;
     final eventTypeValue = main?.eventType ?? _selectedEventType!;
     final eventTypeLabel = main?.label ?? dropdownLookup.labelForEventType(eventTypeValue);
-    final eventDate = multi ? sortEventFunctions(functions!).last.day : _selectedDate!;
+    final eventDate = multi ? sortEventFunctions(functions).last.day : _selectedDate!;
     final place = multi ? null : _locationPlace;
 
     final priorityValue = _selectedPriority ?? 'medium';
@@ -841,7 +841,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final eventTypeLabel = multi
         ? syncFields!['eventTypeLabel']! as String
         : dropdownLookup.labelForEventType(eventTypeValue);
-    final newEventDate = multi ? sortEventFunctions(functions!).last.day : _selectedDate!;
+    final newEventDate = multi ? sortEventFunctions(functions).last.day : _selectedDate!;
 
     final priorityValue = _selectedPriority;
     final priorityLabel = priorityValue != null
@@ -867,7 +867,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
               ((oldEnquiryData['eventLocation'] as String?) ?? '').trim())
         : _locationController.text.trim();
     final newLocationArea = multi && syncFields!.containsKey(EnquiryPlace.areaField)
-        ? syncFields![EnquiryPlace.areaField] as String?
+        ? syncFields[EnquiryPlace.areaField] as String?
         : (multi ? oldEnquiryData[EnquiryPlace.areaField] as String? : _locationPlace?.area);
     final newDescription = _notesController.text.trim();
     final newTotalCost = _parseDouble(_totalCostController.text);
@@ -930,7 +930,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     if (EnquiryStatus.isApproved(statusValue)) {
       final approving = statusDidChange;
       final newDays = distinctBookingDays(
-        multi ? [for (final f in functions!) f.day] : [newEventDate],
+        multi ? [for (final f in functions) f.day] : [newEventDate],
       );
       final oldDays = functionDaysOf(oldEnquiryData).toSet();
       final daysToCheck = approving ? newDays : newDays.where((d) => !oldDays.contains(d)).toList();
@@ -1219,7 +1219,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     // they were already told about the status change above. An admin assignee already got
     // the status push (it goes to every admin but the updater), so skip a second one.
     if (reassigned) {
-      final newAssignee = assignedTo!;
+      final newAssignee = assignedTo;
       final assigneeAlreadyNotified =
           statusDidChange &&
           newAssignee != currentUser.uid &&
