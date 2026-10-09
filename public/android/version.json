@@ -1,12 +1,12 @@
 {
-  "version": "2.0.18",
-  "buildNumber": 49,
+  "version": "2.0.19",
+  "buildNumber": 50,
   "releaseDate": "2026-10-09",
   "releaseNotes": "🔐 Change your password right in the app: Settings → Account → Change Password - no email needed\n👥 Admins: manage team members from Settings → Account, tap anyone to edit\n➕ One \"Add / Invite User\" button - invited people get a set-password email\n🔄 Enquiries list now updates live - new enquiries and status changes appear instantly\n💰 Amounts show as 50000, not 50000.0\n🔔 Push notifications fixed - status changes and assignments reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n⚠️ Everyone must update to keep receiving notifications",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "bd867f8de29fefe08b2de8dacc086d10823e00849b4abca65d61f1afd1b31fb3",
+  "sha256": "69bd6e9d351f8e8076c7b997cd673a23352defed116fb2e6cfe27e5c3619f9cd",
   "forceUpdate": true,
-  "minSupportedBuildNumber": 49,
+  "minSupportedBuildNumber": 50,
   "features": [
     "NEW: Change Password in Settings → Account asks for your current and new password - no reset email needed",
     "NEW: Settings → Account → Team members (admins) - tap a person to edit name, phone, role or deactivate",
