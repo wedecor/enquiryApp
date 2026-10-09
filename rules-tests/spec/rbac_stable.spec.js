@@ -319,15 +319,30 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
 
     test.each([
       ['quote_sent', 'approved'],
-      ['quote_sent', 'in_talks'],
       ['contacted', 'not_interested'],
       ['in_progress', 'closed_lost'],
       ['confirmed', 'completed'],
-      ['scheduled', 'approved'],
       ['enquired', 'in_talks'],
     ])('✅ Staff can move legacy %s → %s', async (from, to) => {
       await seedStatus('transition-doc', from);
       await assertSucceeds(updateStatus(STAFF_UID, 'staff', 'transition-doc', to));
+    });
+
+    // Rewriting a legacy alias to its own canonical value is not a status change: clients
+    // compare canonical values and send no statusUpdatedBy / stage stamps for it.
+    test.each([
+      ['quote_sent', 'in_talks'],
+      ['scheduled', 'approved'],
+    ])('✅ Staff can normalise legacy %s → %s without stamping', async (from, to) => {
+      await seedStatus('transition-doc', from);
+      await assertSucceeds(
+        testEnv
+          .authenticatedContext(STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('enquiries')
+          .doc('transition-doc')
+          .update({ statusValue: to, updatedAt: new Date() })
+      );
     });
 
     test.each([
@@ -828,8 +843,10 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
 
     test('❌ Inactive user cannot read dropdowns or app config', async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
-        await context.firestore().collection('dropdowns').doc('statuses').collection('items').doc('new').set({ label: 'New' });
-        await context.firestore().collection('app_config').doc('update').set({ latestBuild: 1 });
+        // One firestore() per context: a second call re-runs useEmulator on a started instance.
+        const db = context.firestore();
+        await db.collection('dropdowns').doc('statuses').collection('items').doc('new').set({ label: 'New' });
+        await db.collection('app_config').doc('update').set({ latestBuild: 1 });
       });
       const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();
       await assertFails(firestore.collection('dropdowns').doc('statuses').collection('items').doc('new').get());
