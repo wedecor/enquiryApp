@@ -13,8 +13,8 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
 import '../../domain/event_functions.dart';
-import 'approval_location_prompt.dart';
 import 'approved_date_clash_prompt.dart';
+import 'confirm_booking_sheet.dart';
 import 'enquiry_status_parts.dart';
 import 'lost_reason_sheet.dart';
 
@@ -248,23 +248,27 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
     final approving =
         EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue);
-    // Approving requires a location (area at minimum) — asked before the date check.
-    Map<String, Object?>? locationFields;
+    // Approving: Confirm booking (location required; optional amounts for admins),
+    // asked before the date check.
+    Map<String, Object?>? bookingFields;
+    var bookingSheetConfirmed = false;
     if (approving) {
       setState(() => _isUpdatingStatus = true);
-      final location = await ensureApprovalLocation(
+      final booking = await ensureApprovalBooking(
         context,
         ref,
         enquiryId: widget.enquiryId,
         data: widget.enquiryData,
+        isAdmin: widget.isAdmin,
       );
       if (!mounted) return;
       setState(() => _isUpdatingStatus = false);
-      if (!location.proceed) {
+      if (!booking.proceed) {
         setState(() => _selectedStatus = currentStatusValue);
         return;
       }
-      locationFields = location.fields;
+      bookingFields = booking.fields;
+      bookingSheetConfirmed = booking.sheetShown;
     }
     // Approving: warn when other approved bookings already fall on the event date.
     var clashWarningAccepted = false;
@@ -306,8 +310,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     final bool confirmed;
     if (EnquiryStatus.isLost(value)) {
       confirmed = lostPrompt.proceed;
-    } else if (clashWarningAccepted || locationFields != null) {
-      // "Approve anyway" / "Save & approve" already confirmed this change.
+    } else if (clashWarningAccepted || bookingSheetConfirmed) {
+      // "Approve anyway" / the Confirm booking sheet already confirmed this change.
       confirmed = true;
     } else {
       confirmed = await ConfirmationDialog.show(
@@ -346,7 +350,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
             nextStatus: value,
             userId: userId,
             lostReason: lostPrompt.choice,
-            extraFields: locationFields,
+            extraFields: bookingFields,
           );
 
       if (mounted) {

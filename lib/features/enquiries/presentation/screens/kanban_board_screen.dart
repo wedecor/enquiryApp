@@ -14,8 +14,8 @@ import '../../data/enquiry_repository.dart';
 import '../../domain/event_functions.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
-import '../widgets/approval_location_prompt.dart';
 import '../widgets/approved_date_clash_prompt.dart';
+import '../widgets/confirm_booking_sheet.dart';
 import '../widgets/list/kanban_lane.dart';
 import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
@@ -160,17 +160,19 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
-                // Approving needs a location (area at minimum), then the date check.
-                Map<String, Object?>? locationFields;
+                // Approving: Confirm booking (location, optional amounts for admins),
+                // then the date check.
+                Map<String, Object?>? bookingFields;
                 if (EnquiryStatus.isApproved(newStatus)) {
-                  final location = await ensureApprovalLocation(
+                  final booking = await ensureApprovalBooking(
                     context,
                     ref,
                     enquiryId: enquiryId,
                     data: doc.data() as Map<String, dynamic>,
+                    isAdmin: isAdmin,
                   );
-                  if (!location.proceed || !context.mounted) return;
-                  locationFields = location.fields;
+                  if (!booking.proceed || !context.mounted) return;
+                  bookingFields = booking.fields;
                 }
                 // Approving: warn when other approved bookings share the event date.
                 if (EnquiryStatus.isApproved(newStatus)) {
@@ -200,7 +202,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                         nextStatus: newStatus,
                         userId: user.uid,
                         lostReason: lostPrompt.choice,
-                        extraFields: locationFields,
+                        extraFields: bookingFields,
                       );
                 } catch (e) {
                   if (context.mounted) {

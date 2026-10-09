@@ -8,6 +8,7 @@ import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
+import '../domain/booking_amounts.dart';
 import '../domain/enquiry.dart';
 import '../domain/enquiry_lifecycle.dart';
 import '../domain/enquiry_location.dart';
@@ -124,8 +125,9 @@ class EnquiryRepository {
   /// The read, stage stamping, update and history entries run in one transaction, so
   /// concurrent status changes can't stamp the wrong stage or log a stale "from" status.
   ///
-  /// [extraFields] are written in the same update (e.g. the location confirmed in the
-  /// approve sheet). Approving requires a known location (see [isLocationKnown]) in the
+  /// [extraFields] are written in the same update (e.g. the location and optional
+  /// amounts confirmed in the Confirm booking sheet; amount changes get history
+  /// entries). Approving requires a known location (see [isLocationKnown]) in the
   /// resulting document; otherwise [ApprovalLocationRequiredException] is thrown
   /// before anything is written (firestore.rules enforce the same rule).
   Future<void> updateStatus({
@@ -208,6 +210,19 @@ class EnquiryRepository {
           ),
         );
       }
+
+      // Amounts entered in the Confirm booking sheet (admin only): same history
+      // entries as the edit form records for financial changes.
+      bookingAmountAuditChanges(oldEnquiryData, extras).forEach((field, change) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: field,
+            oldValue: change['old_value'],
+            newValue: change['new_value'],
+          ),
+        );
+      });
 
       final oldLostReason = oldEnquiryData['lostReason'];
       if (isLost && lostReason != null) {

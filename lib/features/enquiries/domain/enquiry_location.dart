@@ -135,12 +135,12 @@ bool isApprovedLocationPending({
   required Map<String, dynamic> data,
 }) => statusIsApproved && !isLocationKnownInData(data);
 
-/// "Save & approve" in the Confirm location sheet: enabled once the typed text
+/// Approve in the Confirm booking sheet: enabled once the typed text
 /// (or the place attached to it) passes [isLocationKnown].
 bool canSaveApprovalLocation({required String text, EnquiryPlace? place}) =>
     isLocationKnown(area: place?.area, eventLocation: text);
 
-/// Fields the Confirm location sheet writes together with the approval.
+/// Location fields the Confirm booking sheet writes together with the approval.
 ///
 /// With a picked [place]: the text plus every place field it has. Typed only: the
 /// text, and the same text as `locationArea` so area analytics still groups it.
