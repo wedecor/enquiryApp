@@ -161,19 +161,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             return;
           }
 
-          unawaited(showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const AlertDialog(
-              content: Row(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: AppTokens.space4),
-                  Text('Exporting analytics...'),
-                ],
+          unawaited(
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const AlertDialog(
+                content: Row(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: AppTokens.space4),
+                    Text('Exporting analytics...'),
+                  ],
+                ),
               ),
             ),
-          ));
+          );
 
           await CsvExport.exportAnalyticsSummary(
             kpiSummary: state.kpiSummary!,

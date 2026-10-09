@@ -60,6 +60,10 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   String? _selectedStatus;
   bool _isUpdatingStatus = false;
 
+  // Created once, not on every rebuild (avoids resubscribing to the dropdown items).
+  late final Stream<QuerySnapshot> _statusItems =
+      ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems();
+
   @override
   void didUpdateWidget(covariant EnquiryStatusControl oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -89,7 +93,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
+      stream: _statusItems,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const SizedBox(

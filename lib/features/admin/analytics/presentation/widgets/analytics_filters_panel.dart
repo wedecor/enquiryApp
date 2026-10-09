@@ -241,7 +241,9 @@ class _DateRangePills extends ConsumerWidget {
                   if (preset == DateRangePreset.custom) {
                     await onCustomDateRange(state.filters.dateRange);
                   } else {
-                    unawaited(ref.read(analyticsControllerProvider.notifier).updateDateRangePreset(preset));
+                    unawaited(
+                      ref.read(analyticsControllerProvider.notifier).updateDateRangePreset(preset),
+                    );
                   }
                 },
               ),

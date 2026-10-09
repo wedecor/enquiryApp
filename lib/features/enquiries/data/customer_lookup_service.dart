@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -183,6 +185,11 @@ final customerLookupServiceProvider = Provider<CustomerLookupService>(
 /// Resolves to null when the lookup failed (callers hide their UI).
 final customerOtherEventsProvider = FutureProvider.autoDispose
     .family<CustomerLookupResult?, ({String phone, String? excludeEnquiryId})>((ref, query) {
+      // Keep the result for a couple of minutes so rebuilds don't re-call the Cloud
+      // Function; it refreshes after that (e.g. after adding another event).
+      final link = ref.keepAlive();
+      final timer = Timer(const Duration(minutes: 2), link.close);
+      ref.onDispose(timer.cancel);
       return ref
           .watch(customerLookupServiceProvider)
           .lookupOrNull(query.phone, excludeEnquiryId: query.excludeEnquiryId);

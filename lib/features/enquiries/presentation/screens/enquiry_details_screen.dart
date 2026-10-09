@@ -42,6 +42,25 @@ class EnquiryDetailsScreen extends ConsumerStatefulWidget {
 class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   bool _isUpdatingStatus = false;
 
+  // Created once: a new snapshots() stream on every rebuild resubscribed, flashed the
+  // spinner and remounted the whole screen (which re-ran the customer lookup →
+  // rebuild → resubscribe … an endless flicker).
+  late Stream<DocumentSnapshot> _enquiryStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _enquiryStream = ref.read(firestoreServiceProvider).watchEnquiry(widget.enquiryId);
+  }
+
+  @override
+  void didUpdateWidget(covariant EnquiryDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enquiryId != widget.enquiryId) {
+      _enquiryStream = ref.read(firestoreServiceProvider).watchEnquiry(widget.enquiryId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
@@ -81,15 +100,15 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
 
             return roleAsync.when(
               data: (userRole) {
-                final firestoreService = ref.watch(firestoreServiceProvider);
                 return StreamBuilder<DocumentSnapshot>(
-                  stream: firestoreService.watchEnquiry(widget.enquiryId),
+                  stream: _enquiryStream,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return _frame(actions, Text('Error: ${snapshot.error}'));
                     }
 
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                    if (!snapshot.hasData &&
+                        snapshot.connectionState == ConnectionState.waiting) {
                       return _frame(actions, const CircularProgressIndicator());
                     }
 
