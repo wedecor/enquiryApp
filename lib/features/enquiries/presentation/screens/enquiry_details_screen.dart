@@ -107,8 +107,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       return _frame(actions, Text('Error: ${snapshot.error}'));
                     }
 
-                    if (!snapshot.hasData &&
-                        snapshot.connectionState == ConnectionState.waiting) {
+                    if (!snapshot.hasData && snapshot.connectionState == ConnectionState.waiting) {
                       return _frame(actions, const CircularProgressIndicator());
                     }
 
