@@ -139,4 +139,99 @@ void main() {
       expect(ApprovedOnDateResult.fromResponse(<String, dynamic>{'count': 0}).hasClash, isFalse);
     });
   });
+
+  group('multi-day (functions)', () {
+    final dec13 = DateTime(2026, 12, 13);
+
+    test('distinct days, ascending, time of day dropped', () {
+      expect(distinctBookingDays([dec13, DateTime(2026, 12, 12, 19), dec12]), [dec12, dec13]);
+      expect(distinctBookingDays(const []), isEmpty);
+    });
+
+    test('parses days for the requested dates (Android nested maps too)', () {
+      final clashes = approvedDayClashesFromResponse(<Object?, Object?>{
+        'count': 3,
+        'events': <Object?>[],
+        'days': [
+          <Object?, Object?>{
+            'date': '2026-12-12',
+            'count': 2,
+            'events': [
+              {'id': 'a', 'area': 'Whitefield', 'eventType': 'Haldi'},
+              {'id': 'b', 'area': 'Yelahanka', 'eventType': 'Wedding'},
+            ],
+          },
+          {
+            'date': '2026-12-13',
+            'count': 1,
+            'events': [
+              {'id': 'c', 'area': 'Taj West End', 'eventType': 'Reception'},
+            ],
+          },
+        ],
+      }, [dec12, dec13, DateTime(2026, 12, 14)]);
+      expect(clashes.map((c) => c.count), [2, 1, 0]);
+      expect(clashes.first.events.map((e) => e.eventType), ['Haldi', 'Wedding']);
+      expect(clashes.last.hasClash, isFalse);
+    });
+
+    test('older server (no days) answers for the first date only', () {
+      final clashes = approvedDayClashesFromResponse(<String, dynamic>{
+        'count': 1,
+        'events': [
+          {'id': 'a', 'area': 'HSR'},
+        ],
+      }, [dec12, dec13]);
+      expect(clashes, hasLength(1));
+      expect(clashes.single.date, dec12);
+      expect(clashes.single.count, 1);
+    });
+
+    ApprovedDayClash clash(DateTime date, List<String?> areas) => ApprovedDayClash(
+      date: date,
+      count: areas.length,
+      events: [
+        for (var i = 0; i < areas.length; i++)
+          ApprovedBooking(id: 'e$i', eventType: 'Event', area: areas[i]),
+      ],
+    );
+
+    test('one dialog summarising every clashing day', () {
+      expect(
+        approvedDatesClashMessage(
+          clashes: [
+            clash(dec12, ['Whitefield', 'Yelahanka']),
+            clash(dec13, ['Taj West End']),
+            clash(DateTime(2026, 12, 14), []),
+          ],
+          isDateChange: false,
+          now: now,
+        ),
+        '12 Dec: 2 approved events (Whitefield, Yelahanka) · '
+        '13 Dec: 1 approved event (Taj West End). Approve anyway?',
+      );
+    });
+
+    test('a single clashing day reads like the classic message', () {
+      expect(
+        approvedDatesClashMessage(
+          clashes: [clash(dec12, ['Whitefield']), clash(dec13, [])],
+          isDateChange: true,
+          now: now,
+        ),
+        'You already have 1 approved event on 12 Dec (Whitefield). Move it to this date anyway?',
+      );
+    });
+
+    test('date change question for several days', () {
+      expect(
+        approvedDatesClashMessage(
+          clashes: [clash(dec12, [null]), clash(dec13, ['HSR'])],
+          isDateChange: true,
+          now: now,
+        ),
+        '12 Dec: 1 approved event · 13 Dec: 1 approved event (HSR). Save these dates anyway?',
+      );
+    });
+  });
 }

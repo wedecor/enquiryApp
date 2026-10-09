@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../features/enquiries/domain/event_functions.dart';
 import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
@@ -70,20 +72,31 @@ class FirestoreService {
     String? phone,
     String? email,
     String? notes,
-  }) => [name, phone ?? '', email ?? '', notes ?? ''].join(' ').toLowerCase();
+    List<String> eventTypes = const [],
+  }) => [
+    name,
+    phone ?? '',
+    email ?? '',
+    notes ?? '',
+    ...eventTypes.map((t) => t.trim()).where((t) => t.isNotEmpty),
+  ].join(' ').toLowerCase();
 
+  /// Search fields for an enquiry. [eventTypes] = every function's event type label
+  /// (multi-function bookings) so searching "haldi" finds the booking.
   static Map<String, dynamic> searchIndexFieldsFor({
     required String customerName,
     String? customerPhone,
     String? customerEmail,
     String? description,
     String? notes,
+    List<String> eventTypes = const [],
   }) => _searchIndexFields(
     customerName: customerName,
     customerPhone: customerPhone,
     customerEmail: customerEmail,
     description: description,
     notes: notes,
+    eventTypes: eventTypes,
   );
 
   static Map<String, dynamic> _searchIndexFields({
@@ -92,6 +105,7 @@ class FirestoreService {
     String? customerEmail,
     String? description,
     String? notes,
+    List<String> eventTypes = const [],
   }) {
     final email = customerEmail?.toLowerCase();
     return {
@@ -103,6 +117,7 @@ class FirestoreService {
         phone: customerPhone,
         email: email,
         notes: notes ?? description,
+        eventTypes: eventTypes,
       ),
     };
   }
@@ -323,8 +338,18 @@ class FirestoreService {
     double? locationLng,
     String? locationArea,
     String? locationCity,
+    List<EventFunction>? functions,
   }) async {
     final placeId = locationPlaceId?.trim() ?? '';
+    // Multi-function booking (or one function with a time / notes): write the
+    // functions and their synced top-level fields over the single-event ones.
+    final functionFields = functions != null && functions.isNotEmpty && needsFunctionArray(functions)
+        ? (Map<String, Object?>.of(functionSyncFields(functions))
+            ..removeWhere((key, value) => value == null))
+        : const <String, Object?>{};
+    final typeLabels = functions != null && functions.isNotEmpty
+        ? functionTypeLabels(functions)
+        : [eventTypeLabel ?? eventType];
     final enquiryData = {
       'customerName': customerName,
       if (customerEmail.trim().isNotEmpty) 'customerEmail': customerEmail.toLowerCase(),
@@ -377,7 +402,9 @@ class FirestoreService {
         customerEmail: customerEmail,
         description: description,
         notes: description,
+        eventTypes: typeLabels,
       ),
+      ...functionFields,
     };
 
     final docRef = await _enquiriesCollection.add(enquiryData);

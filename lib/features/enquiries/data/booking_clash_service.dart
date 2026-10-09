@@ -10,10 +10,10 @@ class ApprovedBooking {
 
   final String id;
 
-  /// The enquiry's `eventLocation`, or null when blank.
+  /// The function's area (else its location text), or null when blank.
   final String? area;
 
-  /// Event type label, e.g. "Birthday".
+  /// Event type label of the function on that day, e.g. "Birthday", "Haldi".
   final String eventType;
 
   factory ApprovedBooking.fromMap(Map<String, dynamic> map) => ApprovedBooking(
@@ -52,6 +52,54 @@ class ApprovedOnDateResult {
     final count = (map['count'] as num?)?.toInt() ?? events.length;
     return ApprovedOnDateResult(count: count < 0 ? 0 : count, events: events);
   }
+}
+
+/// Approved FUNCTIONS (of other bookings) on one requested day.
+class ApprovedDayClash {
+  const ApprovedDayClash({required this.date, required this.count, required this.events});
+
+  /// The requested day (local midnight).
+  final DateTime date;
+  final int count;
+  final List<ApprovedBooking> events;
+
+  bool get hasClash => count > 0;
+}
+
+/// Parses the `days` of an `approvedOnDate` response for the requested [dates].
+///
+/// An older server (no `days`) answers for the single legacy `date` only: that
+/// result is used for the first requested day.
+List<ApprovedDayClash> approvedDayClashesFromResponse(Object? data, List<DateTime> dates) {
+  final map = _map(data);
+  if (map == null || dates.isEmpty) return const [];
+  final rawDays = map['days'];
+  if (rawDays is! List) {
+    final single = ApprovedOnDateResult.fromResponse(map);
+    return [ApprovedDayClash(date: dates.first, count: single.count, events: single.events)];
+  }
+  final byKey = <String, ApprovedOnDateResult>{};
+  for (final raw in rawDays) {
+    final day = _map(raw);
+    final key = day == null ? null : _string(day['date']);
+    if (day == null || key == null) continue;
+    byKey[key] = ApprovedOnDateResult.fromResponse(day);
+  }
+  return [
+    for (final date in dates)
+      ApprovedDayClash(
+        date: date,
+        count: byKey[bookingDayKey(date)]?.count ?? 0,
+        events: byKey[bookingDayKey(date)]?.events ?? const [],
+      ),
+  ];
+}
+
+/// Distinct calendar days (local midnight) of [dates], ascending.
+List<DateTime> distinctBookingDays(Iterable<DateTime> dates) {
+  final days = <DateTime>{for (final d in dates) DateTime(d.year, d.month, d.day)}.toList()
+    ..sort();
+  return days;
 }
 
 /// `YYYY-MM-DD` of [date]'s calendar day as the user sees it (local fields).
@@ -97,6 +145,36 @@ String approvedDateClashMessage({
   return 'You already have $count $noun on ${bookingDayLabel(date, now: now)}$where. $question';
 }
 
+/// Dialog text when a booking's functions fall on days that already have approved
+/// events. One clashing day reads like [approvedDateClashMessage]; several give
+/// "12 Dec: 2 approved events (Whitefield, Yelahanka) · 13 Dec: 1 approved event
+/// (Taj West End). Approve anyway?". Days without a clash are left out.
+String approvedDatesClashMessage({
+  required List<ApprovedDayClash> clashes,
+  required bool isDateChange,
+  DateTime? now,
+}) {
+  final hits = clashes.where((c) => c.hasClash).toList();
+  if (hits.length == 1) {
+    final c = hits.single;
+    return approvedDateClashMessage(
+      date: c.date,
+      count: c.count,
+      areas: [for (final e in c.events) e.area],
+      isDateChange: isDateChange,
+      now: now,
+    );
+  }
+  final parts = hits.map((c) {
+    final noun = c.count == 1 ? 'approved event' : 'approved events';
+    final summary = bookingAreasSummary([for (final e in c.events) e.area]);
+    final where = summary.isEmpty ? '' : ' ($summary)';
+    return '${bookingDayLabel(c.date, now: now)}: ${c.count} $noun$where';
+  });
+  final question = isDateChange ? 'Save these dates anyway?' : 'Approve anyway?';
+  return '${parts.join(' · ')}. $question';
+}
+
 Map<String, dynamic>? _map(Object? raw) {
   if (raw is! Map) return null;
   return raw.map((key, value) => MapEntry(key.toString(), value));
@@ -123,6 +201,60 @@ class BookingClashService {
       if (excludeEnquiryId != null) 'excludeEnquiryId': excludeEnquiryId,
     });
     return ApprovedOnDateResult.fromResponse(response.data);
+  }
+
+  /// Approved functions of other bookings on each of [dates] (distinct days; 10 per call).
+  /// Throws [FirebaseFunctionsException] on failure; see [approvedOnDatesOrNull].
+  Future<List<ApprovedDayClash>> approvedOnDates(
+    List<DateTime> dates, {
+    String? excludeEnquiryId,
+  }) async {
+    final days = distinctBookingDays(dates);
+    final callable = FirebaseFunctions.instanceFor(
+      region: 'asia-south1',
+    ).httpsCallable('approvedOnDate');
+    final result = <ApprovedDayClash>[];
+    for (var i = 0; i < days.length; i += 10) {
+      final chunk = days.sublist(i, i + 10 > days.length ? days.length : i + 10);
+      final response = await callable.call<dynamic>(<String, dynamic>{
+        // `date` keeps an older server (single day only) answering for the first day.
+        'date': bookingDayKey(chunk.first),
+        'dates': [for (final d in chunk) bookingDayKey(d)],
+        if (excludeEnquiryId != null) 'excludeEnquiryId': excludeEnquiryId,
+      });
+      final data = response.data;
+      final hasDays = data is Map && data['days'] is List;
+      if (hasDays || chunk.length == 1) {
+        result.addAll(approvedDayClashesFromResponse(data, chunk));
+        continue;
+      }
+      // Older server: one call per day.
+      result.addAll(approvedDayClashesFromResponse(data, chunk.sublist(0, 1)));
+      for (final day in chunk.skip(1)) {
+        final single = await approvedOnDate(day, excludeEnquiryId: excludeEnquiryId);
+        result.add(ApprovedDayClash(date: day, count: single.count, events: single.events));
+      }
+    }
+    return result;
+  }
+
+  /// Like [approvedOnDates] but never throws (null on failure), so a lookup problem can
+  /// never block approving a booking or changing its function dates.
+  Future<List<ApprovedDayClash>?> approvedOnDatesOrNull(
+    List<DateTime> dates, {
+    String? excludeEnquiryId,
+  }) async {
+    if (dates.isEmpty) return const [];
+    try {
+      return await approvedOnDates(
+        dates,
+        excludeEnquiryId: excludeEnquiryId,
+      ).timeout(const Duration(seconds: 10));
+    } catch (e, st) {
+      Log.w('BookingClashService: lookup failed', data: {'error': e.toString()});
+      Log.e('BookingClashService: lookup error', error: e, stackTrace: st);
+      return null;
+    }
   }
 
   /// Like [approvedOnDate] but never throws: failures are logged and return null, so a

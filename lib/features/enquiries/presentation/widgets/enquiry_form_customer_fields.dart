@@ -17,6 +17,7 @@ class EnquiryFormCustomerFields extends StatelessWidget {
     required this.onLocationPlaceChanged,
     this.requireKnownLocation = false,
     this.phoneFooter,
+    this.showLocation = true,
   });
 
   final TextEditingController nameController;
@@ -33,6 +34,9 @@ class EnquiryFormCustomerFields extends StatelessWidget {
 
   /// Shown under the phone / email row (e.g. existing-customer and duplicate cards).
   final Widget? phoneFooter;
+
+  /// False for a multi-function booking: each function has its own location.
+  final bool showLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -95,13 +99,15 @@ class EnquiryFormCustomerFields extends StatelessWidget {
           ),
         ),
         if (phoneFooter != null) ...[const SizedBox(height: AppTokens.space3), phoneFooter!],
-        const SizedBox(height: kEnquiryFieldGap),
-        EnquiryLocationField(
-          controller: locationController,
-          place: locationPlace,
-          onPlaceChanged: onLocationPlaceChanged,
-          requireKnownLocation: requireKnownLocation,
-        ),
+        if (showLocation) ...[
+          const SizedBox(height: kEnquiryFieldGap),
+          EnquiryLocationField(
+            controller: locationController,
+            place: locationPlace,
+            onPlaceChanged: onLocationPlaceChanged,
+            requireKnownLocation: requireKnownLocation,
+          ),
+        ],
       ],
     );
   }

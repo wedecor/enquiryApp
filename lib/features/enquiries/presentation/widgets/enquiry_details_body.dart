@@ -11,6 +11,7 @@ import '../../../reengagement/presentation/widgets/yearly_reminder_card.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../domain/enquiry_lifecycle.dart';
 import '../../domain/enquiry_location.dart';
+import '../../domain/event_functions.dart';
 import 'customer_info_section.dart';
 import 'customer_other_events_section.dart';
 import 'enquiry_assignment_section.dart';
@@ -19,6 +20,7 @@ import 'enquiry_detail_section.dart';
 import 'enquiry_display_labels.dart';
 import 'enquiry_images_section.dart';
 import 'event_details_section.dart';
+import 'event_functions_section.dart';
 import 'payment_section.dart';
 
 /// Sliver list of the enquiry detail sections, cascading in on first build.
@@ -34,6 +36,7 @@ class EnquiryDetailsBody extends StatelessWidget {
     required this.bottomClearance,
     this.onAddEvent,
     this.onOpenCustomerEvent,
+    this.canEditFunctions = false,
   });
 
   final String enquiryId;
@@ -50,6 +53,9 @@ class EnquiryDetailsBody extends StatelessWidget {
   /// Opens one of the customer's other enquiries; null hides that section.
   final ValueChanged<CustomerEvent>? onOpenCustomerEvent;
 
+  /// Admin or the assigned staff: may add / edit / delete functions.
+  final bool canEditFunctions;
+
   static const double _maxContentWidth = 760;
 
   @override
@@ -60,14 +66,24 @@ class EnquiryDetailsBody extends StatelessWidget {
     final side = ((width - _maxContentWidth) / 2).clamp(AppTokens.space4, double.infinity);
 
     final place = EnquiryPlace.fromData(enquiryData);
+    // Multi-function booking: the hero date is the next upcoming function.
+    final functions = functionsOf(enquiryData);
+    final nextFunction = functions.length > 1 ? nextFunctionOf(functions, DateTime.now()) : null;
     final sections = <Widget>[
       EventDetailsSection(
-        eventTypeLabel: labels.eventTypeLabel,
-        eventDate: enquiryData['eventDate'],
+        eventTypeLabel: nextFunction != null
+            ? '${labels.eventTypeLabel} · ${functions.length} functions'
+            : labels.eventTypeLabel,
+        eventDate: nextFunction?.day ?? enquiryData['eventDate'],
         guestCount: enquiryData['guestCount'],
         budgetRange: enquiryData['budgetRange'] as String?,
         priorityLabel: labels.priorityLabel,
         sourceLabel: labels.sourceLabel,
+      ),
+      EventFunctionsSection(
+        enquiryId: enquiryId,
+        enquiryData: enquiryData,
+        canEdit: canEditFunctions,
       ),
       if (userRole == UserRole.admin)
         PaymentSection(

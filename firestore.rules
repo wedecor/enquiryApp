@@ -25,6 +25,8 @@ service cloud.firestore {
     // Staff may READ assigned enquiries in full (including totals/payment).
     // Write protection only — UI/export must hide financial data for staff (see csv_export_rbac).
     // eventDate stays staff-editable: the edit form lets staff correct wrong event dates.
+    // Multi-function bookings: functions / functionCount / eventStartDate (and the synced
+    // eventDate / eventType / location fields) are staff-editable on their own enquiry.
     // Yearly re-engagement stamp (occasionKind/Date/MonthDay/Manual) is admin + server only;
     // staff may edit occasionPerson and toggle occasionReminders (Yearly reminder card).
     function isModifyingOnlyStaffEditableFields() {

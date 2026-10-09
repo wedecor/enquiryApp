@@ -1,5 +1,6 @@
 import '../../../core/constants/status_vocabulary.dart';
 import '../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
+import '../domain/event_functions.dart';
 import 'filters_state.dart';
 
 /// Client-side filter for enquiry documents (avoids composite Firestore indexes).
@@ -19,8 +20,12 @@ bool matchesEnquiryFilters(
   }
 
   if (filters.eventTypes.isNotEmpty) {
-    final eventType = _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase();
-    final matchesType = filters.eventTypes.any((t) => t.toLowerCase() == eventType);
+    // Any function of a multi-function booking matches (legacy: the event type).
+    final eventTypes = {
+      _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase(),
+      for (final f in functionsOf(data)) f.eventType.toLowerCase(),
+    };
+    final matchesType = filters.eventTypes.any((t) => eventTypes.contains(t.toLowerCase()));
     if (!matchesType) return false;
   }
 
@@ -31,11 +36,17 @@ bool matchesEnquiryFilters(
   }
 
   if (filters.dateRange != null) {
-    final eventDate = _parseDate(data['eventDate']);
-    if (eventDate == null) return false;
     final start = filters.dateRange!.start;
     final end = filters.dateRange!.end;
-    if (eventDate.isBefore(start) || !eventDate.isBefore(end)) return false;
+    bool inRange(DateTime d) => !d.isBefore(start) && d.isBefore(end);
+    final functions = functionsOf(data);
+    if (functions.length > 1) {
+      // A booking matches when any of its functions falls in the range.
+      if (!functions.any((f) => inRange(f.day))) return false;
+    } else {
+      final eventDate = _parseDate(data['eventDate']);
+      if (eventDate == null || !inRange(eventDate)) return false;
+    }
   }
 
   final rawQuery = filters.searchQuery?.trim();

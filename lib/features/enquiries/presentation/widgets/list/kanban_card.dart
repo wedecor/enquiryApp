@@ -7,6 +7,7 @@ import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../../../../ui/components/enquiry_list_row.dart';
 import '../../../domain/enquiry_location.dart';
+import '../../../domain/event_functions.dart';
 
 /// Kanban card: the shared [EnquiryListRow] (tight variant) made draggable.
 /// While dragging, the card lifts — slight tilt, scale and a status-coloured
@@ -35,8 +36,17 @@ class KanbanCard extends StatelessWidget {
     final eventTypeLabel =
         (data['eventTypeLabel'] as String?) ??
         (dropdownLookup?.labelForEventType(eventTypeValue) ?? _titleCase(eventTypeValue));
-    final location = (data['eventLocation'] ?? data['location']) as String?;
-    final eventDate = _ts(data['eventDate']);
+    // Multi-function booking: "4 functions · 10–13 Dec · Next: Haldi, 10 Dec (JP Nagar)",
+    // dated (and counted down) by the next upcoming function.
+    final now = DateTime.now();
+    final functions = functionsOf(data);
+    final functionsLine = functionsListSubtitle(functions, now);
+    final location = functionsLine != null
+        ? null
+        : (data['eventLocation'] ?? data['location']) as String?;
+    final eventDate = functionsLine != null
+        ? nextFunctionOf(functions, now)?.day
+        : _ts(data['eventDate']);
     final hasEventDate = eventDate != null && eventDate.year > 1971;
     final createdAt = _ts(data['createdAt']) ?? DateTime.now();
     final countdown = _countdownLabel(eventDate);
@@ -49,7 +59,7 @@ class KanbanCard extends StatelessWidget {
       customerName: customerName,
       statusValue: statusValue,
       statusColor: statusColor,
-      eventTypeLabel: eventTypeLabel,
+      eventTypeLabel: functionsLine ?? eventTypeLabel,
       eventTypeValue: eventTypeValue,
       eventDateLabel: countdown ?? '',
       eventDate: hasEventDate ? eventDate : null,

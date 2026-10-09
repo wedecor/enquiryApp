@@ -267,72 +267,37 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     final Map<DateTime, List<CalendarEvent>> dayEvents = {};
     final Map<DateTime, Map<String, int>> dayStatusCounts = {};
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
 
+    // One entry per FUNCTION on its own day ("Ayesha · Haldi (1/4)"); legacy
+    // enquiries give one entry on their event date. The query window is wider than
+    // the calendar window (see calendarEnquiriesProvider), so filter by day here.
     for (final doc in enquiries) {
       final data = doc.data() as Map<String, dynamic>;
-      final eventDate = _parseDateTime(data['eventDate']);
-      // Skip enquiries without event dates
-      if (eventDate == null) continue;
-
-      // Get canonical status from statusValue (maps legacy confirmed → approved, etc.)
-      final rawStatus = ((data['statusValue'] as String?) ?? 'new').toLowerCase();
-      final status = EnquiryStatus.fromValue(rawStatus)?.value ?? rawStatus;
-
-      // Only show: new, in_talks, approved, completed
-      // Exclude lost statuses: cancelled, not_interested, closed_lost
-      if (EnquiryStatus.isLost(status)) {
-        continue;
-      }
-
-      // Normalize event date to start of day for comparison
-      final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-      // Optional: Filter out past completed events (keep recent ones for reference)
-      if (status == 'completed' && eventDateStart.isBefore(todayStart)) {
-        // Only show completed events from the last 30 days
-        final daysSinceEvent = todayStart.difference(eventDateStart).inDays;
-        if (daysSinceEvent > 30) {
-          continue;
-        }
-      }
-
-      // Past "new" / "in_talks" events are not filtered here: the nightly autoExpireEnquiries
-      // function closes them as "not_interested" once their IST event day has passed.
-
-      final dayKey = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-      final event = CalendarEvent(
+      final entries = calendarEventsForEnquiry(
         enquiryId: doc.id,
-        customerName: (data['customerName'] as String?) ?? 'Unknown',
-        eventType:
-            (data['eventTypeLabel'] as String?) ??
-            (data['eventTypeValue'] as String?) ??
-            (data['eventType'] as String?) ??
-            'Unknown',
-        eventDate: eventDate,
-        eventLocation: data['eventLocation'] as String?,
-        status: status,
-        createdAt: _parseDateTime(data['createdAt']) ?? eventDate,
-        customerPhone: data['customerPhone'] as String?,
+        data: data,
+        windowStart: _windowStart,
+        windowEnd: _windowEnd,
+        now: now,
       );
-
-      dayEvents.putIfAbsent(dayKey, () => []).add(event);
-
-      // Track status counts per day
-      dayStatusCounts
-          .putIfAbsent(dayKey, () => <String, int>{})
-          .update(status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
+      for (final event in entries) {
+        final dayKey = DateTime(event.eventDate.year, event.eventDate.month, event.eventDate.day);
+        dayEvents.putIfAbsent(dayKey, () => []).add(event);
+        // Status counts per day count functions ("N booked" = approved functions).
+        dayStatusCounts
+            .putIfAbsent(dayKey, () => <String, int>{})
+            .update(event.status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
+      }
     }
 
-    // A day is a conflict only when 2+ confirmed bookings (approved) share it
+    // A day is a conflict only when approved functions of 2+ different bookings share it
     dayEvents.forEach((day, events) {
       _events[day] = events;
       _statusCounts[day] = dayStatusCounts[day] ?? {};
       final approved = events
           .where((e) => e.status == EnquiryStatus.approved.value)
           .toList(growable: false);
-      if (approved.length > 1) {
+      if (approved.map((e) => e.enquiryId).toSet().length > 1) {
         _conflicts[day] = approved;
       }
     });
@@ -341,12 +306,5 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   List<CalendarEvent> _getEventsForDay(DateTime day) {
     final dayKey = DateTime(day.year, day.month, day.day);
     return _events[dayKey] ?? [];
-  }
-
-  DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is Timestamp) return value.toDate();
-    return null;
   }
 }

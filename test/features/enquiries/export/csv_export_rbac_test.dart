@@ -12,6 +12,7 @@ void main() {
           'Event Type',
           'Event Date',
           'Event Location',
+          'Functions',
           'Guest Count',
           'Description',
           'Status',
@@ -40,7 +41,7 @@ void main() {
         }
 
         // Verify expected column counts
-        expect(staffColumns.length, 12, reason: 'Staff should have 12 columns');
+        expect(staffColumns.length, 13, reason: 'Staff should have 13 columns');
         expect(adminOnlyColumns.length, 7, reason: 'Admin should have 7 additional columns');
       });
 
@@ -53,6 +54,7 @@ void main() {
           'Event Type',
           'Event Date',
           'Event Location',
+          'Functions',
           'Guest Count',
           'Budget Range', // Admin can see financial
           'Description',
@@ -82,7 +84,7 @@ void main() {
         expect(adminColumns, contains('Customer Email'), reason: 'Admin should see customer email');
 
         // Verify total column count
-        expect(adminColumns.length, 20, reason: 'Admin should have 20 total columns');
+        expect(adminColumns.length, 21, reason: 'Admin should have 21 total columns');
       });
 
       test('financial fields are properly categorized', () {

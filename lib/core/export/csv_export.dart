@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../features/admin/analytics/domain/analytics_models.dart';
+import '../../features/enquiries/domain/event_functions.dart';
 import '../../services/dropdown_lookup.dart';
 import '../auth/role_guards.dart';
 import '../theme/app_theme.dart';
@@ -47,6 +48,7 @@ class CsvExport {
         'Event Type',
         'Event Date',
         'Event Location',
+        'Functions',
         'Guest Count',
         'Budget Range',
         'Description',
@@ -70,6 +72,7 @@ class CsvExport {
         'Event Type',
         'Event Date',
         'Event Location',
+        'Functions',
         'Guest Count',
         'Description',
         'Status',
@@ -93,6 +96,7 @@ class CsvExport {
           _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
           _formatEventDate(enquiry['eventDate']),
           enquiry['eventLocation']?.toString() ?? '',
+          _functionsText(enquiry),
           enquiry['guestCount']?.toString() ?? '',
           enquiry['budgetRange']?.toString() ?? '',
           enquiryNotesFrom(enquiry) ?? '',
@@ -116,6 +120,7 @@ class CsvExport {
           _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
           _formatEventDate(enquiry['eventDate']),
           enquiry['eventLocation']?.toString() ?? '',
+          _functionsText(enquiry),
           enquiry['guestCount']?.toString() ?? '',
           enquiryNotesFrom(enquiry) ?? '',
           DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
@@ -378,6 +383,10 @@ class CsvExport {
 
     return dateTime != null ? _dateFormat.format(dateTime) : '';
   }
+
+  /// "Haldi 10 Dec; Mehendi 11 Dec; …" — one row per booking, every function listed.
+  static String _functionsText(Map<String, dynamic> enquiry) =>
+      functionsSummary(functionsOf(enquiry));
 
   static String _formatEventDate(dynamic timestamp) {
     if (timestamp == null) return '';

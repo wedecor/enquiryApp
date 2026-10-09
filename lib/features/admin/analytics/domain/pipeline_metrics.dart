@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../enquiries/domain/enquiry_lifecycle.dart';
+import '../../../enquiries/domain/event_functions.dart';
 
 /// Pure analytics over raw enquiry maps (as read from Firestore, plus `id`).
 ///
@@ -15,6 +16,10 @@ import '../../../enquiries/domain/enquiry_lifecycle.dart';
 /// * Booked value = `totalCost` of won enquiries.
 /// * Duplicates (merged enquiries, lost reason `duplicate`) are not leads and are
 ///   dropped up front ([leadRows]).
+/// * Owner's rule for multi-function bookings: EVENTS are counted per FUNCTION
+///   (a Haldi + Mehendi + Wedding + Reception booking is 4 events, each with its own
+///   type, date and area); REVENUE is counted per BOOKING, once (never multiplied).
+///   Leads / funnel / win rate / speed to lead stay per booking.
 
 // ── Field helpers ────────────────────────────────────────────────────────────
 
@@ -63,6 +68,84 @@ String _canonicalField(Map<String, dynamic> row, String primary, String legacy) 
 String sourceOf(Map<String, dynamic> row) => _canonicalField(row, 'sourceValue', 'source');
 
 String eventTypeOf(Map<String, dynamic> row) => _canonicalField(row, 'eventTypeValue', 'eventType');
+
+// ── Functions (events) ───────────────────────────────────────────────────────
+
+/// One event (function) of a booking, for per-function counts.
+class FunctionMetric {
+  const FunctionMetric({required this.row, required this.eventType, this.date, this.area});
+
+  /// The booking (enquiry row) it belongs to.
+  final Map<String, dynamic> row;
+
+  /// Event type value of this function (legacy: the booking's [eventTypeOf]).
+  final String eventType;
+
+  /// The function's day (legacy: `eventDate`); null when unknown.
+  final DateTime? date;
+
+  /// The function's `locationArea` (legacy: the booking's); null when unknown.
+  final String? area;
+}
+
+/// The booking's events: one per stored function, or ONE for a legacy
+/// single-event enquiry (its event type, `eventDate` and `locationArea`, even
+/// when the date is missing).
+List<FunctionMetric> metricFunctionsOf(Map<String, dynamic> row) {
+  final functions = functionsOf(row);
+  final raw = row['functions'];
+  final stored = functions.isNotEmpty && raw is List && raw.any((e) => e is Map);
+  if (!stored) {
+    final area = row['locationArea'];
+    return [
+      FunctionMetric(
+        row: row,
+        eventType: eventTypeOf(row),
+        date: metricDate(row['eventDate']),
+        area: area is String ? area : null,
+      ),
+    ];
+  }
+  return [
+    for (final f in functions)
+      FunctionMetric(row: row, eventType: f.eventType, date: f.day, area: f.locationArea),
+  ];
+}
+
+/// Events of [rows] in the period: with [AnalyticsAttribution.eventDate], every
+/// function whose own date is in [start, end); with [AnalyticsAttribution.enquiryDate],
+/// every function of the bookings created in the period.
+List<FunctionMetric> functionsInPeriod(
+  List<Map<String, dynamic>> rows, {
+  required DateTime start,
+  required DateTime end,
+  required AnalyticsAttribution attribution,
+}) {
+  bool inPeriod(DateTime? d) => d != null && !d.isBefore(start) && d.isBefore(end);
+  final result = <FunctionMetric>[];
+  for (final row in rows) {
+    if (attribution == AnalyticsAttribution.enquiryDate) {
+      if (inPeriod(metricDate(row['createdAt']))) result.addAll(metricFunctionsOf(row));
+    } else {
+      result.addAll(metricFunctionsOf(row).where((f) => inPeriod(f.date)));
+    }
+  }
+  return result;
+}
+
+/// Event type value → number of events (functions), largest first.
+List<LabeledCount> computeEventTypeEvents(Iterable<FunctionMetric> functions) {
+  final counts = <String, int>{};
+  for (final f in functions) {
+    counts[f.eventType] = (counts[f.eventType] ?? 0) + 1;
+  }
+  final list = [for (final e in counts.entries) LabeledCount(e.key, e.key, e.value)]
+    ..sort((a, b) {
+      final byCount = b.count.compareTo(a.count);
+      return byCount != 0 ? byCount : a.key.compareTo(b.key);
+    });
+  return list;
+}
 
 /// Real (non-estimated) response time, or null if not contacted / estimated.
 Duration? responseTime(Map<String, dynamic> row) {
@@ -596,8 +679,12 @@ PipelineForecast computeForecast(List<Map<String, dynamic>> allRows, DateTime no
 
 // ── 8. Demand ────────────────────────────────────────────────────────────────
 
-/// How far ahead of the event people enquire.
-List<LabeledCount> computeLeadTime(List<Map<String, dynamic>> rows) {
+/// How far ahead of the event people enquire — per function (each function's own
+/// date). [functions] defaults to every function of [rows].
+List<LabeledCount> computeLeadTime(
+  List<Map<String, dynamic>> rows, {
+  List<FunctionMetric>? functions,
+}) {
   const labels = [
     ('lt2w', '< 2 weeks'),
     ('2to4w', '2–4 weeks'),
@@ -606,9 +693,9 @@ List<LabeledCount> computeLeadTime(List<Map<String, dynamic>> rows) {
     ('gt6m', '> 6 months'),
   ];
   final counts = List<int>.filled(labels.length, 0);
-  for (final row in rows) {
-    final created = metricDate(row['createdAt']);
-    final event = metricDate(row['eventDate']);
+  for (final f in functions ?? [for (final row in rows) ...metricFunctionsOf(row)]) {
+    final created = metricDate(f.row['createdAt']);
+    final event = f.date;
     if (created == null || event == null || event.year <= 1971) continue;
     final days = event.difference(created).inDays;
     if (days < 0) continue;
@@ -633,13 +720,14 @@ class MonthDemand {
 
   final DateTime month;
 
-  /// Event type value → number of non-lost enquiries with an event that month.
+  /// Event type value → number of non-lost events (functions) that month.
   final Map<String, int> byEventType;
 
   int get total => byEventType.values.fold(0, (a, b) => a + b);
 }
 
-/// Upcoming events (not lost) per month for the next [months] months.
+/// Upcoming events (functions of non-lost bookings, each by its own date and type)
+/// per month for the next [months] months.
 List<MonthDemand> computeUpcomingDemand(
   List<Map<String, dynamic>> rows,
   DateTime now, {
@@ -649,12 +737,13 @@ List<MonthDemand> computeUpcomingDemand(
   final maps = List.generate(months, (_) => <String, int>{});
   for (final row in rows) {
     if (isLostRow(row)) continue;
-    final event = metricDate(row['eventDate']);
-    if (event == null) continue;
-    final index = (event.year - start.year) * 12 + (event.month - start.month);
-    if (index < 0 || index >= months) continue;
-    final type = eventTypeOf(row);
-    maps[index][type] = (maps[index][type] ?? 0) + 1;
+    for (final f in metricFunctionsOf(row)) {
+      final event = f.date;
+      if (event == null) continue;
+      final index = (event.year - start.year) * 12 + (event.month - start.month);
+      if (index < 0 || index >= months) continue;
+      maps[index][f.eventType] = (maps[index][f.eventType] ?? 0) + 1;
+    }
   }
   return [
     for (var i = 0; i < months; i++)
@@ -743,7 +832,8 @@ class AreaRow {
     required this.label,
     required this.bookings,
     required this.bookedValue,
-  });
+    int? events,
+  }) : events = events ?? bookings;
 
   /// Key used for an enquiry without `locationArea`.
   static const String notSpecifiedKey = '';
@@ -751,15 +841,21 @@ class AreaRow {
   /// Lower-cased, whitespace-collapsed area ('' = not specified).
   final String key;
   final String label;
+
+  /// Bookings whose (main) area this is — booked value is counted here, once.
   final int bookings;
   final double bookedValue;
+
+  /// Events (functions) held in this area, each function by its own area.
+  final int events;
 
   bool get isNotSpecified => key == notSpecifiedKey;
 }
 
 /// Lower-cased, whitespace-collapsed `locationArea` ('' when missing).
-String areaKeyOf(Map<String, dynamic> row) {
-  final raw = row['locationArea'];
+String areaKeyOf(Map<String, dynamic> row) => _areaKey(row['locationArea']);
+
+String _areaKey(Object? raw) {
   if (raw is! String) return AreaRow.notSpecifiedKey;
   return raw.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
 }
@@ -777,31 +873,54 @@ String areaDisplayLabel(String raw) {
       .join(' ');
 }
 
-/// Approved + completed enquiries grouped by `locationArea` (case-insensitive),
-/// most bookings first, with a "Not specified" row last for those without one.
-List<AreaRow> computeAreaBreakdown(List<Map<String, dynamic>> rows) {
+/// Approved + completed bookings grouped by area (case-insensitive), with a
+/// "Not specified" row last for those without one.
+///
+/// Events = won functions by each function's own area ([functions], default:
+/// every function of the won [rows]). Bookings and booked value = won bookings by
+/// their top-level `locationArea` (the main function's), each counted once.
+/// Most events first, then bookings, booked value, label.
+List<AreaRow> computeAreaBreakdown(
+  List<Map<String, dynamic>> rows, {
+  List<FunctionMetric>? functions,
+}) {
+  final won = leadRows(rows).where(isWon).toList();
   final labels = <String, String>{};
   final counts = <String, int>{};
+  final events = <String, int>{};
   final values = <String, double>{};
-  for (final row in leadRows(rows).where(isWon)) {
+  void label(String key, Object? raw) {
+    if (key != AreaRow.notSpecifiedKey) labels.putIfAbsent(key, () => areaDisplayLabel(raw as String));
+  }
+
+  for (final row in won) {
     final key = areaKeyOf(row);
-    if (key != AreaRow.notSpecifiedKey) {
-      labels.putIfAbsent(key, () => areaDisplayLabel(row['locationArea'] as String));
-    }
+    label(key, row['locationArea']);
     counts[key] = (counts[key] ?? 0) + 1;
     values[key] = (values[key] ?? 0) + (metricNum(row['totalCost']) ?? 0);
   }
+  final wonFunctions =
+      functions?.where((f) => isWon(f.row) && !isDuplicateRow(f.row)) ??
+      [for (final row in won) ...metricFunctionsOf(row)];
+  for (final f in wonFunctions) {
+    final key = _areaKey(f.area);
+    label(key, f.area);
+    events[key] = (events[key] ?? 0) + 1;
+  }
   final list = [
-    for (final key in counts.keys)
+    for (final key in {...counts.keys, ...events.keys})
       AreaRow(
         key: key,
         label: key == AreaRow.notSpecifiedKey ? 'Not specified' : labels[key]!,
-        bookings: counts[key]!,
-        bookedValue: values[key]!,
+        bookings: counts[key] ?? 0,
+        bookedValue: values[key] ?? 0,
+        events: events[key] ?? 0,
       ),
   ];
   list.sort((a, b) {
     if (a.isNotSpecified != b.isNotSpecified) return a.isNotSpecified ? 1 : -1;
+    final byEvents = b.events.compareTo(a.events);
+    if (byEvents != 0) return byEvents;
     final byCount = b.bookings.compareTo(a.bookings);
     if (byCount != 0) return byCount;
     final byValue = b.bookedValue.compareTo(a.bookedValue);
@@ -830,6 +949,9 @@ class PipelineReport {
     required this.followUp,
     required this.bookedValueInPeriod,
     this.areas = const [],
+    this.eventsInPeriod = 0,
+    this.bookingsInPeriod = 0,
+    this.eventTypeEvents = const [],
   });
 
   final AnalyticsAttribution attribution;
@@ -851,6 +973,16 @@ class PipelineReport {
 
   /// Approved + completed enquiries in the period by area ([computeAreaBreakdown]).
   final List<AreaRow> areas;
+
+  /// "Events" KPI: functions of approved + completed bookings in the period
+  /// (by function date, or by enquiry date — see [functionsInPeriod]).
+  final int eventsInPeriod;
+
+  /// Approved + completed bookings in the period (each booking once).
+  final int bookingsInPeriod;
+
+  /// Events (functions) of approved + completed bookings in the period by event type.
+  final List<LabeledCount> eventTypeEvents;
 }
 
 /// Builds every Phase-1 metric. [allRows] = every enquiry visible to the admin
@@ -865,6 +997,13 @@ PipelineReport buildPipelineReport({
 }) {
   allRows = leadRows(allRows);
   final period = rowsInPeriod(allRows, start: start, end: end, attribution: attribution);
+  final periodFunctions = functionsInPeriod(
+    allRows,
+    start: start,
+    end: end,
+    attribution: attribution,
+  );
+  final wonFunctions = periodFunctions.where((f) => isWon(f.row)).toList();
   return PipelineReport(
     attribution: attribution,
     periodCount: period.length,
@@ -876,12 +1015,15 @@ PipelineReport buildPipelineReport({
     money: computeMoneyByMonth(allRows, now),
     overdue: computeOverdue(allRows, now),
     forecast: computeForecast(allRows, now),
-    leadTime: computeLeadTime(period),
+    leadTime: computeLeadTime(period, functions: periodFunctions),
     upcomingDemand: computeUpcomingDemand(allRows, now),
     followUp: computeFollowUp(openRows: allRows, periodRows: period, now: now),
     bookedValueInPeriod: period
         .where(isWon)
         .fold<double>(0, (total, r) => total + (metricNum(r['totalCost']) ?? 0)),
-    areas: computeAreaBreakdown(period),
+    areas: computeAreaBreakdown(period, functions: wonFunctions),
+    eventsInPeriod: wonFunctions.length,
+    bookingsInPeriod: period.where(isWon).length,
+    eventTypeEvents: computeEventTypeEvents(wonFunctions),
   );
 }

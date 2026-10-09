@@ -11,6 +11,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../dashboard/presentation/dashboard_providers.dart';
 import '../../data/enquiry_repository.dart';
+import '../../domain/event_functions.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
 import '../widgets/approval_location_prompt.dart';
@@ -106,13 +107,15 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               }
             }
 
-            // Sort each bucket by event date then created date
+            // Sort each bucket by event date (next upcoming function for
+            // multi-function bookings) then created date
+            final sortNow = DateTime.now();
             for (final bucket in buckets.values) {
               bucket.sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
-                final DateTime? aDate = _ts(aData['eventDate']);
-                final DateTime? bDate = _ts(bData['eventDate']);
+                final DateTime? aDate = listSortDateOf(aData, sortNow);
+                final DateTime? bDate = listSortDateOf(bData, sortNow);
                 if (aDate != null && bDate != null) return aDate.compareTo(bDate);
                 if (aDate != null) return -1;
                 if (bDate != null) return 1;
@@ -171,12 +174,13 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                 }
                 // Approving: warn when other approved bookings share the event date.
                 if (EnquiryStatus.isApproved(newStatus)) {
-                  final eventDate = _ts((doc.data() as Map<String, dynamic>)['eventDate']);
-                  if (eventDate != null) {
+                  // Every function day of the booking (legacy: the event date).
+                  final functionDays = functionDaysOf(doc.data() as Map<String, dynamic>);
+                  if (functionDays.isNotEmpty) {
                     final proceed = await confirmApprovedDateClash(
                       context,
                       ref,
-                      eventDate: eventDate,
+                      eventDates: functionDays,
                       excludeEnquiryId: enquiryId,
                       isDateChange: false,
                     );

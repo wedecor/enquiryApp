@@ -158,6 +158,8 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
         return Icons.calendar_today;
       case 'eventlocation':
         return Icons.location_on;
+      case 'functions':
+        return Icons.event_note_rounded;
       case 'description':
         return Icons.description;
       default:
@@ -187,6 +189,7 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
       case 'eventtypevalue':
       case 'eventdate':
       case 'eventlocation':
+      case 'functions':
         return cs.secondary;
       case 'description':
         return cs.tertiary;
@@ -225,6 +228,8 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
         return 'Event Date';
       case 'eventlocation':
         return 'Event Location';
+      case 'functions':
+        return 'Functions';
       case 'description':
         return 'Description';
       default:

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
+import '../../../enquiries/domain/event_functions.dart';
 
 DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
@@ -44,8 +45,10 @@ int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<O
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final now = DateTime.now();
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   if (aEvent != null && bEvent != null) {
     return aEvent.compareTo(bEvent);
@@ -75,8 +78,9 @@ int compareByNearestEventDate(
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   final aDiff = aEvent?.difference(now);
   final bDiff = bEvent?.difference(now);

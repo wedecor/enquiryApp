@@ -12,6 +12,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
+import '../../domain/event_functions.dart';
 import 'approval_location_prompt.dart';
 import 'approved_date_clash_prompt.dart';
 import 'enquiry_status_parts.dart';
@@ -263,13 +264,25 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     // Approving: warn when other approved bookings already fall on the event date.
     var clashWarningAccepted = false;
     if (approving) {
-      final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
-      if (eventDate != null && eventDate.year > 1971) {
+      // Every function day of the booking (legacy enquiries: the event date). Callers
+      // that pass a partial map (no `functions`) get the stored doc re-read.
+      var clashData = widget.enquiryData;
+      if (!clashData.containsKey('functions')) {
+        try {
+          clashData =
+              await ref.read(firestoreServiceProvider).getEnquiry(widget.enquiryId) ?? clashData;
+        } catch (_) {
+          // Fall back to the data we have; the check never blocks approving.
+        }
+        if (!mounted) return;
+      }
+      final functionDays = functionDaysOf(clashData);
+      if (functionDays.isNotEmpty) {
         setState(() => _isUpdatingStatus = true);
         final decision = await approvedDateClashDecision(
           context,
           ref,
-          eventDate: eventDate,
+          eventDates: functionDays,
           excludeEnquiryId: widget.enquiryId,
           isDateChange: false,
         );

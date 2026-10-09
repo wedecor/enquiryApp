@@ -373,6 +373,13 @@ class PipelineOverviewSection extends ConsumerWidget {
                   value: _money(r.forecast.expectedValue),
                   hint: '${r.forecast.openCount} in talks',
                 ),
+                // Owner's rule: events per function, revenue per booking (once).
+                MiniStat(
+                  label: 'Events',
+                  value: '${r.eventsInPeriod}',
+                  hint: 'Functions of approved + completed bookings',
+                ),
+                MiniStat(label: 'Bookings', value: '${r.bookingsInPeriod}'),
                 MiniStat(label: 'Booked value', value: _money(r.bookedValueInPeriod)),
               ],
             ),
@@ -765,7 +772,9 @@ class MoneyByMonthSection extends StatelessWidget {
     return AnalyticsSectionCard(
       eyebrow: 'Cash',
       title: 'Booked by event month',
-      subtitle: 'Approved & completed bookings · advance collected vs balance due',
+      subtitle:
+          'Approved & completed bookings (each once, by its last function) · '
+          'advance collected vs balance due',
       child: maxBooked == 0
           ? const AnalyticsEmptyState(
               icon: Icons.account_balance_wallet_outlined,
@@ -777,8 +786,8 @@ class MoneyByMonthSection extends StatelessWidget {
                 MetricTable(
                   columns: const [
                     MetricColumn('Month', flex: 2, numeric: false),
-                    MetricColumn('Events'),
-                    MetricColumn('Booked', flex: 2),
+                    MetricColumn('Bookings'),
+                    MetricColumn('Booked value', flex: 2),
                     MetricColumn('Collected', flex: 2),
                     MetricColumn('Due', flex: 2),
                   ],
@@ -895,6 +904,7 @@ class LeadTimeSection extends StatelessWidget {
     return AnalyticsSectionCard(
       eyebrow: 'Demand',
       title: 'How far ahead people enquire',
+      subtitle: 'Per event (function) — enquiry date to each function\'s date',
       child: total == 0
           ? const AnalyticsEmptyState(icon: Icons.schedule_outlined)
           : Column(
@@ -938,7 +948,7 @@ class UpcomingDemandSection extends ConsumerWidget {
     return AnalyticsSectionCard(
       eyebrow: 'Capacity',
       title: 'Busy months ahead',
-      subtitle: 'Upcoming events (not lost) for the next 12 months',
+      subtitle: 'Upcoming events (functions of bookings not lost) for the next 12 months',
       child: max == 0
           ? const AnalyticsEmptyState(
               icon: Icons.event_busy_outlined,
@@ -974,13 +984,14 @@ class AreaBreakdownSection extends StatelessWidget {
     final named = report.areas.where((a) => !a.isNotSpecified).toList();
     final unspecified = report.areas.where((a) => a.isNotSpecified).toList();
     final shown = [...named.take(_maxRows), ...unspecified];
-    final total = report.areas.fold<int>(0, (a, b) => a + b.bookings);
+    final total = report.areas.fold<int>(0, (a, b) => a + b.events);
     return AnalyticsSectionCard(
       eyebrow: 'Geography',
       title: 'By area',
       subtitle: named.length > _maxRows
           ? 'Approved + completed in this period · top $_maxRows of ${named.length} areas'
-          : 'Approved + completed in this period · area from the Maps venue pick',
+          : 'Approved + completed in this period · events by each function\'s area, '
+                'bookings and value by the main area',
       child: total == 0
           ? const AnalyticsEmptyState(
               icon: Icons.map_outlined,
@@ -989,16 +1000,18 @@ class AreaBreakdownSection extends StatelessWidget {
           : MetricTable(
               columns: const [
                 MetricColumn('Area', flex: 3, numeric: false),
+                MetricColumn('Events'),
                 MetricColumn('Bookings'),
                 MetricColumn('Share'),
-                MetricColumn('Booked', flex: 2),
+                MetricColumn('Booked value', flex: 2),
               ],
               rows: [
                 for (final a in shown)
                   [
                     a.label,
+                    '${a.events}',
                     '${a.bookings}',
-                    formatPercent(a.bookings / total),
+                    formatPercent(a.events / total),
                     _money(a.bookedValue),
                   ],
               ],

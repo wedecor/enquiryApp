@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../enquiries/domain/event_functions.dart';
 import '../dashboard_providers.dart';
 import 'dashboard_enquiry_utils.dart';
 import 'dashboard_metric_tiles.dart';
@@ -71,14 +72,19 @@ class DashboardTodaySection extends ConsumerWidget {
       }
       if (shouldShowReminder(data, now)) pendingReminders++;
       if (eventDate == null || status?.category == StatusCategory.lost) continue;
-      final dayOffset = eventDayOffset(eventDate, now);
-      if (dayOffset < 0 || dayOffset >= 7) continue;
-      eventsThisWeek++;
-      perDay[dayOffset]++;
-      if (nearestEventDate == null || eventDate.isBefore(nearestEventDate)) {
-        nearestEventDate = eventDate;
-        nearestDayOffset = dayOffset;
-        nearestEventName = data['customerName'] as String?;
+      // Events are counted per function (a 4-function booking is 4 events).
+      final functions = functionsOf(data);
+      final days = functions.length > 1 ? [for (final f in functions) f.day] : [eventDate];
+      for (final day in days) {
+        final dayOffset = eventDayOffset(day, now);
+        if (dayOffset < 0 || dayOffset >= 7) continue;
+        eventsThisWeek++;
+        perDay[dayOffset]++;
+        if (nearestEventDate == null || day.isBefore(nearestEventDate)) {
+          nearestEventDate = day;
+          nearestDayOffset = dayOffset;
+          nearestEventName = data['customerName'] as String?;
+        }
       }
     }
 

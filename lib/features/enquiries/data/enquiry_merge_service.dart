@@ -8,6 +8,7 @@ import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/utils/enquiry_fields.dart';
 import '../domain/enquiry_lifecycle.dart';
+import '../domain/event_functions.dart';
 
 final enquiryMergeServiceProvider = Provider<EnquiryMergeService>((ref) {
   return EnquiryMergeService(ref.watch(firestoreServiceProvider), ref.watch(auditServiceProvider));
@@ -104,6 +105,7 @@ class EnquiryMergeService {
             customerPhone: target['customerPhone'] as String?,
             customerEmail: target['customerEmail'] as String?,
             notes: newTargetNotes,
+            eventTypes: functionTypeLabels(functionsOf(target)),
           ),
         });
       }

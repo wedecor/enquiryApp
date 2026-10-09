@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../enquiries/domain/event_functions.dart';
 import 'occasion_kind.dart';
 import 'occasion_reminder.dart';
 
@@ -49,14 +50,22 @@ class EnquiryOccasion {
     final stampedKind = OccasionKind.fromValue(data[kindField] as String?);
     final stampedDate = date(data[dateField]);
     final person = data[personField];
+    // Preview before stamping: the main function (wedding anchor) of a multi-function
+    // booking, like the server's occasionEventOf; legacy: the event type and date.
+    final rawFunctions = data['functions'];
+    final main = rawFunctions is List && rawFunctions.isNotEmpty
+        ? mainFunctionOf(functionsOf(data))
+        : null;
     return EnquiryOccasion(
       kind:
           stampedKind ??
-          OccasionKind.forEventType(
-            (data['eventTypeValue'] ?? data['eventType']) as String?,
-            data['eventTypeLabel'] as String?,
-          ),
-      date: stampedDate ?? date(data['eventDate']),
+          (main != null
+              ? OccasionKind.forEventType(main.eventType, main.eventTypeLabel)
+              : OccasionKind.forEventType(
+                  (data['eventTypeValue'] ?? data['eventType']) as String?,
+                  data['eventTypeLabel'] as String?,
+                )),
+      date: stampedDate ?? main?.date ?? date(data['eventDate']),
       person: person is String && person.trim().isNotEmpty ? person.trim() : null,
       stamped: stampedKind != null && stampedDate != null,
       remindersOn: data[remindersField] != false,

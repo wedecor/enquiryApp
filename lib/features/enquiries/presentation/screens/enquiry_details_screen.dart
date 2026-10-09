@@ -18,6 +18,7 @@ import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_merge_service.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
+import '../../domain/event_functions.dart';
 import '../widgets/enquiry_access_denied.dart';
 import '../widgets/enquiry_detail_footer.dart';
 import '../widgets/enquiry_details_body.dart';
@@ -162,7 +163,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
   }) {
     final customerPhone = enquiryData['customerPhone'] as String?;
     final eventDateTs = enquiryData['eventDate'];
-    final eventDate = eventDateTs is Timestamp ? eventDateTs.toDate() : null;
+    final functions = functionsOf(enquiryData);
+    // Multi-function booking: the header shows the next upcoming function's day.
+    final eventDate = functions.length > 1
+        ? nextFunctionOf(functions, DateTime.now())?.day
+        : (eventDateTs is Timestamp ? eventDateTs.toDate() : null);
     final isAdmin = userRole == UserRole.admin;
     final phone = customerPhone?.trim() ?? '';
     final otherEvents = phone.isEmpty
@@ -213,6 +218,9 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               bottomClearance: enquiryGlassBarClearance(context) + AppTokens.space4,
               onAddEvent: isAdmin ? () => _addAnotherEvent(enquiryData) : null,
               onOpenCustomerEvent: (event) => _openCustomerEvent(event, isAdmin: isAdmin),
+              // Functions are staff-editable on their own enquiry (not protected in the rules).
+              canEditFunctions:
+                  isAdmin || (enquiryData['assignedTo'] as String?) == currentUserId,
             ),
           ],
         ),

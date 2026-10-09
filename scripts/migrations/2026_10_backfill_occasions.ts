@@ -28,9 +28,11 @@ import { Timestamp, type DocumentData, type DocumentReference } from "firebase-a
 // functions/ is CommonJS; load it through require so tsx resolves every export.
 type Logic = typeof import("../../functions/src/reengagementLogic.js");
 type Status = typeof import("../../functions/src/statusVocabulary.js");
+type Functions = typeof import("../../functions/src/eventFunctions.js");
 const require = createRequire(import.meta.url);
 const logic: Logic = require("../../functions/src/reengagementLogic.ts");
 const status: Status = require("../../functions/src/statusVocabulary.ts");
+const eventFunctions: Functions = require("../../functions/src/eventFunctions.ts");
 
 type StampSource = import("../../functions/src/reengagementLogic.js").StampSource;
 
@@ -58,11 +60,13 @@ function normalizePhone(raw: unknown): string {
 
 /** Mirrors functions/src/occasionStamping.ts toStampSource. */
 function toSource(id: string, data: DocumentData): StampSource {
+  // Multi-function bookings: main (wedding-anchor) function's type + date.
+  const event = eventFunctions.occasionEventOf(data);
   return {
     id,
-    eventTypeValue: str(data.eventTypeValue) ?? str(data.eventType),
-    eventTypeLabel: str(data.eventTypeLabel),
-    eventDate: toDate(data.eventDate),
+    eventTypeValue: event.eventTypeValue,
+    eventTypeLabel: event.eventTypeLabel,
+    eventDate: event.eventDate,
     fallbackDate: toDate(data.completedAt) ?? toDate(data.updatedAt) ?? toDate(data.createdAt) ?? new Date(),
     status: status.canonicalStatus(data.statusValue),
     merged: !!data.mergedInto,

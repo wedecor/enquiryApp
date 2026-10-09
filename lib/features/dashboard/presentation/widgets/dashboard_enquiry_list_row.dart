@@ -10,6 +10,7 @@ import '../../../../ui/components/enquiry_row_actions_sheet.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/domain/enquiry_location.dart';
+import '../../../enquiries/domain/event_functions.dart';
 import 'dashboard_enquiry_tab_actions.dart';
 import 'dashboard_enquiry_utils.dart';
 
@@ -56,8 +57,14 @@ class DashboardEnquiryListRow extends ConsumerWidget {
             : DropdownLookup.titleCase(eventTypeValue));
 
     final createdAt = parseEnquiryDateTime(data['createdAt']) ?? DateTime.now();
-    final eventDate = parseEnquiryDateTime(data['eventDate']);
     final location = (data['eventLocation'] as String?) ?? (data['location'] as String?);
+    // Multi-function booking: one row, "4 functions · 10–13 Dec · Next: Haldi, 10 Dec (JP Nagar)",
+    // dated by the next upcoming function.
+    final now = DateTime.now();
+    final functions = functionsOf(data);
+    final functionsLine = functionsListSubtitle(functions, now);
+    final nextFunction = functionsLine != null ? nextFunctionOf(functions, now) : null;
+    final eventDate = nextFunction?.day ?? parseEnquiryDateTime(data['eventDate']);
     final assignedUserId = data['assignedTo'] as String?;
     final assigneeLabel = assignedUserId == null
         ? null
@@ -101,11 +108,11 @@ class DashboardEnquiryListRow extends ConsumerWidget {
       statusValue: statusValue,
       statusLabel: statusLabel,
       firestoreStatusColors: dropdownLookup?.statusColorMap,
-      eventTypeLabel: eventTypeLabel,
+      eventTypeLabel: functionsLine ?? eventTypeLabel,
       eventTypeValue: eventTypeValue,
       eventDateLabel: formatDateLabel(eventDate),
       eventDate: (eventDate != null && eventDate.year > 1971) ? eventDate : null,
-      location: location?.trim(),
+      location: functionsLine != null ? null : location?.trim(),
       ageLabel: formatAgeLabel(createdAt),
       assigneeLabel: assigneeLabel?.trim(),
       showStatusChip: showStatus,

@@ -577,6 +577,122 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('🎉 Multi-function bookings (functions array)', () => {
+    const fn = (id, eventType, day, extra = {}) => ({
+      id,
+      eventType,
+      eventTypeLabel: eventType[0].toUpperCase() + eventType.slice(1),
+      date: new Date(`2026-12-${day}T00:00:00+05:30`),
+      ...extra,
+    });
+    const functions = [
+      fn('h1', 'haldi', '10', { location: 'JP Nagar', locationArea: 'JP Nagar' }),
+      fn('m1', 'mehendi', '11'),
+      fn('w1', 'wedding', '12', { time: '19:00', location: 'Palace Grounds' }),
+      fn('r1', 'reception', '13'),
+    ];
+    // What the app writes when functions are saved (functionSyncFields).
+    const syncedWrite = (uid) => ({
+      functions,
+      functionCount: 4,
+      eventStartDate: functions[0].date,
+      eventDate: functions[3].date,
+      eventType: 'wedding',
+      eventTypeValue: 'wedding',
+      eventTypeLabel: 'Wedding',
+      eventLocation: 'Palace Grounds',
+      textIndex: 'functions test haldi mehendi wedding reception',
+      updatedBy: uid,
+      updatedAt: new Date(),
+    });
+    const seed = async (extra = {}) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('functions-doc').set({
+          customerName: 'Functions Test',
+          eventType: 'wedding',
+          eventDate: new Date('2026-12-12T00:00:00+05:30'),
+          eventLocation: 'Bangalore',
+          statusValue: 'in_talks',
+          assignedTo: STAFF_UID,
+          totalCost: 200000,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+          ...extra,
+        });
+      });
+    };
+    const docAs = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('functions-doc');
+
+    test('✅ Assigned staff can add functions (with synced top-level fields)', async () => {
+      await seed();
+      await assertSucceeds(docAs(STAFF_UID, 'staff').update(syncedWrite(STAFF_UID)));
+    });
+
+    test('✅ Assigned staff can edit and remove functions', async () => {
+      await seed({ functions, functionCount: 4, eventStartDate: functions[0].date });
+      await assertSucceeds(
+        docAs(STAFF_UID, 'staff').update({
+          functions: functions.slice(0, 2),
+          functionCount: 2,
+          eventDate: functions[1].date,
+          updatedAt: new Date(),
+        })
+      );
+      // Back to a single event: the array fields are deleted.
+      const firebase = require('firebase/compat/app').default;
+      await assertSucceeds(
+        docAs(STAFF_UID, 'staff').update({
+          functions: firebase.firestore.FieldValue.delete(),
+          functionCount: firebase.firestore.FieldValue.delete(),
+          eventStartDate: firebase.firestore.FieldValue.delete(),
+          updatedAt: new Date(),
+        })
+      );
+    });
+
+    test('❌ Staff cannot edit functions on an enquiry assigned to someone else', async () => {
+      await seed({ assignedTo: OTHER_STAFF_UID });
+      await assertFails(docAs(STAFF_UID, 'staff').update(syncedWrite(STAFF_UID)));
+    });
+
+    test('❌ A functions save cannot smuggle a protected field for staff', async () => {
+      await seed();
+      await assertFails(
+        docAs(STAFF_UID, 'staff').update({ ...syncedWrite(STAFF_UID), totalCost: 1 })
+      );
+    });
+
+    test('✅ Admin can save functions', async () => {
+      await seed();
+      await assertSucceeds(docAs(ADMIN_UID, 'admin').update(syncedWrite(ADMIN_UID)));
+    });
+
+    test('✅ Approving checks the synced top-level location from functions', async () => {
+      await seed({ functions, functionCount: 4 });
+      // Top-level still "Bangalore" → rejected.
+      await assertFails(
+        docAs(STAFF_UID, 'staff').update({
+          statusValue: 'approved',
+          statusUpdatedBy: STAFF_UID,
+          approvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+      );
+      // Synced from the main function's location in the same write → allowed.
+      await assertSucceeds(
+        docAs(STAFF_UID, 'staff').update({
+          statusValue: 'approved',
+          statusUpdatedBy: STAFF_UID,
+          approvedAt: new Date(),
+          eventLocation: 'Palace Grounds',
+          updatedAt: new Date(),
+        })
+      );
+    });
+  });
+
   describe('🕘 Enquiry history (append-only)', () => {
     const history = (uid, role) =>
       testEnv

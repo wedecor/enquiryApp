@@ -26,7 +26,15 @@ final roleScopedEnquiriesProvider = StreamProvider.autoDispose
           .map((snapshot) => snapshot.docs);
     });
 
-/// Calendar listener for enquiries whose event date falls in the key's window.
+/// A booking's functions span days, not months: its `eventDate` (= LAST function)
+/// is less than this after its first function.
+const Duration calendarFunctionSpan = Duration(days: 31);
+
+/// Calendar listener for enquiries with a function in the key's window.
+///
+/// `eventDate` is the booking's LAST function, so the query end is extended by
+/// [calendarFunctionSpan] to also find bookings that start inside the window and
+/// end after it; callers filter by each function's own day.
 final calendarEnquiriesProvider = StreamProvider.autoDispose
     .family<List<QueryDocumentSnapshot<Object?>>, CalendarEnquiriesKey>((ref, key) {
       return ref
@@ -35,7 +43,7 @@ final calendarEnquiriesProvider = StreamProvider.autoDispose
             isAdmin: key.isAdmin,
             assignedToUid: key.uid,
             start: key.start,
-            end: key.end,
+            end: key.end.add(calendarFunctionSpan),
           )
           .map((snapshot) => snapshot.docs);
     });

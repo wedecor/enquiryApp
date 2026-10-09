@@ -386,6 +386,8 @@ class AuditService {
         return 'Event Date';
       case 'eventlocation':
         return 'Event Location';
+      case 'functions':
+        return 'Functions';
       case 'description':
         return 'Description';
       case 'notes':

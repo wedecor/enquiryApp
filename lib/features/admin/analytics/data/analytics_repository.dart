@@ -8,6 +8,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../domain/analytics_models.dart';
+import '../domain/pipeline_metrics.dart';
 
 /// Repository for analytics data from Firestore
 class AnalyticsRepository {
@@ -128,14 +129,14 @@ class AnalyticsRepository {
     return statusCounts;
   }
 
+  /// Events per event type: a multi-function booking counts each function under its
+  /// own type (Haldi 1, Mehendi 1, Wedding 1…); legacy enquiries count once.
   static Map<String, int> aggregateCountByEventType(List<Map<String, dynamic>> raw) {
     final eventTypeCounts = <String, int>{};
 
     for (final data in raw) {
-      final eventType = canonicalFieldString(data, 'eventTypeValue', 'eventType');
-      if (eventType.isEmpty) {
-        eventTypeCounts['unknown'] = (eventTypeCounts['unknown'] ?? 0) + 1;
-      } else {
+      for (final f in metricFunctionsOf(data)) {
+        final eventType = f.eventType.trim().isEmpty ? 'unknown' : f.eventType.trim();
         eventTypeCounts[eventType] = (eventTypeCounts[eventType] ?? 0) + 1;
       }
     }

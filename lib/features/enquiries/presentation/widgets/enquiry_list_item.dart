@@ -8,6 +8,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
 import '../../domain/enquiry_location.dart';
+import '../../domain/event_functions.dart';
 import '../screens/enquiry_details_screen.dart';
 
 /// Maps Firestore enquiry data to the shared [EnquiryListRow].
@@ -51,8 +52,15 @@ class EnquiryListItem extends ConsumerWidget {
     final phone = data['customerPhone'] as String?;
     final whatsapp = data['whatsappNumber'] as String? ?? phone;
     final createdAt = _parseDateTime(data['createdAt']) ?? DateTime.now();
-    final eventDate = _parseDateTime(data['eventDate']);
     final location = (data['eventLocation'] as String?) ?? (data['location'] as String?);
+    // Multi-function booking: one row, "4 functions · 10–13 Dec · Next: Haldi, 10 Dec (JP Nagar)",
+    // dated by the next upcoming function.
+    final now = DateTime.now();
+    final functions = functionsOf(data);
+    final functionsLine = functionsListSubtitle(functions, now);
+    final eventDate = functionsLine != null
+        ? nextFunctionOf(functions, now)?.day
+        : _parseDateTime(data['eventDate']);
 
     void openDetails() {
       Navigator.of(context).push<void>(
@@ -85,11 +93,11 @@ class EnquiryListItem extends ConsumerWidget {
       statusValue: statusValue,
       statusLabel: DropdownLookup.statusLabelOf(dropdownLookup, statusValue),
       firestoreStatusColors: dropdownLookup?.statusColorMap,
-      eventTypeLabel: eventTypeLabel,
+      eventTypeLabel: functionsLine ?? eventTypeLabel,
       eventTypeValue: eventTypeValue,
       eventDateLabel: _formatDateLabel(eventDate),
       eventDate: (eventDate != null && eventDate.year > 1971) ? eventDate : null,
-      location: compact ? null : location?.trim(),
+      location: compact || functionsLine != null ? null : location?.trim(),
       ageLabel: compact ? null : _formatAgeLabel(createdAt),
       assigneeLabel: compact || !showAssignee ? null : assigneeLabel?.trim(),
       compact: compact,

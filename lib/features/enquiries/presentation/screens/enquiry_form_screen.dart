@@ -22,12 +22,14 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
+import '../../data/booking_clash_service.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
 import '../../domain/enquiry_lifecycle.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
+import '../../domain/event_functions.dart';
 import '../widgets/approved_date_clash_prompt.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
@@ -39,6 +41,7 @@ import '../widgets/enquiry_sheet_header.dart';
 import '../widgets/form/enquiry_customer_match_cards.dart';
 import '../widgets/form/enquiry_form_pipeline_fields.dart';
 import '../widgets/form/enquiry_location_field.dart';
+import '../widgets/form/event_function_card.dart';
 import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
 
@@ -125,6 +128,33 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
 
   bool get _isEdit => widget.mode == 'edit';
 
+  /// Function cards (ordered by date) + "Add another function".
+  Widget _functionsEditor() {
+    final drafts = _functionDrafts ?? const <EventFunctionDraft>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < drafts.length; i++)
+          EventFunctionCard(
+            key: ValueKey(drafts[i].id),
+            draft: drafts[i],
+            title: 'Function ${i + 1} of ${drafts.length}',
+            onChanged: _onFunctionChanged,
+            onRemove: () => _removeFunction(drafts[i]),
+            allowPastDates: _isEdit,
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addFunction,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add another function'),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _header() {
     final id = widget.enquiryId;
     return EnquirySheetHeader(
@@ -194,6 +224,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
             EnquiryStatus.isApproved(_selectedStatus) &&
             !EnquiryStatus.isApproved(_initialStatus),
         phoneFooter: _customerMatchCards(),
+        // Multi-function booking: each function card has its own location.
+        showLocation: !_functionsMode,
       ),
       EnquiryFormEventFields(
         selectedDate: _selectedDate,
@@ -202,6 +234,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         onEventTypeChanged: (value) => setState(() => _selectedEventType = value),
         guestCountController: _guestCountController,
         budgetController: _budgetController,
+        onAddFunction: _addFunction,
+        functionsEditor: _functionsMode ? _functionsEditor() : null,
       ),
       EnquiryFormPipelineFields(
         selectedStatus: _selectedStatus,

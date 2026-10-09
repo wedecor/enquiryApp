@@ -31,6 +31,18 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   /// Google Maps place picked for the location text; null for free text.
   EnquiryPlace? _locationPlace;
 
+  /// Functions editor (2+ functions: Haldi, Mehendi, Wedding…); null = single event.
+  List<EventFunctionDraft>? _functionDrafts;
+
+  /// A single function's id / time / notes, kept while the simple form shows it
+  /// (stored 1-function array, or the editor collapsed back to one function).
+  EventFunction? _soloFunction;
+
+  /// The loaded enquiry had a `functions` array (cleared if the save no longer needs it).
+  bool _hadFunctionArray = false;
+
+  bool get _functionsMode => _functionDrafts != null;
+
   // Values as loaded when the edit form opened. Status / assignee / images are only
   // written back if the user changed them, so a save can't undo a change someone else
   // made while this form was open.
@@ -134,6 +146,18 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           }
 
           _selectedDate = parseEnquiryDateTime(data['eventDate']);
+
+          // Multi-function booking: open the Functions editor.
+          final rawFunctions = data['functions'];
+          _hadFunctionArray = rawFunctions is List && rawFunctions.isNotEmpty;
+          final storedFunctions = _hadFunctionArray ? functionsOf(data) : const <EventFunction>[];
+          if (storedFunctions.length > 1) {
+            _functionDrafts = [
+              for (final f in storedFunctions) EventFunctionDraft.fromFunction(f),
+            ];
+          } else if (storedFunctions.length == 1) {
+            _soloFunction = storedFunctions.first;
+          }
 
           // Load existing images
           _existingImageUrls.clear();
@@ -391,8 +415,106 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
   }
 
+  /// "+ Add another function": the first card is pre-filled from the event type /
+  /// date / location already entered; later presses add an empty card.
+  void _addFunction() {
+    setState(() {
+      final drafts = _functionDrafts;
+      if (drafts == null) {
+        final solo = _soloFunction;
+        _functionDrafts = [
+          EventFunctionDraft(
+            id: solo?.id ?? newEventFunctionId(),
+            eventType: _selectedEventType,
+            date: _selectedDate,
+            time: solo?.time,
+            location: _locationController.text,
+            place: _locationPlace,
+            notes: solo?.notes,
+          ),
+          EventFunctionDraft.blank(),
+        ];
+      } else {
+        drafts.add(EventFunctionDraft.blank());
+      }
+    });
+  }
+
+  /// Removes a card; down to one function the form returns to the simple fields.
+  void _removeFunction(EventFunctionDraft draft) {
+    final drafts = _functionDrafts;
+    if (drafts == null) return;
+    final retired = <EventFunctionDraft>[draft];
+    setState(() {
+      drafts.remove(draft);
+      if (drafts.length <= 1) {
+        final last = drafts.isEmpty ? null : drafts.first;
+        if (last != null) {
+          _selectedEventType = last.eventType;
+          _selectedDate = last.date;
+          _locationController.text = last.locationController.text;
+          _locationPlace = last.place;
+          final notes = last.notesController.text.trim();
+          _soloFunction = last.isComplete
+              ? EventFunction(
+                  id: last.id,
+                  eventType: last.eventType!,
+                  date: last.date!,
+                  time: last.time,
+                  notes: notes.isEmpty ? null : notes,
+                )
+              : null;
+          retired.add(last);
+        }
+        _functionDrafts = null;
+      }
+    });
+    // The removed cards' fields still hold the controllers until this frame is built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final d in retired) {
+        d.dispose();
+      }
+    });
+  }
+
+  /// A card changed: rebuild and keep the cards ordered by date.
+  void _onFunctionChanged() {
+    final drafts = _functionDrafts;
+    if (drafts == null) return;
+    setState(() => _functionDrafts = sortFunctionDrafts(drafts));
+  }
+
+  /// Functions to save, or null for a plain single event (legacy shape).
+  List<EventFunction>? _functionsToSave(DropdownLookup lookup) {
+    final drafts = _functionDrafts;
+    if (drafts != null) {
+      return [for (final d in drafts) d.toFunction(labelFor: lookup.labelForEventType)];
+    }
+    final solo = _soloFunction;
+    final type = _selectedEventType;
+    final date = _selectedDate;
+    if (solo == null || type == null || date == null) return null;
+    final text = _locationController.text.trim();
+    final single = EventFunction(
+      id: solo.id,
+      eventType: type,
+      eventTypeLabel: lookup.labelForEventType(type),
+      date: DateTime(date.year, date.month, date.day),
+      time: solo.time,
+      notes: solo.notes,
+      location: text.isEmpty ? null : text,
+      locationArea: text.isEmpty ? null : _locationPlace?.area,
+      locationPlaceId: text.isEmpty ? null : _locationPlace?.placeId,
+      locationAddress: text.isEmpty ? null : _locationPlace?.address,
+    );
+    return needsFunctionArray([single]) ? [single] : null;
+  }
+
   @override
   void dispose() {
+    for (final d in _functionDrafts ?? const <EventFunctionDraft>[]) {
+      d.dispose();
+    }
     _lookupDebounce?.cancel();
     _phoneController.removeListener(_onPhoneChanged);
     _nameController.dispose();
@@ -471,13 +593,21 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedDate == null) {
+    final drafts = _functionDrafts;
+    if (drafts != null) {
+      final incomplete = drafts.indexWhere((d) => !d.isComplete);
+      if (incomplete >= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Function ${incomplete + 1} needs a type and a date')),
+        );
+        return;
+      }
+    } else if (_selectedDate == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please select an event date')));
       return;
-    }
-    if (_selectedEventType == null) {
+    } else if (_selectedEventType == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please select an event type')));
@@ -528,8 +658,16 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     const statusValue = 'new';
     final statusLabel = dropdownLookup.labelForStatus(statusValue);
 
-    final eventTypeValue = _selectedEventType!;
-    final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
+    // Multi-function booking: top-level type / date / location follow the functions
+    // (main function, last date) — see functionSyncFields.
+    final functions = _functionsToSave(dropdownLookup);
+    final multi = _functionsMode && functions != null;
+    final main = multi ? mainFunctionOf(functions!) : null;
+    final syncLocation = multi ? functionSyncFields(functions!)['eventLocation'] as String? : null;
+    final eventTypeValue = main?.eventType ?? _selectedEventType!;
+    final eventTypeLabel = main?.label ?? dropdownLookup.labelForEventType(eventTypeValue);
+    final eventDate = multi ? sortEventFunctions(functions!).last.day : _selectedDate!;
+    final place = multi ? null : _locationPlace;
 
     final priorityValue = _selectedPriority ?? 'medium';
     final priorityLabel = dropdownLookup.labelForPriority(priorityValue);
@@ -545,8 +683,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       customerEmail: _emailController.text.trim(),
       customerPhone: _phoneController.text.trim(),
       eventType: eventTypeValue,
-      eventDate: _selectedDate!,
-      eventLocation: _locationController.text.trim(),
+      eventDate: eventDate,
+      eventLocation: multi ? (syncLocation ?? '') : _locationController.text.trim(),
       guestCount: int.tryParse(_guestCountController.text.trim()) ?? 0,
       budgetRange: _budgetController.text.trim(),
       description: _notesController.text.trim(),
@@ -564,12 +702,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       sourceLabel: sourceLabel,
       paymentStatusLabel: paymentStatusLabel,
       whatsappNumber: _currentWhatsapp,
-      locationPlaceId: _locationPlace?.placeId,
-      locationAddress: _locationPlace?.address,
-      locationLat: _locationPlace?.lat,
-      locationLng: _locationPlace?.lng,
-      locationArea: _locationPlace?.area,
-      locationCity: _locationPlace?.city,
+      locationPlaceId: place?.placeId,
+      locationAddress: place?.address,
+      locationLat: place?.lat,
+      locationLng: place?.lng,
+      locationArea: place?.area,
+      locationCity: place?.city,
+      functions: functions,
     );
 
     final quoteFields = _quoteFields(const {});
@@ -611,7 +750,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     await notificationService.notifyEnquiryCreated(
       enquiryId: enquiryId,
       customerName: _nameController.text.trim(),
-      eventType: _selectedEventType!,
+      eventType: eventTypeValue,
       createdBy: currentUser.uid,
     );
 
@@ -635,7 +774,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         await notificationService.notifyEnquiryAssigned(
           enquiryId: enquiryId,
           customerName: _nameController.text.trim(),
-          eventType: _selectedEventType!,
+          eventType: eventTypeValue,
           assignedTo: assignee,
           assignedBy: currentUser.uid,
           notifyAdmins: false,
@@ -693,8 +832,20 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final userChangedAssignee = _selectedAssignedTo != _initialAssignedTo;
     final assignedTo = userChangedAssignee ? _selectedAssignedTo : previousAssignee;
 
-    final eventTypeValue = _selectedEventType ?? 'event';
-    final eventTypeLabel = dropdownLookup.labelForEventType(eventTypeValue);
+    // Functions: a multi-function booking writes `functions` + synced top-level
+    // fields (type = main function, eventDate = last function, location = main's).
+    final functions = _functionsToSave(dropdownLookup);
+    final multi = _functionsMode && functions != null;
+    final syncFields = functions == null
+        ? null
+        : functionSyncFields(functions, existing: oldEnquiryData);
+    final eventTypeValue = multi
+        ? syncFields!['eventTypeValue']! as String
+        : (_selectedEventType ?? 'event');
+    final eventTypeLabel = multi
+        ? syncFields!['eventTypeLabel']! as String
+        : dropdownLookup.labelForEventType(eventTypeValue);
+    final newEventDate = multi ? sortEventFunctions(functions!).last.day : _selectedDate!;
 
     final priorityValue = _selectedPriority;
     final priorityLabel = priorityValue != null
@@ -715,7 +866,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final newGuestCount = int.tryParse(guestCountText);
     final newBudgetRange = _budgetController.text.trim();
     final newCustomerPhone = _phoneController.text.trim();
-    final newEventLocation = _locationController.text.trim();
+    final newEventLocation = multi
+        ? ((syncFields!['eventLocation'] as String?) ??
+              ((oldEnquiryData['eventLocation'] as String?) ?? '').trim())
+        : _locationController.text.trim();
+    final newLocationArea = multi && syncFields!.containsKey(EnquiryPlace.areaField)
+        ? syncFields![EnquiryPlace.areaField] as String?
+        : (multi ? oldEnquiryData[EnquiryPlace.areaField] as String? : _locationPlace?.area);
     final newDescription = _notesController.text.trim();
     final newTotalCost = _parseDouble(_totalCostController.text);
     final newAdvancePaid = _parseDouble(_advancePaidController.text);
@@ -758,29 +915,36 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     // only check the move into Approved. Checked before the date-clash warning.
     if (statusDidChange &&
         EnquiryStatus.isApproved(statusValue) &&
-        !isLocationKnown(area: _locationPlace?.area, eventLocation: newEventLocation)) {
+        !isLocationKnown(area: newLocationArea, eventLocation: newEventLocation)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(EnquiryLocationField.approvalRequiredMessage)),
+        SnackBar(
+          content: Text(
+            multi
+                ? 'Location is required to approve — add the area to the main function'
+                : EnquiryLocationField.approvalRequiredMessage,
+          ),
+        ),
       );
       return;
     }
 
-    // Approved bookings: warn about other approved events on the same day when this
-    // save approves the enquiry, or moves an approved enquiry to a different day.
-    if (EnquiryStatus.isApproved(statusValue) && _selectedDate != null) {
+    // Approved bookings: warn about other approved events on the booking's days when
+    // this save approves it (every function day), or moves an approved booking to new
+    // days (only function days that weren't there before).
+    if (EnquiryStatus.isApproved(statusValue)) {
       final approving = statusDidChange;
-      final oldDate = parseEnquiryDateTime(oldEnquiryData['eventDate']);
-      final newDate = _selectedDate!;
-      final dateChanged =
-          oldDate == null ||
-          oldDate.year != newDate.year ||
-          oldDate.month != newDate.month ||
-          oldDate.day != newDate.day;
-      if (approving || dateChanged) {
+      final newDays = distinctBookingDays(
+        multi ? [for (final f in functions!) f.day] : [newEventDate],
+      );
+      final oldDays = functionDaysOf(oldEnquiryData).toSet();
+      final daysToCheck = approving
+          ? newDays
+          : newDays.where((d) => !oldDays.contains(d)).toList();
+      if (daysToCheck.isNotEmpty) {
         final proceed = await confirmApprovedDateClash(
           context,
           ref,
-          eventDate: newDate,
+          eventDates: daysToCheck,
           excludeEnquiryId: widget.enquiryId,
           isDateChange: !approving,
         );
@@ -851,11 +1015,29 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
 
     final quoteFields = _quoteFields(oldEnquiryData);
-    final locationPlaceFields = _locationPlaceFields(
-      oldEnquiryData,
-      locationText: newEventLocation,
-      approved: EnquiryStatus.isApproved(statusValue),
-    );
+    final Map<String, Object?> eventFields;
+    if (multi) {
+      eventFields = {for (final e in syncFields!.entries) e.key: e.value ?? FieldValue.delete()};
+    } else {
+      eventFields = {
+        'eventLocation': newEventLocation,
+        ..._locationPlaceFields(
+          oldEnquiryData,
+          locationText: newEventLocation,
+          approved: EnquiryStatus.isApproved(statusValue),
+        ),
+        'eventType': eventTypeValue,
+        'eventTypeValue': eventTypeValue,
+        'eventTypeLabel': eventTypeLabel,
+        'eventDate': Timestamp.fromDate(newEventDate),
+        // One function with a time / notes keeps its array; otherwise a former
+        // multi-function booking goes back to the single-event shape.
+        if (syncFields != null)
+          for (final key in clearFunctionFields.keys) key: syncFields[key]
+        else if (_hadFunctionArray)
+          for (final key in clearFunctionFields.keys) key: FieldValue.delete(),
+      };
+    }
 
     // Update the enquiry document. Status / assignee / images are written only when the
     // user changed them; cleared optional fields are deleted rather than left stale.
@@ -866,18 +1048,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         'customerEmail': newCustomerEmail.toLowerCase()
       else
         'customerEmail': FieldValue.delete(),
-      'eventLocation': newEventLocation,
-      ...locationPlaceFields,
+      ...eventFields,
       if (newDescription.isNotEmpty)
         ...enquiryNotesFields(newDescription)
       else ...{
         'notes': FieldValue.delete(),
         'description': FieldValue.delete(),
       },
-      'eventType': eventTypeValue,
-      'eventTypeValue': eventTypeValue,
-      'eventTypeLabel': eventTypeLabel,
-      'eventDate': Timestamp.fromDate(_selectedDate!),
       if (guestCountText.isEmpty)
         'guestCount': FieldValue.delete()
       else if (newGuestCount != null && newGuestCount >= 0)
@@ -927,6 +1104,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         customerEmail: newCustomerEmail.isNotEmpty ? newCustomerEmail : null,
         description: newDescription,
         notes: newDescription,
+        eventTypes: functions != null ? functionTypeLabels(functions) : [eventTypeLabel],
       ),
     });
 
@@ -948,7 +1126,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       newTotalCost: newTotalCost,
       oldAdvancePaid: oldAdvancePaid,
       newAdvancePaid: newAdvancePaid,
-      newEventDate: _selectedDate,
+      newEventDate: newEventDate,
       eventTypeValue: eventTypeValue,
       newGuestCount: guestCountText.isEmpty ? null : newGuestCount,
       newBudgetRange: newBudgetRange,
@@ -961,6 +1139,29 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           ? allImageUrls.length
           : (oldImages is List ? oldImages.length : 0) + newImageUrls.length,
     );
+
+    // Functions added / changed / removed: one readable "Functions" entry.
+    final oldFunctions = functionsOf(oldEnquiryData);
+    final newFunctions =
+        functions ??
+        [
+          EventFunction(
+            id: EventFunction.legacyId,
+            eventType: eventTypeValue,
+            eventTypeLabel: eventTypeLabel,
+            date: newEventDate,
+          ),
+        ];
+    if (oldFunctions.length > 1 || newFunctions.length > 1) {
+      final oldSummary = functionsSummary(oldFunctions);
+      final newSummary = functionsSummary(newFunctions);
+      if (oldSummary != newSummary) {
+        changes['functions'] = {
+          'old_value': oldSummary.isEmpty ? 'Not Set' : oldSummary,
+          'new_value': newSummary,
+        };
+      }
+    }
 
     if (lostChoice != null) {
       changes['lostReason'] = {

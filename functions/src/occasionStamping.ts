@@ -1,6 +1,7 @@
 import { logger } from "firebase-functions/v2";
 import { Timestamp } from "firebase-admin/firestore";
 import { normalizePhone } from "./customers";
+import { occasionEventOf } from "./eventFunctions";
 import { OccasionStamp, StampSource, computeOccasionStamps } from "./reengagementLogic";
 import { canonicalStatus } from "./statusVocabulary";
 
@@ -23,17 +24,24 @@ export function phoneOf(data: FirebaseFirestore.DocumentData): string {
   return stringOrNull(data.phoneNormalized) ?? normalizePhone(data.customerPhone);
 }
 
-/** Enquiry doc → stamping input. [statusOverride] = status being written in the same update. */
+/**
+ * Enquiry doc → stamping input. [statusOverride] = status being written in the same update.
+ *
+ * Multi-function bookings: kind from the MAIN function's type and date from the
+ * wedding-anchor function when present, else the main function (occasionEventOf).
+ * Legacy single-event docs: their top-level event type and date, as before.
+ */
 export function toStampSource(
   id: string,
   data: FirebaseFirestore.DocumentData,
   statusOverride?: string
 ): StampSource {
+  const event = occasionEventOf(data);
   return {
     id,
-    eventTypeValue: stringOrNull(data.eventTypeValue) ?? stringOrNull(data.eventType),
-    eventTypeLabel: stringOrNull(data.eventTypeLabel),
-    eventDate: toDate(data.eventDate),
+    eventTypeValue: event.eventTypeValue,
+    eventTypeLabel: event.eventTypeLabel,
+    eventDate: event.eventDate,
     fallbackDate: toDate(data.completedAt) ?? new Date(),
     status: statusOverride ?? canonicalStatus(data.statusValue),
     merged: !!data.mergedInto,

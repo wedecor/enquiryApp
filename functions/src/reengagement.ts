@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { occasionEventOf } from "./eventFunctions";
 import { IST_TIME_ZONE } from "./istTime";
 import { phoneOf, planOccasionStamps, stampFields } from "./occasionStamping";
 import {
@@ -88,10 +89,16 @@ export const onEnquiryCompletedStampOccasion = onDocumentWritten("enquiries/{enq
   });
   // Event date / type corrected on an already-completed enquiry → re-stamp
   // (the stamp never changes eventDate / event type, so this cannot loop).
+  // Multi-function bookings: the occasion follows the main (wedding) function, which
+  // can change without touching eventDate (= last function), so compare that too.
+  const beforeEvent = before ? occasionEventOf(before) : null;
+  const afterEvent = occasionEventOf(after);
   const eventChanged =
     !!before &&
     (toDate(before.eventDate)?.getTime() !== toDate(after.eventDate)?.getTime() ||
-      before.eventTypeValue !== after.eventTypeValue);
+      before.eventTypeValue !== after.eventTypeValue ||
+      beforeEvent?.eventDate?.getTime() !== afterEvent.eventDate?.getTime() ||
+      beforeEvent?.eventTypeValue !== afterEvent.eventTypeValue);
   if (!(becameCompleted && !stamped) && !(stamped && eventChanged)) return;
 
   const enquiryId = event.params.enquiryId;
