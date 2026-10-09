@@ -434,4 +434,51 @@ void main() {
       expect(report.lostReasons, isEmpty);
     });
   });
+
+  group('amount coverage', () {
+    test('counts won bookings with a positive total', () {
+      final coverage = computeAmountCoverage([
+        row('a', 'approved', total: 50000),
+        row('b', 'approved'),
+        row('c', 'completed', total: 0),
+        row('d', 'completed', total: 20000),
+        row('e', 'in_talks'),
+        row('f', 'cancelled'),
+      ]);
+      expect(coverage.total, 4);
+      expect(coverage.withAmount, 2);
+      expect(coverage.isPartial, isTrue);
+      expect(amountCoverageCaption(coverage), 'Based on 2 of 4 bookings with an amount');
+    });
+
+    test('no caption when every booking has an amount or there are none', () {
+      final all = computeAmountCoverage([row('a', 'approved', total: 1000)]);
+      expect(all.isPartial, isFalse);
+      expect(amountCoverageCaption(all), isNull);
+      expect(amountCoverageCaption(computeAmountCoverage([row('b', 'new')])), isNull);
+      expect(amountCoverageCaption(AmountCoverage.none), isNull);
+    });
+
+    test('buildPipelineReport: period and money-window coverage', () {
+      final rows = [
+        row('a', 'approved', created: ago(days: 2), event: DateTime(2026, 11, 5), total: 90000),
+        row('b', 'approved', created: ago(days: 3), event: DateTime(2026, 12, 1)),
+        // Outside the period (enquiry date) but inside the money window.
+        row('c', 'approved', created: ago(days: 90), event: DateTime(2026, 11, 20)),
+        // Inside the period, event beyond the 6-month window.
+        row('d', 'completed', created: ago(days: 4), event: DateTime(2027, 9, 1)),
+      ];
+      final report = buildPipelineReport(
+        allRows: rows,
+        start: ago(days: 30),
+        end: now,
+        attribution: AnalyticsAttribution.enquiryDate,
+        now: now,
+      );
+      expect(report.bookedCoverage.total, 3);
+      expect(report.bookedCoverage.withAmount, 1);
+      expect(report.moneyCoverage.total, 3);
+      expect(report.moneyCoverage.withAmount, 1);
+    });
+  });
 }

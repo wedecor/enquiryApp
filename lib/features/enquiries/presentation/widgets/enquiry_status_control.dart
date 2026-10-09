@@ -248,7 +248,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
     final approving =
         EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue);
-    // Approving: Confirm booking (location required; optional amounts for admins),
+    // Approving: Confirm booking for everyone (location required; amounts optional),
     // asked before the date check.
     Map<String, Object?>? bookingFields;
     var bookingSheetConfirmed = false;

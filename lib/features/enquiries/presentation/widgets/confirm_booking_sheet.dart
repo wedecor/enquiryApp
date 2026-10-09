@@ -11,6 +11,7 @@ import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
+import '../../domain/event_functions.dart';
 import 'form/enquiry_location_field.dart';
 
 /// Result of [ensureApprovalBooking].
@@ -25,12 +26,13 @@ typedef ApprovalBookingDecision = ({
   Map<String, Object?>? fields,
 });
 
-/// Before moving an enquiry to Approved.
+/// Before moving an enquiry to Approved: everyone (admins and staff) sees the
+/// Confirm booking sheet — the location (required, prefilled) and the amounts
+/// (always shown, never required).
 ///
-/// * Admins always see the Confirm booking sheet: the location (required, prefilled)
-///   and a quiet, optional "Add amount" section.
-/// * Staff see it only when the location isn't known (area at minimum, see
-///   [isLocationKnown]), without amounts — the rules keep money admin-only.
+/// * Admins can enter or change the amounts; they are saved with the approval.
+/// * Staff see stored amounts read-only (or "Amount will be added by an admin"):
+///   the rules keep money admin-only, so a staff write never includes money fields.
 ///
 /// Call it before the approved-date clash check.
 Future<ApprovalBookingDecision> ensureApprovalBooking(
@@ -40,24 +42,35 @@ Future<ApprovalBookingDecision> ensureApprovalBooking(
   required Map<String, dynamic> data,
   required bool isAdmin,
 }) async {
-  if (!isAdmin && isLocationKnownInData(data)) {
-    return (proceed: true, sheetShown: false, fields: null);
-  }
-
   // Callers may hold partial / stale data (e.g. list rows): re-read the stored doc.
   var current = data;
   try {
     final fresh = await ref.read(firestoreServiceProvider).getEnquiry(enquiryId);
-    if (fresh != null) {
-      if (!isAdmin && isLocationKnownInData(fresh)) {
-        return (proceed: true, sheetShown: false, fields: null);
-      }
-      current = fresh;
-    }
+    if (fresh != null) current = fresh;
   } catch (e) {
     Log.w('ensureApprovalBooking: fresh read failed', data: {'error': e.toString()});
   }
+  DropdownLookup? lookup;
+  try {
+    lookup = await ref.read(dropdownLookupProvider.future);
+  } catch (_) {
+    // Labels fall back to title-cased values; they are display-only.
+  }
   if (!context.mounted) return (proceed: false, sheetShown: false, fields: null);
+
+  final eventTypeValue = ((current['eventTypeValue'] ?? current['eventType']) as String?)?.trim();
+  final eventTypeLabel =
+      (current['eventTypeLabel'] as String?) ??
+      ((eventTypeValue == null || eventTypeValue.isEmpty)
+          ? null
+          : (lookup?.labelForEventType(eventTypeValue) ??
+                DropdownLookup.titleCase(eventTypeValue)));
+  final days = functionDaysOf(current);
+  final subtitle = confirmBookingSubtitle(
+    customerName: current['customerName'] as String?,
+    eventType: eventTypeLabel,
+    eventDate: days.isEmpty ? null : days.first,
+  );
 
   final initialText = ((current['eventLocation'] ?? current['location']) as String?) ?? '';
   final result = await showModalBottomSheet<ConfirmBookingResult>(
@@ -68,7 +81,8 @@ Future<ApprovalBookingDecision> ensureApprovalBooking(
       initialText: initialText,
       initialPlace: EnquiryPlace.fromData(current),
       locationKnown: isLocationKnownInData(current),
-      showAmounts: isAdmin,
+      subtitle: subtitle,
+      canEditAmounts: isAdmin,
       initialTotal: amountText(current['totalCost']),
       initialAdvance: amountText(current['advancePaid']),
     ),
@@ -77,18 +91,13 @@ Future<ApprovalBookingDecision> ensureApprovalBooking(
 
   final location = result.locationFields;
   var amountFields = const <String, Object?>{};
+  // Money fields are admin-only in firestore.rules: never part of a staff write.
   if (isAdmin) {
-    String Function(String) labelFor = DropdownLookup.titleCase;
-    try {
-      labelFor = (await ref.read(dropdownLookupProvider.future)).labelForPaymentStatus;
-    } catch (_) {
-      // Fall back to a title-cased value; the label is display-only.
-    }
     amountFields = bookingAmountFields(
       oldData: current,
       totalText: result.totalText,
       advanceText: result.advanceText,
-      paymentStatusLabel: labelFor,
+      paymentStatusLabel: lookup?.labelForPaymentStatus ?? DropdownLookup.titleCase,
     );
   }
 
@@ -120,13 +129,17 @@ class ConfirmBookingResult {
 
 /// "Confirm booking" sheet shown before approving. Pops a [ConfirmBookingResult],
 /// or null on Cancel.
+///
+/// Location is required; the amounts section is always visible but optional —
+/// Approve is enabled as soon as the location is good enough.
 class ConfirmBookingSheet extends StatefulWidget {
   const ConfirmBookingSheet({
     super.key,
     required this.initialText,
     this.initialPlace,
     this.locationKnown = false,
-    this.showAmounts = false,
+    this.subtitle = '',
+    this.canEditAmounts = false,
     this.initialTotal = '',
     this.initialAdvance = '',
   });
@@ -137,8 +150,11 @@ class ConfirmBookingSheet extends StatefulWidget {
   /// The stored location is already good enough to approve.
   final bool locationKnown;
 
-  /// Admins: optional amounts section (collapsed unless amounts already exist).
-  final bool showAmounts;
+  /// "Customer · Event type · Date"; hidden when empty.
+  final String subtitle;
+
+  /// Admins edit the amounts; staff see stored amounts read-only.
+  final bool canEditAmounts;
   final String initialTotal;
   final String initialAdvance;
 
@@ -157,8 +173,6 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
     text: widget.initialAdvance,
   );
   late EnquiryPlace? _place = widget.initialPlace;
-  late bool _amountsOpen =
-      widget.initialTotal.trim().isNotEmpty || widget.initialAdvance.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -191,8 +205,8 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
         locationFields: writeLocation
             ? approvalLocationFields(text: _controller.text, place: _place)
             : null,
-        totalText: widget.showAmounts ? _totalController.text : widget.initialTotal,
-        advanceText: widget.showAmounts ? _advanceController.text : widget.initialAdvance,
+        totalText: widget.canEditAmounts ? _totalController.text : widget.initialTotal,
+        advanceText: widget.canEditAmounts ? _advanceController.text : widget.initialAdvance,
       ),
     );
   }
@@ -203,6 +217,7 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
     final cs = theme.colorScheme;
     final viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final showTick = widget.locationKnown && !_locationChanged;
+    final quiet = theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
 
     return SafeArea(
       top: false,
@@ -218,14 +233,23 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Confirm booking', style: theme.textTheme.titleMedium).withHeaderSemantics(),
-              if (!widget.locationKnown) ...[
-                const SizedBox(height: AppTokens.space1),
+              if (widget.subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
                 Text(
-                  'Add the area (e.g. JP Nagar) or the venue before approving.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  widget.subtitle,
+                  key: const Key('confirmBookingSubtitle'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ],
               const SizedBox(height: AppTokens.space4),
+              const _SectionLabel('Location'),
+              const SizedBox(height: AppTokens.space2),
+              if (!widget.locationKnown) ...[
+                Text('Add the area (e.g. JP Nagar) or the venue before approving.', style: quiet),
+                const SizedBox(height: AppTokens.space2),
+              ],
               EnquiryLocationField(
                 controller: _controller,
                 place: _place,
@@ -238,22 +262,20 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
                   children: [
                     Icon(Icons.check_circle_outline_rounded, size: 16, color: cs.primary),
                     const SizedBox(width: AppTokens.space1),
-                    Text(
-                      'Location on file',
-                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
+                    Text('Location on file', style: quiet),
                   ],
                 ),
               ],
-              if (widget.showAmounts) ...[
-                const SizedBox(height: AppTokens.space3),
-                _OptionalAmounts(
-                  open: _amountsOpen,
-                  onOpen: () => setState(() => _amountsOpen = true),
+              const SizedBox(height: AppTokens.space5),
+              const _SectionLabel('Amount'),
+              const SizedBox(height: AppTokens.space2),
+              if (widget.canEditAmounts)
+                _EditableAmounts(
                   totalController: _totalController,
                   advanceController: _advanceController,
-                ),
-              ],
+                )
+              else
+                _ReadOnlyAmounts(total: widget.initialTotal, advance: widget.initialAdvance),
               const SizedBox(height: AppTokens.space4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -278,39 +300,37 @@ class _ConfirmBookingSheetState extends State<ConfirmBookingSheet> {
   }
 }
 
-/// Quiet "Add amount (optional)" row that expands into Total / Advance fields and
-/// a live balance line. Nothing here is required or validated.
-class _OptionalAmounts extends StatelessWidget {
-  const _OptionalAmounts({
-    required this.open,
-    required this.onOpen,
-    required this.totalController,
-    required this.advanceController,
-  });
+/// Small muted heading for a sheet section.
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
 
-  final bool open;
-  final VoidCallback onOpen;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w700,
+      ),
+    ).withHeaderSemantics();
+  }
+}
+
+/// Admins: Total / Advance fields with a live balance. Optional — when both are
+/// empty a quiet hint says it can be added later. Nothing is validated or flagged.
+class _EditableAmounts extends StatelessWidget {
+  const _EditableAmounts({required this.totalController, required this.advanceController});
+
   final TextEditingController totalController;
   final TextEditingController advanceController;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final quiet = theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant);
-
-    if (!open) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: TextButton.icon(
-          key: const Key('confirmBookingAddAmount'),
-          onPressed: onOpen,
-          style: TextButton.styleFrom(foregroundColor: cs.onSurfaceVariant),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: Text('Add amount (optional)', style: quiet),
-        ),
-      );
-    }
+    final quiet = theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -342,16 +362,93 @@ class _OptionalAmounts extends StatelessWidget {
               total: parseAmountText(totalController.text),
               advance: parseAmountText(advanceController.text),
             );
-            if (balance == null) return const SizedBox.shrink();
+            final empty =
+                totalController.text.trim().isEmpty && advanceController.text.trim().isEmpty;
+            final line = balance ?? (empty ? 'Optional — you can add it later.' : null);
+            if (line == null) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(top: AppTokens.space2),
-              child: Text(
-                balance,
-                style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
+              child: Text(line, key: const Key('confirmBookingAmountNote'), style: quiet),
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+/// Staff: stored amounts shown read-only, or a muted note when there are none.
+class _ReadOnlyAmounts extends StatelessWidget {
+  const _ReadOnlyAmounts({required this.total, required this.advance});
+
+  final String total;
+  final String advance;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final quiet = theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant);
+    final totalValue = parseAmountText(total);
+    final advanceValue = parseAmountText(advance);
+
+    if (totalValue == null && advanceValue == null) {
+      return Text(
+        'Amount will be added by an admin',
+        key: const Key('confirmBookingAmountByAdmin'),
+        style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+      );
+    }
+
+    final balance = bookingBalanceText(total: totalValue, advance: advanceValue);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _ReadOnlyAmount(
+                label: 'Total amount',
+                value: totalValue == null ? '—' : formatBookingAmount(totalValue),
+              ),
+            ),
+            const SizedBox(width: AppTokens.space3),
+            Expanded(
+              child: _ReadOnlyAmount(
+                label: 'Advance received',
+                value: advanceValue == null ? '—' : formatBookingAmount(advanceValue),
+              ),
+            ),
+          ],
+        ),
+        if (balance != null) ...[
+          const SizedBox(height: AppTokens.space2),
+          Text(balance, style: quiet),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReadOnlyAmount extends StatelessWidget {
+  const _ReadOnlyAmount({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 2),
+        Text(value, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
       ],
     );
   }

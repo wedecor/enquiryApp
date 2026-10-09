@@ -1,10 +1,13 @@
-/// Pure helpers for the optional amounts in the Confirm booking sheet.
+/// Pure helpers for the optional amounts in the Confirm booking sheet and the
+/// "Amount pending" marker.
 ///
 /// Money is never required: empty fields write nothing, and only amounts the admin
 /// actually changed are written (financial fields are admin-only in the rules).
 library;
 
 import 'package:intl/intl.dart';
+
+import '../../../core/constants/status_vocabulary.dart';
 
 /// Canonical payment status values (see `DropdownDefaults.paymentStatuses`).
 const String kPaymentStatusPaid = 'paid';
@@ -24,11 +27,41 @@ String? derivePaymentStatus({double? total, double? advance}) {
   return advance >= total ? kPaymentStatusPaid : kPaymentStatusPartial;
 }
 
+/// "₹1,50,000" (Indian digit grouping; decimals only when present).
+String formatBookingAmount(num amount) =>
+    '₹${NumberFormat.decimalPattern('en_IN').format(amount)}';
+
 /// "Balance ₹1,50,000" once a total is entered; null otherwise. Never negative.
 String? bookingBalanceText({double? total, double? advance}) {
   if (total == null || total <= 0) return null;
   final balance = total - (advance ?? 0);
-  return 'Balance ₹${NumberFormat.decimalPattern('en_IN').format(balance < 0 ? 0 : balance)}';
+  return 'Balance ${formatBookingAmount(balance < 0 ? 0 : balance)}';
+}
+
+/// The booking has a total amount (`totalCost` is a number above zero).
+///
+/// Multi-function bookings carry one top-level `totalCost` for the whole booking.
+bool bookingHasAmount(Map<String, dynamic> data) {
+  final total = data['totalCost'];
+  return total is num && total > 0;
+}
+
+/// Approved or completed booking without a total amount yet — shown to admins as
+/// "Amount pending" (approving never requires an amount).
+bool isApprovedAmountPending(Map<String, dynamic> data) {
+  final status = EnquiryStatus.fromValue(data['statusValue'] as String?);
+  if (status != EnquiryStatus.approved && status != EnquiryStatus.completed) return false;
+  return !bookingHasAmount(data);
+}
+
+/// Confirm booking sheet subtitle: "Ayesha Khan · Wedding · 12 Dec 2026", skipping
+/// empty parts (and placeholder dates from legacy data).
+String confirmBookingSubtitle({String? customerName, String? eventType, DateTime? eventDate}) {
+  return [
+    customerName?.trim() ?? '',
+    eventType?.trim() ?? '',
+    if (eventDate != null && eventDate.year > 1971) DateFormat('d MMM yyyy').format(eventDate),
+  ].where((part) => part.isNotEmpty).join(' · ');
 }
 
 num? _storedAmount(Object? value) => value is num ? value : null;

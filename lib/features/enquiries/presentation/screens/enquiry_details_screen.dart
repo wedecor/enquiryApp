@@ -16,6 +16,7 @@ import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_merge_service.dart';
+import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
 import '../../domain/event_functions.dart';
@@ -225,6 +226,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                 statusIsApproved: EnquiryStatus.isApproved(labels.statusValue),
                 data: enquiryData,
               ),
+              amountPending: isAdmin && isApprovedAmountPending(enquiryData),
             ),
             EnquiryDetailsBody(
               enquiryId: widget.enquiryId,

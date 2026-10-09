@@ -25,6 +25,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     this.actions = const [],
     this.repeatCustomer = false,
     this.locationPending = false,
+    this.amountPending = false,
   });
 
   final String enquiryId;
@@ -43,6 +44,9 @@ class EnquiryDetailsHeader extends StatelessWidget {
   /// Approved without a known location (only "Bangalore" or empty): shows a
   /// "Location pending" badge so an admin can add the area.
   final bool locationPending;
+
+  /// Admins only: approved / completed without a total amount — "Amount pending".
+  final bool amountPending;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,10 @@ class EnquiryDetailsHeader extends StatelessWidget {
           if (locationPending) ...[
             const SizedBox(width: AppTokens.space2),
             const Flexible(child: LocationPendingBadge()),
+          ],
+          if (amountPending) ...[
+            const SizedBox(width: AppTokens.space2),
+            const Flexible(child: AmountPendingBadge()),
           ],
         ],
       ),
@@ -132,6 +140,24 @@ class LocationPendingBadge extends StatelessWidget {
       message: 'Add the area or venue',
       child: _HeaderBadge(
         label: 'Location pending',
+        ink: dark ? AppColorScheme.warningDark : AppColorScheme.onWarningContainerLight,
+      ),
+    );
+  }
+}
+
+/// Small amber pill (admins) on an approved / completed booking without a total
+/// amount — same styling as [LocationPendingBadge].
+class AmountPendingBadge extends StatelessWidget {
+  const AmountPendingBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: 'Edit the enquiry to add the amount',
+      child: _HeaderBadge(
+        label: 'Amount pending',
         ink: dark ? AppColorScheme.warningDark : AppColorScheme.onWarningContainerLight,
       ),
     );

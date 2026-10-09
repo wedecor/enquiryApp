@@ -23,6 +23,7 @@ class KanbanLane extends StatelessWidget {
     required this.onDrop,
     required this.onTap,
     required this.width,
+    this.isAdmin = false,
   });
 
   final String status;
@@ -35,6 +36,9 @@ class KanbanLane extends StatelessWidget {
   final void Function(String enquiryId) onDrop;
   final void Function(String enquiryId) onTap;
   final double width;
+
+  /// Passed to each [KanbanCard] (admin-only markers).
+  final bool isAdmin;
 
   static const double _cardInset = 10;
 
@@ -107,6 +111,7 @@ class KanbanLane extends StatelessWidget {
                               dropdownLookup: dropdownLookup,
                               onTap: () => onTap(doc.id),
                               width: width - _cardInset * 2,
+                              isAdmin: isAdmin,
                             ),
                           );
                         },

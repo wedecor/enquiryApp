@@ -31,6 +31,40 @@ String formatPercent(double fraction) => '${(fraction * 100).round()}%';
 
 String _money(double v) => v == 0 ? '₹0' : formatAnalyticsCurrency(v);
 
+/// [child] followed by a quiet "Based on X of Y bookings with an amount" caption
+/// when some approved / completed bookings have no amount yet.
+Widget _withCoverage(Widget child, AmountCoverage coverage) {
+  final caption = amountCoverageCaption(coverage);
+  if (caption == null) return child;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      child,
+      const SizedBox(height: AppTokens.space3),
+      AmountCoverageCaption(caption),
+    ],
+  );
+}
+
+/// Whisper caption under booked-value totals.
+class AmountCoverageCaption extends StatelessWidget {
+  const AmountCoverageCaption(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      text,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w300,
+      ),
+    );
+  }
+}
+
 void _openEnquiry(BuildContext context, String id) {
   if (id.isEmpty) return;
   Navigator.of(
@@ -380,7 +414,11 @@ class PipelineOverviewSection extends ConsumerWidget {
                   hint: 'Functions of approved + completed bookings',
                 ),
                 MiniStat(label: 'Bookings', value: '${r.bookingsInPeriod}'),
-                MiniStat(label: 'Booked value', value: _money(r.bookedValueInPeriod)),
+                MiniStat(
+                  label: 'Booked value',
+                  value: _money(r.bookedValueInPeriod),
+                  hint: amountCoverageCaption(r.bookedCoverage),
+                ),
               ],
             ),
             const SizedBox(height: AppTokens.space5),
@@ -706,15 +744,18 @@ class TeamSection extends ConsumerWidget {
       subtitle: 'Enquiries in this period by assignee. Tap a column to sort.',
       child: report.team.isEmpty
           ? const AnalyticsEmptyState(icon: Icons.groups_outlined)
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: _tableWidth(context),
-                child: PerformanceTable(
-                  rows: report.team,
-                  nameOf: (r) => names[r.key] ?? 'Unknown',
+          : _withCoverage(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: _tableWidth(context),
+                  child: PerformanceTable(
+                    rows: report.team,
+                    nameOf: (r) => names[r.key] ?? 'Unknown',
+                  ),
                 ),
               ),
+              report.bookedCoverage,
             ),
     );
   }
@@ -734,17 +775,20 @@ class SourcePerformanceSection extends ConsumerWidget {
       subtitle: 'Which sources bring bookings, not just enquiries',
       child: report.sources.isEmpty
           ? const AnalyticsEmptyState(icon: Icons.campaign_outlined)
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: _tableWidth(context),
-                child: PerformanceTable(
-                  rows: report.sources,
-                  nameOf: (r) => r.key == 'unknown'
-                      ? 'Unknown'
-                      : (lookup?.labelForSource(r.key) ?? DropdownLookup.titleCase(r.key)),
+          : _withCoverage(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: _tableWidth(context),
+                  child: PerformanceTable(
+                    rows: report.sources,
+                    nameOf: (r) => r.key == 'unknown'
+                        ? 'Unknown'
+                        : (lookup?.labelForSource(r.key) ?? DropdownLookup.titleCase(r.key)),
+                  ),
                 ),
               ),
+              report.bookedCoverage,
             ),
     );
   }
@@ -767,6 +811,7 @@ class MoneyByMonthSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final months = report.money;
     final maxBooked = months.fold<double>(0, (m, e) => e.booked > m ? e.booked : m);
+    final coverageCaption = amountCoverageCaption(report.moneyCoverage);
     final s = AppSurfaces.of(context);
     final fmt = DateFormat('MMM yyyy');
     return AnalyticsSectionCard(
@@ -776,9 +821,11 @@ class MoneyByMonthSection extends StatelessWidget {
           'Approved & completed bookings (each once, by its last function) · '
           'advance collected vs balance due',
       child: maxBooked == 0
-          ? const AnalyticsEmptyState(
+          ? AnalyticsEmptyState(
               icon: Icons.account_balance_wallet_outlined,
-              message: 'No bookings in the next 6 months',
+              message: report.moneyCoverage.total == 0
+                  ? 'No bookings in the next 6 months'
+                  : 'No amounts added yet for bookings in the next 6 months',
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -825,6 +872,10 @@ class MoneyByMonthSection extends StatelessWidget {
                       ],
                     ),
                   ),
+                if (coverageCaption != null) ...[
+                  const SizedBox(height: AppTokens.space2),
+                  AmountCoverageCaption(coverageCaption),
+                ],
               ],
             ),
     );
@@ -997,24 +1048,27 @@ class AreaBreakdownSection extends StatelessWidget {
               icon: Icons.map_outlined,
               message: 'No bookings in this period',
             )
-          : MetricTable(
-              columns: const [
-                MetricColumn('Area', flex: 3, numeric: false),
-                MetricColumn('Events'),
-                MetricColumn('Bookings'),
-                MetricColumn('Share'),
-                MetricColumn('Booked value', flex: 2),
-              ],
-              rows: [
-                for (final a in shown)
-                  [
-                    a.label,
-                    '${a.events}',
-                    '${a.bookings}',
-                    formatPercent(a.events / total),
-                    _money(a.bookedValue),
-                  ],
-              ],
+          : _withCoverage(
+              MetricTable(
+                columns: const [
+                  MetricColumn('Area', flex: 3, numeric: false),
+                  MetricColumn('Events'),
+                  MetricColumn('Bookings'),
+                  MetricColumn('Share'),
+                  MetricColumn('Booked value', flex: 2),
+                ],
+                rows: [
+                  for (final a in shown)
+                    [
+                      a.label,
+                      '${a.events}',
+                      '${a.bookings}',
+                      formatPercent(a.events / total),
+                      _money(a.bookedValue),
+                    ],
+                ],
+              ),
+              report.bookedCoverage,
             ),
     );
   }

@@ -43,6 +43,7 @@ class EnquiryListRow extends StatelessWidget {
     this.compact = false,
     this.showStatusChip = true,
     this.locationPending = false,
+    this.amountPending = false,
     this.showChevron = true,
     this.bordered = false,
     this.margin,
@@ -74,6 +75,9 @@ class EnquiryListRow extends StatelessWidget {
 
   /// Approved without a known location: a small "Location pending" pill on line 2.
   final bool locationPending;
+
+  /// Admins: approved / completed without a total amount — "Amount pending" pill.
+  final bool amountPending;
 
   /// Kept for call-site compatibility; the tile has no chevron.
   final bool showChevron;
@@ -148,7 +152,7 @@ class EnquiryListRow extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (line2.isNotEmpty || locationPending) ...[
+                if (line2.isNotEmpty || locationPending || amountPending) ...[
                   const SizedBox(height: 3),
                   Row(
                     children: [
@@ -163,9 +167,16 @@ class EnquiryListRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (locationPending) ...[
+                      // Both pills: let them shrink (ellipsis) so narrow tiles never overflow.
+                      for (final pill in [
+                        if (locationPending) 'Location pending',
+                        if (amountPending) 'Amount pending',
+                      ]) ...[
                         const SizedBox(width: AppTokens.space2),
-                        const _LocationPendingPill(),
+                        if (locationPending && amountPending)
+                          Flexible(child: _PendingPill(label: pill))
+                        else
+                          _PendingPill(label: pill),
                       ],
                     ],
                   ),
@@ -303,9 +314,11 @@ class _DateBlock extends StatelessWidget {
   }
 }
 
-/// Amber "Location pending" pill for approved enquiries without an area.
-class _LocationPendingPill extends StatelessWidget {
-  const _LocationPendingPill();
+/// Small amber pill on line 2: "Location pending" / "Amount pending".
+class _PendingPill extends StatelessWidget {
+  const _PendingPill({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -322,8 +335,9 @@ class _LocationPendingPill extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: 1),
         child: Text(
-          'Location pending',
+          label,
           maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
         ),
       ),

@@ -6,6 +6,7 @@ import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../../../../ui/components/enquiry_list_row.dart';
+import '../../../domain/booking_amounts.dart';
 import '../../../domain/enquiry_location.dart';
 import '../../../domain/event_functions.dart';
 
@@ -20,6 +21,7 @@ class KanbanCard extends StatelessWidget {
     required this.dropdownLookup,
     required this.onTap,
     required this.width,
+    this.isAdmin = false,
   });
 
   final QueryDocumentSnapshot doc;
@@ -27,6 +29,9 @@ class KanbanCard extends StatelessWidget {
   final DropdownLookup? dropdownLookup;
   final VoidCallback onTap;
   final double width;
+
+  /// Admins also see "Amount pending" on bookings without a total amount.
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +77,7 @@ class KanbanCard extends StatelessWidget {
         statusIsApproved: EnquiryStatus.isApproved(statusValue),
         data: data,
       ),
+      amountPending: isAdmin && isApprovedAmountPending(data),
       showChevron: false,
       bordered: true,
       margin: margin,

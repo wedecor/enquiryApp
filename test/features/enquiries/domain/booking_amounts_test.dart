@@ -179,4 +179,81 @@ void main() {
       });
     });
   });
+
+  group('isApprovedAmountPending', () {
+    test('approved or completed without a positive total', () {
+      expect(isApprovedAmountPending({'statusValue': 'approved'}), isTrue);
+      expect(isApprovedAmountPending({'statusValue': 'completed', 'totalCost': 0}), isTrue);
+      expect(isApprovedAmountPending({'statusValue': 'approved', 'totalCost': -5}), isTrue);
+      expect(isApprovedAmountPending({'statusValue': 'approved', 'totalCost': null}), isTrue);
+      // Legacy alias resolves to approved.
+      expect(isApprovedAmountPending({'statusValue': 'confirmed'}), isTrue);
+    });
+
+    test('false once a total exists or before approval', () {
+      expect(isApprovedAmountPending({'statusValue': 'approved', 'totalCost': 50000}), isFalse);
+      expect(isApprovedAmountPending({'statusValue': 'completed', 'totalCost': 1.5}), isFalse);
+      expect(isApprovedAmountPending({'statusValue': 'in_talks'}), isFalse);
+      expect(isApprovedAmountPending({'statusValue': 'new'}), isFalse);
+      expect(isApprovedAmountPending({'statusValue': 'cancelled'}), isFalse);
+      expect(isApprovedAmountPending(<String, dynamic>{}), isFalse);
+    });
+
+    test('multi-function booking uses the one top-level total', () {
+      final functions = [
+        {'eventType': 'haldi', 'date': '2026-12-10'},
+        {'eventType': 'wedding', 'date': '2026-12-12'},
+      ];
+      expect(
+        isApprovedAmountPending({'statusValue': 'approved', 'functions': functions}),
+        isTrue,
+      );
+      expect(
+        isApprovedAmountPending({
+          'statusValue': 'approved',
+          'functions': functions,
+          'totalCost': 400000,
+        }),
+        isFalse,
+      );
+    });
+  });
+
+  group('bookingHasAmount', () {
+    test('only a positive number counts', () {
+      expect(bookingHasAmount({'totalCost': 1}), isTrue);
+      expect(bookingHasAmount({'totalCost': 0}), isFalse);
+      expect(bookingHasAmount({'totalCost': '50000'}), isFalse);
+      expect(bookingHasAmount(<String, dynamic>{}), isFalse);
+    });
+  });
+
+  group('formatBookingAmount', () {
+    test('uses Indian digit grouping', () {
+      expect(formatBookingAmount(150000), '₹1,50,000');
+      expect(formatBookingAmount(0), '₹0');
+    });
+  });
+
+  group('confirmBookingSubtitle', () {
+    test('joins customer, event type and date', () {
+      expect(
+        confirmBookingSubtitle(
+          customerName: ' Ayesha Khan ',
+          eventType: 'Wedding',
+          eventDate: DateTime(2026, 12, 12),
+        ),
+        'Ayesha Khan · Wedding · 12 Dec 2026',
+      );
+    });
+
+    test('skips empty parts and placeholder dates', () {
+      expect(confirmBookingSubtitle(customerName: 'Ali', eventType: ''), 'Ali');
+      expect(
+        confirmBookingSubtitle(eventType: 'Haldi', eventDate: DateTime(1970)),
+        'Haldi',
+      );
+      expect(confirmBookingSubtitle(), '');
+    });
+  });
 }

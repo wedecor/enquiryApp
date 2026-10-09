@@ -130,6 +130,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               buckets: buckets,
               hoverColumn: _hoverColumn,
               dropdownLookup: dropdownLookup,
+              isAdmin: isAdmin,
               onDragOver: (status) {
                 if (_hoverColumn != status) setState(() => _hoverColumn = status);
               },
@@ -160,7 +161,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
-                // Approving: Confirm booking (location, optional amounts for admins),
+                // Approving: Confirm booking for everyone (location; optional amounts),
                 // then the date check.
                 Map<String, Object?>? bookingFields;
                 if (EnquiryStatus.isApproved(newStatus)) {
@@ -237,6 +238,7 @@ class _KanbanBoard extends StatelessWidget {
     required this.buckets,
     required this.hoverColumn,
     required this.dropdownLookup,
+    required this.isAdmin,
     required this.onDragOver,
     required this.onDragLeave,
     required this.onDrop,
@@ -247,6 +249,7 @@ class _KanbanBoard extends StatelessWidget {
   final Map<String, List<QueryDocumentSnapshot>> buckets;
   final String? hoverColumn;
   final DropdownLookup? dropdownLookup;
+  final bool isAdmin;
   final void Function(String status) onDragOver;
   final VoidCallback onDragLeave;
   final void Function(String enquiryId, String newStatus) onDrop;
@@ -277,6 +280,7 @@ class _KanbanBoard extends StatelessWidget {
           onDrop: (id) => onDrop(id, col.status),
           onTap: onTap,
           width: _kColumnWidth,
+          isAdmin: isAdmin,
         );
       },
     );

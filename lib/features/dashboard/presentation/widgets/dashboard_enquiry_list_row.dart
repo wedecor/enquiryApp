@@ -8,6 +8,7 @@ import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
 import '../../../admin/users/presentation/users_providers.dart' as users_providers;
+import '../../../enquiries/domain/booking_amounts.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/domain/enquiry_location.dart';
 import '../../../enquiries/domain/event_functions.dart';
@@ -120,6 +121,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
         statusIsApproved: EnquiryStatus.isApproved(statusValue),
         data: data,
       ),
+      amountPending: ref.watch(isAdminProvider) && isApprovedAmountPending(data),
       onTap: () => actions.onView(enquiryId),
       onLongPress: sheetActions.isEmpty
           ? null

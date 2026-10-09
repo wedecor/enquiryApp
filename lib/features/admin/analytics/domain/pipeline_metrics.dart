@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
+import '../../../enquiries/domain/booking_amounts.dart';
 import '../../../enquiries/domain/enquiry_lifecycle.dart';
 import '../../../enquiries/domain/event_functions.dart';
 
@@ -552,6 +553,15 @@ double collectedOf(Map<String, dynamic> row) {
   return total > advance ? total : advance;
 }
 
+/// Month bucket (0 = the current month) of a row's event date, or null when it
+/// has no event date or falls outside the [months]-month window.
+int? _moneyMonthIndex(Map<String, dynamic> row, DateTime now, int months) {
+  final event = metricDate(row['eventDate']);
+  if (event == null) return null;
+  final index = (event.year - now.year) * 12 + (event.month - now.month);
+  return index < 0 || index >= months ? null : index;
+}
+
 /// Won enquiries by event month, from the current month for [months] months.
 List<MoneyMonth> computeMoneyByMonth(
   List<Map<String, dynamic>> rows,
@@ -565,10 +575,8 @@ List<MoneyMonth> computeMoneyByMonth(
   final count = List<int>.filled(months, 0);
 
   for (final row in rows.where(isWon)) {
-    final event = metricDate(row['eventDate']);
-    if (event == null) continue;
-    final index = (event.year - start.year) * 12 + (event.month - start.month);
-    if (index < 0 || index >= months) continue;
+    final index = _moneyMonthIndex(row, now, months);
+    if (index == null) continue;
     booked[index] += metricNum(row['totalCost']) ?? 0;
     collected[index] += collectedOf(row);
     count[index]++;
@@ -578,6 +586,49 @@ List<MoneyMonth> computeMoneyByMonth(
       MoneyMonth(month: buckets[i], bookings: count[i], booked: booked[i], collected: collected[i]),
   ];
 }
+
+/// Won rows counted by [computeMoneyByMonth] (event month in the window).
+List<Map<String, dynamic>> moneyWindowRows(
+  List<Map<String, dynamic>> rows,
+  DateTime now, {
+  int months = 6,
+}) => [
+  for (final row in rows.where(isWon))
+    if (_moneyMonthIndex(row, now, months) != null) row,
+];
+
+// ── Amount coverage ──────────────────────────────────────────────────────────
+
+/// How many won bookings (approved + completed) carry an amount.
+///
+/// Approving never requires an amount, so booked-value totals can be partial.
+class AmountCoverage {
+  const AmountCoverage({required this.withAmount, required this.total});
+
+  static const AmountCoverage none = AmountCoverage(withAmount: 0, total: 0);
+
+  final int withAmount;
+  final int total;
+
+  /// Some bookings lack an amount, so money totals are understated.
+  bool get isPartial => total > 0 && withAmount < total;
+}
+
+/// Coverage over the won rows of [rows] ([bookingHasAmount]: `totalCost` > 0).
+AmountCoverage computeAmountCoverage(Iterable<Map<String, dynamic>> rows) {
+  var total = 0;
+  var withAmount = 0;
+  for (final row in rows.where(isWon)) {
+    total++;
+    if (bookingHasAmount(row)) withAmount++;
+  }
+  return AmountCoverage(withAmount: withAmount, total: total);
+}
+
+/// "Based on 7 of 9 bookings with an amount" when some lack one; null otherwise.
+String? amountCoverageCaption(AmountCoverage coverage) => coverage.isPartial
+    ? 'Based on ${coverage.withAmount} of ${coverage.total} bookings with an amount'
+    : null;
 
 /// Won enquiries whose event day is before today and still have a balance due,
 /// largest balance first.
@@ -954,6 +1005,8 @@ class PipelineReport {
     this.eventsInPeriod = 0,
     this.bookingsInPeriod = 0,
     this.eventTypeEvents = const [],
+    this.bookedCoverage = AmountCoverage.none,
+    this.moneyCoverage = AmountCoverage.none,
   });
 
   final AnalyticsAttribution attribution;
@@ -985,6 +1038,13 @@ class PipelineReport {
 
   /// Events (functions) of approved + completed bookings in the period by event type.
   final List<LabeledCount> eventTypeEvents;
+
+  /// Won bookings in the period with an amount — behind [bookedValueInPeriod],
+  /// the area / source / team booked values.
+  final AmountCoverage bookedCoverage;
+
+  /// Won bookings in the [money] window with an amount.
+  final AmountCoverage moneyCoverage;
 }
 
 /// Builds every Phase-1 metric. [allRows] = every enquiry visible to the admin
@@ -1027,5 +1087,7 @@ PipelineReport buildPipelineReport({
     eventsInPeriod: wonFunctions.length,
     bookingsInPeriod: period.where(isWon).length,
     eventTypeEvents: computeEventTypeEvents(wonFunctions),
+    bookedCoverage: computeAmountCoverage(period),
+    moneyCoverage: computeAmountCoverage(moneyWindowRows(allRows, now)),
   );
 }

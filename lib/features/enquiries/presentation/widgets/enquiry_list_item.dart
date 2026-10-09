@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/constants/status_vocabulary.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
+import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/event_functions.dart';
 import '../screens/enquiry_details_screen.dart';
@@ -107,6 +109,8 @@ class EnquiryListItem extends ConsumerWidget {
             statusIsApproved: EnquiryStatus.isApproved(statusValue),
             data: data,
           ),
+      // Admins only (money is admin data).
+      amountPending: !compact && ref.watch(isAdminProvider) && isApprovedAmountPending(data),
       onTap: onEdit ?? openDetails,
       onLongPress: sheetActions.isEmpty
           ? null
