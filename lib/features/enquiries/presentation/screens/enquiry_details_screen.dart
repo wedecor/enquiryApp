@@ -477,14 +477,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
       // the top-level admin_audit log instead (non-fatal; logged on failure).
       await logAdminAction(ref, 'enquiry_deleted', {'enquiryId': widget.enquiryId});
 
-      if (mounted) {
+      if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Enquiry deleted')));
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to delete enquiry: $e')));

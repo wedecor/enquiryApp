@@ -185,14 +185,14 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Enquiry not found')));
-        Navigator.of(context).maybePop();
+        unawaited(Navigator.of(context).maybePop());
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error loading enquiry data: $e')));
-        Navigator.of(context).maybePop();
+        unawaited(Navigator.of(context).maybePop());
       }
     }
   }

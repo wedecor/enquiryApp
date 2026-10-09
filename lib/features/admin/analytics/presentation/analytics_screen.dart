@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -139,7 +141,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         start: picked.start,
         end: DateTime(end.year, end.month, end.day).add(const Duration(days: 1)),
       );
-      ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange);
+      unawaited(ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange));
     }
   }
 
@@ -159,7 +161,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             return;
           }
 
-          showDialog<void>(
+          unawaited(showDialog<void>(
             context: context,
             barrierDismissible: false,
             builder: (context) => const AlertDialog(
@@ -171,7 +173,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 ],
               ),
             ),
-          );
+          ));
 
           await CsvExport.exportAnalyticsSummary(
             kpiSummary: state.kpiSummary!,
