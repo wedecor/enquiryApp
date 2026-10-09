@@ -6,7 +6,6 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../reengagement/presentation/upcoming_occasions_section.dart';
-import 'amount_pending_card.dart';
 import 'dashboard_today_section.dart';
 
 /// Editorial dashboard hero: date eyebrow, split-weight greeting and the
@@ -84,8 +83,6 @@ class DashboardWelcomePanel extends StatelessWidget {
             userId: user?.uid,
             onBucketTap: onPriorityBucketTap,
           ),
-          // Admins: approved bookings still without an amount (hidden when none).
-          AmountPendingCard(isAdmin: isAdmin, userId: user?.uid),
           // Yearly re-engagement reminders; a one-line "View all" card when none are due.
           const UpcomingOccasionsSection(),
         ],

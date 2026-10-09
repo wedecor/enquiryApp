@@ -28,8 +28,7 @@ String? derivePaymentStatus({double? total, double? advance}) {
 }
 
 /// "₹1,50,000" (Indian digit grouping; decimals only when present).
-String formatBookingAmount(num amount) =>
-    '₹${NumberFormat.decimalPattern('en_IN').format(amount)}';
+String formatBookingAmount(num amount) => '₹${NumberFormat.decimalPattern('en_IN').format(amount)}';
 
 /// "Balance ₹1,50,000" once a total is entered; null otherwise. Never negative.
 String? bookingBalanceText({double? total, double? advance}) {

@@ -20,11 +20,7 @@ import 'form/enquiry_location_field.dart';
 /// * [sheetShown] true → the user confirmed in the sheet (no further confirm needed).
 /// * [fields] are written together with the status change (null when nothing
 ///   changed or nothing was asked).
-typedef ApprovalBookingDecision = ({
-  bool proceed,
-  bool sheetShown,
-  Map<String, Object?>? fields,
-});
+typedef ApprovalBookingDecision = ({bool proceed, bool sheetShown, Map<String, Object?>? fields});
 
 /// Before moving an enquiry to Approved: everyone (admins and staff) sees the
 /// Confirm booking sheet — the location (required, prefilled) and the amounts

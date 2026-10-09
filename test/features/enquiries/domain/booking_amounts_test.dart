@@ -204,10 +204,7 @@ void main() {
         {'eventType': 'haldi', 'date': '2026-12-10'},
         {'eventType': 'wedding', 'date': '2026-12-12'},
       ];
-      expect(
-        isApprovedAmountPending({'statusValue': 'approved', 'functions': functions}),
-        isTrue,
-      );
+      expect(isApprovedAmountPending({'statusValue': 'approved', 'functions': functions}), isTrue);
       expect(
         isApprovedAmountPending({
           'statusValue': 'approved',
@@ -249,10 +246,7 @@ void main() {
 
     test('skips empty parts and placeholder dates', () {
       expect(confirmBookingSubtitle(customerName: 'Ali', eventType: ''), 'Ali');
-      expect(
-        confirmBookingSubtitle(eventType: 'Haldi', eventDate: DateTime(1970)),
-        'Haldi',
-      );
+      expect(confirmBookingSubtitle(eventType: 'Haldi', eventDate: DateTime(1970)), 'Haldi');
       expect(confirmBookingSubtitle(), '');
     });
   });
