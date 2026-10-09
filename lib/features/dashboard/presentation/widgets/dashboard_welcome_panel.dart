@@ -83,7 +83,7 @@ class DashboardWelcomePanel extends StatelessWidget {
             userId: user?.uid,
             onBucketTap: onPriorityBucketTap,
           ),
-          // Yearly re-engagement reminders; renders nothing when there are none.
+          // Yearly re-engagement reminders; a one-line "View all" card when none are due.
           const UpcomingOccasionsSection(),
         ],
       ),

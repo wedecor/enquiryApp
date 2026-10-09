@@ -12,7 +12,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
 # Keep public/android/version.json (version + buildNumber) in sync on every release.
-version: 2.0.19+50
+version: 2.0.20+51
 
 environment:
   sdk: ^3.8.1

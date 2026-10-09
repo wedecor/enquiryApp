@@ -632,6 +632,6 @@ export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";
-export { scheduleReengagements, onEnquiryCompletedStampOccasion } from "./reengagement";
+export { scheduleReengagements, onEnquiryCompletedStampOccasion, runReengagementNow } from "./reengagement";
 // Removed: migrateStatusFields - Migration complete, no longer needed
 // Removed: notifyOverdueInTalks - 4-hour scheduled reminders disabled

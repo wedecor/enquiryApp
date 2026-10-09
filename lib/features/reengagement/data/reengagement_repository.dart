@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/status_vocabulary.dart';
 import '../../../core/services/firestore_service.dart';
 import '../domain/enquiry_occasion.dart';
 import '../domain/occasion_kind.dart';
 import '../domain/occasion_reminder.dart';
+import '../domain/past_customer_occasion.dart';
 import '../domain/reengagement_config.dart';
 import '../domain/reengagement_stats.dart';
 
@@ -115,6 +117,46 @@ class ReengagementRepository {
   /// Yearly reminders on/off for one enquiry.
   Future<void> setOccasionReminders(String enquiryId, {required bool on}) {
     return _enquiry(enquiryId).update({EnquiryOccasion.remindersField: on});
+  }
+
+  /// Completed enquiries with an occasion stamp (unsorted; sorted client-side).
+  /// Admins: all. Staff: only those assigned to them — the enquiries rules only
+  /// allow a query constrained to `assignedTo == uid`. Equality / `in` filters
+  /// only (no orderBy), so no composite index is needed.
+  Future<List<PastCustomerOccasion>> fetchCompletedOccasions({
+    required bool isAdmin,
+    required String uid,
+  }) async {
+    Query<Map<String, dynamic>> query = _firestore.collection('enquiries');
+    if (!isAdmin) query = query.where('assignedTo', isEqualTo: uid);
+    final snap = await query
+        .where('statusValue', whereIn: EnquiryStatus.rawValuesFor(EnquiryStatus.completed.value))
+        .get();
+    return snap.docs
+        .map((d) => PastCustomerOccasion.fromEnquiry(d.id, d.data()))
+        .whereType<PastCustomerOccasion>()
+        .toList(growable: false);
+  }
+
+  /// Normalized phones of customers who chose "Don't remind again".
+  Future<Set<String>> fetchOptedOutPhones() async {
+    final snap = await _prefs.where('noReminders', isEqualTo: true).get();
+    return {for (final d in snap.docs) d.id};
+  }
+
+  /// Marks `reminders/{id}` sent if it exists and is not sent yet. Returns true
+  /// when it was updated. A missing doc (or one the caller may not read — staff
+  /// reading an unassigned/missing reminder are denied by the rules) returns false.
+  Future<bool> markSentIfExists(String id, String uid) async {
+    try {
+      final snap = await _reminders.doc(id).get();
+      if (!snap.exists || snap.data()?['status'] == OccasionReminder.statusSent) return false;
+      await markSent(id, uid);
+      return true;
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied' || e.code == 'not-found') return false;
+      rethrow;
+    }
   }
 
   /// Reminders sent in `[start, end]` (admin; single-field range → automatic index).

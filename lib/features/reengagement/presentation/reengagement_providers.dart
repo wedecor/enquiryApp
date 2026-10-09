@@ -4,6 +4,7 @@ import '../../../core/providers/role_provider.dart';
 import '../../../shared/models/user_model.dart';
 import '../data/reengagement_repository.dart';
 import '../domain/occasion_reminder.dart';
+import '../domain/past_customer_occasion.dart';
 import '../domain/reengagement_config.dart';
 
 /// `app_config/reengagement` (defaults when the doc is missing). Consumers use
@@ -24,4 +25,20 @@ final upcomingRemindersProvider = StreamProvider.autoDispose<List<OccasionRemind
   return ref
       .watch(reengagementRepositoryProvider)
       .watchPending(isAdmin: role == UserRole.admin, uid: uid, from: from, to: to);
+});
+
+/// Every completed customer with an occasion stamp, one row per (phone, kind),
+/// soonest next occurrence first. Opted-out customers, reminders-off enquiries and
+/// merged duplicates are hidden. Admins: all; staff: enquiries assigned to them.
+/// One-shot read; refresh with `ref.invalidate`.
+final pastCustomerOccasionsProvider = FutureProvider.autoDispose<List<PastCustomerRow>>((
+  ref,
+) async {
+  final uid = ref.watch(currentUserUidProvider);
+  final repo = ref.watch(reengagementRepositoryProvider);
+  final role = await ref.watch(roleProvider.future);
+  if (uid == null) return const [];
+  final sources = await repo.fetchCompletedOccasions(isAdmin: role == UserRole.admin, uid: uid);
+  final optedOut = await repo.fetchOptedOutPhones();
+  return PastCustomers.build(sources, now: DateTime.now(), optedOutPhones: optedOut);
 });

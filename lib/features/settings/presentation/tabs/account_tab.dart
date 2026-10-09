@@ -14,6 +14,7 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/glass_dialog.dart';
 import '../../../admin/users/presentation/user_management_screen.dart';
+import '../../../reengagement/presentation/upcoming_occasions_screen.dart';
 import '../widgets/settings_layout.dart';
 import '../widgets/settings_tiles.dart';
 import 'widgets/account_sections.dart';
@@ -74,6 +75,21 @@ class AccountTab extends ConsumerWidget {
               ),
             ],
           ),
+        SettingsGroup(
+          eyebrow: 'Customers',
+          title: 'Same time next year',
+          children: [
+            SettingsTile(
+              icon: Icons.celebration_outlined,
+              title: 'Customer occasions',
+              subtitle: 'Wish past customers on their anniversary or yearly celebration',
+              trailing: const SettingsChevron(),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen())),
+            ),
+          ],
+        ),
         SettingsGroup(
           eyebrow: 'Security',
           title: 'Account Actions',
