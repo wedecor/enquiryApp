@@ -16,7 +16,10 @@ id_rsa*
 .pub/
 build/
 *.iml
+# Lockfiles: pubspec.lock and npm package-lock.json files are tracked on purpose
+# (reproducible builds). Ignore other lockfiles only.
 *.lock
+!pubspec.lock
 
 # Android specific
 **/android/**/gradle-wrapper.jar
@@ -28,34 +31,6 @@ build/
 **/android/**/GeneratedPluginRegistrant.java
 **/android/key.properties
 *.jks
-
-# iOS specific
-**/ios/**/*.mode1v3
-**/ios/**/*.mode2v3
-**/ios/**/*.moved-aside
-**/ios/**/*.pbxuser
-**/ios/**/*.perspectivev3
-**/ios/**/*sync/
-**/ios/**/.sconsign.dblite
-**/ios/**/.tags*
-**/ios/**/.vagrant/
-**/ios/**/DerivedData/
-**/ios/**/Icon?
-**/ios/**/Pods/
-**/ios/**/.symlinks/
-**/ios/**/profile
-**/ios/**/xcuserdata
-**/ios/.generated/
-**/ios/Flutter/App.framework
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Flutter.podspec
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/app.flx
-**/ios/Flutter/app.zip
-**/ios/Flutter/flutter_assets/
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/ServiceDefinitions.json
-**/ios/Runner/GeneratedPluginRegistrant.*
 
 # Web specific
 **/web/firebase.json
@@ -139,8 +114,6 @@ jspm_packages/
 
 # Firebase configuration files with sensitive data
 android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-macos/Runner/GoogleService-Info.plist
 # Note: lib/firebase_options.dart is now secure and should be tracked
 serviceAccountKey.json
 *.local.*
@@ -162,7 +135,10 @@ credentials.json
 **/keys/
 **/credentials/
 
-# Note: .env.example is NOT ignored - it serves as a safe template
+# Env templates are safe and must stay tracked (they are matched by .env* above)
+!.env.example
+!config/.env.example
+!functions/.env.example
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -215,7 +191,10 @@ config/.env.local
 config/.env.*.local
 
 # Build outputs
-functions/lib
+functions/lib/
+functions/.env
+functions/.env.*
+!functions/.env.example
 
 # RC release artifacts
 public/internal/rc3/*.apk

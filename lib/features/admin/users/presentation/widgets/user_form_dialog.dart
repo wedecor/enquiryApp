@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,10 +10,13 @@ import '../../../../../ui/components/glass_dialog.dart';
 import '../../domain/user_model.dart' as domain;
 import '../users_providers.dart';
 
+/// Edit dialog for an existing team member. New people are added through
+/// the invite flow, so this dialog is edit-only. Saving calls the
+/// `adminUpdateUser` callable with only the fields that changed.
 class UserFormDialog extends ConsumerStatefulWidget {
-  final domain.UserModel? user; // null for create, non-null for edit
+  final domain.UserModel user;
 
-  const UserFormDialog({super.key, this.user});
+  const UserFormDialog({super.key, required this.user});
 
   @override
   ConsumerState<UserFormDialog> createState() => _UserFormDialogState();
@@ -23,19 +27,25 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  String _selectedRole = 'staff';
+  late final String _originalRole;
+  late String _selectedRole;
   bool _isActive = true;
+  bool _saving = false;
+
+  /// True when the dialog is editing the signed-in user's own row. Own role
+  /// and status can't be changed (the server rejects it too).
+  bool get _isSelf => widget.user.uid == fb.FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void initState() {
     super.initState();
-    if (widget.user != null) {
-      _nameController.text = widget.user!.name;
-      _emailController.text = widget.user!.email;
-      _phoneController.text = widget.user!.phone ?? '';
-      _selectedRole = widget.user!.role;
-      _isActive = widget.user!.isActive;
-    }
+    final user = widget.user;
+    _nameController.text = user.name;
+    _emailController.text = user.email;
+    _phoneController.text = user.phone ?? '';
+    _originalRole = user.role.toLowerCase() == 'admin' ? 'admin' : 'staff';
+    _selectedRole = _originalRole;
+    _isActive = user.isActive;
   }
 
   @override
@@ -48,13 +58,15 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.user != null;
     final roleAsync = ref.watch(roleProvider);
+    final isSelf = _isSelf;
+    final t = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
 
     return GlassDialog(
       eyebrow: 'Team',
-      title: isEdit ? 'Edit User' : 'Add User',
-      icon: isEdit ? Icons.manage_accounts_outlined : Icons.person_add_alt_1_rounded,
+      title: 'Edit User',
+      icon: Icons.manage_accounts_outlined,
       content: Form(
         key: _formKey,
         child: Column(
@@ -77,20 +89,11 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             const SizedBox(height: AppTokens.space4),
             TextFormField(
               controller: _emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Email',
-                prefixIcon: const Icon(Icons.alternate_email_rounded),
-                enabled: !isEdit, // Email is read-only for edits
+                prefixIcon: Icon(Icons.alternate_email_rounded),
+                enabled: false, // Email is read-only
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter an email';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: AppTokens.space4),
             TextFormField(
@@ -104,19 +107,22 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
             DropdownButtonFormField<String>(
               initialValue: _selectedRole,
               isExpanded: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Role',
-                prefixIcon: Icon(Icons.shield_outlined),
+                prefixIcon: const Icon(Icons.shield_outlined),
+                helperText: isSelf ? "You can't change your own role or status" : null,
               ),
               items: const [
                 DropdownMenuItem(value: 'staff', child: Text('Staff')),
                 DropdownMenuItem(value: 'admin', child: Text('Admin')),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedRole = value ?? 'staff';
-                });
-              },
+              onChanged: isSelf || _saving
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _selectedRole = value ?? 'staff';
+                      });
+                    },
             ),
             const SizedBox(height: AppTokens.space2),
             MergeSemantics(
@@ -124,13 +130,18 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
                 children: [
                   Checkbox(
                     value: _isActive,
-                    onChanged: (value) {
-                      setState(() {
-                        _isActive = value ?? true;
-                      });
-                    },
+                    onChanged: isSelf || _saving
+                        ? null
+                        : (value) {
+                            setState(() {
+                              _isActive = value ?? true;
+                            });
+                          },
                   ),
-                  const Text('Active'),
+                  Text(
+                    'Active',
+                    style: isSelf ? t.bodyMedium?.copyWith(color: cs.onSurfaceVariant) : null,
+                  ),
                 ],
               ),
             ),
@@ -138,13 +149,24 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
         roleAsync.when(
           data: (role) {
             if (role != UserRole.admin) {
               return const SizedBox.shrink();
             }
-            return FilledButton(onPressed: _submit, child: Text(isEdit ? 'Update' : 'Create'));
+            return FilledButton(
+              onPressed: _saving ? null : _submit,
+              child: _saving
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Update'),
+            );
           },
           loading: () => const SizedBox.shrink(),
           error: (_, _) => const SizedBox.shrink(),
@@ -153,41 +175,60 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     );
   }
 
-  void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  /// Fields that differ from the original user, limited to what
+  /// `adminUpdateUser` accepts. Own role/status are never sent.
+  Map<String, dynamic> _changedFields() {
+    final original = widget.user;
+    final changes = <String, dynamic>{};
 
-    final user = domain.UserModel(
-      uid: widget.user?.uid ?? '', // Will be set by Firestore
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-      role: _selectedRole,
-      isActive: _isActive,
-      // fcmToken removed for security - stored in private subcollection
-      createdAt: widget.user?.createdAt ?? DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+    final name = _nameController.text.trim();
+    if (name != original.name) changes['name'] = name;
 
-    final formController = ref.read(userFormControllerProvider.notifier);
+    final phoneText = _phoneController.text.trim();
+    final phone = phoneText.isEmpty ? null : phoneText;
+    final originalPhone = (original.phone?.trim().isEmpty ?? true) ? null : original.phone!.trim();
+    if (phone != originalPhone) changes['phone'] = phone;
 
-    if (widget.user != null) {
-      await formController.updateUser(user.uid, user.toJson());
-    } else {
-      await formController.createUser(user);
+    if (!_isSelf) {
+      if (_selectedRole != _originalRole) changes['role'] = _selectedRole;
+      if (_isActive != original.isActive) changes['isActive'] = _isActive;
+    }
+    return changes;
+  }
+
+  Future<void> _submit() async {
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
+
+    final changes = _changedFields();
+    if (changes.isEmpty) {
+      Navigator.of(context).pop();
+      return;
     }
 
-    if (mounted) {
-      Navigator.of(context).pop();
-
-      // Show success message
+    setState(() => _saving = true);
+    try {
+      await ref.read(userFormControllerProvider.notifier).updateUser(widget.user.uid, changes);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            widget.user != null ? 'User updated successfully' : 'User created successfully',
-          ),
-          backgroundColor: AppColorScheme.snackSuccess,
+          content: Text('Failed to update user: ${userAdminErrorMessage(error)}'),
+          backgroundColor: AppColorScheme.snackError,
         ),
       );
+      return;
     }
+
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('User updated successfully'),
+        backgroundColor: AppColorScheme.snackSuccess,
+      ),
+    );
   }
 }

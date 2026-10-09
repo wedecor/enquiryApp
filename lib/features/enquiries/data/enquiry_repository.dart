@@ -8,7 +8,10 @@ import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
+import '../domain/booking_amounts.dart';
 import '../domain/enquiry.dart';
+import '../domain/enquiry_lifecycle.dart';
+import '../domain/enquiry_location.dart';
 import 'pagination_state.dart';
 
 /// Provider for enquiry repository
@@ -47,6 +50,41 @@ class EnquiryRepository {
         .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
   }
 
+  /// Newest-first list query; staff are scoped to their own enquiries.
+  Query<Map<String, dynamic>> _listQuery({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+  }) {
+    Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
+
+    if (!isAdmin && assignedTo != null) {
+      query = query.where('assignedTo', isEqualTo: assignedTo);
+    }
+
+    if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
+      query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
+    }
+    return query;
+  }
+
+  /// Live view of the newest [limit] enquiries, scoped like [getPaginatedEnquiries].
+  ///
+  /// Includes metadata changes so listeners learn when a cache-only result has been
+  /// confirmed by the server.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchEnquiriesPage({
+    required bool isAdmin,
+    String? assignedTo,
+    String? status,
+    required int limit,
+  }) {
+    return _listQuery(
+      isAdmin: isAdmin,
+      assignedTo: assignedTo,
+      status: status,
+    ).limit(limit).snapshots(includeMetadataChanges: true);
+  }
+
   /// Get paginated enquiries (cursor-based pagination)
   Future<PaginationState> getPaginatedEnquiries({
     required bool isAdmin,
@@ -56,15 +94,7 @@ class EnquiryRepository {
     int pageSize = 20,
   }) async {
     try {
-      Query<Map<String, dynamic>> query = _enquiries.orderBy('createdAt', descending: true);
-
-      if (!isAdmin && assignedTo != null) {
-        query = query.where('assignedTo', isEqualTo: assignedTo);
-      }
-
-      if (status != null && status.isNotEmpty && status != 'All' && status != 'reminders') {
-        query = query.where('statusValue', whereIn: EnquiryStatus.rawValuesFor(status));
-      }
+      var query = _listQuery(isAdmin: isAdmin, assignedTo: assignedTo, status: status);
 
       if (lastDocument != null) {
         query = query.startAfterDocument(lastDocument);
@@ -90,62 +120,148 @@ class EnquiryRepository {
     }
   }
 
-  /// Update status fields with server timestamps (rules-compliant for staff)
+  /// Update status fields with server timestamps (rules-compliant for staff).
+  ///
+  /// The read, stage stamping, update and history entries run in one transaction, so
+  /// concurrent status changes can't stamp the wrong stage or log a stale "from" status.
+  ///
+  /// [extraFields] are written in the same update (e.g. the location and optional
+  /// amounts confirmed in the Confirm booking sheet; amount changes get history
+  /// entries). Approving requires a known location (see [isLocationKnown]) in the
+  /// resulting document; otherwise [ApprovalLocationRequiredException] is thrown
+  /// before anything is written (firestore.rules enforce the same rule).
   Future<void> updateStatus({
     required String id,
     required String nextStatus,
     required String userId,
+    LostReasonChoice? lostReason,
+    Map<String, Object?>? extraFields,
   }) async {
-    final oldEnquiryDoc = await _enquiries.doc(id).get();
-
-    if (!oldEnquiryDoc.exists) {
-      throw Exception('Enquiry not found: $id');
-    }
-
-    final oldEnquiryData = oldEnquiryDoc.data()!;
-    final oldStatusValue =
-        EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
-        (oldEnquiryData['statusValue'] as String? ?? 'new');
-    final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
-
-    if (oldStatusValue == canonicalNext) {
-      return;
-    }
-
     final lookup = await _dropdownLookupFuture;
+    final canonicalNext = EnquiryStatus.canonicalValue(nextStatus) ?? nextStatus;
     final statusLabel = lookup.labelForStatus(canonicalNext);
-    final oldStatusLabel = lookup.labelForStatus(oldStatusValue);
+    final isLost = EnquiryStatus.isLost(canonicalNext);
+    final clearLost = EnquiryStageFields.clearsLostFields(canonicalNext);
+    final docRef = _enquiries.doc(id);
 
-    final customerName = oldEnquiryData['customerName'] as String? ?? 'Unknown Customer';
-    final assignedTo = oldEnquiryData['assignedTo'] as String?;
+    final result = await _firestoreService.firestore.runTransaction<_StatusChangeResult?>((
+      transaction,
+    ) async {
+      final oldEnquiryDoc = await transaction.get(docRef);
+      if (!oldEnquiryDoc.exists) {
+        throw Exception('Enquiry not found: $id');
+      }
 
-    await _enquiries.doc(id).update({
-      'statusValue': canonicalNext,
-      'statusLabel': statusLabel,
-      'statusUpdatedAt': FieldValue.serverTimestamp(),
-      'statusUpdatedBy': userId,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'eventStatus': FieldValue.delete(),
-      'status': FieldValue.delete(),
-      'status_slug': FieldValue.delete(),
+      final oldEnquiryData = oldEnquiryDoc.data()!;
+      final oldStatusValue =
+          EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
+          (oldEnquiryData['statusValue'] as String? ?? 'new');
+
+      if (oldStatusValue == canonicalNext) return null;
+
+      final extras = extraFields ?? const <String, Object?>{};
+      if (EnquiryStatus.isApproved(canonicalNext) && !EnquiryStatus.isApproved(oldStatusValue)) {
+        final merged = <String, dynamic>{...oldEnquiryData};
+        extras.forEach((key, value) {
+          if (value is FieldValue) {
+            merged.remove(key); // only deletes are staged here
+          } else {
+            merged[key] = value;
+          }
+        });
+        if (!isLocationKnownInData(merged)) throw const ApprovalLocationRequiredException();
+      }
+
+      transaction.update(docRef, {
+        ...extras,
+        'statusValue': canonicalNext,
+        'statusLabel': statusLabel,
+        'statusUpdatedAt': FieldValue.serverTimestamp(),
+        'statusUpdatedBy': userId,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'eventStatus': FieldValue.delete(),
+        'status': FieldValue.delete(),
+        'status_slug': FieldValue.delete(),
+        for (final field in EnquiryStageFields.fieldsToStamp(oldEnquiryData, canonicalNext))
+          field: FieldValue.serverTimestamp(),
+        if (isLost && lostReason != null) ...lostReason.toFields(),
+        if (clearLost)
+          for (final field in EnquiryStageFields.lostOnlyFields) field: FieldValue.delete(),
+      });
+
+      transaction.set(
+        _auditService.newHistoryRef(id),
+        _auditService.buildHistoryEntry(
+          fieldChanged: 'statusValue',
+          oldValue: oldStatusValue,
+          newValue: canonicalNext,
+        ),
+      );
+
+      final newLocation = extras['eventLocation'];
+      final oldLocation = oldEnquiryData['eventLocation'];
+      if (newLocation is String && newLocation != oldLocation) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'eventLocation',
+            oldValue: oldLocation,
+            newValue: newLocation,
+          ),
+        );
+      }
+
+      // Amounts entered in the Confirm booking sheet (admin only): same history
+      // entries as the edit form records for financial changes.
+      bookingAmountAuditChanges(oldEnquiryData, extras).forEach((field, change) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: field,
+            oldValue: change['old_value'],
+            newValue: change['new_value'],
+          ),
+        );
+      });
+
+      final oldLostReason = oldEnquiryData['lostReason'];
+      if (isLost && lostReason != null) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'lostReason',
+            oldValue: oldLostReason,
+            newValue: lostReason.reason.value,
+          ),
+        );
+      } else if (clearLost && oldLostReason != null) {
+        transaction.set(
+          _auditService.newHistoryRef(id),
+          _auditService.buildHistoryEntry(
+            fieldChanged: 'lostReason',
+            oldValue: oldLostReason,
+            newValue: null,
+          ),
+        );
+      }
+
+      return _StatusChangeResult(
+        oldStatusValue: oldStatusValue,
+        customerName: oldEnquiryData['customerName'] as String? ?? 'Unknown Customer',
+        assignedTo: oldEnquiryData['assignedTo'] as String?,
+      );
     });
 
-    await _auditService.recordChange(
-      enquiryId: id,
-      fieldChanged: 'statusValue',
-      oldValue: oldStatusValue,
-      newValue: canonicalNext,
-      userId: userId,
-    );
+    if (result == null) return;
 
     try {
       await _notificationService.notifyStatusUpdated(
         enquiryId: id,
-        customerName: customerName,
-        oldStatus: oldStatusLabel,
+        customerName: result.customerName,
+        oldStatus: lookup.labelForStatus(result.oldStatusValue),
         newStatus: statusLabel,
         updatedBy: userId,
-        assignedTo: assignedTo,
+        assignedTo: result.assignedTo,
       );
     } catch (_) {
       // Status update already succeeded; notification errors are non-fatal.
@@ -156,4 +272,26 @@ class EnquiryRepository {
   Future<String> createEnquiry(Map<String, dynamic> data) {
     return _firestoreService.createEnquiryFromData(data);
   }
+}
+
+/// Thrown by [EnquiryRepository.updateStatus] when approving an enquiry whose
+/// location is only the city (or empty).
+class ApprovalLocationRequiredException implements Exception {
+  const ApprovalLocationRequiredException();
+
+  @override
+  String toString() => 'Add the area (e.g. JP Nagar) or the venue before approving.';
+}
+
+/// What [EnquiryRepository.updateStatus] needs from inside its transaction afterwards.
+class _StatusChangeResult {
+  const _StatusChangeResult({
+    required this.oldStatusValue,
+    required this.customerName,
+    required this.assignedTo,
+  });
+
+  final String oldStatusValue;
+  final String customerName;
+  final String? assignedTo;
 }

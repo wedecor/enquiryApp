@@ -42,6 +42,8 @@ class EnquiryListRow extends StatelessWidget {
     this.onLongPress,
     this.compact = false,
     this.showStatusChip = true,
+    this.locationPending = false,
+    this.amountPending = false,
     this.showChevron = true,
     this.bordered = false,
     this.margin,
@@ -70,6 +72,12 @@ class EnquiryListRow extends StatelessWidget {
 
   /// Hide where the status is already implied (e.g. inside a Kanban column).
   final bool showStatusChip;
+
+  /// Approved without a known location: a small "Location pending" pill on line 2.
+  final bool locationPending;
+
+  /// Admins: approved / completed without a total amount — "Amount pending" pill.
+  final bool amountPending;
 
   /// Kept for call-site compatibility; the tile has no chevron.
   final bool showChevron;
@@ -144,16 +152,33 @@ class EnquiryListRow extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (line2.isNotEmpty) ...[
+                if (line2.isNotEmpty || locationPending || amountPending) ...[
                   const SizedBox(height: 3),
-                  Text(
-                    line2,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w300,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          line2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ),
+                      // Both pills: let them shrink (ellipsis) so narrow tiles never overflow.
+                      for (final pill in [
+                        if (locationPending) 'Location pending',
+                        if (amountPending) 'Amount pending',
+                      ]) ...[
+                        const SizedBox(width: AppTokens.space2),
+                        if (locationPending && amountPending)
+                          Flexible(child: _PendingPill(label: pill))
+                        else
+                          _PendingPill(label: pill),
+                      ],
+                    ],
                   ),
                 ],
                 if (showMeta) ...[
@@ -285,6 +310,37 @@ class _DateBlock extends StatelessWidget {
         border: Border.all(color: s.microBorder),
       ),
       child: inner,
+    );
+  }
+}
+
+/// Small amber pill on line 2: "Location pending" / "Amount pending".
+class _PendingPill extends StatelessWidget {
+  const _PendingPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ink = theme.brightness == Brightness.dark
+        ? AppColorScheme.warningDark
+        : AppColorScheme.onWarningContainerLight;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ink.withValues(alpha: 0.10),
+        borderRadius: AppRadius.full,
+        border: Border.all(color: ink.withValues(alpha: 0.24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppTokens.space2, vertical: 1),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(color: ink, fontWeight: FontWeight.w700),
+        ),
+      ),
     );
   }
 }

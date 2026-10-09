@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 import '../../features/admin/users/presentation/users_providers.dart' as users_providers;
+import '../../features/enquiries/domain/enquiry_lifecycle.dart';
 import '../../services/dropdown_lookup.dart';
 import '../../ui/primitives/primitives.dart';
 import 'enquiry_history_widget.dart';
@@ -157,6 +158,8 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
         return Icons.calendar_today;
       case 'eventlocation':
         return Icons.location_on;
+      case 'functions':
+        return Icons.event_note_rounded;
       case 'description':
         return Icons.description;
       default:
@@ -186,6 +189,7 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
       case 'eventtypevalue':
       case 'eventdate':
       case 'eventlocation':
+      case 'functions':
         return cs.secondary;
       case 'description':
         return cs.tertiary;
@@ -224,6 +228,8 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
         return 'Event Date';
       case 'eventlocation':
         return 'Event Location';
+      case 'functions':
+        return 'Functions';
       case 'description':
         return 'Description';
       default:
@@ -387,6 +393,13 @@ class _ValueText extends ConsumerWidget {
         return _text(
           dropdownLookup?.labelForSource(stringValue) ?? DropdownLookup.titleCase(stringValue),
         );
+      case 'lostreason':
+        return _text(LostReason.labelOf(stringValue));
+      case 'totalcost':
+      case 'advancepaid':
+      case 'quotedamount':
+        final amount = value is num ? value as num : num.tryParse(stringValue);
+        return _text(amount == null ? stringValue : '₹${amount.toStringAsFixed(0)}');
       default:
         return _text(stringValue.isEmpty ? 'Not Set' : stringValue);
     }

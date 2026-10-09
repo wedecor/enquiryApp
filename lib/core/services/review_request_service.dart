@@ -105,6 +105,7 @@ class ReviewRequestService {
         customerPhone,
         prefillText: message,
         enquiryId: enquiryId,
+        contactType: ContactType.reviewRequest,
       );
     } catch (e) {
       Log.e('Error sending review request', error: e);

@@ -10,8 +10,13 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
 import '../../data/enquiry_repository.dart';
+import '../../domain/event_functions.dart';
+import 'approved_date_clash_prompt.dart';
+import 'confirm_booking_sheet.dart';
 import 'enquiry_status_parts.dart';
+import 'lost_reason_sheet.dart';
 
 /// How [EnquiryStatusControl] presents the available statuses.
 enum EnquiryStatusLayout {
@@ -33,6 +38,7 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
     required this.isAdmin,
     this.isAssignee = true,
     this.layout = EnquiryStatusLayout.compact,
+    this.onStatusChanged,
   });
 
   final String enquiryId;
@@ -43,6 +49,9 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
   final bool isAssignee;
   final EnquiryStatusLayout layout;
 
+  /// Called after a status change has been saved.
+  final VoidCallback? onStatusChanged;
+
   @override
   ConsumerState<EnquiryStatusControl> createState() => _EnquiryStatusControlState();
 }
@@ -50,6 +59,30 @@ class EnquiryStatusControl extends ConsumerStatefulWidget {
 class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   String? _selectedStatus;
   bool _isUpdatingStatus = false;
+
+  // Created once, not on every rebuild (avoids resubscribing to the dropdown items).
+  late final Stream<QuerySnapshot> _statusItems = ref
+      .read(firestoreServiceProvider)
+      .watchActiveStatusDropdownItems();
+
+  @override
+  void didUpdateWidget(covariant EnquiryStatusControl oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Follow live updates: a status saved elsewhere replaces any stale local selection.
+    if (oldWidget.currentStatusValue != widget.currentStatusValue ||
+        oldWidget.enquiryId != widget.enquiryId) {
+      _selectedStatus = null;
+    }
+  }
+
+  /// True when reopening a lost enquiry whose event date has already passed —
+  /// the nightly auto-close would close it again unless the date is updated.
+  bool _isReopeningPastEvent(String fromStatus, String toStatus) {
+    if (!EnquiryStatus.isLost(fromStatus) || EnquiryStatus.isLost(toStatus)) return false;
+    final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
+    if (eventDate == null) return false;
+    return eventDayOffset(eventDate, DateTime.now()) < 0;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +94,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     }
 
     return StreamBuilder<QuerySnapshot>(
-      stream: ref.read(firestoreServiceProvider).watchActiveStatusDropdownItems(),
+      stream: _statusItems,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
           return const SizedBox(
@@ -200,18 +233,101 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     final nextLabel = lookup.labelForStatus(value);
     final oldStatusLabel = lookup.labelForStatus(currentStatusValue);
 
-    final confirmed = await ConfirmationDialog.show(
-      context: context,
-      title: 'Change Status',
-      message:
-          'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
-      confirmText: 'Change Status',
-      cancelText: 'Cancel',
-      isDestructive: false,
-      icon: Icons.info_outline,
-    );
+    if (!mounted) return;
+    if (_isReopeningPastEvent(currentStatusValue, value)) {
+      final proceed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Event date has passed',
+        message:
+            'Event date has passed — it will be auto-closed again unless you update the date. Continue?',
+        confirmText: 'Continue',
+        cancelText: 'Cancel',
+        icon: Icons.event_busy_outlined,
+      );
+      if (!proceed || !mounted) return;
+    }
+    final approving =
+        EnquiryStatus.isApproved(value) && !EnquiryStatus.isApproved(currentStatusValue);
+    // Approving: Confirm booking for everyone (location required; amounts optional),
+    // asked before the date check.
+    Map<String, Object?>? bookingFields;
+    var bookingSheetConfirmed = false;
+    if (approving) {
+      // No busy spinner here: the sheet is modal, and a spinner left running behind
+      // it never settles.
+      final booking = await ensureApprovalBooking(
+        context,
+        ref,
+        enquiryId: widget.enquiryId,
+        data: widget.enquiryData,
+        isAdmin: widget.isAdmin,
+      );
+      if (!mounted) return;
+      if (!booking.proceed) {
+        setState(() => _selectedStatus = currentStatusValue);
+        return;
+      }
+      bookingFields = booking.fields;
+      bookingSheetConfirmed = booking.sheetShown;
+    }
+    // Approving: warn when other approved bookings already fall on the event date.
+    var clashWarningAccepted = false;
+    if (approving) {
+      // Every function day of the booking (legacy enquiries: the event date). Callers
+      // that pass a partial map (no `functions`) get the stored doc re-read.
+      var clashData = widget.enquiryData;
+      if (!clashData.containsKey('functions')) {
+        try {
+          clashData =
+              await ref.read(firestoreServiceProvider).getEnquiry(widget.enquiryId) ?? clashData;
+        } catch (_) {
+          // Fall back to the data we have; the check never blocks approving.
+        }
+        if (!mounted) return;
+      }
+      final functionDays = functionDaysOf(clashData);
+      if (functionDays.isNotEmpty) {
+        setState(() => _isUpdatingStatus = true);
+        final decision = await approvedDateClashDecision(
+          context,
+          ref,
+          eventDates: functionDays,
+          excludeEnquiryId: widget.enquiryId,
+          isDateChange: false,
+        );
+        if (!mounted) return;
+        setState(() => _isUpdatingStatus = false);
+        if (!decision.proceed) {
+          setState(() => _selectedStatus = currentStatusValue);
+          return;
+        }
+        clashWarningAccepted = decision.shown;
+      }
+    }
+    // Lost statuses ask for a reason; the reason sheet doubles as confirmation.
+    final lostPrompt = await promptLostReasonIfNeeded(context, value);
+    if (!mounted) return;
+    final bool confirmed;
+    if (EnquiryStatus.isLost(value)) {
+      confirmed = lostPrompt.proceed;
+    } else if (clashWarningAccepted || bookingSheetConfirmed) {
+      // "Approve anyway" / the Confirm booking sheet already confirmed this change.
+      confirmed = true;
+    } else {
+      confirmed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Change Status',
+        message:
+            'Change status from "$oldStatusLabel" to "$nextLabel"?\n\nThis will notify all admins.',
+        confirmText: 'Change Status',
+        cancelText: 'Cancel',
+        isDestructive: false,
+        icon: Icons.info_outline,
+      );
+    }
 
-    if (!confirmed || !mounted) {
+    if (!mounted) return;
+    if (!confirmed) {
       setState(() {
         _selectedStatus = currentStatusValue;
       });
@@ -229,7 +345,13 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
       // statusUpdatedBy, notifications, and legacy field cleanup in one place.
       await ref
           .read(enquiryRepositoryProvider)
-          .updateStatus(id: widget.enquiryId, nextStatus: value, userId: userId);
+          .updateStatus(
+            id: widget.enquiryId,
+            nextStatus: value,
+            userId: userId,
+            lostReason: lostPrompt.choice,
+            extraFields: bookingFields,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -238,12 +360,13 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
+        widget.onStatusChanged?.call();
       }
     } catch (e) {
-      setState(() {
-        _selectedStatus = currentStatusValue;
-      });
       if (mounted) {
+        setState(() {
+          _selectedStatus = currentStatusValue;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update status: $e'),

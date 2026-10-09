@@ -9,10 +9,15 @@ import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
+import '../../../dashboard/presentation/dashboard_providers.dart';
 import '../../data/enquiry_repository.dart';
+import '../../domain/event_functions.dart';
 import '../../filters/apply_enquiry_filters.dart';
 import '../../filters/filters_state.dart';
+import '../widgets/approved_date_clash_prompt.dart';
+import '../widgets/confirm_booking_sheet.dart';
 import '../widgets/list/kanban_lane.dart';
+import '../widgets/lost_reason_sheet.dart';
 import 'enquiry_details_screen.dart';
 
 // ── Column definitions ────────────────────────────────────────────────────────
@@ -50,7 +55,6 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
     final dropdownLookup = ref
         .watch(dropdownLookupProvider)
         .maybeWhen(data: (v) => v, orElse: () => null);
-    final firestoreService = ref.watch(firestoreServiceProvider);
 
     return currentUser.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -60,20 +64,27 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
         if (user == null) return const Center(child: Text('Not logged in'));
         final isAdmin = user.role == UserRole.admin;
 
-        return StreamBuilder<QuerySnapshot>(
-          stream: firestoreService.watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: user.uid),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
+        // Same shared listeners as the dashboard: every column's slice.
+        final enquiriesAsync = watchRoleScopedEnquiries(
+          ref,
+          isAdmin: isAdmin,
+          uid: user.uid,
+          scopes: EnquiryScope.values,
+        );
+        return Builder(
+          builder: (context) {
+            if (enquiriesAsync.hasError) {
               return ErrorState(
                 message: 'Couldn\'t load the board.\nPlease check your connection and try again.',
-                error: snapshot.error,
+                error: enquiriesAsync.error,
               );
             }
+            final loadedDocs = enquiriesAsync.valueOrNull;
+            if (loadedDocs == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            final docs = (snapshot.data?.docs ?? []).where((doc) {
+            final docs = loadedDocs.where((doc) {
               if (widget.filters == null) return true;
               return matchesEnquiryFilters(
                 doc.data() as Map<String, dynamic>,
@@ -96,13 +107,15 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               }
             }
 
-            // Sort each bucket by event date then created date
+            // Sort each bucket by event date (next upcoming function for
+            // multi-function bookings) then created date
+            final sortNow = DateTime.now();
             for (final bucket in buckets.values) {
               bucket.sort((a, b) {
                 final aData = a.data() as Map<String, dynamic>;
                 final bData = b.data() as Map<String, dynamic>;
-                final DateTime? aDate = _ts(aData['eventDate']);
-                final DateTime? bDate = _ts(bData['eventDate']);
+                final DateTime? aDate = listSortDateOf(aData, sortNow);
+                final DateTime? bDate = listSortDateOf(bData, sortNow);
                 if (aDate != null && bDate != null) return aDate.compareTo(bDate);
                 if (aDate != null) return -1;
                 if (bDate != null) return 1;
@@ -117,6 +130,7 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               buckets: buckets,
               hoverColumn: _hoverColumn,
               dropdownLookup: dropdownLookup,
+              isAdmin: isAdmin,
               onDragOver: (status) {
                 if (_hoverColumn != status) setState(() => _hoverColumn = status);
               },
@@ -125,7 +139,15 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
               },
               onDrop: (enquiryId, newStatus) async {
                 setState(() => _hoverColumn = null);
-                final doc = docs.firstWhere((d) => d.id == enquiryId);
+                QueryDocumentSnapshot<Object?>? doc;
+                for (final d in docs) {
+                  if (d.id == enquiryId) {
+                    doc = d;
+                    break;
+                  }
+                }
+                // Card vanished from the live data (deleted / filtered) mid-drag.
+                if (doc == null) return;
                 final currentStatus =
                     (doc.data() as Map<String, dynamic>)['statusValue'] as String?;
                 if (EnquiryStatus.statusesMatch(currentStatus, newStatus)) return;
@@ -139,12 +161,50 @@ class _KanbanBoardScreenState extends ConsumerState<KanbanBoardScreen> {
                     return;
                   }
                 }
+                // Approving: Confirm booking for everyone (location; optional amounts),
+                // then the date check.
+                Map<String, Object?>? bookingFields;
+                if (EnquiryStatus.isApproved(newStatus)) {
+                  final booking = await ensureApprovalBooking(
+                    context,
+                    ref,
+                    enquiryId: enquiryId,
+                    data: doc.data() as Map<String, dynamic>,
+                    isAdmin: isAdmin,
+                  );
+                  if (!booking.proceed || !context.mounted) return;
+                  bookingFields = booking.fields;
+                }
+                // Approving: warn when other approved bookings share the event date.
+                if (EnquiryStatus.isApproved(newStatus)) {
+                  // Every function day of the booking (legacy: the event date).
+                  final functionDays = functionDaysOf(doc.data() as Map<String, dynamic>);
+                  if (functionDays.isNotEmpty) {
+                    final proceed = await confirmApprovedDateClash(
+                      context,
+                      ref,
+                      eventDates: functionDays,
+                      excludeEnquiryId: enquiryId,
+                      isDateChange: false,
+                    );
+                    if (!proceed || !context.mounted) return;
+                  }
+                }
+                if (!context.mounted) return;
+                final lostPrompt = await promptLostReasonIfNeeded(context, newStatus);
+                if (!lostPrompt.proceed) return;
                 try {
                   // Use repository so audit history, statusLabel, notifications
                   // and legacy-field cleanup all happen — same as dashboard tabs.
                   await ref
                       .read(enquiryRepositoryProvider)
-                      .updateStatus(id: enquiryId, nextStatus: newStatus, userId: user.uid);
+                      .updateStatus(
+                        id: enquiryId,
+                        nextStatus: newStatus,
+                        userId: user.uid,
+                        lostReason: lostPrompt.choice,
+                        extraFields: bookingFields,
+                      );
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(
@@ -178,6 +238,7 @@ class _KanbanBoard extends StatelessWidget {
     required this.buckets,
     required this.hoverColumn,
     required this.dropdownLookup,
+    required this.isAdmin,
     required this.onDragOver,
     required this.onDragLeave,
     required this.onDrop,
@@ -188,6 +249,7 @@ class _KanbanBoard extends StatelessWidget {
   final Map<String, List<QueryDocumentSnapshot>> buckets;
   final String? hoverColumn;
   final DropdownLookup? dropdownLookup;
+  final bool isAdmin;
   final void Function(String status) onDragOver;
   final VoidCallback onDragLeave;
   final void Function(String enquiryId, String newStatus) onDrop;
@@ -218,6 +280,7 @@ class _KanbanBoard extends StatelessWidget {
           onDrop: (id) => onDrop(id, col.status),
           onTap: onTap,
           width: _kColumnWidth,
+          isAdmin: isAdmin,
         );
       },
     );

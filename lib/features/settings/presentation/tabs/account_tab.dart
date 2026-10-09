@@ -7,14 +7,18 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/firebase_auth_service.dart' show firebaseAuthServiceProvider;
 import '../../../../core/services/update_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../ui/components/glass_dialog.dart';
+import '../../../admin/users/presentation/user_management_screen.dart';
+import '../../../reengagement/presentation/upcoming_occasions_screen.dart';
 import '../widgets/settings_layout.dart';
 import '../widgets/settings_tiles.dart';
 import 'widgets/account_sections.dart';
+import 'widgets/change_password_dialog.dart';
 
 class AccountTab extends ConsumerWidget {
   const AccountTab({super.key});
@@ -55,6 +59,37 @@ class AccountTab extends ConsumerWidget {
             ),
           ],
         ),
+        if (currentUserRole.valueOrNull == UserRole.admin)
+          SettingsGroup(
+            eyebrow: 'Team',
+            title: 'Manage Users',
+            children: [
+              SettingsTile(
+                icon: Icons.group_outlined,
+                title: 'Team members',
+                subtitle: 'Edit name, phone, role or deactivate anyone',
+                trailing: const SettingsChevron(),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute<void>(builder: (_) => const UserManagementScreen())),
+              ),
+            ],
+          ),
+        SettingsGroup(
+          eyebrow: 'Customers',
+          title: 'Same time next year',
+          children: [
+            SettingsTile(
+              icon: Icons.celebration_outlined,
+              title: 'Customer occasions',
+              subtitle: 'Wish past customers on their anniversary or yearly celebration',
+              trailing: const SettingsChevron(),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => const UpcomingOccasionsScreen())),
+            ),
+          ],
+        ),
         SettingsGroup(
           eyebrow: 'Security',
           title: 'Account Actions',
@@ -62,9 +97,9 @@ class AccountTab extends ConsumerWidget {
             SettingsTile(
               icon: Icons.lock_reset_rounded,
               title: 'Change Password',
-              subtitle: 'Send password reset email',
+              subtitle: 'Enter your current password and pick a new one',
               trailing: const SettingsChevron(),
-              onTap: () => _sendPasswordReset(context),
+              onTap: () => _changePassword(context),
             ),
             SettingsTile(
               icon: Icons.system_update_rounded,
@@ -77,10 +112,21 @@ class AccountTab extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.only(top: AppTokens.space8),
-          child: AccountSignOutButton(onTap: () => _signOut(context)),
+          child: AccountSignOutButton(onTap: () => _signOut(context, ref)),
         ),
       ],
     );
+  }
+
+  Future<void> _changePassword(BuildContext context) async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) => ChangePasswordDialog(onForgotPassword: () => _sendPasswordReset(context)),
+    );
+    if (changed == true && context.mounted) {
+      safeLog('password_changed', {'method': 'settings_account_tab'});
+      _showSnackBar(context, 'Password updated');
+    }
   }
 
   Future<void> _sendPasswordReset(BuildContext context) async {
@@ -114,6 +160,10 @@ class AccountTab extends ConsumerWidget {
   }
 
   Future<void> _checkForUpdates(BuildContext context) async {
+    if (!UpdateService.isSupportedPlatform) {
+      _showSnackBar(context, 'In-app updates are available only in the Android app.');
+      return;
+    }
     try {
       // Show loading indicator
       unawaited(
@@ -201,13 +251,16 @@ class AccountTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
-      await FirebaseAuth.instance.signOut();
+      // Goes through FirebaseAuthService so the FCM token is removed and the
+      // next person on this device doesn't receive this user's pushes.
+      await ref.read(firebaseAuthServiceProvider).signOut();
       safeLog('user_signed_out', {'method': 'settings_account_tab'});
 
+      // AuthGate shows the login screen; drop any pushed routes above it.
       if (context.mounted) {
-        unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false));
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       safeLog('sign_out_error', {'error': e.toString(), 'errorType': e.runtimeType.toString()});

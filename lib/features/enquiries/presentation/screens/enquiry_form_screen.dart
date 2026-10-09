@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -14,12 +16,21 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/enquiry_fields.dart';
+import '../../../../core/utils/phone_normalizer.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
+import '../../data/booking_clash_service.dart';
+import '../../data/customer_lookup_service.dart';
 import '../../data/enquiry_image_uploader.dart';
 import '../../domain/enquiry_change_set.dart';
+import '../../domain/enquiry_lifecycle.dart';
+import '../../domain/enquiry_location.dart';
+import '../../domain/enquiry_prefill.dart';
+import '../../domain/event_functions.dart';
+import '../widgets/approved_date_clash_prompt.dart';
 import '../widgets/enquiry_form_customer_fields.dart';
 import '../widgets/enquiry_form_event_fields.dart';
 import '../widgets/enquiry_form_financial_fields.dart';
@@ -27,7 +38,12 @@ import '../widgets/enquiry_form_images_section.dart';
 import '../widgets/enquiry_form_section.dart';
 import '../widgets/enquiry_glass_bar.dart';
 import '../widgets/enquiry_sheet_header.dart';
+import '../widgets/form/enquiry_customer_match_cards.dart';
 import '../widgets/form/enquiry_form_pipeline_fields.dart';
+import '../widgets/form/enquiry_location_field.dart';
+import '../widgets/form/event_function_card.dart';
+import '../widgets/lost_reason_sheet.dart';
+import 'enquiry_details_screen.dart';
 
 part '../widgets/form/enquiry_form_persistence.dart';
 
@@ -36,10 +52,12 @@ class EnquiryFormScreen extends ConsumerStatefulWidget {
   /// Creates an EnquiryFormScreen
   /// [enquiryId] is required for editing mode
   /// [mode] can be 'create' or 'edit'
-  const EnquiryFormScreen({super.key, this.enquiryId, this.mode = 'create'});
+  /// [prefill] seeds the customer fields in create mode (ignored when editing)
+  const EnquiryFormScreen({super.key, this.enquiryId, this.mode = 'create', this.prefill});
 
   final String? enquiryId;
   final String mode;
+  final EnquiryPrefill? prefill;
 
   @override
   ConsumerState<EnquiryFormScreen> createState() => _EnquiryFormScreenState();
@@ -54,21 +72,44 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
   Future<void> _selectDate() async {
     // In edit mode, allow past dates so staff can correct wrong entries.
     final isEdit = widget.mode == 'edit';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final defaultLast = today.add(const Duration(days: 730));
+    var initialDate = _selectedDate ?? today;
+    if (!isEdit && initialDate.isBefore(today)) initialDate = today;
+    // showDatePicker asserts firstDate <= initialDate <= lastDate.
+    final earliest = DateTime(2020, 1, 1);
+    final firstDate = isEdit ? (initialDate.isBefore(earliest) ? initialDate : earliest) : today;
+    final lastDate = initialDate.isAfter(defaultLast) ? initialDate : defaultLast;
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: isEdit ? DateTime(2020, 1, 1) : DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 730)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
+    if (!mounted) return;
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
       });
+      final status = EnquiryStatus.fromValue(_selectedStatus);
+      final isActive = !EnquiryStatus.isLost(_selectedStatus) && status != EnquiryStatus.completed;
+      if (isEdit && isActive && picked.isBefore(today)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This event date is in the past — an active enquiry with a past date is '
+              'auto-closed overnight.',
+            ),
+          ),
+        );
+      }
     }
   }
 
   Future<void> _pickImages() async {
     final List<XFile> images = await _picker.pickMultiImage();
+    if (!mounted) return;
     if (images.isNotEmpty) {
       setState(() {
         _selectedImages.addAll(images);
@@ -83,6 +124,33 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
   }
 
   bool get _isEdit => widget.mode == 'edit';
+
+  /// Function cards (ordered by date) + "Add another function".
+  Widget _functionsEditor() {
+    final drafts = _functionDrafts ?? const <EventFunctionDraft>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < drafts.length; i++)
+          EventFunctionCard(
+            key: ValueKey(drafts[i].id),
+            draft: drafts[i],
+            title: 'Function ${i + 1} of ${drafts.length}',
+            onChanged: _onFunctionChanged,
+            onRemove: () => _removeFunction(drafts[i]),
+            allowPastDates: _isEdit,
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addFunction,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add another function'),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _header() {
     final id = widget.enquiryId;
@@ -145,6 +213,17 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         phoneController: _phoneController,
         emailController: _emailController,
         locationController: _locationController,
+        locationPlace: _locationPlace,
+        onLocationPlaceChanged: (place) => setState(() => _locationPlace = place),
+        // Approving in this save needs the area, not just "Bangalore". Already-approved
+        // enquiries can still be edited (they show a "Location pending" chip instead).
+        requireKnownLocation:
+            widget.mode == 'edit' &&
+            EnquiryStatus.isApproved(_selectedStatus) &&
+            !EnquiryStatus.isApproved(_initialStatus),
+        phoneFooter: _customerMatchCards(),
+        // Multi-function booking: each function card has its own location.
+        showLocation: !_functionsMode,
       ),
       EnquiryFormEventFields(
         selectedDate: _selectedDate,
@@ -153,6 +232,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         onEventTypeChanged: (value) => setState(() => _selectedEventType = value),
         guestCountController: _guestCountController,
         budgetController: _budgetController,
+        onAddFunction: _addFunction,
+        functionsEditor: _functionsMode ? _functionsEditor() : null,
       ),
       EnquiryFormPipelineFields(
         selectedStatus: _selectedStatus,
@@ -176,6 +257,9 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         selectedPaymentStatus: _selectedPaymentStatus,
         onPaymentStatusChanged: (value) => setState(() => _selectedPaymentStatus = value),
         parseDouble: _parseDouble,
+        quotedAmountController: _quotedAmountController,
+        quotedAt: _quotedAt,
+        onQuotedAtChanged: (value) => setState(() => _quotedAt = value),
       ),
       EnquiryFormSection(
         eyebrow: 'Notes',

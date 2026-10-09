@@ -29,6 +29,7 @@ enum EnquiryStatus {
     'confirmed': 'approved',
     'scheduled': 'approved',
     'enquired': 'new',
+    'not_intrested': 'not_interested',
   };
 
   /// Resolves raw Firestore value (incl. legacy) to canonical, or null.

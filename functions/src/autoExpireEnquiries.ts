@@ -7,28 +7,33 @@ import {
   rawStatusValuesFor,
   statusLabel,
 } from "./statusVocabulary";
+import { IST_TIME_ZONE, istDayStart } from "./istTime";
+import { planOccasionStamps, stampFields } from "./occasionStamping";
+import { OccasionStamp } from "./reengagementLogic";
 
 const PAGE_SIZE = 300;
-/** Firestore allows 500 writes per batch; each auto-change is 2 writes (enquiry + history). */
-const MAX_BATCH_WRITES = 400;
+/**
+ * Firestore allows 500 writes per batch. Each auto-change is 2 writes (enquiry + history)
+ * plus one notification doc per recipient; a batch is committed before it would overflow.
+ */
+const MAX_BATCH_WRITES = 450;
+const SYSTEM_USER = "system";
 
-const IST_TIME_ZONE = "Asia/Kolkata";
-/** India has no DST, so the offset is fixed at UTC+05:30. */
-const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+type Recipient = { uid: string };
 
-const istDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: IST_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+function truncate(value: string, max: number): string {
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
+}
 
-/** UTC instant of 00:00 IST on the IST calendar day that contains [date]. */
-function istDayStart(date: Date): Date {
-  const parts = istDateFormatter.formatToParts(date);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  return new Date(Date.UTC(part("year"), part("month") - 1, part("day")) - IST_OFFSET_MS);
+/** Users docs written before the isActive migration may still carry `active`. */
+function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  const isActive = data?.isActive ?? data?.active ?? true;
+  return isActive !== false;
+}
+
+async function loadActiveAdminIds(db: FirebaseFirestore.Firestore): Promise<string[]> {
+  const snap = await db.collection("users").where("role", "==", "admin").get();
+  return snap.docs.filter((d) => isActiveUserData(d.data())).map((d) => d.id);
 }
 
 type AutoCloseRule = {
@@ -68,6 +73,15 @@ export const autoExpireEnquiries = onSchedule(
     const counts: Record<string, number> = {};
     let scanned = 0;
     let changed = 0;
+    let notificationsQueued = 0;
+
+    // Admins are notified of every auto-change; loaded once per run.
+    let activeAdminIds: string[] = [];
+    try {
+      activeAdminIds = await loadActiveAdminIds(db);
+    } catch (error: any) {
+      logger.error("Auto-expire: failed to load admins for notifications", { error: error?.message });
+    }
 
     for (const rule of AUTO_CLOSE_RULES) {
       // Canonical values + legacy aliases (≤ 10 values for the `in` filter).
@@ -104,7 +118,48 @@ export const autoExpireEnquiries = onSchedule(
           if (!eventDate) continue;
           if (istDayStart(eventDate).getTime() >= todayStart.getTime()) continue;
 
+          // First time this stage is reached (analytics stage timestamps).
+          const stageField = rule.to === "completed" ? "completedAt" : "lostAt";
+          const stageFields: Record<string, unknown> = doc.get(stageField)
+            ? {}
+            : { [stageField]: FieldValue.serverTimestamp() };
+          const lostFields: Record<string, unknown> =
+            rule.to === "not_interested"
+              ? { lostReason: "no_response", lostReasonNote: "Auto-closed after event date" }
+              : {};
+
+          // Assignee + all active admins (deduped). sendNotificationToUser skips inactive users.
+          const assignedTo = doc.get("assignedTo");
+          const recipientIds = new Set<string>(activeAdminIds);
+          if (typeof assignedTo === "string" && assignedTo) recipientIds.add(assignedTo);
+          const recipients: Recipient[] = Array.from(recipientIds).map((uid) => ({ uid }));
+
+          // Yearly re-engagement stamp in the same write (the stamping trigger then
+          // sees the fields and does nothing). Wedding-family siblings of the same
+          // customer may be re-stamped to the wedding date as extra writes.
+          let occasionStamps = new Map<string, OccasionStamp>();
+          if (rule.to === "completed" && !doc.get("occasionManual")) {
+            try {
+              occasionStamps = await planOccasionStamps(db, doc.id, doc.data(), "completed");
+            } catch (error: any) {
+              logger.warn("Auto-complete: occasion stamping failed", { enquiryId: doc.id, error: error?.message });
+            }
+          }
+          const ownStamp = occasionStamps.get(doc.id);
+          const occasionFields: Record<string, unknown> = ownStamp ? stampFields(ownStamp) : {};
+          const siblingStamps = Array.from(occasionStamps.entries()).filter(([id]) => id !== doc.id);
+
+          const opsForDoc = 2 + recipients.length + siblingStamps.length;
+          if (pendingWrites > 0 && pendingWrites + opsForDoc > MAX_BATCH_WRITES) {
+            await batch.commit();
+            batch = db.batch();
+            pendingWrites = 0;
+          }
+
           batch.update(doc.ref, {
+            ...stageFields,
+            ...lostFields,
+            ...occasionFields,
             statusValue: rule.to,
             statusLabel: statusLabel(rule.to),
             statusUpdatedAt: FieldValue.serverTimestamp(),
@@ -115,18 +170,55 @@ export const autoExpireEnquiries = onSchedule(
             status_slug: FieldValue.delete(),
           });
 
+          for (const [siblingId, stamp] of siblingStamps) {
+            batch.update(db.collection("enquiries").doc(siblingId), stampFields(stamp));
+          }
+
           // Same shape as AuditService.recordChange (lib/core/services/audit_service.dart).
           batch.set(doc.ref.collection("history").doc(), {
             field_changed: "statusValue",
             old_value: oldStatus,
             new_value: rule.to,
-            user_id: "system",
+            user_id: SYSTEM_USER,
             timestamp: FieldValue.serverTimestamp(),
-            user_email: "system",
+            user_email: SYSTEM_USER,
           });
 
-          pendingWrites += 2;
+          // Same doc shape as NotificationService (users/{uid}/notifications); the
+          // sendNotificationToUser trigger turns each one into a push.
+          const customerName = (doc.get("customerName") as string | undefined) || "Unknown Customer";
+          const oldLabel = statusLabel(oldStatus);
+          const newLabel = statusLabel(rule.to);
+          const title = rule.to === "completed" ? "Enquiry Auto-Completed" : "Enquiry Auto-Closed";
+          const body = truncate(
+            `Status changed from ${oldLabel} to ${newLabel} for ${customerName} (event date passed)`,
+            500
+          );
+          for (const recipient of recipients) {
+            batch.set(
+              db.collection("users").doc(recipient.uid).collection("notifications").doc(),
+              {
+                title: truncate(title, 120),
+                body,
+                type: "status_update",
+                enquiryId: doc.id,
+                data: {
+                  type: "status_update",
+                  enquiryId: doc.id,
+                  customerName,
+                  oldStatus: oldLabel,
+                  newStatus: newLabel,
+                  updatedBy: rule.updatedBy,
+                },
+                read: false,
+                createdAt: FieldValue.serverTimestamp(),
+              }
+            );
+          }
+
+          pendingWrites += opsForDoc;
           changed += 1;
+          notificationsQueued += recipients.length;
           const key = `${oldRaw}->${rule.to}`;
           counts[key] = (counts[key] ?? 0) + 1;
 
@@ -151,6 +243,7 @@ export const autoExpireEnquiries = onSchedule(
     logger.info("Auto-expire enquiries completed", {
       scanned,
       changed,
+      notificationsQueued,
       counts,
       todayStartIst: todayStart.toISOString(),
       asOf: now.toISOString(),

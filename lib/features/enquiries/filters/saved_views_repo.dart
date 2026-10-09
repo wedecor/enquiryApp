@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/logging/logger.dart';
-import '../../../../core/services/firestore_service.dart';
+import '../../../core/logging/logger.dart';
+import '../../../core/services/firestore_service.dart';
+import 'date_range_presets.dart';
 import 'filters_state.dart';
 
 /// Provider for the saved views repository
@@ -16,6 +17,28 @@ class SavedViewsRepository {
   SavedViewsRepository(this._firestoreService);
 
   final FirestoreService _firestoreService;
+
+  /// JSON for Firestore. A "Today"/"This Week" range also stores its preset key so the
+  /// view keeps meaning "today" instead of the day it was saved.
+  static Map<String, dynamic> _toFirestore(SavedView view) {
+    final json = view.toJson();
+    // toJson keeps nested freezed objects as instances; Firestore needs plain maps.
+    json['filters'] = view.filters.toJson();
+    final range = view.filters.dateRange;
+    if (range != null) {
+      (json['filters'] as Map<String, dynamic>)['dateRange'] = range.toJson();
+    }
+    json[DateRangePreset.savedViewField] = DateRangePreset.keyFor(range);
+    return json;
+  }
+
+  /// Parses a stored view, re-resolving a relative date preset to the current range.
+  static SavedView _fromFirestore(Map<String, dynamic> data) {
+    final view = SavedView.fromJson(data);
+    final preset = DateRangePreset.resolve(data[DateRangePreset.savedViewField] as String?);
+    if (preset == null) return view;
+    return view.copyWith(filters: view.filters.copyWith(dateRange: preset));
+  }
 
   CollectionReference<Map<String, dynamic>>? _collectionForCurrentUser() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -33,7 +56,7 @@ class SavedViewsRepository {
       }
 
       final doc = await collection.orderBy('createdAt', descending: false).get();
-      return doc.docs.map((doc) => SavedView.fromJson(doc.data())).toList();
+      return doc.docs.map((doc) => _fromFirestore(doc.data())).toList();
     } catch (e) {
       Logger.error('Failed to get saved views', error: e, tag: 'SavedViews');
       rethrow;
@@ -54,7 +77,7 @@ class SavedViewsRepository {
         return null;
       }
 
-      return SavedView.fromJson(doc.data()!);
+      return _fromFirestore(doc.data()!);
     } catch (e) {
       Logger.error('Failed to get saved view: $id', error: e, tag: 'SavedViews');
       rethrow;
@@ -75,7 +98,7 @@ class SavedViewsRepository {
         createdAt: view.createdAt == view.updatedAt ? now : view.createdAt,
       );
 
-      await collection.doc(view.id).set(viewToSave.toJson());
+      await collection.doc(view.id).set(_toFirestore(viewToSave));
 
       Logger.info('Saved view: ${view.name}', tag: 'SavedViews');
       return viewToSave;
@@ -116,7 +139,7 @@ class SavedViewsRepository {
         updatedAt: now,
       );
 
-      await collection.doc(newView.id).set(newView.toJson());
+      await collection.doc(newView.id).set(_toFirestore(newView));
 
       Logger.info('Created view: ${newView.name}', tag: 'SavedViews');
       return newView;
@@ -146,7 +169,7 @@ class SavedViewsRepository {
       }
 
       final updatedView = view.touch();
-      await collection.doc(view.id).update(updatedView.toJson());
+      await collection.doc(view.id).update(_toFirestore(updatedView));
 
       Logger.info('Updated view: ${view.name}', tag: 'SavedViews');
       return updatedView;
@@ -184,7 +207,7 @@ class SavedViewsRepository {
       await _unsetDefaultViews();
       await collection.doc(id).update({
         'isDefault': true,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(), // SavedView.fromJson parses a string
       });
 
       Logger.info('Set default view: $id', tag: 'SavedViews');
@@ -205,7 +228,7 @@ class SavedViewsRepository {
       if (excludeId == null || doc.id != excludeId) {
         batch.update(doc.reference, {
           'isDefault': false,
-          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedAt': DateTime.now().toIso8601String(), // SavedView.fromJson parses a string
         });
       }
     }
@@ -225,7 +248,7 @@ class SavedViewsRepository {
     return collection
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => SavedView.fromJson(doc.data())).toList());
+        .map((snapshot) => snapshot.docs.map((doc) => _fromFirestore(doc.data())).toList());
   }
 }
 

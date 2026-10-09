@@ -5,12 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
+import '../../../../core/providers/audit_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/review_request_service.dart';
-import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
+import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'dashboard_action_sheets.dart';
 import 'dashboard_enquiry_tab_actions.dart';
@@ -141,20 +142,16 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     try {
       final repository = ref.read(enquiryRepositoryProvider);
 
-      final confirmed = await ConfirmationDialog.show(
-        context: context,
-        title: 'Mark as Not Interested',
-        message:
-            'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
-        confirmText: 'Mark as Not Interested',
-        cancelText: 'Cancel',
-        isDestructive: false,
-        icon: Icons.block,
+      // The reason sheet doubles as the confirmation step.
+      final lostPrompt = await promptLostReasonIfNeeded(context, 'not_interested');
+      if (!lostPrompt.proceed || !mounted) return;
+
+      await repository.updateStatus(
+        id: enquiryId,
+        nextStatus: 'not_interested',
+        userId: userId,
+        lostReason: lostPrompt.choice,
       );
-
-      if (!confirmed || !mounted) return;
-
-      await repository.updateStatus(id: enquiryId, nextStatus: 'not_interested', userId: userId);
 
       if (mounted) {
         showSnack('Enquiry marked as Not Interested');
@@ -204,19 +201,52 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
 
     if (!mounted || result == null) return;
 
+    final firestoreService = ref.read(firestoreServiceProvider);
+    final auditService = ref.read(auditServiceProvider);
+    final newNotes = result.trim();
+    final oldNotes = enquiry.notes?.trim() ?? '';
     try {
-      final firestoreService = ref.read(firestoreServiceProvider);
-      if (result.isEmpty) {
+      // Re-read so the search index is rebuilt from the current name/phone/email.
+      final current = await firestoreService.getEnquiry(enquiry.id) ?? const <String, dynamic>{};
+      final customerName = (current['customerName'] as String?) ?? enquiry.customerName;
+      final customerPhone = (current['customerPhone'] as String?) ?? enquiry.customerPhone;
+      final customerEmail = (current['customerEmail'] as String?) ?? enquiry.customerEmail;
+      final emailOrNull = (customerEmail?.trim().isNotEmpty ?? false)
+          ? customerEmail!.trim()
+          : null;
+      final indexFields = FirestoreService.searchIndexFieldsFor(
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: emailOrNull,
+        notes: newNotes,
+      );
+
+      if (newNotes.isEmpty) {
         await firestoreService.updateEnquiry(enquiry.id, {
           'notes': FieldValue.delete(),
           'description': FieldValue.delete(),
+          ...indexFields,
         });
-        showSnack('Notes cleared');
       } else {
-        await firestoreService.updateEnquiry(enquiry.id, {'notes': result, 'description': result});
-        showSnack('Notes updated');
+        await firestoreService.updateEnquiry(enquiry.id, {
+          'notes': newNotes,
+          'description': newNotes,
+          ...indexFields,
+        });
       }
+
+      if (oldNotes != newNotes) {
+        // Non-fatal: logs (does not throw) if the history entry can't be written.
+        await auditService.recordChange(
+          enquiryId: enquiry.id,
+          fieldChanged: 'notes',
+          oldValue: oldNotes.isEmpty ? 'Not Set' : oldNotes,
+          newValue: newNotes.isEmpty ? 'Not Set' : newNotes,
+        );
+      }
+      showSnack(newNotes.isEmpty ? 'Notes cleared' : 'Notes updated');
     } catch (e) {
+      Log.e('Failed to update notes', error: e);
       showSnack('Failed to update notes');
     }
   }
@@ -264,6 +294,7 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       phone,
       prefillText: prefill,
       enquiryId: enquiryId,
+      contactType: ContactType.reminder,
     );
 
     switch (status) {

@@ -41,6 +41,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
     final s = AppSurfaces.of(context);
     const success = AppColorScheme.snackSuccess;
     final invited = _resetLink != null;
+    final showLink = !_emailSent && (_resetLink?.isNotEmpty ?? false);
 
     return GlassDialog(
       eyebrow: invited ? 'Invitation sent' : 'Team',
@@ -136,10 +137,17 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
                 ),
                 const SizedBox(height: AppTokens.space4),
               ],
+              // The function only returns a link when the email failed.
+              if (!_emailSent && !showLink)
+                Text(
+                  'The invitation email could not be sent. Ask the user to use '
+                  '"Forgot password" on the login screen with this email.',
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                ),
+            ],
+            if (invited && showLink) ...[
               Text(
-                _emailSent
-                    ? 'Backup reset link (if needed):'
-                    : 'Share this password reset link with the user:',
+                'Email could not be sent. Share this password reset link with the user:',
                 style: t.labelLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: AppTokens.space2),
@@ -195,7 +203,8 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
   // Removed _getRoleDisplayName method - using inline role names in dropdown
 
   Future<void> _inviteUser() async {
-    if (!_formKey.currentState!.validate()) return;
+    final form = _formKey.currentState;
+    if (form == null || !form.validate()) return;
 
     setState(() {
       _isLoading = true;
@@ -212,60 +221,69 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
         data: {'region': 'asia-south1', 'function': 'inviteUser'},
       );
 
-      final result = await callable.call<Map<String, dynamic>>({
+      final result = await callable.call<dynamic>({
         'email': _emailController.text.trim(),
         'name': _nameController.text.trim(),
         'role': _selectedRole,
       });
 
-      final data = result.data;
-      final resetLink = data['resetLink'] as String;
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final resetLink = data['resetLink'] as String? ?? '';
       final emailSent = data['emailSent'] as bool? ?? false;
 
+      if (!mounted) return;
       setState(() {
         _resetLink = resetLink;
         _emailSent = emailSent;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
-      // Parse specific error messages for better user feedback
-      String errorMessage = 'Failed to invite user';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_inviteErrorMessage(e)),
+          backgroundColor: AppColorScheme.snackError,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
 
-      if (e.toString().contains('memory limit')) {
-        errorMessage = 'Server is busy. Please try again in a moment.';
-      } else if (e.toString().contains('timeout')) {
-        errorMessage = 'Request timed out. Please check your connection and try again.';
-      } else if (e.toString().contains('permission-denied')) {
-        errorMessage = 'You don\'t have permission to invite users.';
-      } else if (e.toString().contains('invalid-argument')) {
-        errorMessage = 'Please check the email and role are valid.';
-      } else if (e.toString().contains('already-exists')) {
-        errorMessage = 'A user with this email already exists.';
-      } else if (e.toString().contains('unauthenticated')) {
-        errorMessage = 'Please sign in again and try.';
-      } else {
-        errorMessage = 'Failed to invite user: ${e.toString()}';
+  /// Maps an invite failure to a user-facing message.
+  String _inviteErrorMessage(Object e) {
+    if (e is FirebaseFunctionsException) {
+      switch (e.code) {
+        case 'already-exists':
+          return e.message ?? 'A user with this email already exists.';
+        case 'permission-denied':
+          return 'You don\'t have permission to invite users.';
+        case 'invalid-argument':
+          return e.message ?? 'Please check the email and role are valid.';
+        case 'unauthenticated':
+          return 'Please sign in again and try.';
+        case 'deadline-exceeded':
+          return 'Request timed out. Please check your connection and try again.';
+        case 'resource-exhausted':
+          return 'Server is busy. Please try again in a moment.';
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: AppColorScheme.snackError,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: () => _inviteUser(),
-            ),
-          ),
-        );
+      final message = e.message;
+      if (message != null && message.isNotEmpty) {
+        return 'Failed to invite user: $message';
       }
     }
+
+    final text = e.toString();
+    if (text.contains('already-exists')) {
+      return 'A user with this email already exists.';
+    }
+    if (text.contains('timeout')) {
+      return 'Request timed out. Please check your connection and try again.';
+    }
+    return 'Failed to invite user: $text';
   }
 
   void _copyResetLink() {

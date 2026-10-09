@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/role_guards.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/firebase_auth_service.dart'
+    show AuthException, firebaseAuthServiceProvider;
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../shared/models/user_model.dart' show UserRole;
@@ -60,7 +63,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     final filter = ref.watch(usersFilterProvider);
     final roleAsync = ref.watch(roleProvider);
     final currentUser = ref.watch(currentUserWithFirestoreProvider);
-    final paginationState = ref.watch(paginationStateProvider);
 
     return GlassPageScaffold(
       eyebrow: 'Admin',
@@ -75,38 +77,35 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
           return CustomScrollView(
             slivers: [
-              SliverPadding(
-                padding: hPad.copyWith(top: AppTokens.space2),
-                sliver: SliverToBoxAdapter(
-                  child: roleAsync.when(
-                    data: (role) => StaggerIn(
-                      index: 0,
-                      child: RoleCheckerPanel(
-                        email: currentUser.valueOrNull?.email,
-                        uid: currentUser.valueOrNull?.uid,
-                        isAdmin: role == UserRole.admin,
-                        role: role == UserRole.admin ? 'admin' : 'staff',
-                        onRefresh: () => ref.invalidate(roleProvider),
-                        onSignOut: () async {
-                          await fb.FirebaseAuth.instance.signOut();
-                        },
+              // Debug-only session diagnostics panel.
+              if (kDebugMode)
+                SliverPadding(
+                  padding: hPad.copyWith(top: AppTokens.space2),
+                  sliver: SliverToBoxAdapter(
+                    child: roleAsync.when(
+                      data: (role) => StaggerIn(
+                        index: 0,
+                        child: RoleCheckerPanel(
+                          email: currentUser.valueOrNull?.email,
+                          uid: currentUser.valueOrNull?.uid,
+                          isAdmin: role == UserRole.admin,
+                          role: role == UserRole.admin ? 'admin' : 'staff',
+                          onRefresh: () => ref.invalidate(roleProvider),
+                          onSignOut: _signOut,
+                        ),
                       ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
                   ),
                 ),
-              ),
               if (roleAsync.valueOrNull == UserRole.admin)
                 SliverPadding(
                   padding: hPad.copyWith(top: AppTokens.space4),
                   sliver: SliverToBoxAdapter(
                     child: StaggerIn(
                       index: 1,
-                      child: UsersAdminActions(
-                        onInvite: () => _showInviteUserDialog(context),
-                        onAddUser: () => _showAddUserDialog(context),
-                      ),
+                      child: UsersAdminActions(onInvite: () => _showInviteUserDialog(context)),
                     ),
                   ),
                 ),
@@ -117,8 +116,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                     index: 2,
                     child: UsersFilterPanel(
                       searchController: _searchController,
-                      role: filter['role'] as String,
-                      isActive: filter['isActive'] as bool?,
+                      role: filter.role,
+                      isActive: filter.isActive,
                       onRoleChanged: (value) {
                         ref.read(usersFilterProvider.notifier).updateRole(value);
                       },
@@ -146,12 +145,11 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   return [
                     Consumer(
                       builder: (context, ref, child) {
-                        final usersAsync = ref.watch(usersStreamProvider(filter));
+                        final usersAsync = ref.watch(filteredUsersProvider);
                         return _buildUsersListArea(
                           usersAsync,
                           true,
                           true,
-                          paginationState,
                           wide: wide,
                           padding: hPad,
                         );
@@ -189,14 +187,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Widget _buildUsersListArea(
     AsyncValue<List<domain.UserModel>> usersAsync,
     bool isAdmin,
-    bool roleKnown,
-    PaginationState paginationState, {
+    bool roleKnown, {
     required bool wide,
     required EdgeInsets padding,
   }) {
     return usersAsync.when(
-      data: (users) =>
-          _buildUsersList(users, isAdmin, roleKnown, paginationState, wide: wide, padding: padding),
+      data: (users) => _buildUsersList(users, isAdmin, roleKnown, wide: wide, padding: padding),
       loading: () => const SliverFillRemaining(
         hasScrollBody: false,
         child: Center(child: CircularProgressIndicator()),
@@ -222,8 +218,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   Widget _buildUsersList(
     List<domain.UserModel> users,
     bool isAdmin,
-    bool roleKnown,
-    PaginationState paginationState, {
+    bool roleKnown, {
     required bool wide,
     required EdgeInsets padding,
   }) {
@@ -234,13 +229,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       );
     }
 
+    final currentUid = fb.FirebaseAuth.instance.currentUser?.uid;
+
     if (users.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
         child: GlassStateMessage(
           icon: Icons.people_outline_rounded,
           title: isAdmin
-              ? 'No users found. Use "Add User" to create one.'
+              ? 'No users found. Use "Add / Invite User" to add one.'
               : 'No users to show or you lack permissions to modify.',
           message: isAdmin
               ? 'Start by adding your first user to the system.'
@@ -252,7 +249,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     return SliverPadding(
       padding: padding,
       sliver: SliverList.builder(
-        itemCount: users.length + 2,
+        itemCount: users.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
             return SectionHeader(
@@ -260,14 +257,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               title: '${users.length} ${users.length == 1 ? 'member' : 'members'}',
               padding: const EdgeInsets.only(bottom: AppTokens.space3),
             );
-          }
-          if (index == users.length + 1) {
-            return paginationState.hasMore
-                ? UsersLoadMoreButton(
-                    loading: paginationState.isLoading,
-                    onPressed: () => _loadMore(users),
-                  )
-                : const SizedBox.shrink();
           }
           final user = users[index - 1];
           return StaggerIn(
@@ -277,6 +266,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
               user: user,
               isAdmin: isAdmin,
               wide: wide,
+              isSelf: user.uid == currentUid,
               onAction: isAdmin ? (action) => _handleUserAction(action, user) : (_) {},
             ),
           );
@@ -285,15 +275,18 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  void _loadMore(List<domain.UserModel> users) {
-    if (users.isNotEmpty) {
-      ref.read(paginationStateProvider.notifier).setLoading(true);
-      ref.read(usersFilterProvider.notifier).loadMore(users.last.email);
+  Future<void> _signOut() async {
+    try {
+      // Goes through FirebaseAuthService so the FCM token is removed.
+      await ref.read(firebaseAuthServiceProvider).signOut();
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      _showSnackBar('Failed to sign out: ${e.message}', isError: true);
+      return;
     }
-  }
-
-  void _showAddUserDialog(BuildContext context) {
-    showDialog<void>(context: context, builder: (context) => const UserFormDialog());
+    if (!mounted) return;
+    // AuthGate shows the login screen; drop any pushed routes above it.
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _showInviteUserDialog(BuildContext context) {
@@ -325,6 +318,10 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         break;
       case 'activate':
       case 'deactivate':
+        if (user.uid == fb.FirebaseAuth.instance.currentUser?.uid) {
+          _showSnackBar("You can't change your own role or status", isError: true);
+          break;
+        }
         _toggleUserStatus(user);
         break;
     }
@@ -357,10 +354,15 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 .read(userFormControllerProvider.notifier)
                 .toggleActive(user.uid, !user.isActive)
                 .then((_) {
+                  if (!mounted) return;
                   _showSnackBar('User ${action}d successfully', isError: false);
                 })
                 .catchError((Object error) {
-                  _showSnackBar('Failed to $action user: $error', isError: true);
+                  if (!mounted) return;
+                  _showSnackBar(
+                    'Failed to $action user: ${userAdminErrorMessage(error)}',
+                    isError: true,
+                  );
                 });
           },
         ),

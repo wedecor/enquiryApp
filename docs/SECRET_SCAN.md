@@ -14,5 +14,5 @@ Severity: HIGH findings fail CI. Verify and rotate any exposed credentials.
 ## Immediate Actions
 
 - Revoke/rotate any exposed keys immediately.
-- Purge history if secrets were committed: run scripts/history_purge.sh.
+- Purge history if secrets were committed: run scripts/purge_secrets_from_history.sh.
 - Move secrets to CI secret store / env vars; never commit plaintext secrets.

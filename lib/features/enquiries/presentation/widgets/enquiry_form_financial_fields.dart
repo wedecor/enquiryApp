@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -18,6 +19,9 @@ class EnquiryFormFinancialFields extends ConsumerWidget {
     required this.selectedPaymentStatus,
     required this.onPaymentStatusChanged,
     required this.parseDouble,
+    this.quotedAmountController,
+    this.quotedAt,
+    this.onQuotedAtChanged,
   });
 
   final TextEditingController totalCostController;
@@ -25,6 +29,11 @@ class EnquiryFormFinancialFields extends ConsumerWidget {
   final String? selectedPaymentStatus;
   final ValueChanged<String?> onPaymentStatusChanged;
   final double? Function(String?) parseDouble;
+
+  /// Amount quoted to the customer (replaces the old "Quote Sent" status).
+  final TextEditingController? quotedAmountController;
+  final DateTime? quotedAt;
+  final ValueChanged<DateTime?>? onQuotedAtChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,6 +49,15 @@ class EnquiryFormFinancialFields extends ConsumerWidget {
           eyebrowIcon: Icons.lock_outline_rounded,
           title: 'Financial Information',
           children: [
+            if (quotedAmountController != null) ...[
+              _QuoteFields(
+                controller: quotedAmountController!,
+                quotedAt: quotedAt,
+                onQuotedAtChanged: onQuotedAtChanged,
+                parseDouble: parseDouble,
+              ),
+              const SizedBox(height: kEnquiryFieldGap),
+            ],
             EnquiryFieldPair(
               first: TextFormField(
                 controller: totalCostController,
@@ -182,6 +200,69 @@ class _AdvancePreview extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+/// Quoted amount + quote date. The date is set automatically the first time an
+/// amount is saved, and can be changed here.
+class _QuoteFields extends StatelessWidget {
+  const _QuoteFields({
+    required this.controller,
+    required this.quotedAt,
+    required this.onQuotedAtChanged,
+    required this.parseDouble,
+  });
+
+  final TextEditingController controller;
+  final DateTime? quotedAt;
+  final ValueChanged<DateTime?>? onQuotedAtChanged;
+  final double? Function(String?) parseDouble;
+
+  Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: quotedAt ?? now,
+      firstDate: DateTime(2020),
+      lastDate: now,
+    );
+    if (picked != null) onQuotedAtChanged?.call(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = quotedAt == null
+        ? 'Set when saved'
+        : DateFormat('d MMM yyyy').format(quotedAt!);
+    return EnquiryFieldPair(
+      first: TextFormField(
+        controller: controller,
+        scrollPadding: kEnquiryFieldScrollPadding,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'Quoted Amount',
+          prefixIcon: Icon(Icons.request_quote_outlined),
+          hintText: 'Amount quoted to customer',
+        ),
+        validator: (value) {
+          if (value != null && value.trim().isNotEmpty) {
+            final amount = parseDouble(value);
+            if (amount == null || amount < 0) return 'Please enter a valid amount';
+          }
+          return null;
+        },
+      ),
+      second: InkWell(
+        onTap: onQuotedAtChanged == null ? null : () => _pickDate(context),
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Quoted On',
+            prefixIcon: Icon(Icons.event_outlined),
+          ),
+          child: Text(dateLabel),
+        ),
+      ),
     );
   }
 }

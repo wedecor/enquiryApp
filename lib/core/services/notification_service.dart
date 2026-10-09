@@ -53,40 +53,51 @@ class NotificationService {
     }
   }
 
-  /// Send notification when an enquiry is assigned
+  /// Send notification when an enquiry is assigned.
+  ///
+  /// Pass [notifyAdmins] false when the same save already notifies admins
+  /// (new enquiry, status change), so nobody gets two pushes for one action.
   Future<void> notifyEnquiryAssigned({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String assignedTo,
     required String assignedBy,
+    bool notifyAdmins = true,
   }) async {
     try {
       // Get assigned user details
       final assignedUser = await _getUserById(assignedTo);
       if (assignedUser == null) {
-        Log.w('NotificationService: assigned user not found', data: {'assignedTo': assignedTo});
+        Log.w(
+          'NotificationService: assigned user not found or inactive',
+          data: {'assignedTo': assignedTo},
+        );
         return;
       }
 
-      // Send notification to assigned staff member
-      await _sendNotificationToUser(
-        userId: assignedTo,
-        title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
-        data: {
-          'type': 'enquiry_assigned',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'assignedBy': assignedBy,
-        },
-      );
+      if (assignedTo != assignedBy) {
+        await _sendNotificationToUser(
+          userId: assignedTo,
+          title: 'Enquiry Assigned to You',
+          body: 'You have been assigned an enquiry from $customerName for $eventType',
+          data: {
+            'type': 'enquiry_assigned',
+            'enquiryId': enquiryId,
+            'customerName': customerName,
+            'eventType': eventType,
+            'assignedBy': assignedBy,
+          },
+        );
+      }
 
-      // Get all admin users EXCEPT the assigner
-      final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
+      if (!notifyAdmins) return;
 
-      // Send notification to all admins (excluding the assigner)
+      // Admins other than the assigner; the assignee already got their own push.
+      final adminUsers = (await _getAdminUsers(
+        excludeUserId: assignedBy,
+      )).where((admin) => admin.uid != assignedTo).toList();
+
       for (final admin in adminUsers) {
         await _sendNotificationToUser(
           userId: admin.uid,
@@ -158,7 +169,7 @@ class NotificationService {
           'NotificationService: no admin users found to notify',
           data: {'updatedBy': updatedBy},
         );
-        return;
+        // No early return: the assignee below must still be notified.
       }
 
       if (kDebugMode) {
@@ -295,7 +306,7 @@ class NotificationService {
           'NotificationService: no admin users found to notify for enquiry update',
           data: {'updatedBy': updatedBy},
         );
-        return;
+        // No early return: the assignee below must still be notified.
       }
 
       if (kDebugMode) {
@@ -478,6 +489,9 @@ class NotificationService {
       if (!doc.exists) return null;
 
       final data = doc.data() as Map<String, dynamic>;
+      // Never notify deactivated users (legacy docs use `active`).
+      final isActive = data['isActive'] ?? data['active'] ?? true;
+      if (isActive == false) return null;
       return UserModel(
         uid: doc.id,
         name: data['name'] as String? ?? '',
@@ -491,7 +505,22 @@ class NotificationService {
     }
   }
 
-  /// Send notification to a specific user via their FCM token
+  static const int _maxTitleLength = 120;
+  static const int _maxBodyLength = 500;
+
+  /// Cuts [value] to at most [max] characters (rules reject longer strings).
+  static String _truncate(String value, int max) {
+    if (value.length <= max) return value;
+    return '${value.substring(0, max - 1)}…';
+  }
+
+  /// Queues a notification for [userId] by writing `users/{userId}/notifications`.
+  ///
+  /// The `sendNotificationToUser` Cloud Function picks the document up, looks up
+  /// the recipient's device tokens and sends the push. The app must NOT read
+  /// another user's tokens itself: `users/{uid}/private/**` is owner-only in the
+  /// security rules, so that read failed with permission-denied and — because it
+  /// ran before this write — silently stopped every cross-user notification.
   Future<void> _sendNotificationToUser({
     required String userId,
     required String title,
@@ -499,111 +528,40 @@ class NotificationService {
     required Map<String, dynamic> data,
   }) async {
     try {
-      // Get user's FCM token
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) return;
-
-      // Read tokens from private subcollection to check if user has tokens
-      final tokensSnapshot = await _firestore
+      // Only keys allowed by the notification contract (security rules):
+      // title, body, type, data, enquiryId, read, createdAt, createdBy, senderId.
+      final type = data['type'];
+      final enquiryId = data['enquiryId'];
+      final notificationRef = await _firestore
           .collection('users')
           .doc(userId)
-          .collection('private')
-          .doc('notifications')
-          .collection('tokens')
-          .limit(10)
-          .get();
-
-      final tokenCount = tokensSnapshot.docs.length;
-      final tokens = tokensSnapshot.docs
-          .map((doc) => doc.get('token') as String?)
-          .where((token) => token != null && token.isNotEmpty)
-          .cast<String>()
-          .toList();
+          .collection('notifications')
+          .add({
+            'title': _truncate(title, _maxTitleLength),
+            'body': _truncate(body, _maxBodyLength),
+            if (type is String) 'type': type,
+            'data': data,
+            if (enquiryId is String) 'enquiryId': enquiryId,
+            'read': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
 
       Log.i(
-        'NotificationService: checking tokens for user',
-        data: {
-          'userId': userId,
-          'tokenDocumentCount': tokenCount,
-          'validTokenCount': tokens.length,
-        },
-      );
-
-      // Store notification in Firestore for the user
-      // This will trigger the Cloud Function sendNotificationToUser
-      // We store it even if there are no tokens - the Cloud Function will handle it
-      DocumentReference? notificationRef;
-      try {
-        notificationRef = await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .add({
-              'title': title,
-              'body': body,
-              'data': data,
-              'read': false,
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-
-        if (kDebugMode) {
-          debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
-        }
-      } catch (firestoreError, stackTrace) {
-        if (kDebugMode) {
-          debugPrint('❌ ERROR storing notification: $firestoreError');
-        }
-        Log.e(
-          'NotificationService: CRITICAL ERROR storing notification in Firestore',
-          error: firestoreError,
-          stackTrace: stackTrace,
-          data: {'userId': userId, 'title': title},
-        );
-        rethrow; // Re-throw so we know it failed
-      }
-
-      if (kDebugMode) {
-        final hasPushTargets = tokens.isNotEmpty;
-        final pushTargetCount = tokens.length;
-        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
-        debugPrint('   UserId: $userId');
-        debugPrint('   NotificationId: ${notificationRef.id}');
-        debugPrint('   Title: $title');
-        debugPrint('   Body: $body');
-        debugPrint('   HasPushTargets: $hasPushTargets');
-        debugPrint('   PushTargetCount: $pushTargetCount');
-        if (tokens.isEmpty) {
-          debugPrint(
-            '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
-          );
-        }
-      }
-
-      Log.i(
-        'NotificationService: notification stored in Firestore',
+        'NotificationService: notification queued',
         data: {
           'userId': userId,
           'notificationId': notificationRef.id,
           'title': title,
-          'body': body,
-          'hasTokens': tokens.isNotEmpty,
-          'tokenCount': tokens.length,
-          'data': data,
+          'type': data['type'],
         },
       );
-
-      if (tokens.isEmpty) {
-        Log.w(
-          'NotificationService: notification stored but user has no FCM tokens',
-          data: {
-            'userId': userId,
-            'notificationId': notificationRef.id,
-            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
-          },
-        );
-      }
     } catch (e, st) {
-      Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
+      Log.e(
+        'NotificationService: failed to queue notification',
+        error: e,
+        stackTrace: st,
+        data: {'userId': userId, 'title': title},
+      );
     }
   }
 
@@ -619,13 +577,18 @@ class NotificationService {
         .map((snap) => snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
-  /// Real-time stream of unread notification count
+  /// Cap for the unread badge query; the UI shows "99+" above 99.
+  static const int unreadCountCap = 100;
+
+  /// Real-time stream of unread notification count, capped at [unreadCountCap]
+  /// so the badge never streams every unread document.
   Stream<int> watchUnreadCount(String userId) {
     return _firestore
         .collection('users')
         .doc(userId)
         .collection('notifications')
         .where('read', isEqualTo: false)
+        .limit(unreadCountCap)
         .snapshots()
         .map((snap) => snap.docs.length);
   }
@@ -682,7 +645,6 @@ class NotificationService {
   /// Mark all notifications as read for a user
   Future<void> markAllNotificationsAsRead(String userId) async {
     try {
-      final batch = _firestore.batch();
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -690,11 +652,17 @@ class NotificationService {
           .where('read', isEqualTo: false)
           .get();
 
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+      // Firestore batches hold at most 500 writes; commit in chunks.
+      const chunkSize = 450;
+      final docs = snapshot.docs;
+      for (var start = 0; start < docs.length; start += chunkSize) {
+        final end = start + chunkSize < docs.length ? start + chunkSize : docs.length;
+        final batch = _firestore.batch();
+        for (final doc in docs.sublist(start, end)) {
+          batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+        }
+        await batch.commit();
       }
-
-      await batch.commit();
     } catch (e, st) {
       Log.e(
         'NotificationService: error marking all notifications as read',

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +11,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_controller.dart';
+import 'pipeline_controller.dart';
 import 'widgets/analytics_filters_panel.dart';
 import 'widgets/analytics_header.dart';
 import 'widgets/analytics_kpi_grid.dart';
@@ -36,7 +39,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -102,6 +105,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           controller: _tabController,
           children: [
             AnalyticsOverviewTab(onRetry: _refreshData),
+            const AnalyticsPipelineTab(),
+            const AnalyticsTeamTab(),
+            const AnalyticsMoneyTab(),
             AnalyticsTrendsTab(onRetry: _refreshData),
             AnalyticsBreakdownTab(onRetry: _refreshData),
             AnalyticsTablesTab(onRetry: _refreshData),
@@ -113,6 +119,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
 
   void _refreshData() {
     ref.read(analyticsControllerProvider.notifier).refresh();
+    // Pipeline tabs re-run when the controller reloads; invalidate in case the
+    // filters did not change (pure refresh).
+    ref.invalidate(pipelineReportProvider);
   }
 
   Future<void> _showCustomDateRangePicker(DateRange currentRange) async {
@@ -132,7 +141,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
         start: picked.start,
         end: DateTime(end.year, end.month, end.day).add(const Duration(days: 1)),
       );
-      ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange);
+      unawaited(ref.read(analyticsControllerProvider.notifier).updateCustomDateRange(customRange));
     }
   }
 
@@ -152,16 +161,18 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             return;
           }
 
-          showDialog<void>(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => const AlertDialog(
-              content: Row(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(width: AppTokens.space4),
-                  Text('Exporting analytics...'),
-                ],
+          unawaited(
+            showDialog<void>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const AlertDialog(
+                content: Row(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(width: AppTokens.space4),
+                    Text('Exporting analytics...'),
+                  ],
+                ),
               ),
             ),
           );

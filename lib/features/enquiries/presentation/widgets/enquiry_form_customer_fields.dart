@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/tokens.dart';
+import '../../domain/enquiry_location.dart';
 import 'enquiry_form_section.dart';
+import 'form/enquiry_location_field.dart';
 
 /// Customer name, phone, email, and location fields for the enquiry form.
 class EnquiryFormCustomerFields extends StatelessWidget {
@@ -10,12 +13,30 @@ class EnquiryFormCustomerFields extends StatelessWidget {
     required this.phoneController,
     required this.emailController,
     required this.locationController,
+    required this.locationPlace,
+    required this.onLocationPlaceChanged,
+    this.requireKnownLocation = false,
+    this.phoneFooter,
+    this.showLocation = true,
   });
 
   final TextEditingController nameController;
   final TextEditingController phoneController;
   final TextEditingController emailController;
   final TextEditingController locationController;
+
+  /// Google Maps place attached to the location text (null for free text).
+  final EnquiryPlace? locationPlace;
+  final ValueChanged<EnquiryPlace?> onLocationPlaceChanged;
+
+  /// The enquiry will be saved as approved: a city-only location is rejected.
+  final bool requireKnownLocation;
+
+  /// Shown under the phone / email row (e.g. existing-customer and duplicate cards).
+  final Widget? phoneFooter;
+
+  /// False for a multi-function booking: each function has its own location.
+  final bool showLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -77,21 +98,16 @@ class EnquiryFormCustomerFields extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(height: kEnquiryFieldGap),
-        TextFormField(
-          controller: locationController,
-          scrollPadding: kEnquiryFieldScrollPadding,
-          decoration: const InputDecoration(
-            labelText: 'Event Location *',
-            prefixIcon: Icon(Icons.location_on_outlined),
+        if (phoneFooter != null) ...[const SizedBox(height: AppTokens.space3), phoneFooter!],
+        if (showLocation) ...[
+          const SizedBox(height: kEnquiryFieldGap),
+          EnquiryLocationField(
+            controller: locationController,
+            place: locationPlace,
+            onPlaceChanged: onLocationPlaceChanged,
+            requireKnownLocation: requireKnownLocation,
           ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter event location';
-            }
-            return null;
-          },
-        ),
+        ],
       ],
     );
   }

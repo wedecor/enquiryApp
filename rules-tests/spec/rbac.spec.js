@@ -216,12 +216,19 @@ describe('RBAC Firestore Security Rules Tests', () => {
       );
     });
 
-    test('❌ Users cannot read other users documents (non-admin)', async () => {
+    test('✅ Active users can read colleague profiles (D6)', async () => {
       const staffFirestore = staffContext.firestore();
 
-      // Current firestore.rules allows any signed-in user to read /users/{uid}.
+      // firestore.rules: /users/{uid} is readable by the owner or any ACTIVE user.
       await assertSucceeds(staffFirestore.collection('users').doc(ADMIN_UID).get());
       await assertSucceeds(staffFirestore.collection('users').doc(OTHER_STAFF_UID).get());
+    });
+
+    test('❌ Inactive users cannot read other users documents', async () => {
+      const inactiveFirestore = inactiveStaffContext.firestore();
+
+      await assertFails(inactiveFirestore.collection('users').doc(ADMIN_UID).get());
+      await assertSucceeds(inactiveFirestore.collection('users').doc(INACTIVE_STAFF_UID).get());
     });
   });
 

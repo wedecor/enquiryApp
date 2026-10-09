@@ -1,8 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../features/enquiries/domain/event_functions.dart';
 import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
+import '../utils/phone_normalizer.dart';
+
+/// Status slice of the enquiries collection loaded by a role-scoped listener.
+enum EnquiryScope {
+  /// New, In Talks and Approved — the open pipeline (unbounded).
+  active,
+
+  /// Completed enquiries (most recent only).
+  completed,
+
+  /// Not Interested, Closed Lost and Cancelled (most recent only).
+  lost,
+}
 
 /// Service class for handling all Firestore database operations.
 ///
@@ -49,28 +64,39 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get enquiriesCollection =>
       _enquiriesCollection as CollectionReference<Map<String, dynamic>>;
 
-  static String _normalizePhone(String? phone) =>
-      phone == null ? '' : phone.replaceAll(RegExp(r'[^0-9]'), '');
+  /// Customer identity key (last 10 digits) — see [normalizePhone].
+  static String _normalizePhone(String? phone) => normalizePhone(phone);
 
   static String _makeTextIndex({
     required String name,
     String? phone,
     String? email,
     String? notes,
-  }) => [name, phone ?? '', email ?? '', notes ?? ''].join(' ').toLowerCase();
+    List<String> eventTypes = const [],
+  }) => [
+    name,
+    phone ?? '',
+    email ?? '',
+    notes ?? '',
+    ...eventTypes.map((t) => t.trim()).where((t) => t.isNotEmpty),
+  ].join(' ').toLowerCase();
 
+  /// Search fields for an enquiry. [eventTypes] = every function's event type label
+  /// (multi-function bookings) so searching "haldi" finds the booking.
   static Map<String, dynamic> searchIndexFieldsFor({
     required String customerName,
     String? customerPhone,
     String? customerEmail,
     String? description,
     String? notes,
+    List<String> eventTypes = const [],
   }) => _searchIndexFields(
     customerName: customerName,
     customerPhone: customerPhone,
     customerEmail: customerEmail,
     description: description,
     notes: notes,
+    eventTypes: eventTypes,
   );
 
   static Map<String, dynamic> _searchIndexFields({
@@ -79,6 +105,7 @@ class FirestoreService {
     String? customerEmail,
     String? description,
     String? notes,
+    List<String> eventTypes = const [],
   }) {
     final email = customerEmail?.toLowerCase();
     return {
@@ -90,6 +117,7 @@ class FirestoreService {
         phone: customerPhone,
         email: email,
         notes: notes ?? description,
+        eventTypes: eventTypes,
       ),
     };
   }
@@ -303,14 +331,49 @@ class FirestoreService {
     String? priorityLabel,
     String? sourceLabel,
     String? paymentStatusLabel,
+    String? whatsappNumber,
+    String? locationPlaceId,
+    String? locationAddress,
+    double? locationLat,
+    double? locationLng,
+    String? locationArea,
+    String? locationCity,
+    List<EventFunction>? functions,
   }) async {
+    final placeId = locationPlaceId?.trim() ?? '';
+    // Multi-function booking (or one function with a time / notes): write the
+    // functions and their synced top-level fields over the single-event ones.
+    final functionFields =
+        functions != null && functions.isNotEmpty && needsFunctionArray(functions)
+        ? (Map<String, Object?>.of(functionSyncFields(functions))
+            ..removeWhere((key, value) => value == null))
+        : const <String, Object?>{};
+    final typeLabels = functions != null && functions.isNotEmpty
+        ? functionTypeLabels(functions)
+        : [eventTypeLabel ?? eventType];
     final enquiryData = {
       'customerName': customerName,
       if (customerEmail.trim().isNotEmpty) 'customerEmail': customerEmail.toLowerCase(),
       'customerPhone': customerPhone,
+      if (whatsappNumber != null && whatsappNumber.trim().isNotEmpty)
+        'whatsappNumber': whatsappNumber.trim(),
       'eventType': eventType,
       'eventDate': eventDate,
       'eventLocation': eventLocation,
+      // Optional Google Maps place picked in the Location field.
+      if (placeId.isNotEmpty) ...{
+        'locationPlaceId': placeId,
+        if (locationAddress != null && locationAddress.trim().isNotEmpty)
+          'locationAddress': locationAddress.trim(),
+        if (locationLat != null && locationLng != null) ...{
+          'locationLat': locationLat,
+          'locationLng': locationLng,
+        },
+        if (locationArea != null && locationArea.trim().isNotEmpty)
+          'locationArea': locationArea.trim(),
+        if (locationCity != null && locationCity.trim().isNotEmpty)
+          'locationCity': locationCity.trim(),
+      },
       if (guestCount > 0) 'guestCount': guestCount,
       if (budgetRange.trim().isNotEmpty) 'budgetRange': budgetRange,
       ...enquiryNotesFields(description),
@@ -340,7 +403,9 @@ class FirestoreService {
         customerEmail: customerEmail,
         description: description,
         notes: description,
+        eventTypes: typeLabels,
       ),
+      ...functionFields,
     };
 
     final docRef = await _enquiriesCollection.add(enquiryData);
@@ -416,15 +481,73 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Default cap for [watchEnquiriesForRole] (most recent by `createdAt`).
+  static const int recentEnquiriesLimit = 500;
+
+  /// Cap for the terminal (completed / lost) slices in [watchEnquiriesForRoleScope].
+  static const int terminalEnquiriesLimit = 200;
+
+  /// Stored `statusValue`s (canonical + legacy aliases) covered by [scope].
+  ///
+  /// Active work is New, In Talks and Approved (booked, not yet delivered).
+  static List<String> rawStatusValuesForScope(EnquiryScope scope) {
+    final statuses = switch (scope) {
+      EnquiryScope.active => const [
+        EnquiryStatus.newEnquiry,
+        EnquiryStatus.inTalks,
+        EnquiryStatus.approved,
+      ],
+      EnquiryScope.completed => const [EnquiryStatus.completed],
+      EnquiryScope.lost => [
+        for (final status in EnquiryStatus.values)
+          if (status.category == StatusCategory.lost) status,
+      ],
+    };
+    return [for (final status in statuses) ...EnquiryStatus.rawValuesFor(status.value)];
+  }
+
   /// Real-time enquiries stream scoped by role (admin: all, staff: assigned only).
-  Stream<QuerySnapshot> watchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
-    if (isAdmin) {
-      return getEnquiries();
+  ///
+  /// Bounded to the most recent [limit] enquiries by `createdAt` (pass `null`
+  /// for no cap). Dashboard / Kanban use [watchEnquiriesForRoleScope] instead.
+  Stream<QuerySnapshot> watchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+    int? limit = recentEnquiriesLimit,
+  }) {
+    Query query = _enquiriesCollection;
+    if (!isAdmin) {
+      query = query.where('assignedTo', isEqualTo: assignedToUid);
     }
-    return _enquiriesCollection
-        .where('assignedTo', isEqualTo: assignedToUid)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    query = query.orderBy('createdAt', descending: true);
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+    return query.snapshots();
+  }
+
+  /// Role-scoped stream of one status slice of the enquiries collection.
+  ///
+  /// [EnquiryScope.active] is unbounded (the open pipeline is small and must be
+  /// complete); the terminal slices are capped at [terminalEnquiriesLimit],
+  /// newest first. Uses the `statusValue + createdAt DESC` indexes (staff:
+  /// `assignedTo + statusValue + createdAt DESC`).
+  Stream<QuerySnapshot> watchEnquiriesForRoleScope({
+    required bool isAdmin,
+    String? assignedToUid,
+    required EnquiryScope scope,
+  }) {
+    Query query = _enquiriesCollection;
+    if (!isAdmin) {
+      query = query.where('assignedTo', isEqualTo: assignedToUid);
+    }
+    query = query
+        .where('statusValue', whereIn: rawStatusValuesForScope(scope))
+        .orderBy('createdAt', descending: true);
+    if (scope != EnquiryScope.active) {
+      query = query.limit(terminalEnquiriesLimit);
+    }
+    return query.snapshots();
   }
 
   /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
@@ -560,16 +683,23 @@ class FirestoreService {
   Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveStatusDropdownItems() =>
       watchActiveDropdownItems('statuses');
 
-  /// Calendar view: enquiries ordered by event date (role-scoped).
+  /// Calendar view: enquiries with `eventDate` in [[start], [end]), ordered by
+  /// event date (role-scoped). Staff uses the `assignedTo + eventDate` index.
   Stream<QuerySnapshot> watchEnquiriesForRoleByEventDate({
     required bool isAdmin,
     String? assignedToUid,
+    required DateTime start,
+    required DateTime end,
   }) {
     Query query = _enquiriesCollection;
     if (!isAdmin && assignedToUid != null) {
       query = query.where('assignedTo', isEqualTo: assignedToUid);
     }
-    return query.orderBy('eventDate', descending: false).snapshots();
+    return query
+        .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('eventDate', isLessThan: Timestamp.fromDate(end))
+        .orderBy('eventDate', descending: false)
+        .snapshots();
   }
 
   /// Updates an existing enquiry document.

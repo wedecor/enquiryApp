@@ -171,7 +171,7 @@ class AuthGate extends ConsumerWidget {
         GradientPillButton(
           label: 'Retry',
           icon: Icons.refresh_rounded,
-          onPressed: () => _retry(context),
+          onPressed: () => _retry(ref),
         ),
         AuthOutlinedPill(
           label: 'Sign Out',
@@ -242,15 +242,11 @@ class AuthGate extends ConsumerWidget {
     }
   }
 
-  void _retry(BuildContext context) {
-    // Trigger a refresh by signing out and back in
-    // Or implement a manual session refresh if needed
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Retrying authentication...'),
-        backgroundColor: AppColorScheme.info,
-      ),
-    );
+  void _retry(WidgetRef ref) {
+    safeLog('session_retry', {'method': 'auth_gate'});
+    // Recreate the session service: it re-subscribes to auth state and
+    // re-fetches the profile (sessionStateProvider rebuilds with it).
+    ref.invalidate(sessionServiceProvider);
   }
 
   Widget _buildAndroidConfigBanner(BuildContext context) {

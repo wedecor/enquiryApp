@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,13 +13,13 @@ import '../services/firestore_service.dart';
 /// state and user data. It provides a [Stream<UserRole>] that emits the
 /// user's role whenever it changes.
 ///
-/// Currently, this provider returns a default role of [UserRole.staff] for
-/// all users. In a complete implementation, this would fetch the user's
-/// actual role from Firestore based on their UID.
+/// The role is read live from `users/{uid}.role` (case-insensitive).
 ///
 /// Returns a [StreamProvider<UserRole>] that emits:
 /// - [UserRole.admin] for administrators
 /// - [UserRole.staff] for staff members or unauthenticated users
+/// - nothing (stays loading) while auth state is resolving
+/// - an error if auth state errors
 ///
 /// Usage:
 /// ```dart
@@ -46,12 +48,16 @@ final roleProvider = StreamProvider<UserRole>((ref) {
 
       return firestoreService.watchUser(user.uid).map((snap) {
         final data = snap.data();
-        final roleString = (data != null ? (data['role'] as String?) : null) ?? 'staff';
+        final roleString = data?['role']?.toString().trim().toLowerCase() ?? 'staff';
         return roleString == 'admin' ? UserRole.admin : UserRole.staff;
       });
     },
-    loading: () => Stream.value(UserRole.staff),
-    error: (error, stack) => Stream.value(UserRole.staff),
+    // While auth is resolving, emit nothing so consumers stay in loading
+    // instead of briefly seeing "staff" (admin flicker / "Access denied").
+    // A never-completing stream keeps the StreamProvider in AsyncLoading; it
+    // is cancelled when auth resolves and this provider rebuilds.
+    loading: () => Stream<UserRole>.fromFuture(Completer<UserRole>().future),
+    error: (error, stack) => Stream<UserRole>.error(error, stack),
   );
 });
 

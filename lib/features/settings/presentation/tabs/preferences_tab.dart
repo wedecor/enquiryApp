@@ -139,9 +139,11 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       _isSaving = true;
     });
 
+    // Read before any await so the catch block never touches `ref` after
+    // the widget is disposed.
+    final uid = ref.read(currentUserUidProvider);
     try {
       // Debug: Check authentication state
-      final uid = ref.read(currentUserUidProvider);
       Log.d(
         'Preferences save request',
         data: {
@@ -158,6 +160,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       final updateSettings = ref.read(updateUserSettingsProvider);
       await updateSettings(_currentSettings!);
 
+      if (!mounted) return;
       setState(() {
         _originalSettings = _currentSettings;
         _hasChanges = false;
@@ -171,26 +174,22 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
         'uid': uid,
       });
 
-      if (mounted) {
-        _showSnackBar('Preferences saved successfully');
-      }
+      _showSnackBar('Preferences saved successfully');
     } catch (e) {
-      setState(() {
-        _isSaving = false;
-      });
-
       Log.e('Preferences save failed', error: e);
       Log.d('Preferences save failure details', data: {'errorType': e.runtimeType.toString()});
 
       safeLog('preferences_save_error', {
         'error': e.toString(),
         'errorType': e.runtimeType.toString(),
-        'uid': ref.read(currentUserUidProvider),
+        'uid': uid,
       });
 
-      if (mounted) {
-        _showSnackBar('Failed to save preferences: ${e.toString()}', isError: true);
-      }
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+      });
+      _showSnackBar('Failed to save preferences: ${e.toString()}', isError: true);
     }
   }
 

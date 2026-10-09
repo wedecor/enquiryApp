@@ -25,7 +25,14 @@ class StatusInlineControl extends ConsumerWidget {
 
     return EnquiryStatusControl(
       enquiryId: enquiry.id,
-      enquiryData: {'statusValue': enquiry.status, 'assignedTo': enquiry.assignedTo},
+      enquiryData: {
+        'statusValue': enquiry.status,
+        'assignedTo': enquiry.assignedTo,
+        // Approval needs a known location; the prompt re-reads the doc for locationArea.
+        if (enquiry.eventLocation != null) 'eventLocation': enquiry.eventLocation,
+        // Enquiry.fromFirestore maps a missing date to the epoch — pass real dates only.
+        if (enquiry.eventDate.year > 1971) 'eventDate': enquiry.eventDate,
+      },
       currentStatusValue: enquiry.status,
       currentStatusLabel: enquiry.statusDisplay,
       isAdmin: isAdmin,

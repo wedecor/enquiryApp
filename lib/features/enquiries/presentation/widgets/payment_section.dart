@@ -35,7 +35,9 @@ class PaymentSection extends StatelessWidget {
     final total = totalCost is num ? (totalCost as num).toDouble() : null;
     final advance = advancePaid is num ? (advancePaid as num).toDouble() : null;
     final ratio = (total != null && total > 0) ? ((advance ?? 0) / total).clamp(0.0, 1.0) : null;
-    final balance = (total != null && advance != null) ? total - advance : null;
+    // No advance recorded yet means the whole total is still due.
+    final balance = total != null ? total - (advance ?? 0) : null;
+    final overpaid = balance != null && balance < 0;
 
     return EnquiryDetailSection(
       eyebrow: 'Admin only',
@@ -90,7 +92,13 @@ class PaymentSection extends StatelessWidget {
           children: [
             EnquiryDetailInfoRow(label: 'Advance Paid', value: _formatCurrency(advancePaid)),
             if (balance != null)
-              EnquiryDetailInfoRow(label: 'Balance', value: _formatCurrency(balance)),
+              EnquiryDetailInfoRow(
+                label: 'Balance',
+                value: overpaid
+                    ? 'Overpaid ${_formatCurrency(-balance)}'
+                    : _formatCurrency(balance),
+                leading: overpaid ? StatusDot(color: cs.error) : null,
+              ),
             EnquiryDetailInfoRow(
               label: 'Payment Status',
               value: paymentStatusLabel,

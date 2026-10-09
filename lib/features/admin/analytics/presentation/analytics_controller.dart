@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../services/dropdown_lookup.dart';
@@ -72,14 +70,14 @@ class AnalyticsController extends _$AnalyticsController {
   /// Refresh data with current filters
   Future<void> refresh() async {
     final currentState = await future;
+    // Drop the cached rows so this reload (and the pipeline tabs) re-download.
+    ref.invalidate(analyticsRawRowsProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _loadAnalyticsData(currentState.filters));
   }
 
   /// Load all analytics data in parallel
   Future<AnalyticsState> _loadAnalyticsData(AnalyticsFilters filters) async {
-    final repository = ref.read(analyticsRepositoryProvider);
-
     DropdownLookup? dropdownLookup;
     try {
       dropdownLookup = await ref.watch(dropdownLookupProvider.future);
@@ -96,16 +94,11 @@ class AnalyticsController extends _$AnalyticsController {
         end: currentRange.start,
       );
 
-      // Load all data in parallel for better performance
-      final results = await Future.wait([
-        // Current period data
-        _loadCurrentPeriodData(repository, filters),
-        // Previous period data for deltas
-        _loadPreviousPeriodData(repository, filters, previousRange),
-      ]);
-
-      final currentData = results[0] as _CurrentPeriodData;
-      final previousData = results[1] as _PreviousPeriodData;
+      // One cached download of every enquiry (shared with the pipeline tabs);
+      // both periods are sliced from it in memory.
+      final rows = await ref.read(analyticsRawRowsProvider.future);
+      final currentData = _loadCurrentPeriodData(rows, filters);
+      final previousData = _loadPreviousPeriodData(rows, filters, previousRange);
 
       // Calculate KPI summary with deltas
       final kpiSummary = _calculateKpiSummary(currentData, previousData);
@@ -151,68 +144,50 @@ class AnalyticsController extends _$AnalyticsController {
     }
   }
 
-  /// Load current period data
-  Future<_CurrentPeriodData> _loadCurrentPeriodData(
-    AnalyticsRepository repository,
+  /// Current period data, computed from the cached [rows].
+  _CurrentPeriodData _loadCurrentPeriodData(
+    List<Map<String, dynamic>> rows,
     AnalyticsFilters filters,
-  ) async {
+  ) {
     final bucket = TimeBucket.fromDateRange(filters.dateRange);
 
-    final rawData = await repository.fetchEnquiriesRaw(
+    final rawData = AnalyticsRepository.rowsInPeriod(
+      rows,
       dateRange: filters.dateRange,
       filters: filters,
     );
 
-    final results = await Future.wait([
-      repository.countEnquiries(dateRange: filters.dateRange, filters: filters),
-      Future.value(AnalyticsRepository.aggregateCountByStatus(rawData)),
-      Future.value(AnalyticsRepository.aggregateCountByEventType(rawData)),
-      Future.value(AnalyticsRepository.aggregateCountBySource(rawData)),
-      Future.value(AnalyticsRepository.aggregateSumRevenue(rawData)),
-      Future.value(
-        AnalyticsRepository.aggregateTimeSeries(
-          rawData,
-          dateRange: filters.dateRange,
-          bucket: bucket,
-        ),
-      ),
-      repository.getRecentEnquiries(dateRange: filters.dateRange, filters: filters, limit: 20),
-    ]);
-
     return _CurrentPeriodData(
-      totalCount: results[0] as int,
-      statusCounts: results[1] as Map<String, int>,
-      eventTypeCounts: results[2] as Map<String, int>,
-      sourceCounts: results[3] as Map<String, int>,
-      totalRevenue: results[4] as double,
-      timeSeries: results[5] as List<SeriesPoint>,
-      recentEnquiries: results[6] as List<RecentEnquiry>,
+      totalCount: rawData.length,
+      statusCounts: AnalyticsRepository.aggregateCountByStatus(rawData),
+      eventTypeCounts: AnalyticsRepository.aggregateCountByEventType(rawData),
+      sourceCounts: AnalyticsRepository.aggregateCountBySource(rawData),
+      totalRevenue: AnalyticsRepository.aggregateSumRevenue(rawData),
+      timeSeries: AnalyticsRepository.aggregateTimeSeries(
+        rawData,
+        dateRange: filters.dateRange,
+        bucket: bucket,
+      ),
+      recentEnquiries: AnalyticsRepository.aggregateRecentEnquiries(rawData, limit: 20),
     );
   }
 
-  /// Load previous period data for delta calculations
-  Future<_PreviousPeriodData> _loadPreviousPeriodData(
-    AnalyticsRepository repository,
+  /// Previous period data for delta calculations, computed from the cached [rows].
+  _PreviousPeriodData _loadPreviousPeriodData(
+    List<Map<String, dynamic>> rows,
     AnalyticsFilters filters,
     DateRange previousRange,
-  ) async {
-    final previousFilters = filters.copyWith(dateRange: previousRange);
-
-    final rawData = await repository.fetchEnquiriesRaw(
+  ) {
+    final rawData = AnalyticsRepository.rowsInPeriod(
+      rows,
       dateRange: previousRange,
-      filters: previousFilters,
+      filters: filters.copyWith(dateRange: previousRange),
     );
 
-    final results = await Future.wait([
-      repository.countEnquiries(dateRange: previousRange, filters: previousFilters),
-      Future.value(AnalyticsRepository.aggregateCountByStatus(rawData)),
-      Future.value(AnalyticsRepository.aggregateSumRevenue(rawData)),
-    ]);
-
     return _PreviousPeriodData(
-      totalCount: results[0] as int,
-      statusCounts: results[1] as Map<String, int>,
-      totalRevenue: results[2] as double,
+      totalCount: rawData.length,
+      statusCounts: AnalyticsRepository.aggregateCountByStatus(rawData),
+      totalRevenue: AnalyticsRepository.aggregateSumRevenue(rawData),
     );
   }
 
@@ -358,12 +333,14 @@ Future<List<String>> statusesForFilter(StatusesForFilterRef ref) async {
 
 @riverpod
 Future<List<String>> sourcesForFilter(SourcesForFilterRef ref) async {
+  final lookup = await ref.watch(dropdownLookupProvider.future);
   final repository = ref.watch(analyticsRepositoryProvider);
-  return repository.getSources();
+  return repository.getSources(lookup);
 }
 
 @riverpod
 Future<List<String>> prioritiesForFilter(PrioritiesForFilterRef ref) async {
+  final lookup = await ref.watch(dropdownLookupProvider.future);
   final repository = ref.watch(analyticsRepositoryProvider);
-  return repository.getPriorities();
+  return repository.getPriorities(lookup);
 }

@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
+import '../../../enquiries/domain/event_functions.dart';
 
 DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
   if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
   return null;
 }
 
@@ -42,8 +45,10 @@ int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<O
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final now = DateTime.now();
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   if (aEvent != null && bEvent != null) {
     return aEvent.compareTo(bEvent);
@@ -73,8 +78,9 @@ int compareByNearestEventDate(
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   final aDiff = aEvent?.difference(now);
   final bDiff = bEvent?.difference(now);
@@ -112,6 +118,27 @@ int compareByNearestEventDate(
   return bCreated.compareTo(aCreated);
 }
 
+/// Digit strings to try for a phone search, so the country code / trunk zero
+/// doesn't matter either way: "+91 98765 43210", "0 98765 43210" and
+/// "9876543210" all find a number stored as "9876543210" or "+919876543210".
+/// Partial input works too ("+91 98765" also tries "98765").
+Set<String> phoneSearchVariants(String digits, {String rawQuery = ''}) {
+  final variants = <String>{digits};
+  // Full number typed with a country code: compare the last 10 digits.
+  if (digits.length > 10) variants.add(digits.substring(digits.length - 10));
+  // Partial number typed with an explicit +91 / 0091 prefix: drop the prefix.
+  // (A bare "91…" isn't stripped — Indian mobiles can start with 91.)
+  final raw = rawQuery.replaceAll(RegExp(r'\s'), '');
+  if (raw.startsWith('+91') && digits.length > 2) variants.add(digits.substring(2));
+  if (digits.startsWith('0091') && digits.length > 4) variants.add(digits.substring(4));
+  // Trunk zero ("098765…"): mobiles never start with 0.
+  if (digits.startsWith('0') && digits.length > 1) {
+    variants.add(digits.replaceFirst(RegExp('^0+'), ''));
+  }
+  variants.remove('');
+  return variants;
+}
+
 bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
   if (searchQuery.isEmpty) return true;
 
@@ -133,11 +160,12 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
   if (digitQuery.isEmpty) {
     return false;
   }
+  final digitQueries = phoneSearchVariants(digitQuery, rawQuery: query);
 
   bool matchesDigits(String? input) {
     if (input == null || input.isEmpty) return false;
     final cleaned = input.replaceAll(RegExp(r'\D'), '');
-    return cleaned.contains(digitQuery);
+    return digitQueries.any(cleaned.contains);
   }
 
   return matchesDigits(data['customerPhone'] as String?) ||
@@ -243,7 +271,7 @@ String buildReminderMessage(
   DateTime? eventDate,
 ) {
   final now = DateTime.now();
-  final daysUntilEvent = eventDate?.difference(now).inDays;
+  final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
 
   String urgencyMessage;
   if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {
