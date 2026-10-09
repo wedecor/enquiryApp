@@ -187,7 +187,8 @@ export const approvedOnDate = onCall<ApprovedOnDateRequest, Promise<ApprovedOnDa
       .limit(MAX_RESULTS)
       .get();
     if (snap.size >= MAX_RESULTS) {
-      logger.warn("approvedOnDate hit the result cap", { dates: dayKeys, cap: MAX_RESULTS });
+      const dates = dayKeys;
+      logger.warn("approvedOnDate hit the result cap", { dates, cap: MAX_RESULTS });
     }
 
     const days = matchApprovedFunctions(

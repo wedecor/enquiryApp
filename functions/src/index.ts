@@ -588,7 +588,7 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
           }
           logger.info('adminUpdateUser: removed FCM device registrations', { uid, removed });
         } catch (error: any) {
-          logger.error('adminUpdateUser: failed to remove FCM tokens', { uid, error: error?.message });
+          logger.error('adminUpdateUser: failed to remove FCM device registrations', { uid, error: error?.message });
         }
       }
 
@@ -602,9 +602,9 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
         }
       } catch (error: any) {
         if (error?.code === 'auth/user-not-found') {
-          logger.warn('adminUpdateUser: no Auth account for user', { uid });
+          logger.warn('adminUpdateUser: no sign-in account for user', { uid });
         } else {
-          logger.error('adminUpdateUser: failed to update Auth account', {
+          logger.error('adminUpdateUser: failed to update sign-in account', {
             uid,
             error: error?.message,
             code: error?.code,
