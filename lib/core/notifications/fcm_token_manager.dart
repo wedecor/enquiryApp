@@ -24,6 +24,7 @@ class FcmTokenManager {
   );
 
   static const int _maxTokenAttempts = 3;
+  static const Duration _tokenTimeout = Duration(seconds: 20);
 
   /// Wires push listeners (once per process) and saves this device's token for
   /// the signed-in user. Never throws: failures are logged and retried.
@@ -51,7 +52,11 @@ class FcmTokenManager {
     try {
       for (var attempt = 1; attempt <= _maxTokenAttempts; attempt++) {
         try {
-          final token = await FirebaseMessaging.instance.getToken(vapidKey: _vapidKey);
+          // getToken can hang while Play services is still starting; time out so the
+          // retry loop (and the _registering guard) can't stay stuck for the whole session.
+          final token = await FirebaseMessaging.instance
+              .getToken(vapidKey: _vapidKey)
+              .timeout(_tokenTimeout);
           if (token == null) return;
           // The user may have signed out while we were waiting.
           final current = FirebaseAuth.instance.currentUser;
