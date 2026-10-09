@@ -364,7 +364,8 @@ export const runReengagementNow = onCall<unknown, Promise<ReengagementRunResult>
     }
     try {
       const result = await scheduleReengagementsCore(new Date());
-      logger.info("Re-engagement: manual run", { uid: request.auth.uid, ...result });
+      const caller = request.auth.uid;
+      logger.info("Re-engagement: manual run", { caller, ...result });
       return result;
     } catch (error: any) {
       logger.error("Re-engagement: manual run failed", { error: error?.message });

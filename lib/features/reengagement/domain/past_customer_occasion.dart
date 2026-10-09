@@ -252,12 +252,14 @@ class PastCustomers {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return rows;
     final digits = q.replaceAll(RegExp('[^0-9]'), '');
-    return rows.where((r) {
-      if (r.source.customerName.toLowerCase().contains(q)) return true;
-      if (digits.length < 3) return false;
-      final phone = r.source.customerPhone?.replaceAll(RegExp('[^0-9]'), '') ?? '';
-      return r.source.phoneNormalized.contains(digits) || phone.contains(digits);
-    }).toList(growable: false);
+    return rows
+        .where((r) {
+          if (r.source.customerName.toLowerCase().contains(q)) return true;
+          if (digits.length < 3) return false;
+          final phone = r.source.customerPhone?.replaceAll(RegExp('[^0-9]'), '') ?? '';
+          return r.source.phoneNormalized.contains(digits) || phone.contains(digits);
+        })
+        .toList(growable: false);
   }
 
   /// "wedding_ceremony" → "Wedding Ceremony"; "Event" when blank (server's eventTypeLabelOf).
