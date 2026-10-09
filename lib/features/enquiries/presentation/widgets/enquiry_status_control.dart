@@ -253,7 +253,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
     Map<String, Object?>? bookingFields;
     var bookingSheetConfirmed = false;
     if (approving) {
-      setState(() => _isUpdatingStatus = true);
+      // No busy spinner here: the sheet is modal, and a spinner left running behind
+      // it never settles.
       final booking = await ensureApprovalBooking(
         context,
         ref,
@@ -262,7 +263,6 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         isAdmin: widget.isAdmin,
       );
       if (!mounted) return;
-      setState(() => _isUpdatingStatus = false);
       if (!booking.proceed) {
         setState(() => _selectedStatus = currentStatusValue);
         return;
