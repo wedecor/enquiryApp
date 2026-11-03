@@ -141,6 +141,22 @@ describe("planFollowUpOnWrite (pure)", () => {
     assert.equal(planFollowUpOnWrite(due, { ...moved, followUpReason: "callback" }, cfg, now), null);
   });
 
+  it("an automatic follow-up becomes a past-event review once every event day has passed", () => {
+    const later = ist("2026-11-10T12:00");
+    const sent = {
+      ...enquiry({ eventDate: ist("2026-11-08T00:00") }),
+      followUpDueAt: ist("2026-11-07T10:00"), followUpSeq: 2, followUpReason: "auto", followUpNotifiedStage: "overdue",
+    };
+    const update = planFollowUpOnWrite(sent, sent, cfg, later);
+    assert.equal(update?.fields.followUpReason, "past_event");
+    assert.equal(update?.fields.followUpNotifiedStage, null);
+    assert.equal((update?.fields.followUpDueAt as Date).getTime(), later.getTime());
+    const written = { ...sent, ...update!.fields };
+    assert.equal(planFollowUpOnWrite(sent, written, cfg, later), null, "switches only once");
+    // A customer callback is respected.
+    assert.equal(planFollowUpOnWrite(sent, { ...sent, followUpReason: "callback", followUpDueAt: ist("2026-11-12T18:00") }, cfg, later), null);
+  });
+
   it("disabled config schedules nothing", () => {
     assert.equal(planFollowUpOnWrite(null, enquiry(), { ...cfg, enabled: false }, now), null);
   });

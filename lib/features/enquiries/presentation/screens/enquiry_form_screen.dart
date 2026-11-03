@@ -99,8 +99,8 @@ class _EnquiryFormScreenState extends ConsumerState<EnquiryFormScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'This event date is in the past — an active enquiry with a past date is '
-              'auto-closed overnight.',
+              'This event date is in the past — an approved booking is marked Completed; '
+              'an open enquiry stays open and is flagged for follow-up.',
             ),
           ),
         );

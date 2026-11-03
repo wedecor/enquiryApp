@@ -84,8 +84,8 @@ List<CalendarEvent> calendarEventsForEnquiry({
         todayStart.difference(day).inDays > 30) {
       continue;
     }
-    // Past "new" / "in_talks" events are not filtered here: the nightly
-    // autoExpireEnquiries function closes them once their last function has passed.
+    // Past "new" / "in_talks" events are not filtered here: autoExpireEnquiries keeps
+    // them open and flags them for follow-up once their last function has passed.
     final single = count == 1;
     events.add(
       CalendarEvent(

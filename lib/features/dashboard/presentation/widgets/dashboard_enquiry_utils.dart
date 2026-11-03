@@ -222,7 +222,7 @@ int eventDayOffset(DateTime eventDate, DateTime now) {
   return eventDay.difference(today).inDays;
 }
 
-/// Past-dated enquiries stay visible until the nightly auto-close function moves them.
+/// Past-dated enquiries stay visible: they are flagged for follow-up, never auto-closed.
 bool shouldShowInTalks(Map<String, dynamic> enquiryData) =>
     EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?);
 

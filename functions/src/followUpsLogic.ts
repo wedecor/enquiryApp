@@ -252,6 +252,13 @@ export function planFollowUpOnWrite(
     fields.followUpNotifiedStage = null;
   }
 
+  // Every event day has now passed: an automatic follow-up becomes a past-event review,
+  // due now, once (reason past_event never switches back). Customer callbacks stay as set.
+  if (after.followUpReason === "auto" && allEventDaysPassed(after, now)) {
+    const update = scheduleUpdate(after, nextAutoDueAt(after, config, now), "rescheduled");
+    return { fields: { ...fields, ...update.fields }, history: update.history };
+  }
+
   // An automatic follow-up that has not fired yet moves earlier if the event moved earlier.
   if (after.followUpReason === "auto" && !after.followUpNotifiedStage) {
     const next = nextAutoDueAt(after, config, now);
