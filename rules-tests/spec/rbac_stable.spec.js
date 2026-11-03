@@ -856,6 +856,25 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertSucceeds(active.collection('dropdowns').doc('statuses').collection('items').doc('new').get());
     });
 
+    test('✅ Admin can create/update dropdowns/event_types marker; staff can read but not write', async () => {
+      const admin = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore();
+      const staff = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+
+      await assertSucceeds(
+        admin.collection('dropdowns').doc('event_types').set({ defaultsSeeded: true })
+      );
+      await assertSucceeds(
+        admin.collection('dropdowns').doc('event_types').update({ defaultsSeeded: true })
+      );
+      await assertSucceeds(staff.collection('dropdowns').doc('event_types').get());
+      await assertFails(
+        staff.collection('dropdowns').doc('event_types').set({ defaultsSeeded: true })
+      );
+      await assertFails(
+        staff.collection('dropdowns').doc('event_types').update({ defaultsSeeded: false })
+      );
+    });
+
     test('❌ Signed-in account with no users doc cannot read users or dropdowns', async () => {
       const firestore = testEnv.authenticatedContext('stranger-000', {}).firestore();
       await assertFails(firestore.collection('users').doc(STAFF_UID).get());

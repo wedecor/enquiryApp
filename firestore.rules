@@ -233,6 +233,12 @@ service cloud.firestore {
     }
 
     // Dropdowns - active users can read, admin can manage
+    // Group doc only carries the one-time `defaultsSeeded` marker (DropdownsRepository.repairGroup).
+    match /dropdowns/{group} {
+      allow read: if isActiveUser();
+      allow create, update: if isAdmin();
+    }
+
     match /dropdowns/{group}/items/{value} {
       allow read: if isActiveUser();
       allow create, update, delete: if isAdmin();

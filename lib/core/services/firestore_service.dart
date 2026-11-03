@@ -627,24 +627,6 @@ class FirestoreService {
         .toList();
   }
 
-  /// Adds a new item under `dropdowns/{kind}/items` (admin UI quick-add).
-  Future<void> addDropdownItem({
-    required String kind,
-    required String label,
-    required String value,
-    required int order,
-    required String createdBy,
-  }) async {
-    await _firestore.collection('dropdowns').doc(kind).collection('items').add({
-      'label': label,
-      'value': value,
-      'active': true,
-      'order': order,
-      'createdAt': FieldValue.serverTimestamp(),
-      'createdBy': createdBy,
-    });
-  }
-
   /// Value→label map for a dropdown kind (includes inactive items for history display).
   Future<Map<String, String>> fetchDropdownValueLabelMap(String kind) async {
     final snapshot = await _firestore.collection('dropdowns').doc(kind).collection('items').get();

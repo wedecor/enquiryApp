@@ -8,6 +8,8 @@ import '../../core/providers/role_provider.dart';
 import '../../core/services/firestore_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
+import '../../features/admin/dropdowns/data/dropdowns_repository.dart';
+import '../../features/admin/dropdowns/domain/dropdown_item.dart' show DropdownGroup;
 import '../../shared/models/user_model.dart';
 import '../../ui/primitives/primitives.dart';
 
@@ -247,16 +249,13 @@ class _StatusDropdownState extends ConsumerState<StatusDropdown> {
     });
 
     try {
-      final newValue = newStatus.toLowerCase().replaceAll(' ', '_');
-      await ref
-          .read(firestoreServiceProvider)
-          .addDropdownItem(
-            kind: widget.collectionName,
-            label: newStatus,
-            value: newValue,
-            order: _statuses.length + 1,
-            createdBy: ref.read(currentUserWithFirestoreProvider).value?.uid ?? 'unknown',
-          );
+      // Saved the same way as Dropdown Manager (items/{value}), keeping the
+      // built-in options; the old quick-add wrote items the manager couldn't read.
+      final group = DropdownGroup.fromCollectionPath(widget.collectionName);
+      if (group == null) {
+        throw StateError('Unknown dropdown group: ${widget.collectionName}');
+      }
+      final newValue = await ref.read(dropdownsRepositoryProvider).quickAdd(group, newStatus);
 
       // Refresh the list
       await _loadStatuses();
