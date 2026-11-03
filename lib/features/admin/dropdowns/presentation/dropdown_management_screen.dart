@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/logger.dart';
 import '../../../../core/navigation/shell_widgets.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../../../../ui/components/glass_page_scaffold.dart';
 import '../../../../ui/components/glass_segmented_tabs.dart';
 import '../../../../ui/components/glass_state_message.dart';
 import '../../../../ui/components/gradient_pill_button.dart';
+import '../data/dropdowns_repository.dart';
 import '../domain/dropdown_item.dart';
 import 'dropdown_form_dialog.dart';
 import 'dropdown_providers.dart';
@@ -29,6 +31,8 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  bool _repairing = true;
+  String? _repairError;
 
   @override
   void initState() {
@@ -36,6 +40,30 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
     _tabController = TabController(length: DropdownGroup.values.length, vsync: this);
     _tabController.addListener(_onTabChanged);
     _searchController.addListener(_onSearchChanged);
+    unawaited(_repairGroups());
+  }
+
+  /// Fixes items the old quick-add saved and stores the built-in options once
+  /// (see DropdownsRepository.repairGroup). Wait until this finishes before
+  /// showing the list so delete/toggle always hit `items/{value}` docs.
+  Future<void> _repairGroups() async {
+    final repository = ref.read(dropdownsRepositoryProvider);
+    final failures = <String>[];
+    for (final group in DropdownGroup.values) {
+      try {
+        await repository.repairGroup(group);
+      } catch (e) {
+        failures.add(group.displayName);
+        Log.w('Dropdown repair failed', data: {'group': group.collectionPath, 'error': '$e'});
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _repairing = false;
+      _repairError = failures.isEmpty
+          ? null
+          : 'Could not repair: ${failures.join(', ')}. Some items may be missing fields.';
+    });
   }
 
   @override
@@ -129,11 +157,30 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               ],
             ),
           ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: DropdownGroup.values.map((group) => _buildGroupContent(group)).toList(),
+          if (_repairError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.space4,
+                AppTokens.space2,
+                AppTokens.space4,
+                0,
+              ),
+              child: Text(
+                _repairError!,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
             ),
+          Expanded(
+            child: _repairing
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: DropdownGroup.values
+                        .map((group) => _buildGroupContent(group))
+                        .toList(),
+                  ),
           ),
         ],
       ),

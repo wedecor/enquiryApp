@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
-import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../dashboard_providers.dart';
 import 'dashboard_empty_enquiries.dart';
 import 'dashboard_enquiry_list_row.dart';
 import 'dashboard_enquiry_tab_actions.dart';
@@ -59,32 +59,37 @@ class _DashboardEnquiriesTabState extends ConsumerState<DashboardEnquiriesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: ref
-          .read(firestoreServiceProvider)
-          .watchEnquiriesForRole(isAdmin: isAdmin, assignedToUid: userId),
-      builder: (context, snapshot) {
-        final contentSlivers = _buildContentSlivers(context, snapshot);
+    // Shared role-scoped listener (dashboard_providers.dart): re-keying this tab
+    // on every switch reuses the same Firestore subscription.
+    final enquiriesAsync = watchRoleScopedEnquiries(
+      ref,
+      isAdmin: isAdmin,
+      uid: userId,
+      scopes: enquiryScopesForDashboardTab(status),
+    );
+    final contentSlivers = _buildContentSlivers(context, enquiriesAsync);
 
-        return CustomScrollView(
-          key: PageStorageKey<String>('dashboard-tab-$status'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [...widget.headerSlivers, ...contentSlivers],
-        );
-      },
+    return CustomScrollView(
+      key: PageStorageKey<String>('dashboard-tab-$status'),
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [...widget.headerSlivers, ...contentSlivers],
     );
   }
 
-  List<Widget> _buildContentSlivers(BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
-    if (snapshot.hasError) {
-      return [_centeredContentSliver(errorBuilder(context, snapshot.error!))];
+  List<Widget> _buildContentSlivers(
+    BuildContext context,
+    AsyncValue<List<QueryDocumentSnapshot<Object?>>> enquiriesAsync,
+  ) {
+    if (enquiriesAsync.hasError) {
+      return [_centeredContentSliver(errorBuilder(context, enquiriesAsync.error!))];
     }
 
-    if (!snapshot.hasData) {
+    final loadedEnquiries = enquiriesAsync.valueOrNull;
+    if (loadedEnquiries == null) {
       return [_centeredContentSliver(const CircularProgressIndicator())];
     }
 
-    final rawEnquiries = snapshot.data!.docs.toList();
+    final rawEnquiries = loadedEnquiries.toList();
 
     if (rawEnquiries.isEmpty) {
       return [

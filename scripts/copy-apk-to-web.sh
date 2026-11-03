@@ -18,11 +18,11 @@ if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
     APK_SIZE=$(ls -lh build/app/outputs/flutter-apk/app-release.apk | awk '{print $5}')
     echo "   Size: $APK_SIZE"
 else
-    echo "⚠️  Warning: APK not found in build directory"
-    echo "   Building APK first..."
-    flutter build apk --release
-    cp build/app/outputs/flutter-apk/app-release.apk build/web/android/app-release.apk
-    echo "✅ APK built and copied successfully"
+    # Don't build here: a predeploy build without the release keystore would
+    # ship a debug-signed APK that existing installs can't update to.
+    echo "❌ APK not found at build/app/outputs/flutter-apk/app-release.apk"
+    echo "   Build it first: flutter build apk --release (with the release keystore)"
+    exit 1
 fi
 
 # Copy version.json if it exists

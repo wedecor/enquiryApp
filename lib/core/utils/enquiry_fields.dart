@@ -17,6 +17,15 @@ String canonicalFieldString(Map<String, dynamic> data, String canonicalKey, Stri
   return legacy?.trim() ?? '';
 }
 
+/// Amount as plain text for inputs and exports: `50000`, not `50000.0`; keeps real decimals.
+String amountText(Object? value) {
+  if (value == null) return '';
+  if (value is num) {
+    return value == value.truncateToDouble() ? value.toInt().toString() : value.toString();
+  }
+  return value.toString();
+}
+
 /// Notes write map with plain strings (mirrors to legacy `description`).
 Map<String, String> enquiryNotesFields(String? text) {
   final trimmed = text?.trim() ?? '';

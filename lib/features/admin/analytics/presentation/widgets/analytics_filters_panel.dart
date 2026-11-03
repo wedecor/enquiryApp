@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -239,7 +241,9 @@ class _DateRangePills extends ConsumerWidget {
                   if (preset == DateRangePreset.custom) {
                     await onCustomDateRange(state.filters.dateRange);
                   } else {
-                    ref.read(analyticsControllerProvider.notifier).updateDateRangePreset(preset);
+                    unawaited(
+                      ref.read(analyticsControllerProvider.notifier).updateDateRangePreset(preset),
+                    );
                   }
                 },
               ),

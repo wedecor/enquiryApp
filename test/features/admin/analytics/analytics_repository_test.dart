@@ -64,6 +64,44 @@ void main() {
       expect(jan15.count, 1);
       expect(jan16.count, 1);
     });
+
+    test('rowsInPeriod applies the date range (exclusive end) and filters', () {
+      final dateRange = DateRange(start: DateTime(2026, 1, 16), end: DateTime(2026, 1, 17));
+      final inRange = AnalyticsRepository.rowsInPeriod(raw, dateRange: dateRange);
+      expect(inRange.map((r) => r['statusValue']), ['new']);
+
+      final january = DateRange(start: DateTime(2026, 1, 1), end: DateTime(2026, 2, 1));
+      final weddings = AnalyticsRepository.rowsInPeriod(
+        raw,
+        dateRange: january,
+        filters: AnalyticsFilters(
+          dateRange: january,
+          preset: DateRangePreset.custom,
+          eventType: 'wedding',
+        ),
+      );
+      expect(weddings.length, 2);
+
+      final referral = AnalyticsRepository.rowsInPeriod(
+        raw,
+        dateRange: january,
+        filters: AnalyticsFilters(
+          dateRange: january,
+          preset: DateRangePreset.custom,
+          source: 'referral',
+        ),
+      );
+      expect(referral.map((r) => r['statusValue']), ['new']);
+    });
+
+    test('aggregateRecentEnquiries returns newest first', () {
+      final rows = [
+        for (final (i, r) in raw.indexed) {'id': 'e$i', ...r},
+      ];
+      final recent = AnalyticsRepository.aggregateRecentEnquiries(rows, limit: 2);
+      expect(recent.map((e) => e.id), ['e2', 'e1']);
+      expect(recent.first.status, 'completed');
+    });
   });
 
   group('DropdownGroup enquiryFieldNames', () {

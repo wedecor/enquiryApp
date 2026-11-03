@@ -101,7 +101,7 @@ Only contains `notifyOnEnquiryChange` for push notifications.
 ## 5. Where passwords come from
 
 ### Current Sources:
-1. **Scripts/Console**: `scripts/create_admin_user.js` creates Auth account with password
+1. **Scripts/Console**: the `inviteUser` Cloud Function creates the Auth account and emails a set-password link
 2. **Seeding**: `lib/shared/seed_data.dart:216` uses `createUserWithEmailAndPassword`
 3. **Manual Console**: Admin creates Auth users manually in Firebase Console
 4. **Missing**: No automated invite system with password reset links
@@ -206,7 +206,7 @@ Only contains `notifyOnEnquiryChange` for push notifications.
 - **Missing Function**: `functions/src/index.ts` (only has `notifyOnEnquiryChange`)
 
 ### Scripts & Seeding:
-- **Admin Creation**: `scripts/create_admin_user.js:24-29` (creates Auth + Firestore)
+- **Admin Creation**: `inviteUser` callable in functions/src/index.ts (creates Auth + Firestore)
 - **Seed Data**: `lib/shared/seed_data.dart:216-220` (creates Auth + Firestore)
 
 ### Security Rules:

@@ -1,6 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../../core/constants/status_vocabulary.dart';
+import '../../dashboard/presentation/widgets/dashboard_enquiry_utils.dart';
+import '../domain/event_functions.dart';
 import 'filters_state.dart';
 
 /// Client-side filter for enquiry documents (avoids composite Firestore indexes).
@@ -20,8 +20,12 @@ bool matchesEnquiryFilters(
   }
 
   if (filters.eventTypes.isNotEmpty) {
-    final eventType = _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase();
-    final matchesType = filters.eventTypes.any((t) => t.toLowerCase() == eventType);
+    // Any function of a multi-function booking matches (legacy: the event type).
+    final eventTypes = {
+      _fieldString(data, 'eventTypeValue', 'eventType').toLowerCase(),
+      for (final f in functionsOf(data)) f.eventType.toLowerCase(),
+    };
+    final matchesType = filters.eventTypes.any((t) => eventTypes.contains(t.toLowerCase()));
     if (!matchesType) return false;
   }
 
@@ -32,15 +36,22 @@ bool matchesEnquiryFilters(
   }
 
   if (filters.dateRange != null) {
-    final eventDate = _parseDate(data['eventDate']);
-    if (eventDate == null) return false;
     final start = filters.dateRange!.start;
     final end = filters.dateRange!.end;
-    if (eventDate.isBefore(start) || !eventDate.isBefore(end)) return false;
+    bool inRange(DateTime d) => !d.isBefore(start) && d.isBefore(end);
+    final functions = functionsOf(data);
+    if (functions.length > 1) {
+      // A booking matches when any of its functions falls in the range.
+      if (!functions.any((f) => inRange(f.day))) return false;
+    } else {
+      final eventDate = _parseDate(data['eventDate']);
+      if (eventDate == null || !inRange(eventDate)) return false;
+    }
   }
 
-  final query = filters.searchQuery?.trim().toLowerCase();
-  if (query != null && query.isNotEmpty) {
+  final rawQuery = filters.searchQuery?.trim();
+  final query = rawQuery?.toLowerCase();
+  if (rawQuery != null && query != null && query.isNotEmpty) {
     final haystack = [
       data['customerName'],
       data['customerPhone'],
@@ -50,7 +61,9 @@ bool matchesEnquiryFilters(
       data['eventTypeLabel'],
       data['eventType'],
     ].whereType<String>().join(' ').toLowerCase();
-    if (!haystack.contains(query)) return false;
+    // Shared matcher adds digit-only phone matching ("98765 43210" vs "+919876543210")
+    // against customerPhone / whatsappNumber / phoneNormalized, plus textIndex.
+    if (!haystack.contains(query) && !matchesEnquirySearchQuery(data, rawQuery)) return false;
   }
 
   return true;
@@ -62,10 +75,4 @@ String _fieldString(Map<String, dynamic> data, String primary, String fallback) 
   return value.toString().trim();
 }
 
-DateTime? _parseDate(dynamic value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.toDate();
-  if (value is DateTime) return value;
-  if (value is String) return DateTime.tryParse(value);
-  return null;
-}
+DateTime? _parseDate(dynamic value) => parseEnquiryDateTime(value);

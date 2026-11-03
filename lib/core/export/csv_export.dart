@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../features/admin/analytics/domain/analytics_models.dart';
+import '../../features/enquiries/domain/event_functions.dart';
 import '../../services/dropdown_lookup.dart';
 import '../auth/role_guards.dart';
 import '../theme/app_theme.dart';
@@ -19,129 +20,156 @@ class CsvExport {
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
-  /// Export enquiries to CSV with role-based filtering and column restrictions
-  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries, WidgetRef ref) async {
-    if (enquiries.isEmpty) {
-      throw Exception('No data to export');
-    }
+  /// CSV header row for the enquiry export. Staff never get money, customer email
+  /// or budget columns.
+  static List<String> enquiryHeaders({required bool isAdminUser}) => isAdminUser
+      ? const [
+          'ID',
+          'Customer Name',
+          'Customer Email',
+          'Customer Phone',
+          'Event Type',
+          'Event Date',
+          'Event Location',
+          'Functions',
+          'Guest Count',
+          'Budget Range',
+          'Description',
+          'Status',
+          'Payment Status',
+          'Total Cost',
+          'Advance Paid',
+          'Assigned To',
+          'Priority',
+          'Source',
+          'Created At',
+          'Created By',
+          'Updated At',
+        ]
+      : const [
+          'ID',
+          'Customer Name',
+          'Customer Phone',
+          'Event Type',
+          'Event Date',
+          'Event Location',
+          'Functions',
+          'Guest Count',
+          'Description',
+          'Status',
+          'Priority',
+          'Source',
+          'Created At',
+        ];
 
+  /// One CSV row for [enquiry]. Admin rows read money from the merged financial
+  /// summary ([EnquiryFinancials]); staff rows have no money columns at all.
+  static List<String> enquiryRow(
+    Map<String, dynamic> enquiry, {
+    required bool isAdminUser,
+    DropdownLookup? lookup,
+  }) {
+    if (isAdminUser) {
+      return [
+        enquiry['id']?.toString() ?? '',
+        enquiry['customerName']?.toString() ?? '',
+        enquiry['customerEmail']?.toString() ?? '',
+        enquiry['customerPhone']?.toString() ?? '',
+        _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
+        _formatEventDate(enquiry['eventDate']),
+        enquiry['eventLocation']?.toString() ?? '',
+        _functionsText(enquiry),
+        enquiry['guestCount']?.toString() ?? '',
+        enquiry['budgetRange']?.toString() ?? '',
+        enquiryNotesFrom(enquiry) ?? '',
+        DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
+        _labelOrValue(enquiry, 'paymentStatusLabel', 'paymentStatusValue', 'paymentStatus'),
+        amountText(enquiry['totalCost']),
+        amountText(enquiry['advancePaid']),
+        enquiry['assignedTo']?.toString() ?? '',
+        _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
+        _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
+        _formatTimestamp(enquiry['createdAt']),
+        enquiry['createdBy']?.toString() ?? '',
+        _formatTimestamp(enquiry['updatedAt']),
+      ];
+    }
+    return [
+      enquiry['id']?.toString() ?? '',
+      enquiry['customerName']?.toString() ?? '',
+      enquiry['customerPhone']?.toString() ?? '',
+      _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
+      _formatEventDate(enquiry['eventDate']),
+      enquiry['eventLocation']?.toString() ?? '',
+      _functionsText(enquiry),
+      enquiry['guestCount']?.toString() ?? '',
+      enquiryNotesFrom(enquiry) ?? '',
+      DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
+      _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
+      _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
+      _formatTimestamp(enquiry['createdAt']),
+    ];
+  }
+
+  /// Builds the CSV text page by page as [pages] arrive (no row cap). Returns the
+  /// text and the number of data rows.
+  static Future<({String csv, int count})> buildEnquiryCsv(
+    Stream<List<Map<String, dynamic>>> pages, {
+    required bool isAdminUser,
+    DropdownLookup? lookup,
+  }) async {
+    const converter = ListToCsvConverter();
+    final buffer = StringBuffer(converter.convert([enquiryHeaders(isAdminUser: isAdminUser)]));
+    var count = 0;
+    await for (final page in pages) {
+      if (page.isEmpty) continue;
+      final rows = [
+        for (final enquiry in page) enquiryRow(enquiry, isAdminUser: isAdminUser, lookup: lookup),
+      ];
+      buffer
+        ..write('\r\n')
+        ..write(converter.convert(rows));
+      count += rows.length;
+    }
+    return (csv: buffer.toString(), count: count);
+  }
+
+  /// Export enquiries to CSV with role-based filtering and column restrictions.
+  /// [pages] is [FirestoreService.fetchEnquiriesForRole] (500 rows at a time).
+  /// Returns the number of exported rows; nothing is saved when it is 0.
+  static Future<int> exportEnquiryPages(
+    Stream<List<Map<String, dynamic>>> pages,
+    WidgetRef ref,
+  ) async {
     final isAdminUser = isAdmin(ref);
     final lookup = ref.read(dropdownLookupProvider).valueOrNull;
+    final result = await buildEnquiryCsv(pages, isAdminUser: isAdminUser, lookup: lookup);
+    if (result.count == 0) return 0;
 
-    // Log the export action
     await logAdminAction(ref, 'csv_export_enquiries', {
-      'recordCount': enquiries.length,
+      'recordCount': result.count,
       'isAdmin': isAdminUser,
       'exportType': isAdminUser ? 'full_access' : 'staff_restricted',
     });
 
-    // Define CSV headers based on role
-    final List<String> headers;
-    if (isAdminUser) {
-      // Admin gets all fields including financial data
-      headers = [
-        'ID',
-        'Customer Name',
-        'Customer Email',
-        'Customer Phone',
-        'Event Type',
-        'Event Date',
-        'Event Location',
-        'Guest Count',
-        'Budget Range',
-        'Description',
-        'Status',
-        'Payment Status',
-        'Total Cost',
-        'Advance Paid',
-        'Assigned To',
-        'Priority',
-        'Source',
-        'Created At',
-        'Created By',
-        'Updated At',
-      ];
-    } else {
-      // Staff gets limited fields (no financial data)
-      headers = [
-        'ID',
-        'Customer Name',
-        'Customer Phone',
-        'Event Type',
-        'Event Date',
-        'Event Location',
-        'Guest Count',
-        'Description',
-        'Status',
-        'Priority',
-        'Source',
-        'Created At',
-      ];
-    }
-
-    // Convert enquiries to CSV rows
-    final rows = <List<String>>[headers];
-
-    for (final enquiry in enquiries) {
-      if (isAdminUser) {
-        // Admin export: all fields including financial data
-        rows.add([
-          enquiry['id']?.toString() ?? '',
-          enquiry['customerName']?.toString() ?? '',
-          enquiry['customerEmail']?.toString() ?? '',
-          enquiry['customerPhone']?.toString() ?? '',
-          _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
-          _formatEventDate(enquiry['eventDate']),
-          enquiry['eventLocation']?.toString() ?? '',
-          enquiry['guestCount']?.toString() ?? '',
-          enquiry['budgetRange']?.toString() ?? '',
-          enquiryNotesFrom(enquiry) ?? '',
-          DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
-          _labelOrValue(enquiry, 'paymentStatusLabel', 'paymentStatusValue', 'paymentStatus'),
-          enquiry['totalCost']?.toString() ?? '',
-          enquiry['advancePaid']?.toString() ?? '',
-          enquiry['assignedTo']?.toString() ?? '',
-          _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
-          _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
-          _formatTimestamp(enquiry['createdAt']),
-          enquiry['createdBy']?.toString() ?? '',
-          _formatTimestamp(enquiry['updatedAt']),
-        ]);
-      } else {
-        // Staff export: limited fields (no financial data, customer email, budget)
-        rows.add([
-          enquiry['id']?.toString() ?? '',
-          enquiry['customerName']?.toString() ?? '',
-          enquiry['customerPhone']?.toString() ?? '',
-          _labelOrValue(enquiry, 'eventTypeLabel', 'eventTypeValue', 'eventType'),
-          _formatEventDate(enquiry['eventDate']),
-          enquiry['eventLocation']?.toString() ?? '',
-          enquiry['guestCount']?.toString() ?? '',
-          enquiryNotesFrom(enquiry) ?? '',
-          DropdownLookup.statusLabelOf(lookup, enquiry['statusValue']?.toString()),
-          _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
-          _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
-          _formatTimestamp(enquiry['createdAt']),
-        ]);
-      }
-    }
-
-    // Generate CSV content
-    final csvContent = const ListToCsvConverter().convert(rows);
-    final bytes = Uint8List.fromList(utf8.encode(csvContent));
-
-    // Generate filename with timestamp and role indicator
+    final bytes = Uint8List.fromList(utf8.encode(result.csv));
     final timestamp = _fileNameDateFormat.format(DateTime.now());
     final rolePrefix = isAdminUser ? 'all' : 'assigned';
-    final filename = 'enquiries_${rolePrefix}_$timestamp.csv';
-
-    // Save file
     await FileSaver.instance.saveFile(
-      name: filename,
+      name: 'enquiries_${rolePrefix}_$timestamp.csv',
       bytes: bytes,
       ext: 'csv',
       mimeType: MimeType.csv,
     );
+    return result.count;
+  }
+
+  /// Export an in-memory list of enquiries (same columns as [exportEnquiryPages]).
+  static Future<void> exportEnquiries(List<Map<String, dynamic>> enquiries, WidgetRef ref) async {
+    if (enquiries.isEmpty) {
+      throw Exception('No data to export');
+    }
+    await exportEnquiryPages(Stream.value(enquiries), ref);
   }
 
   /// Export recent enquiries from analytics
@@ -174,7 +202,7 @@ class CsvExport {
         DropdownLookup.statusLabelOf(null, enquiry.status),
         enquiry.source,
         enquiry.priority,
-        enquiry.totalCost?.toString() ?? '',
+        amountText(enquiry.totalCost),
       ]);
     }
 
@@ -378,6 +406,10 @@ class CsvExport {
 
     return dateTime != null ? _dateFormat.format(dateTime) : '';
   }
+
+  /// "Haldi 10 Dec; Mehendi 11 Dec; …" — one row per booking, every function listed.
+  static String _functionsText(Map<String, dynamic> enquiry) =>
+      functionsSummary(functionsOf(enquiry));
 
   static String _formatEventDate(dynamic timestamp) {
     if (timestamp == null) return '';

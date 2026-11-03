@@ -13,7 +13,6 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/error_state.dart';
 import '../../../../shared/widgets/press_scale.dart';
 import '../../../../ui/primitives/primitives.dart';
-import '../../data/enquiry_pagination_provider.dart';
 import '../../filters/filters_controller.dart';
 import '../../filters/filters_state.dart';
 import '../../filters/widgets/filters_bar.dart';
@@ -58,7 +57,7 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         final Widget content;
         if (_view == _EnquiriesView.board) {
           content = KanbanBoardScreen(embeddedInShell: true, filters: filters);
-        } else if (filters.searchQuery?.isNotEmpty ?? false) {
+        } else if (needsLiveEnquiryList(filters)) {
           content = EnquiriesStreamList(
             firestoreService: firestoreService,
             isAdmin: userRole == UserRole.admin,
@@ -288,18 +287,9 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         break;
       case 'add':
         if (userRole != UserRole.admin) return;
-        Navigator.of(context)
-            .push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()))
-            .then((_) {
-              if (_view == _EnquiriesView.list) {
-                final filters = ref.read(enquiryFiltersProvider);
-                if (filters.searchQuery?.isNotEmpty ?? false) return;
-                final status = filters.statuses.length == 1 ? filters.statuses.first : null;
-                ref
-                    .read(paginatedEnquiriesProvider(PaginationParams(status: status)).notifier)
-                    .refresh();
-              }
-            });
+        Navigator.of(
+          context,
+        ).push<void>(MaterialPageRoute<void>(builder: (context) => const EnquiryFormScreen()));
         break;
     }
   }
@@ -319,21 +309,21 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         ),
       );
 
-      final snapshot = await firestoreService.fetchEnquiriesForRole(
-        isAdmin: userRole == UserRole.admin,
-        assignedToUid: userId,
+      // Walks every enquiry in pages of 500 and streams them into the CSV.
+      final exported = await CsvExport.exportEnquiryPages(
+        firestoreService.fetchEnquiriesForRole(
+          isAdmin: userRole == UserRole.admin,
+          assignedToUid: userId,
+        ),
+        ref,
       );
-      final enquiries = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {'id': doc.id, ...data};
-      }).toList();
 
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
 
-      if (enquiries.isEmpty) {
+      if (exported == 0) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -344,9 +334,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         }
         return;
       }
-
-      // Export to CSV with role-based filtering
-      await CsvExport.exportEnquiries(enquiries, ref);
 
       if (context.mounted) {
         CsvExport.showExportSuccess(

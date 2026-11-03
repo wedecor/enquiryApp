@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Accounts are created only through the admin `inviteUser` callable — there
+/// is deliberately no client-side sign-up. Sign out through
+/// `firebaseAuthServiceProvider` so the FCM token is removed.
 class AuthService {
   AuthService._();
 
@@ -10,16 +13,8 @@ class AuthService {
     await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  Future<void> signUp(String email, String password) async {
-    await _auth.createUserWithEmailAndPassword(email: email, password: password);
-  }
-
   Future<void> reset(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
-  }
-
-  Future<void> signOut() async {
-    await _auth.signOut();
   }
 
   static String messageForException(FirebaseAuthException e) {

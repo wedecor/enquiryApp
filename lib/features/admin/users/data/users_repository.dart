@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../../../core/logging/logger.dart';
 import '../domain/user_model.dart';
@@ -9,48 +10,28 @@ class UsersRepository {
   final FirebaseFirestore _firestore;
   static const String _collection = 'users';
 
-  /// Stream of users with filtering, search, and pagination
-  Stream<List<UserModel>> watchUsers({
-    String? search,
-    String? role,
-    bool? active,
-    int limit = 20,
-    String? startAfterEmail,
-  }) {
-    Query query = _firestore.collection(_collection);
-
-    // Apply role filter
-    if (role != null && role.isNotEmpty && role != 'All') {
-      query = query.where('role', isEqualTo: role);
-    }
-
-    // Apply active filter (backward compatible: check both fields)
-    if (active != null) {
-      // Note: During migration, we query for isActive but also handle legacy 'active' field
-      query = query.where('isActive', isEqualTo: active);
-    }
-
-    // Order by email for stable pagination
-    query = query.orderBy('email');
-
-    // Apply pagination
-    if (startAfterEmail != null) {
-      query = query.startAfter([startAfterEmail]);
-    }
-
-    // Apply limit
-    query = query.limit(limit);
-
-    return query
+  /// Live stream of every user document, sorted by email.
+  ///
+  /// The team is small, so the whole collection is streamed and all filtering
+  /// (search, role, active) happens on the client. Sorting is also done on the
+  /// client so documents without an `email` field are not dropped and no
+  /// composite index is needed. Legacy documents that only carry `active` are
+  /// handled by [UserModel.fromFirestore] (`isActive ?? active`).
+  ///
+  /// Phone and email live in `users/{uid}/private/profile` (owner + admins only);
+  /// they are merged in here for the admin screens, with the legacy public fields
+  /// as fallback until the profile exists.
+  Stream<List<UserModel>> watchUsers() {
+    return _firestore
+        .collection(_collection)
         .snapshots()
-        .map((snapshot) {
-          List<UserModel> users = [];
+        .asyncMap((snapshot) async {
+          final users = <UserModel>[];
+          final profiles = await Future.wait(snapshot.docs.map((doc) => _privateProfile(doc.id)));
 
-          // Process each document with error handling
-          for (final doc in snapshot.docs) {
+          for (final (i, doc) in snapshot.docs.indexed) {
             try {
-              final user = UserModel.fromFirestore(doc);
-              users.add(user);
+              users.add(withPrivateProfile(UserModel.fromFirestore(doc), profiles[i]));
             } catch (e, st) {
               Log.e(
                 'UsersRepository: error parsing user document',
@@ -59,48 +40,64 @@ class UsersRepository {
                 data: {'docId': doc.id},
               );
               // Skip invalid documents instead of crashing
-              continue;
             }
           }
 
-          // Apply search filter on client side (for name and email)
-          if (search != null && search.isNotEmpty) {
-            final searchLower = search.toLowerCase();
-            users = users.where((user) {
-              return user.name.toLowerCase().contains(searchLower) ||
-                  user.email.toLowerCase().contains(searchLower);
-            }).toList();
-          }
-
+          users.sort((a, b) => a.email.toLowerCase().compareTo(b.email.toLowerCase()));
           return users;
         })
         .handleError((Object error, StackTrace stackTrace) {
           Log.e('UsersRepository: users stream error', error: error, stackTrace: stackTrace);
-          return <UserModel>[]; // Return empty list on stream error
+          // Forward the error so the UI shows the error state instead of
+          // spinning forever.
+          Error.throwWithStackTrace(error, stackTrace);
         });
   }
 
-  /// Create a new user document
-  Future<void> createUserDoc(UserModel input) async {
-    final userData = input.toFirestore();
-
-    // Set timestamps
-    userData['createdAt'] = FieldValue.serverTimestamp();
-    userData['updatedAt'] = FieldValue.serverTimestamp();
-
-    await _firestore.collection(_collection).doc(input.uid).set(userData);
+  /// `users/{uid}/private/profile` (phone, email) or null when missing / not readable.
+  Future<Map<String, dynamic>?> _privateProfile(String uid) async {
+    try {
+      final snap = await _firestore
+          .collection(_collection)
+          .doc(uid)
+          .collection('private')
+          .doc('profile')
+          .get();
+      return snap.data();
+    } catch (e) {
+      Log.w('UsersRepository: private profile unavailable', data: {'error': e.toString()});
+      return null;
+    }
   }
 
-  /// Update user document with patch
-  Future<void> updateUserDoc(String uid, Map<String, dynamic> patch) async {
-    patch['updatedAt'] = FieldValue.serverTimestamp();
-
-    await _firestore.collection(_collection).doc(uid).update(patch);
+  /// [user] with phone / email from its private profile when that has them.
+  static UserModel withPrivateProfile(UserModel user, Map<String, dynamic>? profile) {
+    if (profile == null) return user;
+    final email = (profile['email'] as String?)?.trim();
+    final phone = (profile['phone'] as String?)?.trim();
+    return user.copyWith(
+      email: (email == null || email.isEmpty) ? user.email : email,
+      phone: (phone == null || phone.isEmpty) ? user.phone : phone,
+    );
   }
 
-  /// Toggle user active status
-  Future<void> toggleActive(String uid, bool active) async {
-    await updateUserDoc(uid, {'isActive': active});
+  /// Updates a user through the `adminUpdateUser` callable (asia-south1).
+  ///
+  /// [changes] may contain only `name`, `phone`, `role` and `isActive` (phone is
+  /// stored in the private profile by the function). The
+  /// function validates the caller (active admin), blocks self role/status
+  /// changes and removing the last active admin, syncs Firebase Auth and FCM
+  /// tokens on deactivation, and writes the audit trail. Throws
+  /// [FirebaseFunctionsException] on failure.
+  Future<void> adminUpdateUser(String uid, Map<String, dynamic> changes) async {
+    final functions = FirebaseFunctions.instanceFor(region: 'asia-south1');
+    final callable = functions.httpsCallable('adminUpdateUser');
+    await callable.call<dynamic>(<String, dynamic>{...changes, 'uid': uid});
+  }
+
+  /// Activates or deactivates a user via [adminUpdateUser].
+  Future<void> toggleActive(String uid, bool active) {
+    return adminUpdateUser(uid, {'isActive': active});
   }
 
   /// Get user by UID
@@ -128,21 +125,5 @@ class UsersRepository {
     } catch (e) {
       throw Exception('Failed to check email: $e');
     }
-  }
-
-  /// Get total count of users (for pagination info)
-  Future<int> getTotalUsersCount({String? role, bool? active}) async {
-    Query query = _firestore.collection(_collection);
-
-    if (role != null && role.isNotEmpty && role != 'All') {
-      query = query.where('role', isEqualTo: role);
-    }
-
-    if (active != null) {
-      query = query.where('isActive', isEqualTo: active);
-    }
-
-    final snapshot = await query.get();
-    return snapshot.docs.length;
   }
 }

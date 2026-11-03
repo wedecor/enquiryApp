@@ -76,6 +76,7 @@ void main() {
       when(
         () => firestore.fetchActiveDropdownItems(any()),
       ).thenAnswer((_) async => _emptyStatusQuerySnapshot());
+      when(() => firestore.getEnquiry(any())).thenAnswer((_) async => null);
       when(
         () => repo.updateStatus(
           id: any(named: 'id'),
@@ -88,6 +89,8 @@ void main() {
         id: 'E2',
         customerName: 'Bob',
         eventType: 'Wedding',
+        // A known location: the Confirm booking sheet can approve straight away.
+        eventLocation: 'JP Nagar',
         eventDate: DateTime.now().add(const Duration(days: 30)),
         status: 'in_talks',
         assignedTo: 'staff1',
@@ -120,8 +123,12 @@ void main() {
       await tester.tap(find.text('Approved').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('Change Status'), findsWidgets);
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Change Status'));
+      // Everyone confirms the booking on a move to Approved; staff never edit money.
+      expect(find.text('Confirm booking'), findsOneWidget);
+      expect(find.text('Amount will be added by an admin'), findsOneWidget);
+      expect(find.byKey(const Key('confirmBookingTotal')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('confirmBookingApprove')));
+      await tester.tap(find.byKey(const Key('confirmBookingApprove')));
       await tester.pumpAndSettle();
 
       verify(() => repo.updateStatus(id: 'E2', nextStatus: 'approved', userId: 'staff1')).called(1);

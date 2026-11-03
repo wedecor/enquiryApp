@@ -6,6 +6,9 @@ import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../services/dropdown_lookup.dart';
 import '../../../../../ui/components/enquiry_list_row.dart';
+import '../../../domain/booking_amounts.dart';
+import '../../../domain/enquiry_location.dart';
+import '../../../domain/event_functions.dart';
 
 /// Kanban card: the shared [EnquiryListRow] (tight variant) made draggable.
 /// While dragging, the card lifts — slight tilt, scale and a status-coloured
@@ -18,6 +21,7 @@ class KanbanCard extends StatelessWidget {
     required this.dropdownLookup,
     required this.onTap,
     required this.width,
+    this.isAdmin = false,
   });
 
   final QueryDocumentSnapshot doc;
@@ -25,6 +29,9 @@ class KanbanCard extends StatelessWidget {
   final DropdownLookup? dropdownLookup;
   final VoidCallback onTap;
   final double width;
+
+  /// Admins also see "Amount pending" on bookings without a total amount.
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +41,17 @@ class KanbanCard extends StatelessWidget {
     final eventTypeLabel =
         (data['eventTypeLabel'] as String?) ??
         (dropdownLookup?.labelForEventType(eventTypeValue) ?? _titleCase(eventTypeValue));
-    final location = (data['eventLocation'] ?? data['location']) as String?;
-    final eventDate = _ts(data['eventDate']);
+    // Multi-function booking: "4 functions · 10–13 Dec · Next: Haldi, 10 Dec (JP Nagar)",
+    // dated (and counted down) by the next upcoming function.
+    final now = DateTime.now();
+    final functions = functionsOf(data);
+    final functionsLine = functionsListSubtitle(functions, now);
+    final location = functionsLine != null
+        ? null
+        : (data['eventLocation'] ?? data['location']) as String?;
+    final eventDate = functionsLine != null
+        ? nextFunctionOf(functions, now)?.day
+        : _ts(data['eventDate']);
     final hasEventDate = eventDate != null && eventDate.year > 1971;
     final createdAt = _ts(data['createdAt']) ?? DateTime.now();
     final countdown = _countdownLabel(eventDate);
@@ -48,7 +64,7 @@ class KanbanCard extends StatelessWidget {
       customerName: customerName,
       statusValue: statusValue,
       statusColor: statusColor,
-      eventTypeLabel: eventTypeLabel,
+      eventTypeLabel: functionsLine ?? eventTypeLabel,
       eventTypeValue: eventTypeValue,
       eventDateLabel: countdown ?? '',
       eventDate: hasEventDate ? eventDate : null,
@@ -57,6 +73,11 @@ class KanbanCard extends StatelessWidget {
       ageLabel: hasEventDate && countdown != null ? '$countdown · $ageLabel' : ageLabel,
       onTap: onTap,
       showStatusChip: false,
+      locationPending: isApprovedLocationPending(
+        statusIsApproved: EnquiryStatus.isApproved(statusValue),
+        data: data,
+      ),
+      amountPending: isAdmin && isApprovedAmountPending(data),
       showChevron: false,
       bordered: true,
       margin: margin,

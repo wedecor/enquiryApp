@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -63,7 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
         GlassStateMessage(
           icon: Icons.error_outline_rounded,
           title: 'Settings unavailable',
-          message: 'Error: $error',
+          message: 'Settings could not be loaded. Please try again.',
           color: Theme.of(context).colorScheme.error,
         ),
       ),
@@ -73,6 +75,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
   Widget _wrap(Widget body) {
     if (widget.embeddedInShell) return body;
     return GlassPageScaffold(eyebrow: 'Workspace', title: 'Settings', body: body);
+  }
+
+  /// Swaps in a controller with [length] tabs when the segment count changes
+  /// (admin tab appears/disappears), keeping the selected index. The old
+  /// controller is still attached to the widgets from the previous frame, so
+  /// it is disposed after this frame instead of during build.
+  void _ensureTabCount(int length) {
+    if (_tabController.length == length) return;
+    final old = _tabController;
+    _tabController = TabController(
+      length: length,
+      vsync: this,
+      initialIndex: math.min(old.index, length - 1),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
 
   Widget _buildSettingsScreen(BuildContext context, bool isAdmin) {
@@ -87,11 +104,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
     final segments = isAdmin ? [..._baseSegments, _adminSegment] : _baseSegments;
     final tabViews = isAdmin ? [...baseTabViews, const AdminTab()] : baseTabViews;
 
-    // Update tab controller length if needed
-    if (_tabController.length != segments.length) {
-      _tabController.dispose();
-      _tabController = TabController(length: segments.length, vsync: this);
-    }
+    _ensureTabCount(segments.length);
 
     return _wrap(
       Column(

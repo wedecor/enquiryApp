@@ -86,6 +86,20 @@ void main() {
     });
   });
 
+  group('FirestoreService.parseDropdownOptionMaps', () {
+    test('skips inactive, falls back to doc id, sorts by order', () {
+      final options = FirestoreService.parseDropdownOptionMaps([
+        ('rand', {'value': 'mehendi', 'label': 'Mehendi', 'order': 2, 'active': true}),
+        ('dead', {'value': 'old', 'label': 'Old', 'order': 1, 'active': false}),
+        ('wedding', {'label': 'Wedding', 'order': 1}), // missing active + value
+      ]);
+      expect(options, [
+        {'label': 'Wedding', 'value': 'wedding'},
+        {'label': 'Mehendi', 'value': 'mehendi'},
+      ]);
+    });
+  });
+
   group('DropdownLookup.statusLabelOf', () {
     test('legacy values show the canonical label', () {
       expect(DropdownLookup.statusLabelOf(null, 'quote_sent'), 'In Talks');
@@ -118,6 +132,15 @@ void main() {
       final data = {
         'statusValue': 'confirmed',
         'eventDate': Timestamp.fromDate(DateTime(2026, 10, 5)),
+      };
+      expect(shouldShowReminder(data, now), isFalse);
+    });
+
+    test('a follow-up already sent leaves the list', () {
+      final data = {
+        'statusValue': 'in_talks',
+        'eventDate': Timestamp.fromDate(DateTime(2026, 10, 11)),
+        'lastReminderSentAt': Timestamp.fromDate(DateTime(2026, 9, 30)),
       };
       expect(shouldShowReminder(data, now), isFalse);
     });

@@ -147,6 +147,7 @@ class EnquiryDetailFooter extends ConsumerWidget {
           isAdmin: isAdmin,
           isAssignee: isAssignee,
           layout: EnquiryStatusLayout.list,
+          onStatusChanged: () => Navigator.of(ctx).pop(),
         ),
       ),
     );

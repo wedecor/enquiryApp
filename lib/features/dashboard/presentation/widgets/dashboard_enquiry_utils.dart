@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
+import '../../../enquiries/domain/event_functions.dart';
+import '../../../enquiries/domain/follow_up.dart';
 
 DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
   if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
   return null;
 }
 
@@ -42,8 +46,10 @@ int compareByEventDate(QueryDocumentSnapshot<Object?> a, QueryDocumentSnapshot<O
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final now = DateTime.now();
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   if (aEvent != null && bEvent != null) {
     return aEvent.compareTo(bEvent);
@@ -73,8 +79,9 @@ int compareByNearestEventDate(
   final aData = a.data() as Map<String, dynamic>;
   final bData = b.data() as Map<String, dynamic>;
 
-  final aEvent = parseEnquiryDateTime(aData['eventDate']);
-  final bEvent = parseEnquiryDateTime(bData['eventDate']);
+  // Multi-function bookings sort by their next upcoming function.
+  final aEvent = listSortDateOf(aData, now);
+  final bEvent = listSortDateOf(bData, now);
 
   final aDiff = aEvent?.difference(now);
   final bDiff = bEvent?.difference(now);
@@ -112,6 +119,27 @@ int compareByNearestEventDate(
   return bCreated.compareTo(aCreated);
 }
 
+/// Digit strings to try for a phone search, so the country code / trunk zero
+/// doesn't matter either way: "+91 98765 43210", "0 98765 43210" and
+/// "9876543210" all find a number stored as "9876543210" or "+919876543210".
+/// Partial input works too ("+91 98765" also tries "98765").
+Set<String> phoneSearchVariants(String digits, {String rawQuery = ''}) {
+  final variants = <String>{digits};
+  // Full number typed with a country code: compare the last 10 digits.
+  if (digits.length > 10) variants.add(digits.substring(digits.length - 10));
+  // Partial number typed with an explicit +91 / 0091 prefix: drop the prefix.
+  // (A bare "91…" isn't stripped — Indian mobiles can start with 91.)
+  final raw = rawQuery.replaceAll(RegExp(r'\s'), '');
+  if (raw.startsWith('+91') && digits.length > 2) variants.add(digits.substring(2));
+  if (digits.startsWith('0091') && digits.length > 4) variants.add(digits.substring(4));
+  // Trunk zero ("098765…"): mobiles never start with 0.
+  if (digits.startsWith('0') && digits.length > 1) {
+    variants.add(digits.replaceFirst(RegExp('^0+'), ''));
+  }
+  variants.remove('');
+  return variants;
+}
+
 bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
   if (searchQuery.isEmpty) return true;
 
@@ -133,11 +161,12 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
   if (digitQuery.isEmpty) {
     return false;
   }
+  final digitQueries = phoneSearchVariants(digitQuery, rawQuery: query);
 
   bool matchesDigits(String? input) {
     if (input == null || input.isEmpty) return false;
     final cleaned = input.replaceAll(RegExp(r'\D'), '');
-    return cleaned.contains(digitQuery);
+    return digitQueries.any(cleaned.contains);
   }
 
   return matchesDigits(data['customerPhone'] as String?) ||
@@ -145,8 +174,28 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
       matchesDigits(data['phoneNormalized'] as String?);
 }
 
+/// Follow Up tab / "Follow-ups" counter.
+///
+/// Enquiries managed by automatic follow-ups (`followUpSeq` present) show while
+/// their follow-up is due or overdue (New / In Talks); "Mark done" or a reschedule
+/// removes them. Older documents keep the legacy rule (In Talks, event within
+/// 21 days, no follow-up WhatsApp sent) until the server backfills them.
 bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
+  final followUp = FollowUpInfo.fromData(enquiryData);
+  if (followUp.tracked) {
+    return FollowUpInfo.isEligibleStatus(enquiryData['statusValue'] as String?) &&
+        followUp.isActionableAt(now);
+  }
+  return _legacyShouldShowReminder(enquiryData, now);
+}
+
+bool _legacyShouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
   if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
+    return false;
+  }
+
+  // Follow-up already sent from the Follow Up tab — don't show it again.
+  if (enquiryData['lastReminderSentAt'] != null) {
     return false;
   }
 
@@ -173,7 +222,7 @@ int eventDayOffset(DateTime eventDate, DateTime now) {
   return eventDay.difference(today).inDays;
 }
 
-/// Past-dated enquiries stay visible until the nightly auto-close function moves them.
+/// Past-dated enquiries stay visible: they are flagged for follow-up, never auto-closed.
 bool shouldShowInTalks(Map<String, dynamic> enquiryData) =>
     EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?);
 
@@ -243,7 +292,7 @@ String buildReminderMessage(
   DateTime? eventDate,
 ) {
   final now = DateTime.now();
-  final daysUntilEvent = eventDate?.difference(now).inDays;
+  final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
 
   String urgencyMessage;
   if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {

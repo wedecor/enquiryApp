@@ -1,29 +1,19 @@
 {
-  "version": "2.0.13",
-  "buildNumber": 44,
-  "releaseDate": "2026-10-01",
-  "releaseNotes": "⬇️ The Download button in update prompts now opens the browser\n✨ Fresh new design across every screen\n🏷️ Statuses are consistent everywhere (New, In Talks, Approved, Completed, Not Interested, Closed Lost, Cancelled)\n📅 'This week' counter, calendar conflicts and analytics date ranges fixed\n⚡ Long-press an enquiry for Add note, Share, Mark not interested and Request review",
+  "version": "2.0.27",
+  "buildNumber": 58,
+  "releaseDate": "2026-11-03",
+  "releaseNotes": "\ud83d\udc8c Wishes now have two versions, for past customers and for people who enquired\n\ud83d\udccb Upcoming occasions shows who's who, with a filter",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "7fb1c3040debcb3835ee23664414718f8cb4f0d07b625c59c1a502ef1e68b4cb",
+  "sha256": "b56735da9081bb38652030d97d419ebec112ae930af627f0ab68b083058e7b8e",
   "forceUpdate": false,
-  "minSupportedBuildNumber": 3,
+  "minSupportedBuildNumber": 54,
   "features": [
-    "NEW: Redesigned app - glass navigation, cleaner dashboard, enquiry list, calendar, analytics and settings",
-    "NEW: Long-press actions on dashboard rows - Add note, Share, Mark not interested, Request review",
-    "NEW: Revenue KPI caption explains it is the booked value of enquiries created in the period",
-    "IMPROVED: Status names always use the official labels, even for older enquiries",
-    "IMPROVED: In Talks tab shows every in-talks enquiry; past ones are closed automatically each night",
-    "IMPROVED: Calendar only flags a conflict when two or more approved bookings share a day",
-    "IMPROVED: Kanban column titles follow admin label settings",
-    "IMPROVED: Enquiries list loads straight away on cold start"
+    "NEW: Separate wish messages for past customers and for people who only enquired",
+    "NEW: Upcoming occasions marks PAST CUSTOMER / ENQUIRED and filters by either",
+    "IMPROVED: Wish cards are timing-neutral (no date, no \"Happy\u2026\")"
   ],
   "bugFixes": [
-    "Fixed update prompt Download button doing nothing on Android 11+",
-    "Fixed 'This week' counter missing today's events and counting lost enquiries",
-    "Fixed analytics custom date range dropping the last day",
-    "Fixed old status values (e.g. Quote Sent, Confirmed) showing wrong labels or missing from filters",
-    "Fixed staff calendar index error",
-    "Fixed status-change push notifications not being sent to assignees",
-    "Fixed automatic closing of past enquiries using the wrong timezone; changes now appear in History"
+    "Lost-enquiry wishes no longer read as if we decorated their event",
+    "Wish card no longer implies the occasion is today"
   ]
 }

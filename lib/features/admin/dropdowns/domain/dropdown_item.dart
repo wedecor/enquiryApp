@@ -28,6 +28,14 @@ enum DropdownGroup {
     }
   }
 
+  /// The group stored at `dropdowns/{path}`, or null for an unknown path.
+  static DropdownGroup? fromCollectionPath(String path) {
+    for (final group in DropdownGroup.values) {
+      if (group.collectionPath == path) return group;
+    }
+    return null;
+  }
+
   /// Firestore collection path for the group
   String get collectionPath {
     switch (this) {
@@ -94,16 +102,85 @@ class DropdownItem with _$DropdownItem {
 
   /// Create a DropdownItem from Firestore document
   factory DropdownItem.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    return DropdownItem.fromMap(doc.id, data);
+  }
+
+  /// Tolerant parse used by [fromFirestore] and unit tests.
+  ///
+  /// One bad or half-written item (pending server timestamp, old quick-add
+  /// without `updatedAt`, random doc id) must not blank the whole list.
+  /// Prefer the stored `value` field so enquiry reference checks and delete
+  /// use the semantic value even before [DropdownsRepository.repairGroup]
+  /// moves the doc to `items/{value}`.
+  factory DropdownItem.fromMap(String docId, Map<String, dynamic> data) {
+    DateTime when(Object? raw) =>
+        raw is Timestamp ? raw.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+    final storedValue = _asTrimmedString(data['value']);
+    final label = _asTrimmedString(data['label']);
+    final color = _asTrimmedString(data['color']);
     return DropdownItem(
-      value: doc.id,
-      label: data['label'] as String,
-      order: data['order'] as int,
-      active: data['active'] as bool,
-      color: data['color'] as String?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      value: storedValue != null && storedValue.isNotEmpty ? storedValue : docId,
+      label: label == null || label.isEmpty ? (storedValue ?? docId) : label,
+      order: _asOrder(data['order']),
+      active: _asActive(data['active']),
+      color: color,
+      createdAt: when(data['createdAt']),
+      updatedAt: when(data['updatedAt']),
     );
+  }
+
+  static String? _asTrimmedString(Object? raw) {
+    if (raw is String) {
+      final trimmed = raw.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (raw is num || raw is bool) return raw.toString();
+    return null;
+  }
+
+  static int _asOrder(Object? raw) {
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw.trim()) ?? 0;
+    return 0;
+  }
+
+  /// Missing / unknown `active` counts as active (matches website loadEventTypes).
+  static bool _asActive(Object? raw) {
+    if (raw is bool) return raw;
+    if (raw == 1 || raw == '1' || raw == 'true') return true;
+    if (raw == 0 || raw == '0' || raw == 'false') return false;
+    return true;
+  }
+
+  /// Slug used as the Firestore doc id / `value` for a typed label.
+  static String valueFromLabel(String label) {
+    return label
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+  }
+}
+
+/// Pure helpers for [DropdownsRepository.repairGroup] (unit-tested).
+class DropdownRepair {
+  DropdownRepair._();
+
+  /// Fields to fill on a half-written item. Empty when the doc is already complete.
+  static Map<String, Object> missingFields(Map<String, dynamic> data, String docId) {
+    final value = (data['value'] as String?)?.trim();
+    return {
+      if (data['label'] is! String) 'label': value ?? docId,
+      if (data['order'] is! num) 'order': 0,
+      if (data['active'] is! bool) 'active': true,
+    };
+  }
+
+  /// True when the item was saved under a random id and should move to `items/{value}`.
+  static bool needsRelocate(String docId, String? value) {
+    final v = value?.trim();
+    return v != null && v.isNotEmpty && v != docId;
   }
 }
 

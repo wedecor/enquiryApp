@@ -17,6 +17,24 @@ bool isProfileActive(Map<String, dynamic> data) {
   return isActive != false;
 }
 
+/// Builds the session [UserModel] from a `users/{uid}` document, tolerating
+/// legacy/hand-edited docs: missing `name`/`email`, role in any case
+/// (`'Admin'`), non-string phone. Unknown roles fall back to staff.
+@visibleForTesting
+UserModel parseSessionProfile(String uid, Map<String, dynamic> data, {String? fallbackEmail}) {
+  String? str(Object? v) {
+    if (v == null) return null;
+    final text = v.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  final email = str(data['email']) ?? fallbackEmail ?? '';
+  final name = str(data['name']) ?? str(data['displayName']) ?? email.split('@').first;
+  final role = str(data['role'])?.toLowerCase() == 'admin' ? UserRole.admin : UserRole.staff;
+
+  return UserModel(uid: uid, name: name, email: email, phone: str(data['phone']), role: role);
+}
+
 class SessionService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirestoreService _firestoreService;
@@ -30,6 +48,11 @@ class SessionService {
   Stream<SessionState>? _sessionStream;
   Timer? _debounceTimer;
   User? _lastUser;
+
+  /// Live listener on `users/{uid}` for the signed-in user, so deactivation
+  /// and provisioning take effect without restarting the app.
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _profileSubscription;
+  SessionState? _lastEmitted;
 
   /// Stream of session states with debouncing and profile fetching.
   Stream<SessionState> get sessionStream => _sessionStream ??= _bindSessionStream();
@@ -53,6 +76,7 @@ class SessionService {
 
     // If user is null, emit immediately
     if (user == null) {
+      _cancelProfileSubscription();
       _lastUser = null;
       _emitSessionState(const SessionState.unauthenticated());
       safeLog('session_transition', {'outcome': 'unauthenticated', 'reason': 'auth_user_null'});
@@ -63,6 +87,9 @@ class SessionService {
     if (_lastUser?.uid == user.uid) {
       return;
     }
+
+    // A different user: stop listening to the previous user's profile.
+    _cancelProfileSubscription();
 
     // Debounce rapid auth changes
     _debounceTimer = Timer(const Duration(milliseconds: 400), () {
@@ -90,9 +117,16 @@ class SessionService {
 
     try {
       // Fetch profile with exponential backoff
-      final fetchResult = await _fetchProfileWithBackoff(user.uid);
+      final fetchResult = await _fetchProfileWithBackoff(user.uid, user.email);
       final profile = fetchResult.profile;
       final rawData = fetchResult.rawData;
+
+      // Signed out or switched user while fetching: drop the stale result.
+      if (_lastUser?.uid != user.uid) return;
+
+      // From here on, react to changes of users/{uid} (deactivation,
+      // reactivation, provisioning, role changes).
+      _listenToProfile(user, userLite);
 
       if (profile == null) {
         _emitSessionState(SessionState.unprovisioned(email: user.email ?? ''));
@@ -123,6 +157,7 @@ class SessionService {
         'uid': user.uid,
       });
     } catch (e, stackTrace) {
+      if (_lastUser?.uid != user.uid) return;
       _emitSessionState(SessionState.error(message: 'Failed to load user profile', cause: e));
 
       safeLog('session_transition_error', {
@@ -137,6 +172,7 @@ class SessionService {
   /// Fetch user profile with exponential backoff
   Future<({UserModel? profile, Map<String, dynamic>? rawData})> _fetchProfileWithBackoff(
     String uid,
+    String? authEmail,
   ) async {
     const delays = [250, 500, 1000, 2000, 4000]; // ~7.75s total
 
@@ -151,7 +187,10 @@ class SessionService {
         if (doc.exists) {
           final data = doc.data();
           if (data != null) {
-            return (profile: UserModel.fromJson({'uid': uid, ...data}), rawData: data);
+            return (
+              profile: parseSessionProfile(uid, data, fallbackEmail: authEmail),
+              rawData: data,
+            );
           }
         }
 
@@ -187,8 +226,71 @@ class SessionService {
     return (profile: null, rawData: null);
   }
 
+  /// Subscribes to `users/{uid}` and maps each snapshot to a session state:
+  /// missing doc → unprovisioned, inactive → disabled, otherwise
+  /// authenticated (with the fresh profile). Identical states are not
+  /// re-emitted.
+  void _listenToProfile(User user, FirebaseUserLite userLite) {
+    _cancelProfileSubscription();
+    final email = user.email ?? '';
+    _profileSubscription = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen(
+          (doc) {
+            if (_lastUser?.uid != user.uid) return;
+
+            final SessionState next;
+            final data = doc.data();
+            if (!doc.exists || data == null) {
+              // A cache-only "missing" result is not authoritative.
+              if (doc.metadata.isFromCache) return;
+              next = SessionState.unprovisioned(email: email);
+            } else if (!isProfileActive(data)) {
+              next = SessionState.disabled(email: email);
+            } else {
+              next = SessionState.authenticated(
+                user: userLite,
+                profile: parseSessionProfile(user.uid, data, fallbackEmail: user.email),
+              );
+            }
+
+            if (next == _lastEmitted) return;
+            _emitSessionState(next);
+            safeLog('session_transition', {
+              'outcome': next.map(
+                unauthenticated: (_) => 'unauthenticated',
+                loading: (_) => 'loading',
+                authenticated: (_) => 'authenticated',
+                unprovisioned: (_) => 'unprovisioned',
+                disabled: (_) => 'disabled',
+                error: (_) => 'error',
+              ),
+              'reason': 'profile_snapshot',
+              'uid': user.uid,
+            });
+          },
+          onError: (Object e, StackTrace st) {
+            if (_lastUser?.uid != user.uid) return;
+            safeLog('session_profile_listen_error', {'error': e.toString(), 'uid': user.uid});
+            // Losing read access to our own profile means the account was
+            // deactivated (rules require an active user).
+            if (e is FirebaseException && e.code == 'permission-denied') {
+              _emitSessionState(SessionState.disabled(email: email));
+            }
+          },
+        );
+  }
+
+  void _cancelProfileSubscription() {
+    _profileSubscription?.cancel();
+    _profileSubscription = null;
+  }
+
   void _emitSessionState(SessionState state) {
     if (_sessionController != null && !_sessionController!.isClosed) {
+      _lastEmitted = state;
       _sessionController!.add(state);
     }
   }
@@ -205,6 +307,8 @@ class SessionService {
   void dispose() {
     _debounceTimer?.cancel();
     _debounceTimer = null;
+    _cancelProfileSubscription();
+    _lastEmitted = null;
     _authSubscription?.cancel();
     _authSubscription = null;
     _sessionController?.close();

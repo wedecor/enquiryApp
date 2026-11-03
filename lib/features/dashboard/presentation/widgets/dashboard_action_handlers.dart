@@ -5,12 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
+import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/review_request_service.dart';
-import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
+import '../../../enquiries/data/follow_up_service.dart';
 import '../../../enquiries/domain/enquiry.dart';
+import '../../../enquiries/domain/follow_up.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
+import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'dashboard_action_sheets.dart';
 import 'dashboard_enquiry_tab_actions.dart';
@@ -141,20 +145,16 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     try {
       final repository = ref.read(enquiryRepositoryProvider);
 
-      final confirmed = await ConfirmationDialog.show(
-        context: context,
-        title: 'Mark as Not Interested',
-        message:
-            'Mark this enquiry as "Not Interested"?\n\nThis will update the status and notify all admins.',
-        confirmText: 'Mark as Not Interested',
-        cancelText: 'Cancel',
-        isDestructive: false,
-        icon: Icons.block,
+      // The reason sheet doubles as the confirmation step.
+      final lostPrompt = await promptLostReasonIfNeeded(context, 'not_interested');
+      if (!lostPrompt.proceed || !mounted) return;
+
+      await repository.updateStatus(
+        id: enquiryId,
+        nextStatus: 'not_interested',
+        userId: userId,
+        lostReason: lostPrompt.choice,
       );
-
-      if (!confirmed || !mounted) return;
-
-      await repository.updateStatus(id: enquiryId, nextStatus: 'not_interested', userId: userId);
 
       if (mounted) {
         showSnack('Enquiry marked as Not Interested');
@@ -204,19 +204,52 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
 
     if (!mounted || result == null) return;
 
+    final firestoreService = ref.read(firestoreServiceProvider);
+    final auditService = ref.read(auditServiceProvider);
+    final newNotes = result.trim();
+    final oldNotes = enquiry.notes?.trim() ?? '';
     try {
-      final firestoreService = ref.read(firestoreServiceProvider);
-      if (result.isEmpty) {
+      // Re-read so the search index is rebuilt from the current name/phone/email.
+      final current = await firestoreService.getEnquiry(enquiry.id) ?? const <String, dynamic>{};
+      final customerName = (current['customerName'] as String?) ?? enquiry.customerName;
+      final customerPhone = (current['customerPhone'] as String?) ?? enquiry.customerPhone;
+      final customerEmail = (current['customerEmail'] as String?) ?? enquiry.customerEmail;
+      final emailOrNull = (customerEmail?.trim().isNotEmpty ?? false)
+          ? customerEmail!.trim()
+          : null;
+      final indexFields = FirestoreService.searchIndexFieldsFor(
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: emailOrNull,
+        notes: newNotes,
+      );
+
+      if (newNotes.isEmpty) {
         await firestoreService.updateEnquiry(enquiry.id, {
           'notes': FieldValue.delete(),
           'description': FieldValue.delete(),
+          ...indexFields,
         });
-        showSnack('Notes cleared');
       } else {
-        await firestoreService.updateEnquiry(enquiry.id, {'notes': result, 'description': result});
-        showSnack('Notes updated');
+        await firestoreService.updateEnquiry(enquiry.id, {
+          'notes': newNotes,
+          'description': newNotes,
+          ...indexFields,
+        });
       }
+
+      if (oldNotes != newNotes) {
+        // Non-fatal: logs (does not throw) if the history entry can't be written.
+        await auditService.recordChange(
+          enquiryId: enquiry.id,
+          fieldChanged: 'notes',
+          oldValue: oldNotes.isEmpty ? 'Not Set' : oldNotes,
+          newValue: newNotes.isEmpty ? 'Not Set' : newNotes,
+        );
+      }
+      showSnack(newNotes.isEmpty ? 'Notes cleared' : 'Notes updated');
     } catch (e) {
+      Log.e('Failed to update notes', error: e);
       showSnack('Failed to update notes');
     }
   }
@@ -234,7 +267,9 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Handle reminder WhatsApp click - increments count and opens WhatsApp
+  /// Follow-up WhatsApp from the Follow Up tab. Once WhatsApp opens, the enquiry is
+  /// marked as followed up (`lastReminderSentAt`) and leaves the Follow Up list;
+  /// the snackbar's Undo puts it back.
   Future<void> handleReminderWhatsApp(
     String phone,
     String customerName,
@@ -248,27 +283,74 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       return;
     }
 
-    try {
-      await ref.read(firestoreServiceProvider).updateEnquiry(enquiryId, {
-        'reminderClickCount': FieldValue.increment(1),
-        'lastReminderSentAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      Log.e('Failed to increment reminder count', error: e);
-      // Continue even if count update fails
-    }
-
     final launcher = ref.read(contactLauncherProvider);
     final prefill = buildReminderMessage(customerName, eventType, createdAt, eventDate);
     final status = await launcher.openWhatsAppWithAudit(
       phone,
       prefillText: prefill,
       enquiryId: enquiryId,
+      contactType: ContactType.reminder,
     );
+
+    if (status == ContactLaunchStatus.opened) {
+      final firestore = ref.read(firestoreServiceProvider);
+      final followUps = ref.read(followUpServiceProvider);
+      final userId = ref.read(currentUserWithFirestoreProvider).valueOrNull?.uid;
+      // Automatic follow-up open on this enquiry: the WhatsApp counts as done.
+      FollowUpInfo? completed;
+      try {
+        await firestore.updateEnquiry(enquiryId, {
+          'reminderClickCount': FieldValue.increment(1),
+          'lastReminderSentAt': FieldValue.serverTimestamp(),
+        });
+        final snap = await firestore.enquiriesCollection.doc(enquiryId).get();
+        final info = FollowUpInfo.fromData(snap.data() ?? const {});
+        if (userId != null && info.tracked && info.dueAt != null) {
+          await followUps.complete(enquiryId: enquiryId, userId: userId, previousDueAt: info.dueAt);
+          completed = info;
+        }
+      } catch (e) {
+        Log.e('Failed to mark follow-up as sent', error: e);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Follow-up sent to $customerName'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                try {
+                  await firestore.updateEnquiry(enquiryId, {
+                    'reminderClickCount': FieldValue.increment(-1),
+                    'lastReminderSentAt': FieldValue.delete(),
+                  });
+                  // Put the follow-up back (a completion can't be un-recorded; it is
+                  // re-opened as a manual reschedule, kept in the history).
+                  final previous = completed?.dueAt;
+                  if (userId != null && previous != null) {
+                    final soon = DateTime.now().add(const Duration(minutes: 1));
+                    await followUps.reschedule(
+                      enquiryId: enquiryId,
+                      userId: userId,
+                      dueAt: previous.isAfter(soon) ? previous : soon,
+                      note: completed?.note,
+                      reason: 'manual',
+                    );
+                  }
+                } catch (e) {
+                  Log.e('Failed to undo follow-up', error: e);
+                }
+              },
+            ),
+          ),
+        );
+      return;
+    }
 
     switch (status) {
       case ContactLaunchStatus.opened:
-        showSnack('Reminder sent to $customerName via WhatsApp');
         break;
       case ContactLaunchStatus.invalidNumber:
         showSnack('Invalid WhatsApp number');

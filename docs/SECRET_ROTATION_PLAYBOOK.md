@@ -39,6 +39,6 @@ This playbook describes how to revoke, rotate, and roll out new credentials safe
 ## Post-Rotation Checklist
 - [ ] Replace secrets in CI / envs
 - [ ] Redeploy affected services
-- [ ] Purge secrets from history (scripts/history_purge.sh)
+- [ ] Purge secrets from history (scripts/purge_secrets_from_history.sh)
 - [ ] Monitor logs for unauthorized attempts
 - [ ] Update runbooks/docs

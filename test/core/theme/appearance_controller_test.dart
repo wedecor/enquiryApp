@@ -58,7 +58,7 @@ void main() {
       final container = ProviderContainer();
 
       // Allow async loading to complete
-      await Future.delayed(const Duration(milliseconds: 10));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
       // Should fallback to light mode
       final mode = container.read(appearanceControllerProvider);

@@ -329,6 +329,7 @@ class _MockContactLauncher extends ContactLauncher {
     String rawPhone, {
     String? prefillText,
     String? enquiryId,
+    ContactType contactType = ContactType.whatsapp,
   }) async {
     if (onWhatsApp != null) {
       return onWhatsApp!(rawPhone, prefillText);

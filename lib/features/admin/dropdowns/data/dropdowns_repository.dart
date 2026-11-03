@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/dropdown_defaults.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../domain/dropdown_item.dart';
 
@@ -16,9 +17,126 @@ class DropdownsRepository {
 
   /// Watch dropdown items for a specific group
   Stream<List<DropdownItem>> watchGroup(DropdownGroup group) {
-    return _getCollection(group).orderBy('order').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => DropdownItem.fromFirestore(doc)).toList();
+    // Sorted here, not with orderBy('order'): Firestore's orderBy silently drops
+    // items that have no `order` field.
+    return _getCollection(group).snapshots().map((snapshot) {
+      final items = snapshot.docs.map(DropdownItem.fromFirestore).toList()
+        ..sort((a, b) {
+          final byOrder = a.order.compareTo(b.order);
+          return byOrder != 0 ? byOrder : a.label.toLowerCase().compareTo(b.label.toLowerCase());
+        });
+      return items;
     });
+  }
+
+  /// Repairs a group so the manager and the forms agree. Admin only; safe to repeat.
+  ///
+  /// 1. Items saved by the old form quick-add (random document id, no `updatedAt`)
+  ///    are moved to `items/{value}` with the missing fields filled in.
+  /// 2. The first time, the built-in options (Wedding, Birthday, …) are saved too.
+  ///    The forms only fall back to the built-ins while a group is empty, so a
+  ///    single added item used to hide all of them. Marked by `defaultsSeeded` on
+  ///    `dropdowns/{group}`, so built-ins an admin later deletes don't come back.
+  Future<void> repairGroup(DropdownGroup group) async {
+    final collection = _getCollection(group);
+    final snapshot = await collection.get();
+    final batch = _firestore.batch();
+    var writes = 0;
+    final docIds = snapshot.docs.map((d) => d.id).toSet();
+    final values = <String>{};
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final value = (data['value'] as String?)?.trim();
+      final fill = <String, dynamic>{
+        ...DropdownRepair.missingFields(data, doc.id),
+        if (data['createdAt'] is! Timestamp) 'createdAt': FieldValue.serverTimestamp(),
+        if (data['updatedAt'] is! Timestamp) 'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (DropdownRepair.needsRelocate(doc.id, value)) {
+        if (!docIds.contains(value)) {
+          batch.set(collection.doc(value!), {...data, ...fill, 'value': value});
+          writes++;
+        }
+        batch.delete(doc.reference);
+        writes++;
+        values.add(value!);
+      } else {
+        values.add(doc.id);
+        if (fill.isNotEmpty || value == null) {
+          batch.set(doc.reference, {...fill, 'value': doc.id}, SetOptions(merge: true));
+          writes++;
+        }
+      }
+    }
+
+    if (group != DropdownGroup.statuses) {
+      final parent = _firestore.collection('dropdowns').doc(group.collectionPath);
+      final parentSnap = await parent.get();
+      if (parentSnap.data()?['defaultsSeeded'] != true) {
+        final defaults = DropdownDefaults.forCollection(group.collectionPath);
+        for (var i = 0; i < defaults.length; i++) {
+          final value = defaults[i]['value']!;
+          if (values.contains(value)) continue;
+          batch.set(collection.doc(value), {
+            'value': value,
+            'label': defaults[i]['label'],
+            'active': true,
+            'order': i + 1,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+          writes++;
+        }
+        batch.set(parent, {
+          'defaultsSeeded': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+        writes++;
+      }
+    }
+
+    if (writes > 0) await batch.commit();
+  }
+
+  /// Quick-add from a form field: repairs the group first (so the built-ins stay),
+  /// then saves like the manager does. Returns the stored value.
+  Future<String> quickAdd(DropdownGroup group, String label) async {
+    await repairGroup(group);
+    final trimmed = label.trim();
+    final value = DropdownItem.valueFromLabel(trimmed);
+    if (value.isEmpty) {
+      throw ArgumentError('Label must contain at least one letter or digit');
+    }
+    final collection = _getCollection(group);
+    final existing = await collection.doc(value).get();
+    if (existing.exists) {
+      // Re-adding a deactivated type turns it back on instead of failing.
+      if (existing.data()?['active'] != true) await update(group, value, {'active': true});
+      return value;
+    }
+    await collection.doc(value).set({
+      'value': value,
+      'label': trimmed,
+      'active': true,
+      'order': await _getNextOrder(group),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return value;
+  }
+
+  /// Resolve `items/{value}` or a stray quick-add doc whose `value` field matches.
+  Future<DocumentReference<Map<String, dynamic>>?> _docForValue(
+    DropdownGroup group,
+    String value,
+  ) async {
+    final collection = _getCollection(group);
+    final byId = await collection.doc(value).get();
+    if (byId.exists) return byId.reference;
+    final byField = await collection.where('value', isEqualTo: value).limit(1).get();
+    if (byField.docs.isEmpty) return null;
+    return byField.docs.first.reference;
   }
 
   /// Create a new dropdown item
@@ -45,8 +163,10 @@ class DropdownsRepository {
 
   /// Update an existing dropdown item
   Future<void> update(DropdownGroup group, String value, Map<String, dynamic> patch) async {
-    final docRef = _getCollection(group).doc(value);
-
+    final docRef = await _docForValue(group, value);
+    if (docRef == null) {
+      throw Exception('Dropdown item "$value" not found');
+    }
     await docRef.update({...patch, 'updatedAt': FieldValue.serverTimestamp()});
   }
 
@@ -66,16 +186,20 @@ class DropdownsRepository {
       );
     }
 
-    await _getCollection(group).doc(value).delete();
+    final docRef = await _docForValue(group, value);
+    if (docRef == null) {
+      throw Exception('Dropdown item "$value" not found');
+    }
+    await docRef.delete();
   }
 
   /// Reorder dropdown items
   Future<void> reorder(DropdownGroup group, List<String> orderedValues) async {
     final batch = _firestore.batch();
-    final collection = _getCollection(group);
 
     for (int i = 0; i < orderedValues.length; i++) {
-      final docRef = collection.doc(orderedValues[i]);
+      final docRef = await _docForValue(group, orderedValues[i]);
+      if (docRef == null) continue;
       batch.update(docRef, {'order': i + 1, 'updatedAt': FieldValue.serverTimestamp()});
     }
 
@@ -110,6 +234,11 @@ class DropdownsRepository {
             enquiryField: newValue,
             'updatedAt': FieldValue.serverTimestamp(),
           };
+          // Keep sibling type fields in sync when replacing event types.
+          if (group == DropdownGroup.eventTypes) {
+            updates['eventType'] = newValue;
+            updates['eventTypeValue'] = newValue;
+          }
           if (newLabel != null && labelField != null) {
             updates[labelField] = newLabel;
           }
@@ -122,16 +251,63 @@ class DropdownsRepository {
         lastDoc = snapshot.docs.last;
       }
     }
+
+    if (group == DropdownGroup.eventTypes) {
+      await _replaceInFunctionArrays(oldValue, newValue, newLabel);
+    }
+  }
+
+  /// Multi-function bookings store secondary types only on `functions[]`.
+  Future<void> _replaceInFunctionArrays(String oldValue, String newValue, String? newLabel) async {
+    const batchSize = 100;
+    QueryDocumentSnapshot? lastDoc;
+    while (true) {
+      Query query = _firestore
+          .collection('enquiries')
+          .where('functionCount', isGreaterThanOrEqualTo: 2)
+          .limit(batchSize);
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) break;
+
+      final batch = _firestore.batch();
+      var writes = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? const {};
+        final functions = data['functions'];
+        if (functions is! List) continue;
+        var changed = false;
+        final next = <Map<String, dynamic>>[];
+        for (final raw in functions) {
+          if (raw is! Map) continue;
+          final fn = Map<String, dynamic>.from(raw);
+          if (fn['eventType'] == oldValue || fn['eventTypeValue'] == oldValue) {
+            fn['eventType'] = newValue;
+            fn['eventTypeValue'] = newValue;
+            if (newLabel != null) fn['eventTypeLabel'] = newLabel;
+            changed = true;
+          }
+          next.add(fn);
+        }
+        if (!changed) continue;
+        batch.update(doc.reference, {'functions': next, 'updatedAt': FieldValue.serverTimestamp()});
+        writes++;
+      }
+      if (writes > 0) await batch.commit();
+      if (snapshot.docs.length < batchSize) break;
+      lastDoc = snapshot.docs.last;
+    }
   }
 
   /// Get the next order value for a group
   Future<int> _getNextOrder(DropdownGroup group) async {
-    final snapshot = await _getCollection(group).orderBy('order', descending: true).limit(1).get();
-
-    if (snapshot.docs.isEmpty) return 1;
-
-    final lastItem = DropdownItem.fromFirestore(snapshot.docs.first);
-    return lastItem.order + 1;
+    final snapshot = await _getCollection(group).get();
+    var maxOrder = 0;
+    for (final doc in snapshot.docs) {
+      final order = (doc.data()['order'] as num?)?.toInt() ?? 0;
+      if (order > maxOrder) maxOrder = order;
+    }
+    return maxOrder + 1;
   }
 
   /// Check if a dropdown value has references in enquiries
@@ -146,13 +322,49 @@ class DropdownsRepository {
       if (snapshot.docs.isNotEmpty) return true;
     }
 
+    // Secondary function types live only on `functions[]` (top-level stays the main).
+    if (group == DropdownGroup.eventTypes && await _hasFunctionEventTypeReference(value)) {
+      return true;
+    }
+
     return false;
+  }
+
+  Future<bool> _hasFunctionEventTypeReference(String value) async {
+    const batchSize = 100;
+    QueryDocumentSnapshot? lastDoc;
+    while (true) {
+      Query query = _firestore
+          .collection('enquiries')
+          .where('functionCount', isGreaterThanOrEqualTo: 2)
+          .limit(batchSize);
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) return false;
+      for (final doc in snapshot.docs) {
+        final functions = (doc.data() as Map<String, dynamic>?)?['functions'];
+        if (functions is! List) continue;
+        for (final raw in functions) {
+          if (raw is! Map) continue;
+          if (raw['eventType'] == value || raw['eventTypeValue'] == value) return true;
+        }
+      }
+      if (snapshot.docs.length < batchSize) return false;
+      lastDoc = snapshot.docs.last;
+    }
   }
 
   /// Get dropdown items for a specific group (non-stream)
   Future<List<DropdownItem>> getGroup(DropdownGroup group) async {
-    final snapshot = await _getCollection(group).orderBy('order').get();
-    return snapshot.docs.map((doc) => DropdownItem.fromFirestore(doc)).toList();
+    // Same client-side sort as [watchGroup] — no orderBy, so docs without
+    // `order` are not silently dropped.
+    final snapshot = await _getCollection(group).get();
+    final items = snapshot.docs.map(DropdownItem.fromFirestore).toList()
+      ..sort((a, b) {
+        final byOrder = a.order.compareTo(b.order);
+        return byOrder != 0 ? byOrder : a.label.toLowerCase().compareTo(b.label.toLowerCase());
+      });
+    return items;
   }
 
   /// Search dropdown items within a group

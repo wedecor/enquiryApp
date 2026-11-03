@@ -13,7 +13,52 @@ class AuditService {
 
   FirebaseFirestore get _firestore => _firestoreService.firestore;
 
-  /// Record a change to an enquiry
+  /// UID that history docs are attributed to. Security rules require
+  /// `user_id == request.auth.uid` on create, so this is always the signed-in user.
+  String? get _historyUserId => _auth.currentUser?.uid;
+
+  /// A fresh `enquiries/{enquiryId}/history/{auto}` reference, for callers that write the
+  /// history entry inside their own transaction or batch.
+  DocumentReference<Map<String, dynamic>> newHistoryRef(String enquiryId) =>
+      _firestore.collection('enquiries').doc(enquiryId).collection('history').doc();
+
+  /// History document data for a change made by the signed-in user.
+  ///
+  /// Throws [StateError] when nobody is signed in (the write would be rejected anyway).
+  Map<String, dynamic> buildHistoryEntry({
+    required String fieldChanged,
+    required dynamic oldValue,
+    required dynamic newValue,
+  }) {
+    final currentUser = _auth.currentUser;
+    final uid = currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Cannot record history without a signed-in user');
+    }
+    return {
+      'field_changed': fieldChanged,
+      'old_value': oldValue,
+      'new_value': newValue,
+      'user_id': uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'user_email': currentUser?.email ?? 'unknown',
+    };
+  }
+
+  void _warnIfForeignUserId(String? userId) {
+    if (userId != null && userId != _historyUserId) {
+      Log.w(
+        'AuditService: ignoring userId that is not the signed-in user',
+        data: {'requestedUserId': userId, 'currentUserId': _historyUserId},
+      );
+    }
+  }
+
+  /// Record a change to an enquiry.
+  ///
+  /// Non-fatal: failures are logged (never thrown) so the UI action that triggered the
+  /// change still completes. [userId] is accepted for compatibility but history is always
+  /// attributed to the signed-in user (rules enforce it).
   Future<void> recordChange({
     required String enquiryId,
     required String fieldChanged,
@@ -22,53 +67,42 @@ class AuditService {
     String? userId,
   }) async {
     try {
-      final currentUser = _auth.currentUser;
-      final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
-
-      await _firestore.collection('enquiries').doc(enquiryId).collection('history').add({
-        'field_changed': fieldChanged,
-        'old_value': oldValue,
-        'new_value': newValue,
-        'user_id': changeUserId,
-        'timestamp': FieldValue.serverTimestamp(),
-        'user_email': currentUser?.email ?? 'unknown',
-      });
+      _warnIfForeignUserId(userId);
+      await newHistoryRef(
+        enquiryId,
+      ).set(buildHistoryEntry(fieldChanged: fieldChanged, oldValue: oldValue, newValue: newValue));
 
       Log.d('AuditService: recorded change', data: {'field': fieldChanged, 'enquiryId': enquiryId});
     } catch (e, st) {
+      Log.w(
+        'AuditService: history entry NOT recorded',
+        data: {'field': fieldChanged, 'enquiryId': enquiryId, 'error': e.toString()},
+      );
       Log.e('AuditService: error recording change', error: e, stackTrace: st);
     }
   }
 
-  /// Record multiple changes at once (for bulk updates)
+  /// Record multiple changes at once (for bulk updates). Non-fatal, like [recordChange].
   Future<void> recordMultipleChanges({
     required String enquiryId,
     required Map<String, Map<String, dynamic>> changes,
     String? userId,
   }) async {
+    if (changes.isEmpty) return;
     try {
-      final currentUser = _auth.currentUser;
-      final changeUserId = userId ?? currentUser?.uid ?? 'unknown';
+      _warnIfForeignUserId(userId);
       final batch = _firestore.batch();
 
       for (final entry in changes.entries) {
-        final fieldChanged = entry.key;
         final changeData = entry.value;
-
-        final historyRef = _firestore
-            .collection('enquiries')
-            .doc(enquiryId)
-            .collection('history')
-            .doc();
-
-        batch.set(historyRef, {
-          'field_changed': fieldChanged,
-          'old_value': changeData['old_value'],
-          'new_value': changeData['new_value'],
-          'user_id': changeUserId,
-          'timestamp': FieldValue.serverTimestamp(),
-          'user_email': currentUser?.email ?? 'unknown',
-        });
+        batch.set(
+          newHistoryRef(enquiryId),
+          buildHistoryEntry(
+            fieldChanged: entry.key,
+            oldValue: changeData['old_value'],
+            newValue: changeData['new_value'],
+          ),
+        );
       }
 
       await batch.commit();
@@ -77,6 +111,10 @@ class AuditService {
         data: {'count': changes.length, 'enquiryId': enquiryId},
       );
     } catch (e, st) {
+      Log.w(
+        'AuditService: history entries NOT recorded',
+        data: {'fields': changes.keys.toList(), 'enquiryId': enquiryId, 'error': e.toString()},
+      );
       Log.e('AuditService: error recording multiple changes', error: e, stackTrace: st);
     }
   }
@@ -344,8 +382,28 @@ class AuditService {
         return 'Event Date';
       case 'eventlocation':
         return 'Event Location';
+      case 'functions':
+        return 'Functions';
       case 'description':
         return 'Description';
+      case 'notes':
+        return 'Notes';
+      case 'customeremail':
+        return 'Customer Email';
+      case 'guestcount':
+        return 'Guest Count';
+      case 'budgetrange':
+        return 'Budget Range';
+      case 'source':
+        return 'Source';
+      case 'quotedamount':
+        return 'Quoted Amount';
+      case 'quotedat':
+        return 'Quoted On';
+      case 'images':
+        return 'Reference Images';
+      case 'lostreason':
+        return 'Lost Reason';
       default:
         return fieldName.replaceAll('_', ' ').toTitleCase();
     }

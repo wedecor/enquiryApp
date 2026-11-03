@@ -13,10 +13,9 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
-import '../../../../ui/components/brand_mark.dart';
+import '../../../../ui/components/brand_splash.dart';
 import '../../../../ui/components/gradient_pill_button.dart';
 import '../screens/login_screen.dart';
-import 'auth_backdrop.dart';
 import 'auth_status_view.dart';
 
 /// Root authentication gate that handles all session states
@@ -27,17 +26,30 @@ class AuthGate extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sessionAsync = ref.watch(sessionStateProvider);
 
-    return sessionAsync.when(
-      data: (session) => _buildForSessionState(context, ref, session),
-      loading: () => _buildLoadingScreen(context, 'Initializing...'),
-      error: (error, stack) => _buildErrorScreen(context, ref, 'Initialization failed: $error'),
+    final (String key, Widget child) = sessionAsync.when(
+      data: (session) => session.maybeWhen(
+        loading: (_) => ('loading', const BrandSplash()),
+        orElse: () =>
+            (session.runtimeType.toString(), _buildForSessionState(context, ref, session)),
+      ),
+      loading: () => ('loading', const BrandSplash()),
+      error: (error, stack) =>
+          ('error', _buildErrorScreen(context, ref, 'Initialization failed: $error')),
+    );
+
+    // The opening screen fades into whatever comes next (dashboard, login…).
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: KeyedSubtree(key: ValueKey(key), child: child),
     );
   }
 
   Widget _buildForSessionState(BuildContext context, WidgetRef ref, SessionState session) {
     return session.when(
       unauthenticated: () => const LoginScreen(),
-      loading: (reason) => _buildLoadingScreen(context, _getLoadingMessage(reason)),
+      loading: (_) => const BrandSplash(),
       authenticated: (user, profile) => Column(
         children: [
           if (kDebugMode) _buildDebugBanner(context, 'Authenticated: ${profile.role.name}'),
@@ -48,33 +60,6 @@ class AuthGate extends ConsumerWidget {
       unprovisioned: (email) => _buildUnprovisionedScreen(context, ref, email),
       disabled: (email) => _buildDisabledScreen(context, ref, email),
       error: (message, cause) => _buildErrorScreen(context, ref, message, cause),
-    );
-  }
-
-  Widget _buildLoadingScreen(BuildContext context, String message) {
-    return AuthBackdrop(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const BrandMark(size: 48, showSubtitle: true),
-              const SizedBox(height: AppTokens.space8),
-              const SizedBox.square(
-                dimension: 28,
-                child: CircularProgressIndicator(strokeWidth: 2.4),
-              ),
-              const SizedBox(height: AppTokens.space4),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w300),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -171,7 +156,7 @@ class AuthGate extends ConsumerWidget {
         GradientPillButton(
           label: 'Retry',
           icon: Icons.refresh_rounded,
-          onPressed: () => _retry(context),
+          onPressed: () => _retry(ref),
         ),
         AuthOutlinedPill(
           label: 'Sign Out',
@@ -199,17 +184,6 @@ class AuthGate extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  String _getLoadingMessage(String? reason) {
-    switch (reason) {
-      case 'sync_profile':
-        return 'Syncing your profile...';
-      case 'auth_check':
-        return 'Checking authentication...';
-      default:
-        return 'Loading...';
-    }
   }
 
   void _copyEmail(BuildContext context, String email) {
@@ -242,15 +216,11 @@ class AuthGate extends ConsumerWidget {
     }
   }
 
-  void _retry(BuildContext context) {
-    // Trigger a refresh by signing out and back in
-    // Or implement a manual session refresh if needed
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Retrying authentication...'),
-        backgroundColor: AppColorScheme.info,
-      ),
-    );
+  void _retry(WidgetRef ref) {
+    safeLog('session_retry', {'method': 'auth_gate'});
+    // Recreate the session service: it re-subscribes to auth state and
+    // re-fetches the profile (sessionStateProvider rebuilds with it).
+    ref.invalidate(sessionServiceProvider);
   }
 
   Widget _buildAndroidConfigBanner(BuildContext context) {

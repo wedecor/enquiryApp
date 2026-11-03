@@ -1,121 +1,76 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../core/logging/logger.dart';
-import '../../shared/models/user_model.dart';
 import 'firestore_service.dart';
 
-/// Service for managing notification triggers and sending notifications
+/// Sends one enquiry event to the `notifyEnquiryEvent` callable.
+typedef EnquiryEventAnnouncer = Future<void> Function(Map<String, dynamic> payload);
+
+/// Enquiry notifications (create / assign / status / edit) and the in-app inbox.
+///
+/// The app no longer writes `users/{uid}/notifications` for other people: the
+/// security rules reject it, because any active user could otherwise push any
+/// text to any colleague. Each `notify*` method calls the `notifyEnquiryEvent`
+/// Cloud Function with the enquiry id and the kind of event; the server checks the
+/// caller may act on that enquiry, chooses the recipients (admins other than the
+/// actor, and the assignee) and builds the title and body from stored data.
+///
+/// The methods never throw: a failed notification must not fail the save.
 class NotificationService {
-  NotificationService(this._firestoreService);
+  NotificationService(this._firestoreService, {EnquiryEventAnnouncer? announcer})
+    : _announcer = announcer ?? _callNotifyEnquiryEvent;
 
   final FirestoreService _firestoreService;
+  final EnquiryEventAnnouncer _announcer;
 
   FirebaseFirestore get _firestore => _firestoreService.firestore;
 
-  /// Send notification when a new enquiry is created
+  static Future<void> _callNotifyEnquiryEvent(Map<String, dynamic> payload) async {
+    final callable = FirebaseFunctions.instanceFor(
+      region: 'asia-south1',
+    ).httpsCallable('notifyEnquiryEvent');
+    await callable.call<dynamic>(payload);
+  }
+
+  Future<void> _announce(String enquiryId, String event, Map<String, dynamic> extra) async {
+    try {
+      await _announcer(<String, dynamic>{'enquiryId': enquiryId, 'event': event, ...extra});
+      Log.i('NotificationService: event announced', data: {'enquiryId': enquiryId, 'event': event});
+    } catch (e, st) {
+      Log.e(
+        'NotificationService: failed to announce enquiry event',
+        error: e,
+        stackTrace: st,
+        data: {'enquiryId': enquiryId, 'event': event},
+      );
+    }
+  }
+
+  /// New enquiry: every active admin except the creator.
   Future<void> notifyEnquiryCreated({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String createdBy,
-  }) async {
-    try {
-      // Get all admin users EXCEPT the creator
-      final adminUsers = await _getAdminUsers(excludeUserId: createdBy);
+  }) => _announce(enquiryId, 'created', const {});
 
-      // Send notification to all admins (excluding the creator)
-      for (final admin in adminUsers) {
-        await _sendNotificationToUser(
-          userId: admin.uid,
-          title: 'New Enquiry Created',
-          body: 'New enquiry from $customerName for $eventType',
-          data: {
-            'type': 'new_enquiry',
-            'enquiryId': enquiryId,
-            'customerName': customerName,
-            'eventType': eventType,
-            'createdBy': createdBy,
-          },
-        );
-      }
-
-      Log.i(
-        'NotificationService: sent new enquiry notifications',
-        data: {'adminCount': adminUsers.length},
-      );
-    } catch (e, st) {
-      Log.e(
-        'NotificationService: error sending new enquiry notifications',
-        error: e,
-        stackTrace: st,
-      );
-    }
-  }
-
-  /// Send notification when an enquiry is assigned
+  /// Assignment: the enquiry's current assignee ("Assigned to You") and, unless
+  /// [notifyAdmins] is false, the other admins. Pass false when the same save
+  /// already notifies admins (new enquiry, status change).
   Future<void> notifyEnquiryAssigned({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String assignedTo,
     required String assignedBy,
-  }) async {
-    try {
-      // Get assigned user details
-      final assignedUser = await _getUserById(assignedTo);
-      if (assignedUser == null) {
-        Log.w('NotificationService: assigned user not found', data: {'assignedTo': assignedTo});
-        return;
-      }
+    bool notifyAdmins = true,
+  }) => _announce(enquiryId, 'assigned', {'notifyAdmins': notifyAdmins});
 
-      // Send notification to assigned staff member
-      await _sendNotificationToUser(
-        userId: assignedTo,
-        title: 'Enquiry Assigned to You',
-        body: 'You have been assigned an enquiry from $customerName for $eventType',
-        data: {
-          'type': 'enquiry_assigned',
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'assignedBy': assignedBy,
-        },
-      );
-
-      // Get all admin users EXCEPT the assigner
-      final adminUsers = await _getAdminUsers(excludeUserId: assignedBy);
-
-      // Send notification to all admins (excluding the assigner)
-      for (final admin in adminUsers) {
-        await _sendNotificationToUser(
-          userId: admin.uid,
-          title: 'Enquiry Assigned',
-          body: 'Enquiry from $customerName assigned to ${assignedUser.name}',
-          data: {
-            'type': 'enquiry_assigned',
-            'enquiryId': enquiryId,
-            'customerName': customerName,
-            'assignedTo': assignedTo,
-            'assignedBy': assignedBy,
-          },
-        );
-      }
-
-      Log.i(
-        'NotificationService: sent assignment notifications',
-        data: {'adminCount': adminUsers.length},
-      );
-    } catch (e, st) {
-      Log.e(
-        'NotificationService: error sending assignment notifications',
-        error: e,
-        stackTrace: st,
-      );
-    }
-  }
-
-  /// Send notification when enquiry status is updated
+  /// Status change: admins other than the updater, and the assignee unless
+  /// [assignedTo] is null (callers pass null when the assignee gets a separate
+  /// "Assigned to You" push). [oldStatusValue] is the previous `statusValue`; the
+  /// new status is read from the enquiry on the server.
   Future<void> notifyStatusUpdated({
     required String enquiryId,
     required String customerName,
@@ -123,489 +78,20 @@ class NotificationService {
     required String newStatus,
     required String updatedBy,
     String? assignedTo,
-  }) async {
-    try {
-      if (kDebugMode) {
-        debugPrint('🔔 NOTIFICATION DEBUG: notifyStatusUpdated called');
-        debugPrint('   EnquiryId: $enquiryId');
-        debugPrint('   Customer: $customerName');
-        debugPrint('   Status: $oldStatus → $newStatus');
-        debugPrint('   UpdatedBy: $updatedBy');
-      }
+    String? oldStatusValue,
+  }) => _announce(enquiryId, 'status_changed', {
+    'oldStatus': oldStatusValue ?? oldStatus,
+    'notifyAssignee': assignedTo != null,
+  });
 
-      Log.i(
-        'NotificationService: notifyStatusUpdated called',
-        data: {
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'oldStatus': oldStatus,
-          'newStatus': newStatus,
-          'updatedBy': updatedBy,
-          'assignedTo': assignedTo,
-        },
-      );
-
-      // Get all admin users EXCEPT the updater
-      final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
-
-      if (adminUsers.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
-          debugPrint('   UpdatedBy: $updatedBy');
-          debugPrint('   This means no admins will receive notifications!');
-        }
-        Log.w(
-          'NotificationService: no admin users found to notify',
-          data: {'updatedBy': updatedBy},
-        );
-        return;
-      }
-
-      if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
-        for (var admin in adminUsers) {
-          debugPrint('   - Admin: ${admin.email} (${admin.uid})');
-        }
-      }
-
-      Log.i(
-        'NotificationService: sending status update notifications to admins',
-        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
-      );
-
-      // Send notification to all admins (excluding the updater)
-      for (final admin in adminUsers) {
-        try {
-          await _sendNotificationToUser(
-            userId: admin.uid,
-            title: 'Enquiry Status Updated',
-            body: 'Status changed from $oldStatus to $newStatus for $customerName',
-            data: {
-              'type': 'status_update',
-              'enquiryId': enquiryId,
-              'customerName': customerName,
-              'oldStatus': oldStatus,
-              'newStatus': newStatus,
-              'updatedBy': updatedBy,
-            },
-          );
-          Log.d(
-            'NotificationService: notification sent to admin',
-            data: {'adminId': admin.uid, 'adminEmail': admin.email},
-          );
-        } catch (e, st) {
-          Log.e(
-            'NotificationService: error sending notification to admin',
-            error: e,
-            stackTrace: st,
-            data: {'adminId': admin.uid},
-          );
-        }
-      }
-
-      // Also send notification to assigned user if they exist and are different from updater
-      if (assignedTo != null && assignedTo != updatedBy) {
-        final assignedUser = await _getUserById(assignedTo);
-        if (assignedUser != null) {
-          // Only send if they're not already an admin (to avoid duplicate)
-          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
-          if (!isAssignedUserAdmin) {
-            await _sendNotificationToUser(
-              userId: assignedTo,
-              title: 'Enquiry Status Updated',
-              body: 'Status changed from $oldStatus to $newStatus for $customerName',
-              data: {
-                'type': 'status_update',
-                'enquiryId': enquiryId,
-                'customerName': customerName,
-                'oldStatus': oldStatus,
-                'newStatus': newStatus,
-                'updatedBy': updatedBy,
-              },
-            );
-          }
-        }
-      }
-
-      Log.i(
-        'NotificationService: sent status change notifications',
-        data: {
-          'adminCount': adminUsers.length,
-          'assignedTo': assignedTo,
-          'enquiryId': enquiryId,
-          'updatedBy': updatedBy,
-        },
-      );
-    } catch (e, st) {
-      // Log error but don't fail the status update
-      Log.e(
-        'NotificationService: CRITICAL ERROR sending status change notifications',
-        error: e,
-        stackTrace: st,
-        data: {
-          'enquiryId': enquiryId,
-          'updatedBy': updatedBy,
-          'assignedTo': assignedTo,
-          'note': 'Status update succeeded but notifications failed',
-        },
-      );
-      // Don't rethrow - allow status update to succeed even if notifications fail
-    }
-  }
-
-  /// Send notification when an enquiry is updated (edited)
+  /// Edit: admins other than the updater, and the assignee unless [assignedTo] is null.
   Future<void> notifyEnquiryUpdated({
     required String enquiryId,
     required String customerName,
     required String eventType,
     required String updatedBy,
     String? assignedTo,
-  }) async {
-    // ALWAYS log - even in release mode for debugging
-    try {
-      if (kDebugMode) {
-        debugPrint('🔔 NOTIFICATION DEBUG: notifyEnquiryUpdated called');
-        debugPrint('   EnquiryId: $enquiryId');
-        debugPrint('   Customer: $customerName');
-        debugPrint('   EventType: $eventType');
-        debugPrint('   UpdatedBy: $updatedBy');
-      }
-
-      Log.i(
-        'NotificationService: notifyEnquiryUpdated called',
-        data: {
-          'enquiryId': enquiryId,
-          'customerName': customerName,
-          'eventType': eventType,
-          'updatedBy': updatedBy,
-          'assignedTo': assignedTo,
-        },
-      );
-
-      // Get all admin users EXCEPT the updater
-      final adminUsers = await _getAdminUsers(excludeUserId: updatedBy);
-
-      if (adminUsers.isEmpty) {
-        if (kDebugMode) {
-          debugPrint('⚠️ NOTIFICATION DEBUG: NO ADMIN USERS FOUND!');
-          debugPrint('   UpdatedBy: $updatedBy');
-          debugPrint('   This means no admins will receive notifications!');
-        }
-        Log.w(
-          'NotificationService: no admin users found to notify for enquiry update',
-          data: {'updatedBy': updatedBy},
-        );
-        return;
-      }
-
-      if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users');
-        for (var admin in adminUsers) {
-          debugPrint('   - Admin: ${admin.email} (${admin.uid})');
-        }
-      }
-
-      Log.i(
-        'NotificationService: sending enquiry update notifications to admins',
-        data: {'adminCount': adminUsers.length, 'adminIds': adminUsers.map((u) => u.uid).toList()},
-      );
-
-      // Send notification to all admins (excluding the updater)
-      for (final admin in adminUsers) {
-        try {
-          await _sendNotificationToUser(
-            userId: admin.uid,
-            title: 'Enquiry Updated',
-            body: 'Enquiry from $customerName for $eventType has been updated',
-            data: {
-              'type': 'enquiry_updated',
-              'enquiryId': enquiryId,
-              'customerName': customerName,
-              'eventType': eventType,
-              'updatedBy': updatedBy,
-            },
-          );
-          Log.d(
-            'NotificationService: notification sent to admin',
-            data: {'adminId': admin.uid, 'adminEmail': admin.email},
-          );
-        } catch (e, st) {
-          Log.e(
-            'NotificationService: error sending notification to admin',
-            error: e,
-            stackTrace: st,
-            data: {'adminId': admin.uid},
-          );
-        }
-      }
-
-      // Also send notification to assigned user if they exist and are different from updater
-      if (assignedTo != null && assignedTo != updatedBy) {
-        final assignedUser = await _getUserById(assignedTo);
-        if (assignedUser != null) {
-          // Only send if they're not already an admin (to avoid duplicate)
-          final isAssignedUserAdmin = adminUsers.any((admin) => admin.uid == assignedTo);
-          if (!isAssignedUserAdmin) {
-            await _sendNotificationToUser(
-              userId: assignedTo,
-              title: 'Enquiry Updated',
-              body: 'Enquiry from $customerName for $eventType has been updated',
-              data: {
-                'type': 'enquiry_updated',
-                'enquiryId': enquiryId,
-                'customerName': customerName,
-                'eventType': eventType,
-                'updatedBy': updatedBy,
-              },
-            );
-          }
-        }
-      }
-
-      Log.i(
-        'NotificationService: sent enquiry update notifications',
-        data: {'adminCount': adminUsers.length, 'assignedTo': assignedTo},
-      );
-    } catch (e, st) {
-      Log.e(
-        'NotificationService: error sending enquiry update notifications',
-        error: e,
-        stackTrace: st,
-      );
-    }
-  }
-
-  /// Get all admin users, optionally excluding a specific user
-  Future<List<UserModel>> _getAdminUsers({String? excludeUserId}) async {
-    try {
-      if (kDebugMode) {
-        debugPrint('🔍 NOTIFICATION DEBUG: Querying for admin users...');
-        debugPrint('   Excluding userId: $excludeUserId');
-      }
-
-      // Query for admin users - filter by isActive (backward compatible during migration)
-      final query = _firestore.collection('users').where('role', isEqualTo: 'admin');
-
-      final snapshot = await query.get();
-
-      if (kDebugMode) {
-        debugPrint('   Found ${snapshot.docs.length} total admin documents in Firestore');
-        for (var doc in snapshot.docs) {
-          final data = doc.data();
-          final isActive = data['isActive'] ?? data['active'] ?? true;
-          final willInclude =
-              !(excludeUserId != null && doc.id == excludeUserId) && isActive != false;
-          debugPrint('   - Admin doc: ${doc.id}');
-          debugPrint('     Email: ${data['email']}');
-          debugPrint('     Role: ${data['role']}');
-          debugPrint(
-            '     isActive: ${data['isActive'] ?? data['active'] ?? 'not set (defaulting to true)'}',
-          );
-          debugPrint('     Will include: $willInclude');
-          if (!willInclude) {
-            if (excludeUserId != null && doc.id == excludeUserId) {
-              debugPrint('       Reason: Matches excluded userId');
-            } else if (isActive == false) {
-              debugPrint('       Reason: isActive = false');
-            }
-          }
-        }
-      }
-
-      final adminUsers = snapshot.docs
-          .where((doc) {
-            // Exclude the specified user if provided
-            if (excludeUserId != null && doc.id == excludeUserId) {
-              if (kDebugMode) {
-                debugPrint('   ⏭️ Excluding admin: ${doc.id} (matches updatedBy)');
-              }
-              return false;
-            }
-            // Filter out inactive users - backward compatible: check both fields
-            // Default to true (active) if field is not set
-            final data = doc.data();
-            final isActive = data['isActive'] ?? data['active'] ?? true;
-            if (isActive == false) {
-              if (kDebugMode) {
-                debugPrint('   ⏭️ Excluding admin: ${doc.id} (isActive = false)');
-              }
-              return false;
-            }
-            return true;
-          })
-          .map((doc) {
-            final data = doc.data();
-            return UserModel(
-              uid: doc.id,
-              name: data['name'] as String? ?? '',
-              email: data['email'] as String? ?? '',
-              phone: data['phone'] as String? ?? '',
-              role: UserRole.admin,
-            );
-          })
-          .toList();
-
-      if (kDebugMode) {
-        debugPrint('✅ NOTIFICATION DEBUG: Found ${adminUsers.length} admin users to notify');
-        for (var admin in adminUsers) {
-          debugPrint('   - ${admin.email} (${admin.uid})');
-        }
-      }
-
-      Log.i(
-        'NotificationService: found admin users',
-        data: {
-          'totalAdmins': adminUsers.length,
-          'excludedUserId': excludeUserId,
-          'adminIds': adminUsers.map((u) => u.uid).toList(),
-        },
-      );
-
-      return adminUsers;
-    } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('❌ NOTIFICATION DEBUG: ERROR getting admin users: $e');
-      }
-      Log.e('NotificationService: error getting admin users', error: e, stackTrace: st);
-      return [];
-    }
-  }
-
-  /// Get user by ID
-  Future<UserModel?> _getUserById(String userId) async {
-    try {
-      final doc = await _firestore.collection('users').doc(userId).get();
-      if (!doc.exists) return null;
-
-      final data = doc.data() as Map<String, dynamic>;
-      return UserModel(
-        uid: doc.id,
-        name: data['name'] as String? ?? '',
-        email: data['email'] as String? ?? '',
-        phone: data['phone'] as String? ?? '',
-        role: data['role'] == 'admin' ? UserRole.admin : UserRole.staff,
-      );
-    } catch (e, st) {
-      Log.e('NotificationService: error getting user by ID', error: e, stackTrace: st);
-      return null;
-    }
-  }
-
-  /// Send notification to a specific user via their FCM token
-  Future<void> _sendNotificationToUser({
-    required String userId,
-    required String title,
-    required String body,
-    required Map<String, dynamic> data,
-  }) async {
-    try {
-      // Get user's FCM token
-      final userDoc = await _firestore.collection('users').doc(userId).get();
-      if (!userDoc.exists) return;
-
-      // Read tokens from private subcollection to check if user has tokens
-      final tokensSnapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('private')
-          .doc('notifications')
-          .collection('tokens')
-          .limit(10)
-          .get();
-
-      final tokenCount = tokensSnapshot.docs.length;
-      final tokens = tokensSnapshot.docs
-          .map((doc) => doc.get('token') as String?)
-          .where((token) => token != null && token.isNotEmpty)
-          .cast<String>()
-          .toList();
-
-      Log.i(
-        'NotificationService: checking tokens for user',
-        data: {
-          'userId': userId,
-          'tokenDocumentCount': tokenCount,
-          'validTokenCount': tokens.length,
-        },
-      );
-
-      // Store notification in Firestore for the user
-      // This will trigger the Cloud Function sendNotificationToUser
-      // We store it even if there are no tokens - the Cloud Function will handle it
-      DocumentReference? notificationRef;
-      try {
-        notificationRef = await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('notifications')
-            .add({
-              'title': title,
-              'body': body,
-              'data': data,
-              'read': false,
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-
-        if (kDebugMode) {
-          debugPrint('✅ Notification stored in Firestore: ${notificationRef.id}');
-        }
-      } catch (firestoreError, stackTrace) {
-        if (kDebugMode) {
-          debugPrint('❌ ERROR storing notification: $firestoreError');
-        }
-        Log.e(
-          'NotificationService: CRITICAL ERROR storing notification in Firestore',
-          error: firestoreError,
-          stackTrace: stackTrace,
-          data: {'userId': userId, 'title': title},
-        );
-        rethrow; // Re-throw so we know it failed
-      }
-
-      if (kDebugMode) {
-        final hasPushTargets = tokens.isNotEmpty;
-        final pushTargetCount = tokens.length;
-        debugPrint('📝 NOTIFICATION DEBUG: Stored notification in Firestore');
-        debugPrint('   UserId: $userId');
-        debugPrint('   NotificationId: ${notificationRef.id}');
-        debugPrint('   Title: $title');
-        debugPrint('   Body: $body');
-        debugPrint('   HasPushTargets: $hasPushTargets');
-        debugPrint('   PushTargetCount: $pushTargetCount');
-        if (tokens.isEmpty) {
-          debugPrint(
-            '   ⚠️ WARNING: User has no FCM registrations - notification may not be delivered!',
-          );
-        }
-      }
-
-      Log.i(
-        'NotificationService: notification stored in Firestore',
-        data: {
-          'userId': userId,
-          'notificationId': notificationRef.id,
-          'title': title,
-          'body': body,
-          'hasTokens': tokens.isNotEmpty,
-          'tokenCount': tokens.length,
-          'data': data,
-        },
-      );
-
-      if (tokens.isEmpty) {
-        Log.w(
-          'NotificationService: notification stored but user has no FCM tokens',
-          data: {
-            'userId': userId,
-            'notificationId': notificationRef.id,
-            'note': 'Cloud Function will attempt to send but may fail if no tokens exist',
-          },
-        );
-      }
-    } catch (e, st) {
-      Log.e('NotificationService: error sending notification to user', error: e, stackTrace: st);
-    }
-  }
+  }) => _announce(enquiryId, 'updated', {'notifyAssignee': assignedTo != null});
 
   /// Real-time stream of all notifications for a user (newest first, max 50)
   Stream<List<Map<String, dynamic>>> watchUserNotifications(String userId) {
@@ -619,13 +105,18 @@ class NotificationService {
         .map((snap) => snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList());
   }
 
-  /// Real-time stream of unread notification count
+  /// Cap for the unread badge query; the UI shows "99+" above 99.
+  static const int unreadCountCap = 100;
+
+  /// Real-time stream of unread notification count, capped at [unreadCountCap]
+  /// so the badge never streams every unread document.
   Stream<int> watchUnreadCount(String userId) {
     return _firestore
         .collection('users')
         .doc(userId)
         .collection('notifications')
         .where('read', isEqualTo: false)
+        .limit(unreadCountCap)
         .snapshots()
         .map((snap) => snap.docs.length);
   }
@@ -682,7 +173,6 @@ class NotificationService {
   /// Mark all notifications as read for a user
   Future<void> markAllNotificationsAsRead(String userId) async {
     try {
-      final batch = _firestore.batch();
       final snapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -690,11 +180,17 @@ class NotificationService {
           .where('read', isEqualTo: false)
           .get();
 
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+      // Firestore batches hold at most 500 writes; commit in chunks.
+      const chunkSize = 450;
+      final docs = snapshot.docs;
+      for (var start = 0; start < docs.length; start += chunkSize) {
+        final end = start + chunkSize < docs.length ? start + chunkSize : docs.length;
+        final batch = _firestore.batch();
+        for (final doc in docs.sublist(start, end)) {
+          batch.update(doc.reference, {'read': true, 'readAt': FieldValue.serverTimestamp()});
+        }
+        await batch.commit();
       }
-
-      await batch.commit();
     } catch (e, st) {
       Log.e(
         'NotificationService: error marking all notifications as read',

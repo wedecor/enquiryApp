@@ -5,7 +5,6 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
-import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -13,6 +12,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../enquiries/presentation/screens/enquiry_form_screen.dart';
 import '../../../enquiries/presentation/widgets/enquiry_list_item.dart';
+import '../dashboard_providers.dart';
 import '../widgets/calendar_day_agenda.dart';
 import '../widgets/calendar_day_markers.dart';
 import '../widgets/calendar_event.dart';
@@ -40,11 +40,38 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   final Map<DateTime, List<CalendarEvent>> _conflicts = {};
   final Map<DateTime, Map<String, int>> _statusCounts = {};
 
+  /// Months loaded either side of [_windowAnchor] (13-month event-date window).
+  static const int _windowMonthsBefore = 6;
+  static const int _windowMonthsAfter = 7;
+
+  /// First day of the month the loaded event-date window is centred on.
+  late DateTime _windowAnchor;
+
+  /// Last loaded documents, shown while a re-centred window is loading.
+  List<QueryDocumentSnapshot<Object?>>? _lastEnquiries;
+
   @override
   void initState() {
     super.initState();
     _selectedDay = DateTime.now();
     _focusedDay = DateTime.now();
+    _windowAnchor = DateTime(_focusedDay.year, _focusedDay.month);
+  }
+
+  DateTime get _windowStart =>
+      DateTime(_windowAnchor.year, _windowAnchor.month - _windowMonthsBefore);
+
+  DateTime get _windowEnd => DateTime(_windowAnchor.year, _windowAnchor.month + _windowMonthsAfter);
+
+  /// Re-centres the loaded window once [focusedDay] gets within a month of
+  /// either edge, so paging the calendar never shows an unloaded month.
+  void _ensureWindowCovers(DateTime focusedDay) {
+    final month = DateTime(focusedDay.year, focusedDay.month);
+    final safeStart = DateTime(_windowStart.year, _windowStart.month + 1);
+    final safeEnd = DateTime(_windowEnd.year, _windowEnd.month - 1);
+    if (month.isBefore(safeStart) || !month.isBefore(safeEnd)) {
+      setState(() => _windowAnchor = month);
+    }
   }
 
   @override
@@ -96,18 +123,25 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
       return const Center(child: Text('User not found'));
     }
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: _getEnquiriesStream(isAdmin, userId),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
+    final enquiriesAsync = ref.watch(
+      calendarEnquiriesProvider((
+        isAdmin: isAdmin,
+        uid: userId,
+        start: _windowStart,
+        end: _windowEnd,
+      )),
+    );
+    return Builder(
+      builder: (context) {
+        if (enquiriesAsync.hasError) {
+          return Center(child: Text('Error: ${enquiriesAsync.error}'));
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final enquiries = enquiriesAsync.valueOrNull ?? _lastEnquiries;
+        if (enquiries == null) {
           return const Center(child: CircularProgressIndicator());
         }
-
-        final enquiries = snapshot.data?.docs ?? [];
+        _lastEnquiries = enquiries;
         _processEnquiries(enquiries);
 
         final selectedDayKey = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
@@ -143,6 +177,7 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
                     },
                     onPageChanged: (focusedDay) {
                       _focusedDay = focusedDay;
+                      _ensureWindowCovers(focusedDay);
                     },
                     onFormatChanged: (format) {
                       setState(() {
@@ -187,6 +222,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     }
 
     return Positioned(
+      left: 1,
+      right: 1,
       bottom: 3,
       child: CalendarDayMarkers(
         colors: [
@@ -195,6 +232,8 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
         ],
         total: events.length,
         hasConflict: _conflicts.containsKey(dayKey),
+        // Approved bookings in the loaded (role-scoped) data — no extra query.
+        booked: statusCounts[EnquiryStatus.approved.value] ?? 0,
       ),
     );
   }
@@ -228,72 +267,37 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
     final Map<DateTime, List<CalendarEvent>> dayEvents = {};
     final Map<DateTime, Map<String, int>> dayStatusCounts = {};
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
 
+    // One entry per FUNCTION on its own day ("Ayesha · Haldi (1/4)"); legacy
+    // enquiries give one entry on their event date. The query window is wider than
+    // the calendar window (see calendarEnquiriesProvider), so filter by day here.
     for (final doc in enquiries) {
       final data = doc.data() as Map<String, dynamic>;
-      final eventDate = _parseDateTime(data['eventDate']);
-      // Skip enquiries without event dates
-      if (eventDate == null) continue;
-
-      // Get canonical status from statusValue (maps legacy confirmed → approved, etc.)
-      final rawStatus = ((data['statusValue'] as String?) ?? 'new').toLowerCase();
-      final status = EnquiryStatus.fromValue(rawStatus)?.value ?? rawStatus;
-
-      // Only show: new, in_talks, approved, completed
-      // Exclude lost statuses: cancelled, not_interested, closed_lost
-      if (EnquiryStatus.isLost(status)) {
-        continue;
-      }
-
-      // Normalize event date to start of day for comparison
-      final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-      // Optional: Filter out past completed events (keep recent ones for reference)
-      if (status == 'completed' && eventDateStart.isBefore(todayStart)) {
-        // Only show completed events from the last 30 days
-        final daysSinceEvent = todayStart.difference(eventDateStart).inDays;
-        if (daysSinceEvent > 30) {
-          continue;
-        }
-      }
-
-      // Past "new" / "in_talks" events are not filtered here: the nightly autoExpireEnquiries
-      // function closes them as "not_interested" once their IST event day has passed.
-
-      final dayKey = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-      final event = CalendarEvent(
+      final entries = calendarEventsForEnquiry(
         enquiryId: doc.id,
-        customerName: (data['customerName'] as String?) ?? 'Unknown',
-        eventType:
-            (data['eventTypeLabel'] as String?) ??
-            (data['eventTypeValue'] as String?) ??
-            (data['eventType'] as String?) ??
-            'Unknown',
-        eventDate: eventDate,
-        eventLocation: data['eventLocation'] as String?,
-        status: status,
-        createdAt: _parseDateTime(data['createdAt']) ?? eventDate,
-        customerPhone: data['customerPhone'] as String?,
+        data: data,
+        windowStart: _windowStart,
+        windowEnd: _windowEnd,
+        now: now,
       );
-
-      dayEvents.putIfAbsent(dayKey, () => []).add(event);
-
-      // Track status counts per day
-      dayStatusCounts
-          .putIfAbsent(dayKey, () => <String, int>{})
-          .update(status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
+      for (final event in entries) {
+        final dayKey = DateTime(event.eventDate.year, event.eventDate.month, event.eventDate.day);
+        dayEvents.putIfAbsent(dayKey, () => []).add(event);
+        // Status counts per day count functions ("N booked" = approved functions).
+        dayStatusCounts
+            .putIfAbsent(dayKey, () => <String, int>{})
+            .update(event.status, (currentCount) => currentCount + 1, ifAbsent: () => 1);
+      }
     }
 
-    // A day is a conflict only when 2+ confirmed bookings (approved) share it
+    // A day is a conflict only when approved functions of 2+ different bookings share it
     dayEvents.forEach((day, events) {
       _events[day] = events;
       _statusCounts[day] = dayStatusCounts[day] ?? {};
       final approved = events
           .where((e) => e.status == EnquiryStatus.approved.value)
           .toList(growable: false);
-      if (approved.length > 1) {
+      if (approved.map((e) => e.enquiryId).toSet().length > 1) {
         _conflicts[day] = approved;
       }
     });
@@ -302,18 +306,5 @@ class _CalendarViewScreenState extends ConsumerState<CalendarViewScreen> {
   List<CalendarEvent> _getEventsForDay(DateTime day) {
     final dayKey = DateTime(day.year, day.month, day.day);
     return _events[dayKey] ?? [];
-  }
-
-  DateTime? _parseDateTime(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is Timestamp) return value.toDate();
-    return null;
-  }
-
-  Stream<QuerySnapshot> _getEnquiriesStream(bool isAdmin, String userId) {
-    return ref
-        .read(firestoreServiceProvider)
-        .watchEnquiriesForRoleByEventDate(isAdmin: isAdmin, assignedToUid: userId);
   }
 }
