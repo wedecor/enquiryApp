@@ -1192,6 +1192,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         enquiryId: widget.enquiryId!,
         customerName: newCustomerName,
         oldStatus: oldStatusLabel,
+        oldStatusValue: oldStatusValue,
         newStatus: statusLabel,
         updatedBy: currentUser.uid,
         // A new assignee gets "Assigned to You" below instead.

@@ -769,14 +769,20 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       createdAt: new Date(),
     });
 
-    test('✅ Active user can queue a notification for a colleague', async () => {
-      await assertSucceeds(notifications(STAFF_UID, 'staff', ADMIN_UID).add(valid()));
+    // P0: notifications are server-created only (notifyEnquiryEvent / scheduled jobs).
+    test('❌ Staff cannot create a notification for a colleague (admin)', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', ADMIN_UID).add(valid()));
     });
 
-    test('✅ Contract keys type/enquiryId/createdBy/senderId are accepted', async () => {
-      await assertSucceeds(
+    test('❌ Staff cannot create a notification for another staff member', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).add(valid()));
+    });
+
+    test('❌ Staff cannot send arbitrary content even with the full contract keys', async () => {
+      await assertFails(
         notifications(STAFF_UID, 'staff', ADMIN_UID).add({
           ...valid(),
+          title: 'URGENT: transfer the advance to my account',
           type: 'status_update',
           enquiryId: 'enquiry-assigned-to-staff',
           createdBy: STAFF_UID,
@@ -785,23 +791,37 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
 
+    test('❌ Staff cannot create a notification with a fixed id (no overwrite of server ids)', async () => {
+      await assertFails(
+        notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).doc('fu_enquiry-1_1_due').set(valid())
+      );
+    });
+
+    test('❌ Users cannot create notifications in their own inbox either', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', STAFF_UID).add(valid()));
+    });
+
+    test('❌ Admins cannot create notifications from the client', async () => {
+      await assertFails(notifications(ADMIN_UID, 'admin', STAFF_UID).add(valid()));
+    });
+
     test('❌ Inactive user cannot queue notifications', async () => {
       await assertFails(notifications(INACTIVE_STAFF_UID, 'staff', ADMIN_UID).add(valid()));
     });
 
-    test('❌ Extra keys are rejected', async () => {
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), imageUrl: 'https://evil.example' })
-      );
-    });
-
-    test('❌ Title over 120 chars / body over 500 chars is rejected', async () => {
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), title: 'x'.repeat(121) })
-      );
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), body: 'x'.repeat(501) })
-      );
+    test('❌ Staff cannot read a colleague\'s notifications; ✅ admin can', async () => {
+      let id;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const ref = await context
+          .firestore()
+          .collection('users')
+          .doc(OTHER_STAFF_UID)
+          .collection('notifications')
+          .add(valid());
+        id = ref.id;
+      });
+      await assertFails(notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).doc(id).get());
+      await assertSucceeds(notifications(ADMIN_UID, 'admin', OTHER_STAFF_UID).doc(id).get());
     });
 
     test('✅ Owner can mark read; ❌ owner cannot rewrite content', async () => {

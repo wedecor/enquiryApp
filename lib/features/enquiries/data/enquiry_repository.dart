@@ -259,6 +259,7 @@ class EnquiryRepository {
         enquiryId: id,
         customerName: result.customerName,
         oldStatus: lookup.labelForStatus(result.oldStatusValue),
+        oldStatusValue: result.oldStatusValue,
         newStatus: statusLabel,
         updatedBy: userId,
         assignedTo: result.assignedTo,

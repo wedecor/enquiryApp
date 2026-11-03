@@ -321,7 +321,8 @@ If you didn't expect this invitation, please ignore this email.`
 // pushes and pushes to the person who made the change.
 
 // Sends the FCM push for every notification doc created under users/{userId}/notifications
-// (queued by the app's NotificationService and by autoExpireEnquiries).
+// (queued by notifyEnquiryEvent and by server jobs: website leads, auto-expire,
+// follow-up reminders, re-engagement). Clients cannot create these docs (firestore.rules).
 export const sendNotificationToUser = onDocumentCreated(
   "users/{userId}/notifications/{notificationId}",
   async (event) => {
@@ -630,6 +631,7 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
 
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
+export { notifyEnquiryEvent } from "./notifications";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";
 export { scheduleReengagements, onEnquiryCompletedStampOccasion, runReengagementNow } from "./reengagement";

@@ -9,9 +9,12 @@
   "scripts": {
     "clean": "rimraf lib dist node_modules .turbo .parcel-cache .cache || true",
     "build": "node -e \"require('fs').rmSync('lib',{recursive:true,force:true})\" && tsc -p tsconfig.json",
-    "deploy": "firebase deploy --only functions:inviteUser,functions:adminUpdateUser,functions:autoExpireEnquiries,functions:sendNotificationToUser,functions:lookupCustomer,functions:approvedOnDate,functions:scheduleReengagements,functions:runReengagementNow,functions:onEnquiryCompletedStampOccasion,functions:placesAutocomplete,functions:placeDetails,functions:websiteLead,functions:websiteFormOptions,functions:websitePlacesAutocomplete,functions:websitePlaceDetails",
+    "deploy": "firebase deploy --only functions:inviteUser,functions:adminUpdateUser,functions:autoExpireEnquiries,functions:sendNotificationToUser,functions:lookupCustomer,functions:notifyEnquiryEvent,functions:approvedOnDate,functions:scheduleReengagements,functions:runReengagementNow,functions:onEnquiryCompletedStampOccasion,functions:placesAutocomplete,functions:placeDetails,functions:websiteLead,functions:websiteFormOptions,functions:websitePlacesAutocomplete,functions:websitePlaceDetails",
     "lint": "echo \"(optional) add eslint if needed\"",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:test": "node -e \"require('fs').rmSync('lib-test',{recursive:true,force:true})\" && tsc -p tsconfig.test.json",
+    "test": "npm run build:test && node --test --test-concurrency=1 \"lib-test/test/**/*.test.js\"",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-functions-test \"npm test\""
   },
   "dependencies": {
     "dotenv": "^16.4.5",
