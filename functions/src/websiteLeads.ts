@@ -252,7 +252,7 @@ export async function defaultAssigneeId(db: FirebaseFirestore.Firestore): Promis
   return match?.id ?? null;
 }
 
-function secretMatches(given: string | undefined, expected: string): boolean {
+export function secretMatches(given: string | undefined, expected: string): boolean {
   if (!given || !expected) return false;
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
@@ -330,6 +330,92 @@ export function buildEnquiryDoc(
   };
 }
 
+export type WebsiteLeadResult = { status: number; json: Record<string, unknown> };
+
+/**
+ * Creates the enquiry for one website submission (secret already verified).
+ *
+ * Repeat enquiries vs duplicate deliveries:
+ * - The doc id is `web_{externalId}` and is written with `create()`, so a retried
+ *   delivery of the SAME submission returns 200 `{duplicate: true}` and writes nothing.
+ * - A NEW externalId always creates a NEW enquiry, even when the phone already exists
+ *   (a birthday now and a wedding later are separate enquiries). The phone match only
+ *   changes the notification title; nothing is merged or marked as a duplicate. Staff
+ *   see the customer's other enquiries via `lookupCustomer`; genuine duplicates are
+ *   closed manually with "Mark as duplicate of…" (EnquiryMergeService).
+ */
+export async function handleWebsiteLead(
+  db: FirebaseFirestore.Firestore,
+  body: WebsiteLeadPayload,
+  now: Date = new Date(),
+): Promise<WebsiteLeadResult> {
+  const parsed = parseWebsiteLead(body ?? {}, now);
+  if (typeof parsed === "string") {
+    logger.warn("websiteLead: rejected", { reason: parsed });
+    return { status: 400, json: { ok: false, error: parsed } };
+  }
+
+  // Doc id from the website's lead id: a retried webhook can't create a second enquiry.
+  const ref = db.collection("enquiries").doc(`web_${parsed.externalId}`);
+  const [eventTypes, sourceLabelText, adminIds, assignedTo, previous] = await Promise.all([
+    loadEventTypes(db),
+    sourceLabel(db),
+    activeAdminIds(db),
+    defaultAssigneeId(db),
+    parsed.phoneNormalized.length === 10
+      ? db.collection("enquiries").where("phoneNormalized", "==", parsed.phoneNormalized).limit(2).get()
+      : Promise.resolve(null),
+  ]);
+  const matched = matchEventType(parsed.eventType, eventTypes);
+  const eventType = matched ?? eventTypes.find((t) => t.value === OTHER_EVENT_TYPE.value) ?? OTHER_EVENT_TYPE;
+  // The lead's own doc (an earlier delivery of this submission) is not a "previous" enquiry.
+  const repeat = !!previous && previous.docs.some((d) => d.id !== ref.id);
+
+  const batch = db.batch();
+  batch.create(
+    ref,
+    buildEnquiryDoc(parsed, eventType, matched ? null : parsed.eventType, sourceLabelText, assignedTo),
+  );
+
+  const title = repeat ? "New website enquiry · repeat customer" : "New website enquiry";
+  const notificationBody = truncate(
+    [parsed.name, eventType.label, istShortDate(parsed.eventDate), parsed.area].filter(Boolean).join(" · "),
+    500,
+  );
+  const notifyUids = Array.from(new Set([...adminIds, assignedTo].filter((id): id is string => !!id)));
+  for (const uid of notifyUids) {
+    batch.set(db.collection("users").doc(uid).collection("notifications").doc(), {
+      title,
+      body: notificationBody,
+      type: "new_enquiry",
+      enquiryId: ref.id,
+      data: {
+        type: "new_enquiry",
+        enquiryId: ref.id,
+        customerName: parsed.name,
+        eventType: eventType.label,
+        createdBy: CREATED_BY,
+      },
+      read: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  }
+
+  try {
+    await batch.commit();
+  } catch (error: any) {
+    // gRPC 6 = ALREADY_EXISTS: the same lead was delivered before.
+    if (error?.code === 6) {
+      return { status: 200, json: { ok: true, enquiryId: ref.id, duplicate: true } };
+    }
+    logger.error("websiteLead: write failed", { error: error?.message });
+    return { status: 500, json: { ok: false, error: "write failed" } };
+  }
+
+  logger.info("websiteLead: created", { enquiryId: ref.id, repeat, notified: notifyUids.length });
+  return { status: 201, json: { ok: true, enquiryId: ref.id } };
+}
+
 export const websiteLead = onRequest(
   { secrets: [WEBSITE_LEAD_SECRET], invoker: "public", cors: false, maxInstances: 3 },
   async (req, res) => {
@@ -341,75 +427,8 @@ export const websiteLead = onRequest(
       res.status(401).json({ ok: false, error: "unauthorized" });
       return;
     }
-
-    const parsed = parseWebsiteLead((req.body ?? {}) as WebsiteLeadPayload);
-    if (typeof parsed === "string") {
-      logger.warn("websiteLead: rejected", { reason: parsed });
-      res.status(400).json({ ok: false, error: parsed });
-      return;
-    }
-
-    const db = getFirestore();
-    const [eventTypes, sourceLabelText, adminIds, assignedTo, previous] = await Promise.all([
-      loadEventTypes(db),
-      sourceLabel(db),
-      activeAdminIds(db),
-      defaultAssigneeId(db),
-      parsed.phoneNormalized.length === 10
-        ? db.collection("enquiries").where("phoneNormalized", "==", parsed.phoneNormalized).limit(1).get()
-        : Promise.resolve({ empty: true as const }),
-    ]);
-    const matched = matchEventType(parsed.eventType, eventTypes);
-    const eventType = matched ?? eventTypes.find((t) => t.value === OTHER_EVENT_TYPE.value) ?? OTHER_EVENT_TYPE;
-    const repeat = !previous.empty;
-
-    // Doc id from the website's lead id: a retried webhook can't create a second enquiry.
-    const ref = db.collection("enquiries").doc(`web_${parsed.externalId}`);
-    const batch = db.batch();
-    batch.create(
-      ref,
-      buildEnquiryDoc(parsed, eventType, matched ? null : parsed.eventType, sourceLabelText, assignedTo),
-    );
-
-    const title = repeat ? "New website enquiry · repeat customer" : "New website enquiry";
-    const body = truncate(
-      [parsed.name, eventType.label, istShortDate(parsed.eventDate), parsed.area].filter(Boolean).join(" · "),
-      500,
-    );
-    const notifyUids = Array.from(new Set([...adminIds, assignedTo].filter((id): id is string => !!id)));
-    for (const uid of notifyUids) {
-      batch.set(db.collection("users").doc(uid).collection("notifications").doc(), {
-        title,
-        body,
-        type: "new_enquiry",
-        enquiryId: ref.id,
-        data: {
-          type: "new_enquiry",
-          enquiryId: ref.id,
-          customerName: parsed.name,
-          eventType: eventType.label,
-          createdBy: CREATED_BY,
-        },
-        read: false,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    }
-
-    try {
-      await batch.commit();
-    } catch (error: any) {
-      // gRPC 6 = ALREADY_EXISTS: the same lead was delivered before.
-      if (error?.code === 6) {
-        res.status(200).json({ ok: true, enquiryId: ref.id, duplicate: true });
-        return;
-      }
-      logger.error("websiteLead: write failed", { error: error?.message });
-      res.status(500).json({ ok: false, error: "write failed" });
-      return;
-    }
-
-    logger.info("websiteLead: created", { enquiryId: ref.id, repeat, notified: notifyUids.length });
-    res.status(201).json({ ok: true, enquiryId: ref.id });
+    const result = await handleWebsiteLead(getFirestore(), (req.body ?? {}) as WebsiteLeadPayload);
+    res.status(result.status).json(result.json);
   },
 );
 

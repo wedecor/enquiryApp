@@ -844,6 +844,58 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('👥 Repeat customers (same phone, separate enquiries)', () => {
+    const seedPair = async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        const base = {
+          customerName: 'Priya Sharma',
+          customerPhone: '9876543210',
+          phoneNormalized: '9876543210',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+        };
+        await db.collection('enquiries').doc('web_birthday').set({ ...base, eventTypeValue: 'birthday' });
+        await db.collection('enquiries').doc('web_wedding').set({ ...base, eventTypeValue: 'wedding' });
+      });
+    };
+
+    test('✅ Assignee edits one enquiry; the other is untouched', async () => {
+      await seedPair();
+      const db = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(
+        db.collection('enquiries').doc('web_birthday').update({
+          statusValue: 'in_talks',
+          statusUpdatedBy: STAFF_UID,
+          inTalksAt: new Date(),
+        })
+      );
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const other = await context.firestore().collection('enquiries').doc('web_wedding').get();
+        expect(other.get('statusValue')).toBe('new');
+      });
+    });
+
+    test('❌ Staff cannot reassign a repeat enquiry; ✅ admin can still mark a genuine duplicate', async () => {
+      await seedPair();
+      const db = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertFails(
+        db.collection('enquiries').doc('web_wedding').update({ assignedTo: OTHER_STAFF_UID })
+      );
+      // Admin "Mark as duplicate of…" still works for genuine duplicates.
+      const admin = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore();
+      await assertSucceeds(
+        admin.collection('enquiries').doc('web_wedding').update({
+          statusValue: 'closed_lost',
+          lostReason: 'duplicate',
+          mergedInto: 'web_birthday',
+        })
+      );
+    });
+  });
+
   describe('🚫 Inactive users', () => {
     test('✅ Inactive user can still read their own profile (Access disabled screen)', async () => {
       const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();
