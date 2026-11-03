@@ -11,8 +11,9 @@ import '../reengagement_actions.dart';
 
 enum _RowMenu { markSent, skip, dontRemind }
 
-/// One upcoming occasion: customer, occasion ("2nd wedding anniversary · 12 Dec"),
-/// last year's event type, and WhatsApp / Mark sent / Skip / Don't remind again.
+/// One upcoming occasion: a gold (past customer) or grey (only enquired) dot,
+/// customer, "PAST CUSTOMER · 2nd wedding anniversary · 12 Dec", the event they
+/// booked or enquired about, and WhatsApp / Mark sent / Skip / Don't remind again.
 class OccasionRow extends ConsumerWidget {
   const OccasionRow({super.key, required this.reminder});
 
@@ -41,11 +42,17 @@ class OccasionRow extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final canOpen = ReengagementActions.canOpenEnquiry(ref, reminder);
+    final past = reminder.pastCustomer;
+    // accentInk: the gold tuned for text on both light and dark surfaces.
+    final markerColor = past ? AppSurfaces.of(context).accentInk : cs.onSurfaceVariant;
+    final markerLabel = past ? 'PAST CUSTOMER' : 'ENQUIRED';
 
     return Pressable(
       onTap: canOpen ? () => ReengagementActions.openEnquiry(context, reminder) : null,
       borderRadius: AppRadius.medium,
-      semanticLabel: '${reminder.customerName}, ${reminder.occasionText}',
+      semanticLabel:
+          '${reminder.customerName}, ${past ? 'past customer' : 'enquired'}, '
+          '${reminder.occasionText}',
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppTokens.space2),
         child: Row(
@@ -57,21 +64,47 @@ class OccasionRow extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    reminder.customerName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: markerColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: AppTokens.space2),
+                      Expanded(
+                        child: Text(
+                          reminder.customerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    reminder.occasionText,
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: markerLabel,
+                          style: t.labelSmall?.copyWith(
+                            color: markerColor,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        TextSpan(text: '  ·  ${reminder.occasionText}'),
+                      ],
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: t.bodySmall?.copyWith(color: cs.onSurface),
                   ),
                   Text(
-                    'Last year: ${reminder.eventTypeLabel}',
+                    past
+                        ? 'Booked: ${reminder.eventTypeLabel}'
+                        : 'Enquired: ${reminder.eventTypeLabel}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: t.bodySmall?.copyWith(color: cs.onSurfaceVariant),

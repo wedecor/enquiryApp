@@ -56,6 +56,13 @@ void main() {
       expect(reminder.nth, 1);
       expect(reminder.customerName, 'Customer');
       expect(reminder.occasionText, '1 year since Event');
+      // Reminders from before Nov 2026 carry no flag and were all past customers.
+      expect(reminder.pastCustomer, isTrue);
+    });
+
+    test('pastCustomer false marks someone who only enquired', () {
+      expect(OccasionReminder.fromMap('x', const {'pastCustomer': false}).pastCustomer, isFalse);
+      expect(OccasionReminder.fromMap('x', const {'pastCustomer': true}).pastCustomer, isTrue);
     });
   });
 

@@ -89,6 +89,7 @@ class OccasionReminder {
     this.person,
     this.assignedTo,
     this.sentAt,
+    this.pastCustomer = true,
   });
 
   static const String statusPending = 'pending';
@@ -115,6 +116,11 @@ class OccasionReminder {
   final String? assignedTo;
   final String status;
   final DateTime? sentAt;
+
+  /// True when we decorated their event; false when they only enquired (a lost
+  /// enquiry that still gets a wish). Reminders created before Nov 2026 have no
+  /// flag and were all past customers.
+  final bool pastCustomer;
 
   factory OccasionReminder.fromMap(String id, Map<String, dynamic> data) {
     String? str(String key) {
@@ -144,6 +150,7 @@ class OccasionReminder {
       assignedTo: str('assignedTo'),
       status: str('status') ?? statusPending,
       sentAt: date('sentAt'),
+      pastCustomer: data['pastCustomer'] != false,
     );
   }
 

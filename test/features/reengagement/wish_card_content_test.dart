@@ -15,7 +15,7 @@ void main() {
     test('birthday with a person puts the name in gold, no age', () {
       final c = card(OccasionKind.birthday, person: 'Aarav');
       expect(c.named, isTrue);
-      expect(c.creamLine, 'Happy Birthday');
+      expect(c.creamLine, 'Birthday Wishes');
       expect(c.goldLines, ['Aarav']);
       expect([c.creamLine, ...c.goldLines, c.line].join(' '), isNot(contains(RegExp(r'\d'))));
     });
@@ -28,9 +28,22 @@ void main() {
     });
 
     test('wedding anniversary shows the year; anniversary party does not', () {
-      expect(card(OccasionKind.weddingAnniversary).goldLines, ['Happy 5th', 'Anniversary']);
-      expect(card(OccasionKind.anniversary).goldLines, ['Happy', 'Anniversary']);
+      expect(card(OccasionKind.weddingAnniversary).goldLines, ['5th Anniversary', 'Wishes']);
+      expect(card(OccasionKind.anniversary).goldLines, ['Anniversary', 'Wishes']);
       expect(card(OccasionKind.weddingAnniversary).eyebrow, 'WISHING YOU BOTH');
+    });
+
+    test('cards are timing-neutral: no "Happy …" (reads as today), no date', () {
+      for (final kind in OccasionKind.values) {
+        final c = card(kind, person: 'Aarav');
+        final all = [c.eyebrow, c.creamLine, ...c.goldLines, c.line].join(' ');
+        expect(all, isNot(contains('Happy')), reason: kind.value);
+        expect(
+          all,
+          isNot(contains(RegExp(r'\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b'))),
+          reason: kind.value,
+        );
+      }
     });
 
     test('only one name: the occasion person if set, else the customer', () {
@@ -42,8 +55,8 @@ void main() {
     });
 
     test('home counts years; nth below 1 reads 1st', () {
-      expect(card(OccasionKind.home, nth: 2).goldLines.first, 'Happy 2nd Year');
-      expect(card(OccasionKind.home, nth: 0).goldLines.first, 'Happy 1st Year');
+      expect(card(OccasionKind.home, nth: 2).goldLines.first, '2nd Year');
+      expect(card(OccasionKind.home, nth: 0).goldLines.first, '1st Year');
     });
 
     test('no card text sells', () {

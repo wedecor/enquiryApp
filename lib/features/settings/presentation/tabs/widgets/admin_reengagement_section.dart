@@ -33,7 +33,14 @@ class ReengagementConfigTab extends ConsumerStatefulWidget {
 class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
   final _formKey = GlobalKey<FormState>();
   final _leadDaysController = TextEditingController();
+
+  /// Past-customer messages.
   final Map<OccasionKind, TextEditingController> _templateControllers = {
+    for (final kind in OccasionKind.values) kind: TextEditingController(),
+  };
+
+  /// Messages for people who only enquired.
+  final Map<OccasionKind, TextEditingController> _enquiredControllers = {
     for (final kind in OccasionKind.values) kind: TextEditingController(),
   };
 
@@ -45,7 +52,7 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
   @override
   void dispose() {
     _leadDaysController.dispose();
-    for (final c in _templateControllers.values) {
+    for (final c in [..._templateControllers.values, ..._enquiredControllers.values]) {
       c.dispose();
     }
     super.dispose();
@@ -77,23 +84,32 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
     _leadDaysController.text = '${config.leadDays}';
     for (final kind in OccasionKind.values) {
       _templateControllers[kind]!.text = config.templateFor(kind);
+      _enquiredControllers[kind]!.text = config.templateFor(kind, enquired: true);
     }
   }
 
   /// The config the form currently describes; templates equal to the default are
   /// not stored, so later default improvements reach them.
   ReengagementConfig _fromForm() {
-    final templates = <OccasionKind, String>{};
-    for (final kind in OccasionKind.values) {
-      final text = _templateControllers[kind]!.text.trim();
-      if (text.isNotEmpty && text != ReengagementTemplates.defaults[kind]) {
-        templates[kind] = text;
+    Map<OccasionKind, String> custom(
+      Map<OccasionKind, TextEditingController> controllers, {
+      required bool enquired,
+    }) {
+      final out = <OccasionKind, String>{};
+      for (final kind in OccasionKind.values) {
+        final text = controllers[kind]!.text.trim();
+        if (text.isNotEmpty && text != ReengagementTemplates.defaultFor(kind, enquired: enquired)) {
+          out[kind] = text;
+        }
       }
+      return out;
     }
+
     return ReengagementConfig(
       enabled: _enabled,
       leadDays: int.tryParse(_leadDaysController.text.trim()) ?? ReengagementConfig.defaultLeadDays,
-      templates: templates,
+      templates: custom(_templateControllers, enquired: false),
+      enquiredTemplates: custom(_enquiredControllers, enquired: true),
     );
   }
 
@@ -101,6 +117,7 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
     if (a.enabled != b.enabled || a.leadDays != b.leadDays) return true;
     for (final kind in OccasionKind.values) {
       if (a.templateFor(kind) != b.templateFor(kind)) return true;
+      if (a.templateFor(kind, enquired: true) != b.templateFor(kind, enquired: true)) return true;
     }
     return false;
   }
@@ -131,8 +148,8 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
               eyebrow: 'Yearly reminders',
               title: 'Schedule',
               subtitle:
-                  'Every completed event comes back as a reminder before its anniversary, '
-                  'for the person who handled it (or admins).',
+                  'Past customers, and people who enquired but didn\'t book, come back as a '
+                  'wish before their occasion, for the person who handled it (or admins).',
               children: [
                 SettingsSwitchTile(
                   title: 'Send yearly reminders',
@@ -169,32 +186,53 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
                 ),
               ],
             ),
-            SettingsGroup(
-              eyebrow: 'WhatsApp',
-              title: 'Message templates',
+            _templatesGroup(
+              title: 'Past customers',
               subtitle:
-                  'Placeholders: ${ReengagementTemplates.placeholders.join(' ')}. '
-                  '{person} may be empty — "{person}\'s birthday" then reads "A birthday".',
-              separated: false,
-              padding: const EdgeInsets.all(AppTokens.space4),
-              children: [
-                // Corporate occasions get no yearly wish, so there's no template to edit.
-                for (final kind in _editableKinds) ...[
-                  _TemplateField(
-                    kind: kind,
-                    controller: _templateControllers[kind]!,
-                    onReset: () {
-                      _templateControllers[kind]!.text = ReengagementTemplates.defaults[kind] ?? '';
-                      _recompute();
-                    },
-                  ),
-                  if (kind != _editableKinds.last) const SizedBox(height: AppTokens.space4),
-                ],
-              ],
+                  'People we decorated for. Placeholders: '
+                  '${ReengagementTemplates.placeholders.join(' ')}. '
+                  '{person} may be empty — "{person}\'s birthday" then reads "a birthday".',
+              controllers: _templateControllers,
+              enquired: false,
+            ),
+            _templatesGroup(
+              title: 'Enquired only',
+              subtitle: "People who enquired but didn't book. Don't mention working together.",
+              controllers: _enquiredControllers,
+              enquired: true,
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _templatesGroup({
+    required String title,
+    required String subtitle,
+    required Map<OccasionKind, TextEditingController> controllers,
+    required bool enquired,
+  }) {
+    return SettingsGroup(
+      eyebrow: 'WhatsApp messages',
+      title: title,
+      subtitle: subtitle,
+      separated: false,
+      padding: const EdgeInsets.all(AppTokens.space4),
+      children: [
+        // Corporate occasions get no yearly wish, so there's no template to edit.
+        for (final kind in _editableKinds) ...[
+          _TemplateField(
+            kind: kind,
+            controller: controllers[kind]!,
+            onReset: () {
+              controllers[kind]!.text = ReengagementTemplates.defaultFor(kind, enquired: enquired);
+              _recompute();
+            },
+          ),
+          if (kind != _editableKinds.last) const SizedBox(height: AppTokens.space4),
+        ],
+      ],
     );
   }
 

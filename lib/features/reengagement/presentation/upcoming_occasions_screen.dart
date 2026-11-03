@@ -85,12 +85,22 @@ const EdgeInsets _panelPadding = EdgeInsets.fromLTRB(
   AppTokens.space2,
 );
 
-/// Pending reminders (WhatsApp / Mark sent / Skip / Don't remind again).
-class _DueNowTab extends ConsumerWidget {
+enum _WhoFilter { all, past, enquired }
+
+/// Pending reminders (WhatsApp / Mark sent / Skip / Don't remind again), with an
+/// All · Past customers · Enquired filter so the warmest can go first.
+class _DueNowTab extends ConsumerStatefulWidget {
   const _DueNowTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DueNowTab> createState() => _DueNowTabState();
+}
+
+class _DueNowTabState extends ConsumerState<_DueNowTab> {
+  _WhoFilter _filter = _WhoFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final remindersAsync = ref.watch(upcomingRemindersProvider);
     final isAdmin = ref.watch(roleProvider).valueOrNull == UserRole.admin;
     final leadDays =
@@ -116,14 +126,48 @@ class _DueNowTab extends ConsumerWidget {
             action: isAdmin ? const _CheckNowButton() : null,
           );
         }
+        final pastCount = reminders.where((r) => r.pastCustomer).length;
+        final enquiredCount = reminders.length - pastCount;
+        final shown = switch (_filter) {
+          _WhoFilter.all => reminders,
+          _WhoFilter.past => reminders.where((r) => r.pastCustomer).toList(),
+          _WhoFilter.enquired => reminders.where((r) => !r.pastCustomer).toList(),
+        };
         return ListView(
           padding: _listPadding,
           children: [
-            GlassPanel(
-              strong: true,
-              padding: _panelPadding,
-              child: Column(children: [for (final r in reminders) OccasionRow(reminder: r)]),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTokens.space3),
+              child: SegmentedButton<_WhoFilter>(
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                segments: [
+                  ButtonSegment(value: _WhoFilter.all, label: Text('All ${reminders.length}')),
+                  ButtonSegment(value: _WhoFilter.past, label: Text('Past customers $pastCount')),
+                  ButtonSegment(value: _WhoFilter.enquired, label: Text('Enquired $enquiredCount')),
+                ],
+                selected: {_filter},
+                onSelectionChanged: (s) => setState(() => _filter = s.first),
+              ),
             ),
+            if (shown.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(AppTokens.space4),
+                child: Text(
+                  _filter == _WhoFilter.past
+                      ? 'No past customers due right now.'
+                      : 'No enquired customers due right now.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              )
+            else
+              GlassPanel(
+                strong: true,
+                padding: _panelPadding,
+                child: Column(children: [for (final r in shown) OccasionRow(reminder: r)]),
+              ),
           ],
         );
       },

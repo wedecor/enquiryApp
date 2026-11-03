@@ -24,35 +24,79 @@ void main() {
     test('wedding anniversary uses first name, ordinal and IST date', () {
       expect(
         render(OccasionKind.weddingAnniversary, nth: 2),
-        'Hi Ayesha, your 2nd wedding anniversary is on 12 December. Wishing you both many more '
-        'happy years together. Warm wishes from We Decor Events.',
+        'Hi Ayesha, your 2nd wedding anniversary is coming up soon. Wishing you both many '
+        'more happy years together. It was lovely being part of your wedding. If you\'re '
+        "planning something to celebrate, we'd love to be part of it again. Warm wishes from "
+        'We Decor Events.',
       );
     });
 
     test('birthday with a person', () {
       expect(
         render(OccasionKind.birthday, person: 'Aarav'),
-        startsWith("Hi Ayesha, Aarav's birthday is coming up on 12 December."),
+        startsWith("Hi Ayesha, Aarav's birthday is coming up soon."),
       );
     });
 
     test('birthday without a person reads "A birthday"', () {
       final text = render(OccasionKind.birthday);
-      expect(text, startsWith('Hi Ayesha, a birthday is coming up on 12 December.'));
+      expect(text, startsWith('Hi Ayesha, a birthday is coming up soon.'));
       expect(text, isNot(contains('{person}')));
     });
 
-    test('wishes never sell and never use emoji', () {
-      for (final kind in OccasionKind.values) {
-        final text = render(kind, person: 'Aarav');
-        expect(text.toLowerCase(), isNot(contains('decorat')), reason: kind.value);
-        expect(text.toLowerCase(), isNot(contains('planning')), reason: kind.value);
-        expect(
-          RegExp(r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]', unicode: true).hasMatch(text),
-          isFalse,
-          reason: kind.value,
-        );
+    test('wishes stay soft: no prices, offers, "book" or emoji', () {
+      for (final enquired in [false, true]) {
+        for (final kind in OccasionKind.values) {
+          final text = ReengagementTemplates.render(
+            ReengagementTemplates.defaultFor(kind, enquired: enquired),
+            customerName: 'Ayesha Khan',
+            nth: 1,
+            date: dec12,
+            person: 'Aarav',
+            eventType: 'Wedding',
+            business: 'We Decor Events',
+          ).toLowerCase();
+          for (final word in ['₹', 'discount', 'offer', 'book', 'price', 'decorat']) {
+            expect(text, isNot(contains(word)), reason: '${kind.value} enquired=$enquired');
+          }
+          expect(
+            RegExp(r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]', unicode: true).hasMatch(text),
+            isFalse,
+            reason: kind.value,
+          );
+        }
       }
+    });
+
+    test('default messages never name the day (dates can be a haldi or a weekend party)', () {
+      for (final enquired in [false, true]) {
+        for (final kind in OccasionKind.values) {
+          expect(
+            ReengagementTemplates.defaultFor(kind, enquired: enquired),
+            isNot(contains('{date}')),
+            reason: '${kind.value} enquired=$enquired',
+          );
+        }
+      }
+    });
+
+    test('enquired-only messages never mention working together', () {
+      for (final kind in OccasionKind.values) {
+        final text = ReengagementTemplates.defaultFor(kind, enquired: true).toLowerCase();
+        expect(text, isNot(contains('part of')), reason: kind.value);
+        expect(text, isNot(contains('part of it again')), reason: kind.value);
+      }
+    });
+
+    test('past-customer messages remember the event; enquired ones leave the door open', () {
+      expect(
+        ReengagementTemplates.defaultFor(OccasionKind.birthday),
+        contains('It was lovely being part of your celebration'),
+      );
+      expect(
+        ReengagementTemplates.defaultFor(OccasionKind.birthday, enquired: true),
+        contains("we're just a message away"),
+      );
     });
 
     test('mid-sentence possessive becomes lower-case article', () {
@@ -78,12 +122,16 @@ void main() {
         eventType: 'Diwali Party',
         business: ' ',
       );
-      expect(text, startsWith('Hi there, thinking of you as 12 December comes round again.'));
+      expect(text, startsWith('Hi there, thinking of you as this time of year comes round again.'));
+      expect(text, contains('your diwali party'));
       expect(text, endsWith('Warm wishes from We Decor Events.'));
     });
 
     test('nth below 1 is rendered as 1st', () {
-      expect(render(OccasionKind.home, nth: 0), contains('happy 1st anniversary of your home'));
+      expect(
+        render(OccasionKind.home, nth: 0),
+        contains('the 1st anniversary of your home is coming up soon'),
+      );
     });
 
     test('every default fills all placeholders', () {
@@ -120,6 +168,20 @@ void main() {
         ReengagementTemplates.defaults[OccasionKind.home],
       );
       expect(config.toMap()['templates'], {'birthday': 'Custom {name}'});
+    });
+
+    test('enquired templates are separate from past-customer ones', () {
+      final config = ReengagementConfig.fromMap({
+        'templates': {'birthday': 'Past {name}'},
+        'templatesEnquired': {'birthday': 'Enquired {name}'},
+      });
+      expect(config.templateFor(OccasionKind.birthday), 'Past {name}');
+      expect(config.templateFor(OccasionKind.birthday, enquired: true), 'Enquired {name}');
+      expect(
+        config.templateFor(OccasionKind.home, enquired: true),
+        ReengagementTemplates.enquiredDefaults[OccasionKind.home],
+      );
+      expect(config.toMap()['templatesEnquired'], {'birthday': 'Enquired {name}'});
     });
 
     test('the list window follows lead days', () {

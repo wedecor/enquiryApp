@@ -314,6 +314,8 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
       person: s.person,
       eventTypeLabel: s.eventTypeLabel,
       assignedTo,
+      // Picks the message version and the PAST CUSTOMER / ENQUIRED marker in the app.
+      pastCustomer: s.status === "completed",
       status: "pending",
       createdAt: FieldValue.serverTimestamp(),
     });

@@ -24,7 +24,7 @@ class WishCardContent {
   /// Small letter-spaced caps at the top ("WISHING YOU").
   final String eyebrow;
 
-  /// "Happy Birthday" (named) or "Dear Neha," (greeting).
+  /// "Birthday Wishes" (named) or "Dear Neha," (greeting).
   final String creamLine;
 
   /// The name (named, one line) or the wish (greeting, two lines).
@@ -35,7 +35,9 @@ class WishCardContent {
 
   final bool named;
 
-  /// Card text for an occasion. Numbers appear only where we know them: the
+  /// Card text for an occasion. Timing-neutral (no date, no "Happy …", which reads as
+  /// "today"): wishes go out a few days early and our stored date can be a haldi or a
+  /// weekend party, not the exact day. Numbers appear only where we know them: the
   /// wedding anniversary and the home anniversary (counted from the event we
   /// decorated or quoted). Birthdays never show an age.
   static WishCardContent forOccasion({
@@ -54,7 +56,7 @@ class WishCardContent {
         if (who.isNotEmpty) {
           return WishCardContent(
             eyebrow: 'WISHING YOU',
-            creamLine: 'Happy Birthday',
+            creamLine: 'Birthday Wishes',
             goldLines: [who],
             line: 'A year full of good moments ahead.',
             named: true,
@@ -71,7 +73,7 @@ class WishCardContent {
         return WishCardContent(
           eyebrow: 'WISHING YOU BOTH',
           creamLine: dear,
-          goldLines: ['Happy $ordinal', 'Anniversary'],
+          goldLines: ['$ordinal Anniversary', 'Wishes'],
           line: 'Many more happy years together.',
           named: false,
         );
@@ -79,7 +81,7 @@ class WishCardContent {
         return WishCardContent(
           eyebrow: 'WISHING YOU BOTH',
           creamLine: dear,
-          goldLines: const ['Happy', 'Anniversary'],
+          goldLines: const ['Anniversary', 'Wishes'],
           line: 'Many more happy years together.',
           named: false,
         );
@@ -95,7 +97,7 @@ class WishCardContent {
         return WishCardContent(
           eyebrow: 'WISHING YOU',
           creamLine: 'Dear $first,',
-          goldLines: ['Happy $ordinal Year', 'in Your Home'],
+          goldLines: ['$ordinal Year', 'in Your Home'],
           line: 'Many more happy years there.',
           named: false,
         );

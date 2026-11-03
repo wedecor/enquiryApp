@@ -27,9 +27,11 @@ import 'wish_card.dart';
 class ReengagementActions {
   ReengagementActions._();
 
-  /// The filled WhatsApp message for [reminder] with the current templates.
+  /// The filled WhatsApp message for [reminder] with the current templates: the
+  /// past-customer version, or the "only enquired" one.
   static String messageFor(WidgetRef ref, OccasionReminder reminder) => _render(
     ref,
+    enquired: !reminder.pastCustomer,
     kind: reminder.kind,
     customerName: reminder.customerName,
     nth: reminder.nth,
@@ -41,6 +43,7 @@ class ReengagementActions {
   /// The filled WhatsApp message for a past-customer row (next occurrence).
   static String messageForPast(WidgetRef ref, PastCustomerRow row) => _render(
     ref,
+    enquired: false,
     kind: row.source.kind,
     customerName: row.source.customerName,
     nth: row.nth,
@@ -51,6 +54,7 @@ class ReengagementActions {
 
   static String _render(
     WidgetRef ref, {
+    required bool enquired,
     required OccasionKind kind,
     required String customerName,
     required int nth,
@@ -61,7 +65,7 @@ class ReengagementActions {
     final config = ref.read(reengagementConfigProvider).valueOrNull ?? const ReengagementConfig();
     final business = ref.read(appGeneralConfigProvider).valueOrNull?.companyName;
     return ReengagementTemplates.render(
-      config.templateFor(kind),
+      config.templateFor(kind, enquired: enquired),
       customerName: customerName,
       nth: nth,
       date: date,

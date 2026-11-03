@@ -1,7 +1,8 @@
 import 'occasion_kind.dart';
 import 'reengagement_templates.dart';
 
-/// `app_config/reengagement` — `{enabled, leadDays, templates: {kind: text}}`.
+/// `app_config/reengagement` — `{enabled, leadDays, templates: {kind: text},
+/// templatesEnquired: {kind: text}}` (past customers / people who only enquired).
 /// Read by the app (templates) and by the daily `scheduleReengagements` function
 /// (enabled, leadDays). Blank / missing templates fall back to the defaults.
 class ReengagementConfig {
@@ -9,6 +10,7 @@ class ReengagementConfig {
     this.enabled = true,
     this.leadDays = defaultLeadDays,
     this.templates = const {},
+    this.enquiredTemplates = const {},
   });
 
   static const String docId = 'reengagement';
@@ -23,27 +25,34 @@ class ReengagementConfig {
   /// Days before the occasion that the reminder is created.
   final int leadDays;
 
-  /// Custom templates keyed by kind; only non-blank entries are kept.
+  /// Custom past-customer templates keyed by kind; only non-blank entries are kept.
   final Map<OccasionKind, String> templates;
+
+  /// Custom templates for people who only enquired.
+  final Map<OccasionKind, String> enquiredTemplates;
 
   factory ReengagementConfig.fromMap(Map<String, dynamic>? data) {
     if (data == null) return const ReengagementConfig();
     final rawLead = data['leadDays'];
     final lead = rawLead is num ? rawLead.toInt() : defaultLeadDays;
-    final templates = <OccasionKind, String>{};
-    final rawTemplates = data['templates'];
-    if (rawTemplates is Map) {
-      rawTemplates.forEach((key, value) {
-        final kind = key is String ? OccasionKind.fromValue(key) : null;
-        if (kind != null && value is String && value.trim().isNotEmpty) {
-          templates[kind] = value;
-        }
-      });
+    Map<OccasionKind, String> readTemplates(Object? raw) {
+      final out = <OccasionKind, String>{};
+      if (raw is Map) {
+        raw.forEach((key, value) {
+          final kind = key is String ? OccasionKind.fromValue(key) : null;
+          if (kind != null && value is String && value.trim().isNotEmpty) {
+            out[kind] = value;
+          }
+        });
+      }
+      return out;
     }
+
     return ReengagementConfig(
       enabled: data['enabled'] != false,
       leadDays: lead >= minLeadDays && lead <= maxLeadDays ? lead : defaultLeadDays,
-      templates: templates,
+      templates: readTemplates(data['templates']),
+      enquiredTemplates: readTemplates(data['templatesEnquired']),
     );
   }
 
@@ -51,11 +60,14 @@ class ReengagementConfig {
     'enabled': enabled,
     'leadDays': leadDays,
     'templates': {for (final e in templates.entries) e.key.value: e.value},
+    'templatesEnquired': {for (final e in enquiredTemplates.entries) e.key.value: e.value},
   };
 
-  /// Template in use for [kind] (custom or default).
-  String templateFor(OccasionKind kind) =>
-      templates[kind] ?? ReengagementTemplates.defaults[kind] ?? '';
+  /// Template in use for [kind] (custom or default): the past-customer version, or
+  /// the version for someone who only [enquired].
+  String templateFor(OccasionKind kind, {bool enquired = false}) =>
+      (enquired ? enquiredTemplates : templates)[kind] ??
+      ReengagementTemplates.defaultFor(kind, enquired: enquired);
 
   /// Days ahead the "Upcoming occasions" list covers: the lead time, so the list
   /// shows exactly what Settings → Lead days says (it used to be at least 30).
@@ -65,11 +77,13 @@ class ReengagementConfig {
     bool? enabled,
     int? leadDays,
     Map<OccasionKind, String>? templates,
+    Map<OccasionKind, String>? enquiredTemplates,
   }) {
     return ReengagementConfig(
       enabled: enabled ?? this.enabled,
       leadDays: leadDays ?? this.leadDays,
       templates: templates ?? this.templates,
+      enquiredTemplates: enquiredTemplates ?? this.enquiredTemplates,
     );
   }
 }
