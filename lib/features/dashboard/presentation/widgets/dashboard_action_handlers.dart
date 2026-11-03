@@ -264,7 +264,9 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Handle reminder WhatsApp click - increments count and opens WhatsApp
+  /// Follow-up WhatsApp from the Follow Up tab. Once WhatsApp opens, the enquiry is
+  /// marked as followed up (`lastReminderSentAt`) and leaves the Follow Up list;
+  /// the snackbar's Undo puts it back.
   Future<void> handleReminderWhatsApp(
     String phone,
     String customerName,
@@ -278,16 +280,6 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       return;
     }
 
-    try {
-      await ref.read(firestoreServiceProvider).updateEnquiry(enquiryId, {
-        'reminderClickCount': FieldValue.increment(1),
-        'lastReminderSentAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      Log.e('Failed to increment reminder count', error: e);
-      // Continue even if count update fails
-    }
-
     final launcher = ref.read(contactLauncherProvider);
     final prefill = buildReminderMessage(customerName, eventType, createdAt, eventDate);
     final status = await launcher.openWhatsAppWithAudit(
@@ -297,9 +289,42 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       contactType: ContactType.reminder,
     );
 
+    if (status == ContactLaunchStatus.opened) {
+      final firestore = ref.read(firestoreServiceProvider);
+      try {
+        await firestore.updateEnquiry(enquiryId, {
+          'reminderClickCount': FieldValue.increment(1),
+          'lastReminderSentAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        Log.e('Failed to mark follow-up as sent', error: e);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Follow-up sent to $customerName'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                try {
+                  await firestore.updateEnquiry(enquiryId, {
+                    'reminderClickCount': FieldValue.increment(-1),
+                    'lastReminderSentAt': FieldValue.delete(),
+                  });
+                } catch (e) {
+                  Log.e('Failed to undo follow-up', error: e);
+                }
+              },
+            ),
+          ),
+        );
+      return;
+    }
+
     switch (status) {
       case ContactLaunchStatus.opened:
-        showSnack('Reminder sent to $customerName via WhatsApp');
         break;
       case ContactLaunchStatus.invalidNumber:
         showSnack('Invalid WhatsApp number');

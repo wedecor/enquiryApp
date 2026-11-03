@@ -178,6 +178,11 @@ bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
     return false;
   }
 
+  // Follow-up already sent from the Follow Up tab — don't show it again.
+  if (enquiryData['lastReminderSentAt'] != null) {
+    return false;
+  }
+
   final eventDate = parseEnquiryDateTime(enquiryData['eventDate']);
   if (eventDate == null) {
     return false;

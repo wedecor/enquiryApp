@@ -121,6 +121,15 @@ void main() {
       };
       expect(shouldShowReminder(data, now), isFalse);
     });
+
+    test('a follow-up already sent leaves the list', () {
+      final data = {
+        'statusValue': 'in_talks',
+        'eventDate': Timestamp.fromDate(DateTime(2026, 10, 11)),
+        'lastReminderSentAt': Timestamp.fromDate(DateTime(2026, 9, 30)),
+      };
+      expect(shouldShowReminder(data, now), isFalse);
+    });
   });
 
   group('AnalyticsRepository.aggregateCountByStatus with legacy statuses', () {
