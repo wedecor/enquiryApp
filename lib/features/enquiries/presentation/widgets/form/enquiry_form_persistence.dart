@@ -675,7 +675,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
     final enquiryId = await firestoreService.createEnquiry(
-      customerName: _nameController.text.trim(),
+      customerName: tidyPersonName(_nameController.text),
       customerEmail: _emailController.text.trim(),
       customerPhone: _phoneController.text.trim(),
       eventType: eventTypeValue,
@@ -745,7 +745,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final notificationService = ref.read(notificationServiceProvider);
     await notificationService.notifyEnquiryCreated(
       enquiryId: enquiryId,
-      customerName: _nameController.text.trim(),
+      customerName: tidyPersonName(_nameController.text),
       eventType: eventTypeValue,
       createdBy: currentUser.uid,
     );
@@ -769,7 +769,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       if (!assigneeAlreadyNotified) {
         await notificationService.notifyEnquiryAssigned(
           enquiryId: enquiryId,
-          customerName: _nameController.text.trim(),
+          customerName: tidyPersonName(_nameController.text),
           eventType: eventTypeValue,
           assignedTo: assignee,
           assignedBy: currentUser.uid,
@@ -856,7 +856,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
-    final newCustomerName = _nameController.text.trim();
+    final newCustomerName = tidyPersonName(_nameController.text);
     final newCustomerEmail = _emailController.text.trim();
     final guestCountText = _guestCountController.text.trim();
     final newGuestCount = int.tryParse(guestCountText);
@@ -1228,7 +1228,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         await notificationService.notifyEnquiryAssigned(
           enquiryId: widget.enquiryId!,
           customerName: newCustomerName,
-          eventType: eventTypeLabel,
+          eventType: eventTypeValue,
           assignedTo: newAssignee,
           assignedBy: currentUser.uid,
           notifyAdmins: !statusDidChange,

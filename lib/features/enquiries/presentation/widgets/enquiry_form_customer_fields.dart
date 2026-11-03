@@ -47,6 +47,7 @@ class EnquiryFormCustomerFields extends StatelessWidget {
         TextFormField(
           controller: nameController,
           scrollPadding: kEnquiryFieldScrollPadding,
+          textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(
             labelText: 'Customer Name *',
             prefixIcon: Icon(Icons.person_outline_rounded),

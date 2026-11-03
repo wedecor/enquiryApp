@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../../core/utils/name_case.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../../../ui/components/glass_dialog.dart';
 
@@ -57,6 +58,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
             if (!invited) ...[
               TextFormField(
                 controller: _nameController,
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   prefixIcon: Icon(Icons.person_outline_rounded),
@@ -223,7 +225,7 @@ class _InviteUserDialogState extends ConsumerState<InviteUserDialog> {
 
       final result = await callable.call<dynamic>({
         'email': _emailController.text.trim(),
-        'name': _nameController.text.trim(),
+        'name': tidyPersonName(_nameController.text),
         'role': _selectedRole,
       });
 

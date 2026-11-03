@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/providers/role_provider.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
+import '../../../../../core/utils/name_case.dart';
 import '../../../../../shared/models/user_model.dart';
 import '../../../../../ui/components/glass_dialog.dart';
 import '../../domain/user_model.dart' as domain;
@@ -75,6 +76,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
           children: [
             TextFormField(
               controller: _nameController,
+              textCapitalization: TextCapitalization.words,
               decoration: const InputDecoration(
                 labelText: 'Name',
                 prefixIcon: Icon(Icons.person_outline_rounded),
@@ -181,7 +183,7 @@ class _UserFormDialogState extends ConsumerState<UserFormDialog> {
     final original = widget.user;
     final changes = <String, dynamic>{};
 
-    final name = _nameController.text.trim();
+    final name = tidyPersonName(_nameController.text);
     if (name != original.name) changes['name'] = name;
 
     final phoneText = _phoneController.text.trim();

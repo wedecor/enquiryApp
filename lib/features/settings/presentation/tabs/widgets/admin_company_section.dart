@@ -122,6 +122,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
               children: [
                 TextFormField(
                   controller: _companyNameController,
+                  textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Company Name',
                     prefixIcon: Icon(Icons.storefront_outlined),

@@ -16,6 +16,7 @@ import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/enquiry_fields.dart';
+import '../../../../core/utils/name_case.dart';
 import '../../../../core/utils/phone_normalizer.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../shared/models/user_model.dart';
