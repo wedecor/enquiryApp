@@ -1,26 +1,23 @@
 {
-  "version": "2.0.24",
-  "buildNumber": 55,
+  "version": "2.0.25",
+  "buildNumber": 56,
   "releaseDate": "2026-11-03",
-  "releaseNotes": "📋 Event Types in Dropdown Manager work again — accidental \"Eng\" removed, and all your custom types stay visible\n➕ Adding an event type from the enquiry form saves the same way as the manager\n📌 Sent WhatsApp follow-ups leave the Follow Up tab (with Undo)\n⚡ Location search is faster — spinner while searching, quicker first results\n✏️ Names like \"priya sharma\" save as \"Priya Sharma\"\n🔔 New-enquiry pushes show \"Corporate Event\", not \"corporate_event\"\n🌐 Website contact-form enquiries land in the app",
+  "releaseNotes": "💌 Yearly wishes are now a shareable card — pick WhatsApp and send image + text together\n🗓️ Wishes go out 7 days ahead (not 30), so they feel like a greeting not a sales nudge\n💛 Lost enquiries that reached In Talks still get a yearly wish; corporate and open leads are skipped\n📋 Event Types in Dropdown Manager stay visible; accidental Eng removed; App lead source restored\n⚡ Faster location search, capitalised names, readable event type in pushes",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "7fccd4097db65892872cb6c0cba17844cbb15562ec5b8e0e0a8e7402d1a90649",
+  "sha256": "6a3133bda8cf09c417b83ad29efe55a84a2d86c0209ea6f3a4c91d6ce8bfd710",
   "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
-    "FIXED: Dropdown Manager → Event Types shows the full list again (Wedding, Birthday, custom types, …)",
-    "IMPROVED: + Add event type from the enquiry form writes items/{value} like the manager",
-    "IMPROVED: Follow Up tab hides an enquiry once the WhatsApp follow-up is sent — Undo brings it back",
-    "FASTER: Location / Maps search with warm-up, cache and a searching spinner",
-    "NEW: Customer and team names are capitalised on save (McKenzie stays McKenzie)",
-    "IMPROVED: Push notifications use the readable event type label",
-    "NEW: Website contact-form leads create enquiries in the app"
+    "NEW: Share a branded wish card (image + warm message) for birthdays and anniversaries",
+    "IMPROVED: Re-engagement lead time defaults to 7 days",
+    "IMPROVED: Wish-eligible lost enquiries can get a yearly occasion stamp and reminder",
+    "FIXED: Dropdown Manager Event Types list; App lead source available again",
+    "FASTER: Location / Maps search with warm-up and cache"
   ],
   "bugFixes": [
-    "Fixed Event Types list going empty after adding a type from the form",
-    "Fixed and removed the accidental \"Eng\" event type",
-    "Fixed sent follow-ups staying in the Follow Up list forever",
-    "Fixed slow first Maps suggestion after opening the form",
-    "Fixed notification bodies showing corporate_event instead of Corporate Event"
+    "Fixed Event Types going empty after a quick-add from the form",
+    "Fixed missing App lead source for most historical enquiries",
+    "Fixed wish messages that read like a sales pitch",
+    "Fixed corporate occasions getting a personal yearly wish"
   ]
 }
