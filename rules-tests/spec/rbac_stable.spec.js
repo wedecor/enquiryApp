@@ -896,6 +896,96 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('⏰ Follow-ups', () => {
+    const firebase = require('firebase/compat/app').default;
+    require('firebase/compat/firestore');
+    const FV = () => firebase.firestore.FieldValue;
+    const inDays = (n) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+
+    const seed = async (overrides = {}) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('fu').set({
+          customerName: 'Priya Sharma',
+          statusValue: 'in_talks',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+          followUpDueAt: new Date(Date.now() - 60 * 60 * 1000),
+          followUpSeq: 4,
+          followUpReason: 'auto',
+          followUpNotifiedStage: 'due',
+          followUpScheduledBy: 'system:followups',
+          ...overrides,
+        });
+      });
+    };
+    const doc = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('fu');
+    const complete = (uid) => ({
+      followUpDueAt: null,
+      followUpSeq: FV().increment(1),
+      followUpNotifiedStage: null,
+      followUpLastCompletedAt: FV().serverTimestamp(),
+      followUpLastCompletedBy: uid,
+    });
+    const reschedule = (uid, due = inDays(2)) => ({
+      followUpDueAt: due,
+      followUpSeq: FV().increment(1),
+      followUpNotifiedStage: null,
+      followUpReason: 'callback',
+      followUpScheduledBy: uid,
+      followUpNote: 'Call after 6 pm',
+    });
+
+    test('✅ Assignee can complete their follow-up', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(complete(STAFF_UID)));
+    });
+
+    test('✅ Assignee can reschedule to a later callback; ✅ admin can too', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(reschedule(STAFF_UID)));
+      await assertSucceeds(doc(ADMIN_UID, 'admin').update(reschedule(ADMIN_UID, inDays(5))));
+    });
+
+    test('❌ Staff cannot touch a follow-up on an enquiry not assigned to them', async () => {
+      await seed({ assignedTo: OTHER_STAFF_UID });
+      await assertFails(doc(STAFF_UID, 'staff').update(complete(STAFF_UID)));
+    });
+
+    test('❌ Reschedule into the past or without bumping the sequence is rejected', async () => {
+      await seed();
+      await assertFails(doc(STAFF_UID, 'staff').update(reschedule(STAFF_UID, new Date(Date.now() - 60000))));
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({ ...reschedule(STAFF_UID), followUpSeq: 4 })
+      );
+    });
+
+    test('❌ Clients cannot suppress or fake reminder bookkeeping', async () => {
+      await seed({ followUpNotifiedStage: null });
+      await assertFails(doc(STAFF_UID, 'staff').update({ followUpNotifiedStage: 'overdue', followUpSeq: 5 }));
+      await assertFails(doc(STAFF_UID, 'staff').update({ followUpLastNotifiedAt: new Date() }));
+      await assertFails(doc(ADMIN_UID, 'admin').update({ pastEventReviewAt: null }));
+    });
+
+    test('❌ Completion must be attributed to the caller', async () => {
+      await seed();
+      await assertFails(doc(STAFF_UID, 'staff').update(complete(OTHER_STAFF_UID)));
+    });
+
+    test('❌ Callback notes are capped at 300 characters', async () => {
+      await seed();
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({ ...reschedule(STAFF_UID), followUpNote: 'x'.repeat(301) })
+      );
+    });
+
+    test('✅ Ordinary edits are unaffected by the follow-up rules', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update({ notes: 'Customer prefers evenings' }));
+    });
+  });
+
   describe('🚫 Inactive users', () => {
     test('✅ Inactive user can still read their own profile (Access disabled screen)', async () => {
       const firestore = testEnv.authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' }).firestore();

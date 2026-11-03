@@ -94,6 +94,25 @@ class AppConfigService {
     }
   }
 
+  /// `app_config/notifications.followUpsEnabled` (absent = on). Read by the
+  /// follow-up Cloud Functions; kept outside [AppNotificationConfig] so older app
+  /// builds that save that model (merge) never reset it.
+  Stream<bool> watchFollowUpsEnabled() {
+    return _configDoc(AppConfigKind.notifications).snapshots().map((snap) {
+      final data = snap.data() as Map<String, dynamic>?;
+      return data?['followUpsEnabled'] != false;
+    });
+  }
+
+  /// Turns automatic follow-ups on or off for the whole team (admin only).
+  Future<void> setFollowUpsEnabled(bool enabled) async {
+    await _configDoc(AppConfigKind.notifications).set({
+      'followUpsEnabled': enabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    safeLog('app_config_updated', {'kind': 'notifications', 'followUpsEnabled': enabled});
+  }
+
   /// Update app notification config (admin only)
   Future<void> updateNotifications(AppNotificationConfig config) async {
     try {

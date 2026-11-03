@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "followUpNotifiedStage", "order": "ASCENDING" },
+        { "fieldPath": "followUpDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "items",
       "queryScope": "COLLECTION",
       "fields": [

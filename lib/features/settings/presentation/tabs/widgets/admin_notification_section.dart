@@ -34,6 +34,7 @@ class NotificationConfigTab extends ConsumerWidget {
     WidgetRef ref,
     AppNotificationConfig config,
   ) {
+    final followUpsEnabled = ref.watch(followUpsEnabledProvider).valueOrNull ?? true;
     return SettingsScrollBody(
       children: [
         Padding(
@@ -79,10 +80,28 @@ class NotificationConfigTab extends ConsumerWidget {
                 );
               },
             ),
+            SettingsSwitchTile(
+              icon: Icons.event_repeat_rounded,
+              title: 'Automatic follow-ups',
+              subtitle: followUpsEnabled
+                  ? 'Open enquiries get follow-up reminders (in-app + push)'
+                  : 'Off — no follow-ups are scheduled or reminded',
+              value: followUpsEnabled,
+              onChanged: (value) async {
+                try {
+                  await ref.read(appConfigServiceProvider).setFollowUpsEnabled(value);
+                } catch (e) {
+                  safeLog('notification_config_update_error', {
+                    'field': 'followUpsEnabled',
+                    'error': e.toString(),
+                  });
+                }
+              },
+            ),
             SettingsTile(
               icon: Icons.alarm_rounded,
-              title: 'Default Reminder Days',
-              subtitle: '${config.reminderDaysDefault} days',
+              title: 'Follow-up every',
+              subtitle: '${config.reminderDaysDefault} days · due 10:00 IST · overdue after 24 h',
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => _showReminderDaysDialog(context, ref, config),
             ),
@@ -120,7 +139,7 @@ class NotificationConfigTab extends ConsumerWidget {
       context: context,
       builder: (context) => GlassDialog(
         icon: Icons.alarm_rounded,
-        title: 'Default Reminder Days',
+        title: 'Follow-up every (days)',
         content: TextFormField(
           controller: controller,
           keyboardType: TextInputType.number,

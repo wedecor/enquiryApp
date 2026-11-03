@@ -140,6 +140,50 @@ service cloud.firestore {
         || isKnownLocationValue(request.resource.data.get('eventLocation', ''));
     }
 
+    // Automatic follow-ups (functions/src/followUps*.ts, docs/IMPLEMENTATION_PLAN_2026-11.md).
+    // The server schedules, cancels and records reminders. A client (admin or the
+    // assignee, under the normal enquiry update rules) may only:
+    //   complete   — followUpDueAt → null, completed by/at = self/now; or
+    //   reschedule — a future followUpDueAt (≤ 400 days), reason callback/manual, by self;
+    // each bumping followUpSeq by exactly one and clearing followUpNotifiedStage, so a
+    // reminder for the old schedule can never fire. Reminder bookkeeping and the
+    // past-event flag are server-only.
+    function followUpFields() {
+      return ['followUpDueAt', 'followUpSeq', 'followUpReason', 'followUpNotifiedStage',
+        'followUpScheduledBy', 'followUpNote', 'followUpLastCompletedAt', 'followUpLastCompletedBy'];
+    }
+
+    function isFollowUpCompletion() {
+      let d = request.resource.data;
+      return d.get('followUpDueAt', null) == null
+        && d.get('followUpLastCompletedBy', '') == request.auth.uid
+        && d.get('followUpLastCompletedAt', null) == request.time;
+    }
+
+    function isFollowUpReschedule() {
+      let d = request.resource.data;
+      let changed = d.diff(resource.data).affectedKeys();
+      return d.get('followUpDueAt', null) is timestamp
+        && d.followUpDueAt > request.time
+        && d.followUpDueAt < request.time + duration.value(400, 'd')
+        && d.get('followUpScheduledBy', '') == request.auth.uid
+        && d.get('followUpReason', '') in ['callback', 'manual']
+        && !changed.hasAny(['followUpLastCompletedAt', 'followUpLastCompletedBy']);
+    }
+
+    function isValidFollowUpChange() {
+      let d = request.resource.data;
+      let changed = d.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['pastEventReviewAt', 'followUpLastNotifiedAt'])
+        && (!changed.hasAny(followUpFields()) || (
+          d.get('followUpSeq', 0) == resource.data.get('followUpSeq', 0) + 1
+          && d.get('followUpNotifiedStage', null) == null
+          && (d.get('followUpNote', null) == null
+            || (d.followUpNote is string && d.followUpNote.size() <= 300))
+          && (isFollowUpCompletion() || isFollowUpReschedule())
+        ));
+    }
+
     // Public-ish profile (NO tokens here)
     // D6: active users may read colleague profiles (name/email/phone) — accepted 2026-07.
     // The owner can always read their own doc so the app can show "Access disabled".
@@ -180,8 +224,9 @@ service cloud.firestore {
       allow delete: if isAdmin();
       
       // Update: Admin can update anything, Staff can only update non-financial fields
-      // Both roles: moving into Approved needs a known location (hasLocationIfApproving).
-      allow update: if hasLocationIfApproving() && (isAdmin()
+      // Both roles: moving into Approved needs a known location (hasLocationIfApproving);
+      // follow-up fields change only as a valid complete / reschedule (isValidFollowUpChange).
+      allow update: if hasLocationIfApproving() && isValidFollowUpChange() && (isAdmin()
         || (
           // Staff can update if:
           // 1. They are assigned to the enquiry

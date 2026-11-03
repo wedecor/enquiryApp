@@ -44,6 +44,11 @@ final appNotificationConfigProvider = StreamProvider<AppNotificationConfig>((ref
   return service.observeNotifications();
 });
 
+/// Automatic follow-ups switch (`app_config/notifications.followUpsEnabled`).
+final followUpsEnabledProvider = StreamProvider<bool>((ref) {
+  return ref.watch(appConfigServiceProvider).watchFollowUpsEnabled();
+});
+
 final appSecurityConfigProvider = StreamProvider<AppSecurityConfig>((ref) {
   final service = ref.watch(appConfigServiceProvider);
   return service.observeSecurity();
