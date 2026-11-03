@@ -23,7 +23,7 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="We Decor Enquiries">
+  <meta name="apple-mobile-web-app-title" content="We Decor">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -31,11 +31,48 @@
 
   <title>We Decor Enquiries</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563EB">
+  <meta name="theme-color" content="#23262B">
 
   <!-- Note: Firebase is initialized from Dart via firebase_options.dart. -->
+  <style>
+    /* Opening screen until Flutter draws its first frame (same look as the app). */
+    html, body { margin: 0; background: #23262B; }
+    #brand-splash {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #23262B; transition: opacity 350ms ease-in;
+    }
+    #brand-splash img { width: 228px; height: auto; opacity: 0; animation: wd-fade-in 350ms ease-out 50ms forwards; }
+    #brand-splash .wd-line {
+      margin-top: 40px; width: 56px; height: 2px; overflow: hidden; position: relative;
+      opacity: 0; animation: wd-fade-in 300ms ease-out 3s forwards;
+    }
+    #brand-splash .wd-line::after {
+      content: ""; position: absolute; top: 0; left: -40%; width: 40%; height: 2px;
+      background: #C6A15B; animation: wd-slide 1.2s ease-in-out infinite;
+    }
+    @keyframes wd-fade-in { to { opacity: 1; } }
+    @keyframes wd-slide { to { left: 100%; } }
+    @media (prefers-reduced-motion: reduce) {
+      #brand-splash img { animation: none; opacity: 1; }
+    }
+  </style>
 </head>
 <body>
+  <div id="brand-splash" role="img" aria-label="We Decor. Bringing dreams to life. Loading">
+    <img src="icons/splash_lockup.png" alt="">
+    <div class="wd-line"></div>
+  </div>
+  <script>
+    // Fade the opening screen out once Flutter has drawn (the app's own BrandSplash
+    // takes over while the session loads, so the hand-off is invisible).
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('brand-splash');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(function () { el.remove(); }, 400);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

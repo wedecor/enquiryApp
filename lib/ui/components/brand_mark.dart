@@ -1,24 +1,25 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../core/theme/tokens.dart';
 
-/// Gold seal (a gradient disc inside a broken orbit ring) plus the optional
-/// "WE DECOR" wordmark set in Marcellus, matching the brand toolkit.
+/// The real WD monogram (gold on dark surfaces, charcoal on light, per the brand
+/// kit) plus the optional "WE DECOR" wordmark set in Marcellus.
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.compact = false, this.showSubtitle = false, this.size = 22});
 
   final bool compact;
   final bool showSubtitle;
+
+  /// Height of the monogram.
   final double size;
+
+  static const String goldAsset = 'assets/brand/wd_mark_gold.png';
+  static const String inkAsset = 'assets/brand/wd_mark_ink.png';
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final s = AppSurfaces.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,11 +27,12 @@ class BrandMark extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox.square(
-              dimension: size,
-              child: CustomPaint(
-                painter: _SealPainter(gradient: s.accentGradient, ring: s.accent),
-              ),
+            Image.asset(
+              theme.brightness == Brightness.dark ? goldAsset : inkAsset,
+              height: size,
+              filterQuality: FilterQuality.high,
+              semanticLabel: compact ? 'We Decor' : null,
+              excludeFromSemantics: !compact,
             ),
             if (!compact) ...[
               const SizedBox(width: AppTokens.space2 + 2),
@@ -57,35 +59,4 @@ class BrandMark extends StatelessWidget {
       ],
     );
   }
-}
-
-class _SealPainter extends CustomPainter {
-  const _SealPainter({required this.gradient, required this.ring});
-
-  final Gradient gradient;
-  final Color ring;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.shortestSide / 2;
-    final rect = Rect.fromCircle(center: c, radius: r);
-
-    canvas.drawArc(
-      rect.deflate(0.75),
-      -math.pi * 0.35,
-      math.pi * 1.55,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round
-        ..color = ring.withValues(alpha: 0.55),
-    );
-    canvas.drawCircle(c, r * 0.5, Paint()..shader = gradient.createShader(rect));
-    canvas.drawCircle(Offset(c.dx + r * 0.72, c.dy - r * 0.72), r * 0.12, Paint()..color = ring);
-  }
-
-  @override
-  bool shouldRepaint(_SealPainter old) => old.gradient != gradient || old.ring != ring;
 }

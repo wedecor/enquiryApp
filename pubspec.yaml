@@ -80,6 +80,8 @@ flutter:
 
   assets:
     - assets/brand/wd_mark_gold.png
+    - assets/brand/wd_mark_ink.png
+    - assets/brand/splash_lockup.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
