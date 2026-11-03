@@ -1,34 +1,26 @@
 {
-  "version": "2.0.23",
-  "buildNumber": 54,
-  "releaseDate": "2026-10-09",
-  "releaseNotes": "🔐 Change your password right in the app: Settings → Account → Change Password - no email needed\n👥 Admins: manage team members from Settings → Account, tap anyone to edit\n➕ One \"Add / Invite User\" button - invited people get a set-password email\n🔄 Enquiries list now updates live - new enquiries and status changes appear instantly\n💰 Amounts show as 50000, not 50000.0\n🔔 Push notifications fixed - status changes and assignments reach the right people, once\n📊 New analytics: Pipeline, Team, Money, Trends and Breakdown tabs\n⚠️ Everyone must update to keep receiving notifications",
+  "version": "2.0.24",
+  "buildNumber": 55,
+  "releaseDate": "2026-11-03",
+  "releaseNotes": "📋 Event Types in Dropdown Manager work again — accidental \"Eng\" removed, and all your custom types stay visible\n➕ Adding an event type from the enquiry form saves the same way as the manager\n📌 Sent WhatsApp follow-ups leave the Follow Up tab (with Undo)\n⚡ Location search is faster — spinner while searching, quicker first results\n✏️ Names like \"priya sharma\" save as \"Priya Sharma\"\n🔔 New-enquiry pushes show \"Corporate Event\", not \"corporate_event\"\n🌐 Website contact-form enquiries land in the app",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "4fc4d96bb83ab0e283294bf08cc4e65a043a14919e8c5e71e1a2a643aa8f540b",
-  "forceUpdate": true,
+  "sha256": "7fccd4097db65892872cb6c0cba17844cbb15562ec5b8e0e0a8e7402d1a90649",
+  "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
-    "NEW: Change Password in Settings → Account asks for your current and new password - no reset email needed",
-    "NEW: Settings → Account → Team members (admins) - tap a person to edit name, phone, role or deactivate",
-    "IMPROVED: Adding people always goes through invite, so every new user gets a working login",
-    "NEW: Enquiries list updates live - no need to pull to refresh",
-    "NEW: Analytics tabs - Overview, Pipeline (funnel, lost reasons, speed to lead), Team, Money, Trends, Breakdown and Tables",
-    "NEW: Count analytics by enquiry date or event date",
-    "NEW: Lost-reason sheet when an enquiry is marked Not Interested, Closed Lost or Cancelled",
-    "NEW: Calls and WhatsApp from an enquiry are recorded as contacts (first contact, last contact, count)",
-    "NEW: Admins can record quoted amount and quote date",
-    "IMPROVED: Tapping a notification opens the enquiry; in-app banner with a View button when the app is open",
-    "IMPROVED: Status colours are the same on every screen"
+    "FIXED: Dropdown Manager → Event Types shows the full list again (Wedding, Birthday, custom types, …)",
+    "IMPROVED: + Add event type from the enquiry form writes items/{value} like the manager",
+    "IMPROVED: Follow Up tab hides an enquiry once the WhatsApp follow-up is sent — Undo brings it back",
+    "FASTER: Location / Maps search with warm-up, cache and a searching spinner",
+    "NEW: Customer and team names are capitalised on save (McKenzie stays McKenzie)",
+    "IMPROVED: Push notifications use the readable event type label",
+    "NEW: Website contact-form leads create enquiries in the app"
   ],
   "bugFixes": [
-    "Fixed being unable to change your password when the reset email does not arrive",
-    "Fixed \"Add User\" creating profiles that could not sign in",
-    "Fixed Enquiries list showing old statuses until refreshed",
-    "Fixed list jumping back to the top after opening an enquiry",
-    "Fixed amounts showing a trailing .0 in the edit form, history and CSV export",
-    "Fixed status-change and assignment notifications not being delivered",
-    "Fixed duplicate notifications and being notified about your own changes",
-    "Fixed status sheet staying open after changing a status",
-    "Fixed lost reason showing as a raw code in the change history"
+    "Fixed Event Types list going empty after adding a type from the form",
+    "Fixed and removed the accidental \"Eng\" event type",
+    "Fixed sent follow-ups staying in the Follow Up list forever",
+    "Fixed slow first Maps suggestion after opening the form",
+    "Fixed notification bodies showing corporate_event instead of Corporate Event"
   ]
 }
