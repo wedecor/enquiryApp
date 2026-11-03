@@ -25,7 +25,7 @@ class SecurityConfigTab extends ConsumerWidget {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Security settings unavailable',
-        message: 'Error loading security config: $error',
+        message: 'Security settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

@@ -39,7 +39,7 @@ class _DashboardDefaultsTabState extends ConsumerState<DashboardDefaultsTab> {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Dashboard settings unavailable',
-        message: 'Error loading dashboard settings: $error',
+        message: 'Dashboard settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

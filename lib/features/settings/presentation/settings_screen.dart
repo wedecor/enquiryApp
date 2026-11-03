@@ -65,7 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with TickerProv
         GlassStateMessage(
           icon: Icons.error_outline_rounded,
           title: 'Settings unavailable',
-          message: 'Error: $error',
+          message: 'Settings could not be loaded. Please try again.',
           color: Theme.of(context).colorScheme.error,
         ),
       ),

@@ -10,7 +10,6 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/booking_amounts.dart';
-import '../domain/enquiry.dart';
 import '../domain/enquiry_lifecycle.dart';
 import '../domain/enquiry_location.dart';
 import 'pagination_state.dart';
@@ -42,14 +41,6 @@ class EnquiryRepository {
   );
 
   CollectionReference<Map<String, dynamic>> get _enquiries => _firestoreService.enquiriesCollection;
-
-  /// Get all enquiries as a stream
-  Stream<List<Enquiry>> getEnquiries() {
-    return _enquiries
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
-  }
 
   /// Newest-first list query; staff are scoped to their own enquiries.
   Query<Map<String, dynamic>> _listQuery({

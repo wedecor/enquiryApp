@@ -4,6 +4,15 @@
       "collectionGroup": "enquiries",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
+        { "fieldPath": "eventDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "followUpNotifiedStage", "order": "ASCENDING" },
         { "fieldPath": "followUpDueAt", "order": "ASCENDING" }
       ]

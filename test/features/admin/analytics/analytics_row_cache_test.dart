@@ -66,6 +66,29 @@ void main() {
     expect(a.lostReasons.length, b.lostReasons.length);
   });
 
+  test('money comes from financial summaries; a summary-only change updates the row', () {
+    final now = DateTime(2026, 11, 4, 12);
+    final legacy = row('a', updatedAt: t0, status: 'approved', total: 10);
+    final cache = AnalyticsRowCache.fromFullRead(
+      [legacy, row('b', updatedAt: t0)],
+      summaries: {
+        'a': {'totalCost': 90000, 'updatedAt': Timestamp.fromDate(t0)},
+      },
+      uid: 'admin1',
+      now: now,
+    );
+    expect(cache.rowsById['a']!['totalCost'], 90000, reason: 'summary wins over legacy parent');
+    expect(cache.rowsById['b']!.containsKey('totalCost'), isFalse);
+
+    final later = DateTime(2026, 11, 4, 13);
+    final merged = cache.applyDelta(const [], {
+      'b': {'totalCost': 50000, 'updatedAt': Timestamp.fromDate(later)},
+    });
+    expect(merged.rowsById['b']!['totalCost'], 50000);
+    expect(merged.watermark, later);
+    expect(merged.parentsById.length, 2);
+  });
+
   test('delta query starts before the watermark (overlap)', () {
     final cache = AnalyticsRowCache.fromFullRead(
       [row('a', updatedAt: t0)],

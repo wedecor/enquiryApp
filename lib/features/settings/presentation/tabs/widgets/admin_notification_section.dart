@@ -25,7 +25,7 @@ class NotificationConfigTab extends ConsumerWidget {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Notification settings unavailable',
-        message: 'Error loading notification config: $error',
+        message: 'Notification settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

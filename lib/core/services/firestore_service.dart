@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/enquiries/domain/event_functions.dart';
 import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
+import '../logging/logger.dart';
 import '../utils/enquiry_fields.dart';
 import '../utils/phone_normalizer.dart';
 import 'enquiry_financials.dart';
@@ -43,8 +46,8 @@ enum EnquiryScope {
 ///   // ... other parameters
 /// );
 ///
-/// // Get real-time stream of enquiries
-/// final enquiriesStream = firestoreService.getEnquiries();
+/// // Real-time, role-scoped enquiries for a viewer
+/// final enquiriesStream = firestoreService.watchEnquiriesForRole(isAdmin: true);
 /// ```
 class FirestoreService {
   /// The underlying Firebase Firestore instance.
@@ -453,30 +456,6 @@ class FirestoreService {
     return _createWithFinancials(payload);
   }
 
-  /// Retrieves a real-time stream of all enquiries.
-  ///
-  /// This method returns a stream that emits the latest enquiry data
-  /// whenever there are changes in the enquiries collection. The enquiries
-  /// are ordered by creation date (newest first).
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits:
-  /// - Current enquiry data on subscription
-  /// - Updated data whenever enquiries are added, modified, or deleted
-  ///
-  /// Example:
-  /// ```dart
-  /// final enquiriesStream = firestoreService.getEnquiries();
-  /// enquiriesStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Enquiry: ${data['customerName']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> getEnquiries() {
-    return _enquiriesCollection.orderBy('createdAt', descending: true).snapshots();
-  }
-
   /// Retrieves a real-time stream of enquiries filtered by status.
   ///
   /// This method returns a stream of enquiries that match the specified
@@ -569,6 +548,104 @@ class FirestoreService {
       query = query.limit(terminalEnquiriesLimit);
     }
     return query.snapshots();
+  }
+
+  /// Approved bookings stay in the live dashboard listener while their last
+  /// function day (`eventDate`) is at most this far in the past — the calendar's
+  /// look-back. Older approved bookings are auto-completed, so the listener never
+  /// carries the whole Approved history.
+  static const Duration approvedLiveLookback = Duration(days: 31);
+
+  /// The open pipeline is logged once per session when it grows past this.
+  static const int activePipelineLogThreshold = 1500;
+  static bool _activeCountLogged = false;
+
+  /// Live documents of the active dashboard scope for a viewer:
+  /// every New / In Talks enquiry (never capped — hiding open work is worse than
+  /// the read cost) plus Approved bookings whose last function day is within
+  /// [approvedLiveLookback] (indexes `statusValue + eventDate`, staff
+  /// `assignedTo + statusValue + eventDate`). Emits once both queries have.
+  Stream<List<QueryDocumentSnapshot<Object?>>> watchActiveEnquiryDocs({
+    required bool isAdmin,
+    String? assignedToUid,
+    DateTime? now,
+  }) {
+    Query base = _enquiriesCollection;
+    if (!isAdmin) base = base.where('assignedTo', isEqualTo: assignedToUid);
+    final open = base
+        .where(
+          'statusValue',
+          whereIn: [
+            ...EnquiryStatus.rawValuesFor(EnquiryStatus.newEnquiry.value),
+            ...EnquiryStatus.rawValuesFor(EnquiryStatus.inTalks.value),
+          ],
+        )
+        .orderBy('createdAt', descending: true);
+    final today = now ?? DateTime.now();
+    final approvedFrom = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(approvedLiveLookback);
+    final approved = base
+        .where('statusValue', whereIn: EnquiryStatus.rawValuesFor(EnquiryStatus.approved.value))
+        .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(approvedFrom))
+        .orderBy('eventDate');
+    _logLargeActivePipelineOnce(isAdmin: isAdmin, assignedToUid: assignedToUid);
+    return combineLatestDocs(open.snapshots(), approved.snapshots());
+  }
+
+  /// Merges two query streams: emits the docs of both once each has emitted, and
+  /// again whenever either changes. Errors from either are forwarded.
+  static Stream<List<QueryDocumentSnapshot<Object?>>> combineLatestDocs(
+    Stream<QuerySnapshot> a,
+    Stream<QuerySnapshot> b,
+  ) {
+    late StreamController<List<QueryDocumentSnapshot<Object?>>> controller;
+    StreamSubscription<QuerySnapshot>? subA;
+    StreamSubscription<QuerySnapshot>? subB;
+    QuerySnapshot? lastA;
+    QuerySnapshot? lastB;
+    void emit() {
+      if (lastA != null && lastB != null) controller.add([...lastA!.docs, ...lastB!.docs]);
+    }
+
+    controller = StreamController<List<QueryDocumentSnapshot<Object?>>>(
+      onListen: () {
+        subA = a.listen((s) {
+          lastA = s;
+          emit();
+        }, onError: controller.addError);
+        subB = b.listen((s) {
+          lastB = s;
+          emit();
+        }, onError: controller.addError);
+      },
+      onCancel: () async {
+        await subA?.cancel();
+        await subB?.cancel();
+      },
+    );
+    return controller.stream;
+  }
+
+  /// One `count()` of the active scope per session; above
+  /// [activePipelineLogThreshold] a single line with the count and role only.
+  void _logLargeActivePipelineOnce({required bool isAdmin, String? assignedToUid}) {
+    if (_activeCountLogged) return;
+    _activeCountLogged = true;
+    Query query = _enquiriesCollection;
+    if (!isAdmin) query = query.where('assignedTo', isEqualTo: assignedToUid);
+    query
+        .where('statusValue', whereIn: rawStatusValuesForScope(EnquiryScope.active))
+        .count()
+        .get()
+        .then((snap) {
+          final count = snap.count ?? 0;
+          if (count > activePipelineLogThreshold) {
+            Log.w('dashboard_active_pipeline_large', data: {'count': count, 'admin': isAdmin});
+          }
+        }, onError: (Object _) {});
   }
 
   /// Rows per page when [fetchEnquiriesForRole] walks the collection.

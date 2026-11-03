@@ -73,7 +73,7 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
       error: (error, _) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Re-engagement settings unavailable',
-        message: '$error',
+        message: 'Re-engagement settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

@@ -19,9 +19,9 @@ final reengagementRepositoryProvider = Provider<ReengagementRepository>((ref) {
 typedef ReengagementPrefSetter = Future<void> Function(String phone, bool noReminders);
 
 Future<void> _callSetReengagementPref(String phone, bool noReminders) async {
-  await FirebaseFunctions.instanceFor(
-    region: 'asia-south1',
-  ).httpsCallable('setReengagementPref').call<dynamic>({'phone': phone, 'noReminders': noReminders});
+  await FirebaseFunctions.instanceFor(region: 'asia-south1')
+      .httpsCallable('setReengagementPref')
+      .call<dynamic>({'phone': phone, 'noReminders': noReminders});
 }
 
 /// Reads/writes `reminders`, `customer_prefs`, `app_config/reengagement` and the

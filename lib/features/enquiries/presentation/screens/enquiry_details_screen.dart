@@ -250,8 +250,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               bottomClearance: enquiryGlassBarClearance(context) + AppTokens.space4,
               onAddEvent: isAdmin ? () => _addAnotherEvent(enquiryData) : null,
               onOpenCustomerEvent: (event) => _openCustomerEvent(event, isAdmin: isAdmin),
-              // Functions are staff-editable on their own enquiry (not protected in the rules).
-              canEditFunctions: isAdmin || (enquiryData['assignedTo'] as String?) == currentUserId,
+              // Admins, or staff on their own enquiry (firestore.rules; UserPermissions).
+              canEditFunctions: ref
+                  .watch(userPermissionsProvider)
+                  .canEditEnquiry(
+                    assignedTo: enquiryData['assignedTo'] as String?,
+                    currentUid: currentUserId,
+                  ),
             ),
           ],
         ),
