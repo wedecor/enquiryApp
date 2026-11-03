@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/enquiry_financials.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -59,23 +60,37 @@ class AnalyticsRepository {
   }) async {
     final at = now ?? DateTime.now();
     final since = previous?.deltaSince;
+    Future<AnalyticsRowCache> fullRead() async {
+      final results = await Future.wait([
+        fetchAllEnquiriesRaw(),
+        EnquiryFinancials.readAll(_firestore),
+      ]);
+      return AnalyticsRowCache.fromFullRead(
+        results[0] as List<Map<String, dynamic>>,
+        summaries: results[1] as Map<String, Map<String, dynamic>>,
+        uid: uid,
+        now: at,
+      );
+    }
+
     if (AnalyticsRowCache.needsFullReload(previous, uid: uid, now: at, force: force) ||
         since == null) {
-      return AnalyticsRowCache.fromFullRead(await fetchAllEnquiriesRaw(), uid: uid, now: at);
+      return fullRead();
     }
     final collection = _firestore.collection('enquiries');
     final results = await Future.wait([
       collection.where('updatedAt', isGreaterThan: Timestamp.fromDate(since)).get(),
       collection.count().get(),
+      EnquiryFinancials.readAll(_firestore, since: since),
     ]);
     final changed = (results[0] as QuerySnapshot<Map<String, dynamic>>).docs
         .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
         .toList();
     final total = (results[1] as AggregateQuerySnapshot).count;
-    final merged = previous!.applyDelta(changed);
-    if (total != merged.rowsById.length) {
+    final merged = previous!.applyDelta(changed, results[2] as Map<String, Map<String, dynamic>>);
+    if (total != merged.parentsById.length) {
       // Deleted (or never-stamped) documents: reload so the rows match exactly.
-      return AnalyticsRowCache.fromFullRead(await fetchAllEnquiriesRaw(), uid: uid, now: at);
+      return fullRead();
     }
     return merged;
   }

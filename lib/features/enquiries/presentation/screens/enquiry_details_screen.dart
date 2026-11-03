@@ -30,6 +30,8 @@ import '../widgets/enquiry_round_button.dart';
 import '../widgets/enquiry_sheet_header.dart';
 import '../widgets/form/enquiry_customer_match_cards.dart';
 import 'enquiry_form_screen.dart';
+import '../../../../core/services/enquiry_financials.dart';
+import '../../data/enquiry_financials_provider.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
   final String enquiryId;
@@ -116,7 +118,17 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       return _frame(actions, const Text('Enquiry not found'));
                     }
 
-                    final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+                    final rawData = snapshot.data!.data() as Map<String, dynamic>;
+                    // Money: admins read the admin-only financial summary (legacy parent
+                    // fields as fallback); everyone else never sees amounts.
+                    final enquiryData = userRole == UserRole.admin
+                        ? EnquiryFinancials.merge(
+                            rawData,
+                            ref
+                                .watch(enquiryFinancialSummaryProvider(widget.enquiryId))
+                                .valueOrNull,
+                          )
+                        : EnquiryFinancials.strip(rawData);
                     final dropdownLookup = ref
                         .watch(dropdownLookupProvider)
                         .maybeWhen(data: (value) => value, orElse: () => null);

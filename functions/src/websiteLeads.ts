@@ -233,23 +233,21 @@ async function activeAdminIds(db: FirebaseFirestore.Firestore): Promise<string[]
     .map((d) => d.id);
 }
 
-const ZAKIR_UID = "q6fRF2hRHCa988zgzFT5ySddjw73";
-
 function isActiveUser(data: FirebaseFirestore.DocumentData | undefined): boolean {
   return (data?.isActive ?? data?.active ?? true) !== false;
 }
 
-/** Website leads are assigned to Mohammed Zakir. */
+/**
+ * Website leads go to the user chosen in Settings → Admin → Notifications
+ * (`app_config/notifications.websiteAssigneeUid`). When it is unset, or that user
+ * is missing or inactive, the enquiry stays unassigned; admins are still notified.
+ */
 export async function defaultAssigneeId(db: FirebaseFirestore.Firestore): Promise<string | null> {
-  const known = await db.collection("users").doc(ZAKIR_UID).get();
-  if (known.exists && isActiveUser(known.data())) return ZAKIR_UID;
-
-  const snap = await db.collection("users").get();
-  const match = snap.docs.find((d) => {
-    const name = String(d.get("name") || d.get("displayName") || "").toLowerCase();
-    return isActiveUser(d.data()) && /(^|\s)zakir(\s|$)/.test(name);
-  });
-  return match?.id ?? null;
+  const config = await db.collection("app_config").doc("notifications").get();
+  const uid = config.get("websiteAssigneeUid");
+  if (typeof uid !== "string" || !uid.trim() || uid.includes("/")) return null;
+  const user = await db.collection("users").doc(uid.trim()).get();
+  return user.exists && isActiveUser(user.data()) ? user.id : null;
 }
 
 export function secretMatches(given: string | undefined, expected: string): boolean {
@@ -273,7 +271,15 @@ export function searchIndexFields(lead: ParsedWebsiteLead, eventTypeLabel: strin
   };
 }
 
-/** Enquiry document in the same shape FirestoreService.createEnquiry writes. */
+/** Initial `enquiries/{id}/financial/summary` for a website lead (no amounts yet). */
+export const INITIAL_FINANCIALS = {
+  paymentStatus: "pending",
+  paymentStatusValue: "pending",
+  totalCost: null,
+  advancePaid: null,
+} as const;
+
+/** Enquiry document in the same shape FirestoreService.createEnquiry writes (no money). */
 export function buildEnquiryDoc(
   lead: ParsedWebsiteLead,
   eventType: EventTypeOption,
@@ -310,10 +316,6 @@ export function buildEnquiryDoc(
     ...(notes ? { notes, description: notes } : {}),
     statusValue: "new",
     statusLabel: "New",
-    paymentStatus: "pending",
-    paymentStatusValue: "pending",
-    totalCost: null,
-    advancePaid: null,
     assignedTo,
     createdBy: CREATED_BY,
     priority: "medium",
@@ -376,6 +378,11 @@ export async function handleWebsiteLead(
     ref,
     buildEnquiryDoc(parsed, eventType, matched ? null : parsed.eventType, sourceLabelText, assignedTo),
   );
+  // Money lives in the admin-only summary (lib/core/services/enquiry_financials.dart).
+  batch.create(ref.collection("financial").doc("summary"), {
+    ...INITIAL_FINANCIALS,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
 
   const title = repeat ? "New website enquiry · repeat customer" : "New website enquiry";
   const notificationBody = truncate(

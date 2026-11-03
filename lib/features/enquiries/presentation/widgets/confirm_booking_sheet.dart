@@ -27,8 +27,8 @@ typedef ApprovalBookingDecision = ({bool proceed, bool sheetShown, Map<String, O
 /// (always shown, never required).
 ///
 /// * Admins can enter or change the amounts; they are saved with the approval.
-/// * Staff see stored amounts read-only (or "Amount will be added by an admin"):
-///   the rules keep money admin-only, so a staff write never includes money fields.
+/// * Staff never see amounts ("Amount will be added by an admin"): money lives in the
+///   admin-only financial summary, so a staff write never includes money fields.
 ///
 /// Call it before the approved-date clash check.
 Future<ApprovalBookingDecision> ensureApprovalBooking(
@@ -41,7 +41,11 @@ Future<ApprovalBookingDecision> ensureApprovalBooking(
   // Callers may hold partial / stale data (e.g. list rows): re-read the stored doc.
   var current = data;
   try {
-    final fresh = await ref.read(firestoreServiceProvider).getEnquiry(enquiryId);
+    // Admins see the stored amounts from the admin-only financial summary.
+    final service = ref.read(firestoreServiceProvider);
+    final fresh = isAdmin
+        ? await service.getEnquiryWithFinancials(enquiryId)
+        : await service.getEnquiry(enquiryId);
     if (fresh != null) current = fresh;
   } catch (e) {
     Log.w('ensureApprovalBooking: fresh read failed', data: {'error': e.toString()});

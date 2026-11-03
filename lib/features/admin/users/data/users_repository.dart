@@ -17,16 +17,21 @@ class UsersRepository {
   /// client so documents without an `email` field are not dropped and no
   /// composite index is needed. Legacy documents that only carry `active` are
   /// handled by [UserModel.fromFirestore] (`isActive ?? active`).
+  ///
+  /// Phone and email live in `users/{uid}/private/profile` (owner + admins only);
+  /// they are merged in here for the admin screens, with the legacy public fields
+  /// as fallback until the profile exists.
   Stream<List<UserModel>> watchUsers() {
     return _firestore
         .collection(_collection)
         .snapshots()
-        .map((snapshot) {
+        .asyncMap((snapshot) async {
           final users = <UserModel>[];
+          final profiles = await Future.wait(snapshot.docs.map((doc) => _privateProfile(doc.id)));
 
-          for (final doc in snapshot.docs) {
+          for (final (i, doc) in snapshot.docs.indexed) {
             try {
-              users.add(UserModel.fromFirestore(doc));
+              users.add(withPrivateProfile(UserModel.fromFirestore(doc), profiles[i]));
             } catch (e, st) {
               Log.e(
                 'UsersRepository: error parsing user document',
@@ -49,9 +54,37 @@ class UsersRepository {
         });
   }
 
+  /// `users/{uid}/private/profile` (phone, email) or null when missing / not readable.
+  Future<Map<String, dynamic>?> _privateProfile(String uid) async {
+    try {
+      final snap = await _firestore
+          .collection(_collection)
+          .doc(uid)
+          .collection('private')
+          .doc('profile')
+          .get();
+      return snap.data();
+    } catch (e) {
+      Log.w('UsersRepository: private profile unavailable', data: {'error': e.toString()});
+      return null;
+    }
+  }
+
+  /// [user] with phone / email from its private profile when that has them.
+  static UserModel withPrivateProfile(UserModel user, Map<String, dynamic>? profile) {
+    if (profile == null) return user;
+    final email = (profile['email'] as String?)?.trim();
+    final phone = (profile['phone'] as String?)?.trim();
+    return user.copyWith(
+      email: (email == null || email.isEmpty) ? user.email : email,
+      phone: (phone == null || phone.isEmpty) ? user.phone : phone,
+    );
+  }
+
   /// Updates a user through the `adminUpdateUser` callable (asia-south1).
   ///
-  /// [changes] may contain only `name`, `phone`, `role` and `isActive`. The
+  /// [changes] may contain only `name`, `phone`, `role` and `isActive` (phone is
+  /// stored in the private profile by the function). The
   /// function validates the caller (active admin), blocks self role/status
   /// changes and removing the last active admin, syncs Firebase Auth and FCM
   /// tokens on deactivation, and writes the audit trail. Throws

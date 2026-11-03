@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../../core/services/enquiry_financials.dart';
+
 /// Session cache of every enquiry row behind the admin analytics.
 ///
 /// The pipeline metrics need lifetime data, so the first load per session
@@ -8,17 +10,28 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// stamps it), plus one `count()` aggregate to catch deletions; on any doubt
 /// they fall back to a full read. Metric definitions are untouched: the
 /// merged rows are the same rows a full read returns.
+///
+/// Money lives in `enquiries/{id}/financial/summary` ([EnquiryFinancials]); the
+/// cache keeps parents and summaries apart and merges them into each row, so a
+/// change to either refreshes the row.
 class AnalyticsRowCache {
   AnalyticsRowCache({
     required this.uid,
     required Map<String, Map<String, dynamic>> rowsById,
+    Map<String, Map<String, dynamic>> summariesById = const {},
     required this.watermark,
     required this.fullLoadedAt,
-  }) : rowsById = Map.unmodifiable(rowsById);
+  }) : parentsById = Map.unmodifiable(rowsById),
+       summariesById = Map.unmodifiable(summariesById);
 
   /// Signed-in user the rows were read as; another user always reloads.
   final String? uid;
-  final Map<String, Map<String, dynamic>> rowsById;
+
+  /// Enquiry documents as read (each with its `id`).
+  final Map<String, Map<String, dynamic>> parentsById;
+
+  /// Financial summaries keyed by enquiry id.
+  final Map<String, Map<String, dynamic>> summariesById;
 
   /// Latest `updatedAt` seen (server time), the lower bound of the next delta.
   final DateTime? watermark;
@@ -30,6 +43,12 @@ class AnalyticsRowCache {
 
   /// Delta queries overlap the watermark to absorb server-timestamp ordering.
   static const Duration overlap = Duration(minutes: 2);
+
+  /// Merged rows (parent + its money), keyed by enquiry id.
+  Map<String, Map<String, dynamic>> get rowsById => {
+    for (final entry in parentsById.entries)
+      entry.key: EnquiryFinancials.merge(entry.value, summariesById[entry.key]),
+  };
 
   List<Map<String, dynamic>> get rows => rowsById.values.toList(growable: false);
 
@@ -52,13 +71,15 @@ class AnalyticsRowCache {
   /// Rows keyed by their `id` (as the repository adds it).
   static AnalyticsRowCache fromFullRead(
     List<Map<String, dynamic>> rows, {
+    Map<String, Map<String, dynamic>> summaries = const {},
     required String? uid,
     required DateTime now,
   }) {
     return AnalyticsRowCache(
       uid: uid,
       rowsById: {for (final row in rows) row['id'] as String: row},
-      watermark: maxUpdatedAt(rows),
+      summariesById: summaries,
+      watermark: maxUpdatedAt(summaries.values, maxUpdatedAt(rows)),
       fullLoadedAt: now,
     );
   }
@@ -77,16 +98,22 @@ class AnalyticsRowCache {
     return now.difference(cache.fullLoadedAt) >= maxAge;
   }
 
-  /// Rows after applying [changed] (newer copies replace older ones by id).
-  AnalyticsRowCache applyDelta(List<Map<String, dynamic>> changed) {
-    final merged = Map<String, Map<String, dynamic>>.of(rowsById);
+  /// Rows after applying [changed] parents and [changedSummaries] (newer copies
+  /// replace older ones by id).
+  AnalyticsRowCache applyDelta(
+    List<Map<String, dynamic>> changed, [
+    Map<String, Map<String, dynamic>> changedSummaries = const {},
+  ]) {
+    final parents = Map<String, Map<String, dynamic>>.of(parentsById);
     for (final row in changed) {
-      merged[row['id'] as String] = row;
+      parents[row['id'] as String] = row;
     }
+    final summaries = {...summariesById, ...changedSummaries};
     return AnalyticsRowCache(
       uid: uid,
-      rowsById: merged,
-      watermark: maxUpdatedAt(changed, watermark),
+      rowsById: parents,
+      summariesById: summaries,
+      watermark: maxUpdatedAt(changedSummaries.values, maxUpdatedAt(changed, watermark)),
       fullLoadedAt: fullLoadedAt,
     );
   }

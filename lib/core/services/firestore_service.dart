@@ -6,6 +6,7 @@ import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
 import '../utils/enquiry_fields.dart';
 import '../utils/phone_normalizer.dart';
+import 'enquiry_financials.dart';
 
 /// Status slice of the enquiries collection loaded by a role-scoped listener.
 enum EnquiryScope {
@@ -157,17 +158,23 @@ class FirestoreService {
     required String phone,
     required String role,
   }) async {
-    final userData = {
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'role': role,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'isActive': true, // Standardized field name
-    };
-
-    await _usersCollection.doc(uid).set(userData);
+    // Public profile: name / role / isActive. Phone and email go to the private
+    // profile (owner + admins only), same as the inviteUser function.
+    final userRef = _usersCollection.doc(uid);
+    final batch = firestore.batch()
+      ..set(userRef, {
+        'name': name,
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true, // Standardized field name
+      })
+      ..set(userRef.collection('private').doc('profile'), {
+        'email': email,
+        'phone': phone,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    await batch.commit();
   }
 
   /// Retrieves a user document by UID.
@@ -408,7 +415,22 @@ class FirestoreService {
       ...functionFields,
     };
 
-    final docRef = await _enquiriesCollection.add(enquiryData);
+    return _createWithFinancials(enquiryData);
+  }
+
+  /// Writes a new enquiry (without money) and its admin-only financial summary in
+  /// one batch. See [EnquiryFinancials].
+  Future<String> _createWithFinancials(Map<String, dynamic> data) async {
+    final parts = EnquiryFinancials.split(data);
+    final docRef = _enquiriesCollection.doc();
+    final batch = firestore.batch()..set(docRef, parts.parent);
+    if (parts.money.isNotEmpty) {
+      batch.set(
+        EnquiryFinancials.ref(firestore, docRef.id),
+        EnquiryFinancials.summaryWrite(parts.money),
+      );
+    }
+    await batch.commit();
     return docRef.id;
   }
 
@@ -428,8 +450,7 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    final docRef = await _enquiriesCollection.add(payload);
-    return docRef.id;
+    return _createWithFinancials(payload);
   }
 
   /// Retrieves a real-time stream of all enquiries.
@@ -550,15 +571,39 @@ class FirestoreService {
     return query.snapshots();
   }
 
-  /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
-  Future<QuerySnapshot> fetchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
-    Query query = _enquiriesCollection.orderBy('createdAt', descending: true);
-    if (!isAdmin && assignedToUid != null) {
-      query = _enquiriesCollection
-          .where('assignedTo', isEqualTo: assignedToUid)
-          .orderBy('createdAt', descending: true);
+  /// Rows per page when [fetchEnquiriesForRole] walks the collection.
+  static const int exportPageSize = 500;
+
+  /// Every enquiry the user may export, newest first (`createdAt DESC`), as pages of
+  /// [pageSize] rows walked with `startAfterDocument`; no row cap. Each row carries
+  /// its `id`. Admin rows include money from the financial summaries (legacy parent
+  /// fields as fallback); staff rows are their assigned enquiries without money.
+  Stream<List<Map<String, dynamic>>> fetchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+    int pageSize = exportPageSize,
+  }) async* {
+    if (!isAdmin && (assignedToUid == null || assignedToUid.isEmpty)) return;
+    Query<Map<String, dynamic>> query = enquiriesCollection;
+    if (!isAdmin) query = query.where('assignedTo', isEqualTo: assignedToUid);
+    query = query.orderBy('createdAt', descending: true).limit(pageSize);
+
+    final summaries = isAdmin
+        ? await EnquiryFinancials.readAll(firestore)
+        : const <String, Map<String, dynamic>>{};
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      final page = await (last == null ? query : query.startAfterDocument(last)).get();
+      if (page.docs.isEmpty) return;
+      yield [
+        for (final doc in page.docs)
+          isAdmin
+              ? EnquiryFinancials.merge({'id': doc.id, ...doc.data()}, summaries[doc.id])
+              : EnquiryFinancials.strip({'id': doc.id, ...doc.data()}),
+      ];
+      if (page.docs.length < pageSize) return;
+      last = page.docs.last;
     }
-    return query.get();
   }
 
   /// Retrieves a specific enquiry by its ID.
@@ -718,6 +763,38 @@ class FirestoreService {
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
 
+  /// Admin read: the enquiry with its money taken from the financial summary
+  /// (falling back to legacy parent fields). Non-admins can't read the summary;
+  /// for them this returns the parent without money fields.
+  Future<Map<String, dynamic>?> getEnquiryWithFinancials(String enquiryId) async {
+    final parent = await getEnquiry(enquiryId);
+    if (parent == null) return null;
+    try {
+      return EnquiryFinancials.merge(parent, await EnquiryFinancials.read(firestore, enquiryId));
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      return EnquiryFinancials.strip(parent);
+    }
+  }
+
+  /// [updateEnquiry] that sends money fields to the financial summary (admin only)
+  /// in the same batch; the parent never receives them.
+  Future<void> updateEnquiryWithFinancials(String enquiryId, Map<String, dynamic> data) async {
+    final parts = EnquiryFinancials.split(data);
+    if (parts.money.isEmpty) return updateEnquiry(enquiryId, parts.parent);
+    final batch = firestore.batch()
+      ..update(_enquiriesCollection.doc(enquiryId), {
+        ...parts.parent,
+        'updatedAt': FieldValue.serverTimestamp(),
+      })
+      ..set(
+        EnquiryFinancials.ref(firestore, enquiryId),
+        EnquiryFinancials.summaryWrite(parts.money),
+        SetOptions(merge: true),
+      );
+    await batch.commit();
+  }
+
   /// Deletes an enquiry document from Firestore.
   ///
   /// This method permanently removes the specified enquiry from the database.
@@ -736,7 +813,11 @@ class FirestoreService {
   /// await firestoreService.deleteEnquiry('enquiry123');
   /// ```
   Future<void> deleteEnquiry(String enquiryId) async {
-    await _enquiriesCollection.doc(enquiryId).delete();
+    // Subcollections are not deleted with the parent: drop the money doc too (admin only).
+    final batch = firestore.batch()
+      ..delete(_enquiriesCollection.doc(enquiryId))
+      ..delete(EnquiryFinancials.ref(firestore, enquiryId));
+    await batch.commit();
   }
 
   /// Retrieves a real-time stream of all active users.

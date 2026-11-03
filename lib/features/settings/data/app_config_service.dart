@@ -104,6 +104,26 @@ class AppConfigService {
     });
   }
 
+  /// `app_config/notifications.websiteAssigneeUid`: who website enquiries are
+  /// assigned to (null = nobody; admins are notified either way). Read by the
+  /// websiteLead function.
+  Stream<String?> watchWebsiteAssigneeUid() {
+    return _configDoc(AppConfigKind.notifications).snapshots().map((snap) {
+      final data = snap.data() as Map<String, dynamic>?;
+      final uid = data?['websiteAssigneeUid'];
+      return uid is String && uid.trim().isNotEmpty ? uid.trim() : null;
+    });
+  }
+
+  /// Sets (or clears, with null) the website enquiry assignee (admin only).
+  Future<void> setWebsiteAssigneeUid(String? uid) async {
+    await _configDoc(AppConfigKind.notifications).set({
+      'websiteAssigneeUid': uid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    safeLog('app_config_updated', {'kind': 'notifications', 'websiteAssigneeSet': uid != null});
+  }
+
   /// Turns automatic follow-ups on or off for the whole team (admin only).
   Future<void> setFollowUpsEnabled(bool enabled) async {
     await _configDoc(AppConfigKind.notifications).set({

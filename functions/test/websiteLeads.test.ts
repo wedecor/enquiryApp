@@ -50,8 +50,8 @@ describe("websiteLead + lookupCustomer (emulator)", { skip: !hasEmulator }, () =
   beforeEach(async () => {
     await clearEmulator();
     await seedUsers(db);
-    // Website default assignee is resolved by name when the known uid is absent.
-    await db.collection("users").doc("zakir").set({ name: "Mohammed Zakir", role: "staff", isActive: true });
+    // Website assignee comes from Settings (app_config/notifications.websiteAssigneeUid).
+    await db.collection("app_config").doc("notifications").set({ websiteAssigneeUid: "staff1" });
   });
 
   it("(1) the same external id submitted twice creates one enquiry and one set of notifications", async () => {
@@ -123,6 +123,18 @@ describe("websiteLead + lookupCustomer (emulator)", { skip: !hasEmulator }, () =
     await assert.rejects(handleLookupCustomer(db, "staffOff", { phone: "9876543210" }), /Active account/);
   });
 
+  it("(5) no configured / missing / inactive website assignee → unassigned, admins still notified", async () => {
+    for (const [i, config] of [{}, { websiteAssigneeUid: "ghost" }, { websiteAssigneeUid: "staffOff" }].entries()) {
+      await db.collection("app_config").doc("notifications").set(config);
+      const res = await handleWebsiteLead(db, payload({ externalId: `lead-noassign-${i}` }), NOW);
+      assert.equal(res.status, 201);
+      const doc = await db.collection("enquiries").doc(`web_lead-noassign-${i}`).get();
+      assert.equal(doc.get("assignedTo"), null, JSON.stringify(config));
+    }
+    assert.equal((await inbox(db, "admin1")).length, 3);
+    assert.equal((await inbox(db, "staffOff")).length, 0);
+  });
+
   it("(15) website integration: attribution, assignee, admin + assignee notifications, validation", async () => {
     const bad = await handleWebsiteLead(db, payload({ date: "2026-10-01" }), NOW);
     assert.equal(bad.status, 400);
@@ -133,12 +145,18 @@ describe("websiteLead + lookupCustomer (emulator)", { skip: !hasEmulator }, () =
     assert.equal(doc.get("sourceValue"), "google_website");
     assert.equal(doc.get("createdBy"), "system:website");
     assert.equal(doc.get("websiteLeadId"), "lead-0001-abcd");
-    assert.equal(doc.get("assignedTo"), "zakir");
+    assert.equal(doc.get("assignedTo"), "staff1");
+    // No money on the enquiry: it lives in the admin-only financial summary.
+    for (const field of ["totalCost", "advancePaid", "paymentStatus", "paymentStatusValue"]) {
+      assert.equal(doc.get(field), undefined, field);
+    }
+    const summary = await doc.ref.collection("financial").doc("summary").get();
+    assert.equal(summary.get("paymentStatusValue"), "pending");
     assert.equal(doc.get("eventTypeValue"), "others", "unknown website types fall back to Others");
     assert.match(String(doc.get("notes")), /Event type on website: Kitty Party/);
     assert.equal((await inbox(db, "admin1")).length, 1);
     assert.equal((await inbox(db, "admin2")).length, 1);
-    assert.equal((await inbox(db, "zakir")).length, 1);
+    assert.equal((await inbox(db, "staff1")).length, 1);
     assert.equal((await inbox(db, "adminOff")).length, 0);
   });
 });

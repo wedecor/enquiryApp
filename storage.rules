@@ -23,7 +23,8 @@ service firebase.storage {
         && firestore.get(_userDoc()).data.role == 'admin';
     }
 
-    // Admins: full access. Staff: only when Firestore allows them to read the enquiry.
+    // Admins: full access. Others: only when the enquiry is assigned to them, the
+    // same rule Firestore uses for reading the enquiry (no createdBy exception).
     function canAccessEnquiry(enquiryId) {
       return isAdmin() || isAssignedToEnquiry(enquiryId);
     }
@@ -32,10 +33,7 @@ service firebase.storage {
       let enquiryPath = /databases/(default)/documents/enquiries/$(enquiryId);
       return isActiveUser()
         && firestore.exists(enquiryPath)
-        && (
-          firestore.get(enquiryPath).data.assignedTo == request.auth.uid
-          || firestore.get(enquiryPath).data.createdBy == request.auth.uid
-        );
+        && firestore.get(enquiryPath).data.assignedTo == request.auth.uid;
     }
 
     function isValidAttachmentWrite() {
