@@ -172,3 +172,48 @@ Rules:
 | 4 | Auto-expire: flag open past events instead of closing them | Past-event open enquiries pile up in In Talks | They are due for follow-up, admins are notified once, and the dashboard shows them. |
 | 5 | Analytics incremental refresh | Server writes that don't bump `updatedAt` (occasion stamps) | Manual refresh and a 6 h maximum age do a full reload. Deletes are detected with a `count()`. |
 | 6 (P2) | Review only: open-pipeline listeners, CSV export, App Check | — | Documented in `docs/APP_CHECK_AND_QUERY_REVIEW.md`. Nothing is enforced. |
+
+## 7. Manual deployment steps (nothing in this branch has been deployed)
+
+Run these from a machine with `firebase login` for project `wedecorenquries`, in this
+order:
+
+1. **Indexes first.** Deploy them and wait until the new
+   `enquiries (followUpNotifiedStage, followUpDueAt)` index shows *Enabled*:
+   `firebase deploy --only firestore:indexes`
+2. **Functions:** `npm --prefix functions run deploy`. The script lists every function,
+   including the new `notifyEnquiryEvent`, `onEnquiryWrittenFollowUp` and
+   `followUpReminders`. The changed functions are `autoExpireEnquiries`, `websiteLead`
+   and `lookupCustomer`.
+   - From this point `autoExpireEnquiries` stops closing open past-event enquiries.
+   - On its first 15-minute run, `followUpReminders` backfills open enquiries once (see
+     `app_config/followups_state`). Backfilled due times are at least the next
+     10:00 IST slot.
+   - To stage the rollout, set `app_config/notifications.followUpsEnabled = false`
+     before deploying, then switch it on from Settings → Admin → Notifications.
+3. **App release:** build and publish the new Android APK and web build. This build
+   sends notifications through `notifyEnquiryEvent` and shows the Follow-up section.
+4. **Rules, last:** `firebase deploy --only firestore:rules`, once staff are on the new
+   build.
+   - From then on, clients cannot create `users/{uid}/notifications` (P0 fix), and
+     follow-up fields are validated.
+   - Older builds keep working, but their cross-user pushes are dropped. Those writes
+     were caught and logged, so the save still succeeds.
+5. **Verify:**
+   - Create a test enquiry and check that admins get "New Enquiry Created".
+   - Check that the Follow-up section shows "Due in 3 days".
+   - Check the function logs for `Follow-up reminders run` and
+     `Auto-expire enquiries completed` (`flaggedForReview`).
+
+**Rollback:**
+- Re-deploy the previous functions. The new fields on the enquiries are ignored by old
+  code.
+- Rules can be rolled back on their own. Old clients then write notifications again,
+  which re-opens the P0 hole.
+- No data migration needs undoing. To stop reminders without a deploy, set
+  `followUpsEnabled` to `false`.
+
+**No production data was modified.** Enquiries that the old job auto-closed to
+Not Interested stay closed. Reopening any of them is an admin decision. They carry
+`lostReason: no_response` and the note `Auto-closed after event date`, so they can be
+found with a query.
