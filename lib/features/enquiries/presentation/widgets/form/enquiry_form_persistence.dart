@@ -746,7 +746,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     await notificationService.notifyEnquiryCreated(
       enquiryId: enquiryId,
       customerName: tidyPersonName(_nameController.text),
-      eventType: eventTypeValue,
+      eventType: eventTypeLabel,
       createdBy: currentUser.uid,
     );
 
@@ -770,7 +770,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         await notificationService.notifyEnquiryAssigned(
           enquiryId: enquiryId,
           customerName: tidyPersonName(_nameController.text),
-          eventType: eventTypeValue,
+          eventType: eventTypeLabel,
           assignedTo: assignee,
           assignedBy: currentUser.uid,
           notifyAdmins: false,
@@ -1209,7 +1209,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       await notificationService.notifyEnquiryUpdated(
         enquiryId: widget.enquiryId!,
         customerName: newCustomerName,
-        eventType: eventTypeValue,
+        eventType: eventTypeLabel,
         updatedBy: currentUser.uid,
         assignedTo: assignedTo,
       );
@@ -1228,7 +1228,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         await notificationService.notifyEnquiryAssigned(
           enquiryId: widget.enquiryId!,
           customerName: newCustomerName,
-          eventType: eventTypeValue,
+          eventType: eventTypeLabel,
           assignedTo: newAssignee,
           assignedBy: currentUser.uid,
           notifyAdmins: !statusDidChange,
