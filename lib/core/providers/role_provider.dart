@@ -279,7 +279,11 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
   return UserPermissions(
     canViewEnquiries: isAdmin || isStaff,
     canCreateEnquiries: isAdmin,
-    canEditEnquiries: isAdmin,
+    // Mirrors firestore.rules: admins update any enquiry; staff update status and
+    // functions on enquiries assigned to them (see [UserPermissions.canEditEnquiry]).
+    canEditEnquiries: isAdmin || isStaff,
+    canEditAllEnquiries: isAdmin,
+    canOpenEditForm: isAdmin,
     canDeleteEnquiries: isAdmin,
     canViewAnalytics: isAdmin,
     canManageUsers: isAdmin,
@@ -295,7 +299,8 @@ final userPermissionsProvider = Provider<UserPermissions>((ref) {
 ///
 /// Permissions are determined based on the user's role:
 /// - **Admin users** have all permissions enabled
-/// - **Staff users** have limited permissions (view assigned enquiries, update status)
+/// - **Staff users** have limited permissions (view assigned enquiries, update their
+///   status and functions)
 /// - **Unauthenticated users** have no permissions
 ///
 /// Example usage:
@@ -337,6 +342,8 @@ class UserPermissions {
     required this.canDeleteEnquiries,
     required this.canViewAnalytics,
     required this.canManageUsers,
+    this.canEditAllEnquiries = false,
+    this.canOpenEditForm = false,
   });
 
   /// Whether the user can view enquiry lists and details.
@@ -359,16 +366,23 @@ class UserPermissions {
   /// Typically restricted to admin users (matches Firestore create rules).
   final bool canCreateEnquiries;
 
-  /// Whether the user can modify existing enquiries.
-  ///
-  /// This permission allows users to:
-  /// - Update enquiry information
-  /// - Change enquiry status
-  /// - Modify customer details
-  /// - Update assignment information
-  ///
-  /// Typically restricted to admin users only.
+  /// Whether the user may update enquiries they can act on (firestore.rules):
+  /// admins any enquiry; staff the status and functions of enquiries assigned
+  /// to them (never money, assignment or the full edit form). Use
+  /// [canEditEnquiry] for a specific enquiry.
   final bool canEditEnquiries;
+
+  /// Admin: may update every enquiry, not only assigned ones.
+  final bool canEditAllEnquiries;
+
+  /// Admin: may open the full enquiry edit form (customer, money, assignment).
+  final bool canOpenEditForm;
+
+  /// Whether the user may update status / functions of the enquiry assigned to
+  /// [assignedTo], when signed in as [currentUid].
+  bool canEditEnquiry({String? assignedTo, String? currentUid}) =>
+      canEditAllEnquiries ||
+      (canEditEnquiries && assignedTo != null && assignedTo.isNotEmpty && assignedTo == currentUid);
 
   /// Whether the user can delete enquiries.
   ///

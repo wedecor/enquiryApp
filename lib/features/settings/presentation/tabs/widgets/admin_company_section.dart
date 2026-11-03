@@ -63,7 +63,7 @@ class _CompanyConfigTabState extends ConsumerState<CompanyConfigTab> {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Company settings unavailable',
-        message: 'Error loading company config: $error',
+        message: 'Company settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

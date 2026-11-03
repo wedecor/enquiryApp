@@ -8,6 +8,7 @@ import '../../../../core/auth/role_guards.dart' show logAdminAction;
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/enquiry_financials.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../data/customer_lookup_service.dart';
+import '../../data/enquiry_financials_provider.dart';
 import '../../data/enquiry_merge_service.dart';
 import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
@@ -116,7 +118,17 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                       return _frame(actions, const Text('Enquiry not found'));
                     }
 
-                    final enquiryData = snapshot.data!.data() as Map<String, dynamic>;
+                    final rawData = snapshot.data!.data() as Map<String, dynamic>;
+                    // Money: admins read the admin-only financial summary (legacy parent
+                    // fields as fallback); everyone else never sees amounts.
+                    final enquiryData = userRole == UserRole.admin
+                        ? EnquiryFinancials.merge(
+                            rawData,
+                            ref
+                                .watch(enquiryFinancialSummaryProvider(widget.enquiryId))
+                                .valueOrNull,
+                          )
+                        : EnquiryFinancials.strip(rawData);
                     final dropdownLookup = ref
                         .watch(dropdownLookupProvider)
                         .maybeWhen(data: (value) => value, orElse: () => null);
@@ -238,8 +250,13 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               bottomClearance: enquiryGlassBarClearance(context) + AppTokens.space4,
               onAddEvent: isAdmin ? () => _addAnotherEvent(enquiryData) : null,
               onOpenCustomerEvent: (event) => _openCustomerEvent(event, isAdmin: isAdmin),
-              // Functions are staff-editable on their own enquiry (not protected in the rules).
-              canEditFunctions: isAdmin || (enquiryData['assignedTo'] as String?) == currentUserId,
+              // Admins, or staff on their own enquiry (firestore.rules; UserPermissions).
+              canEditFunctions: ref
+                  .watch(userPermissionsProvider)
+                  .canEditEnquiry(
+                    assignedTo: enquiryData['assignedTo'] as String?,
+                    currentUid: currentUserId,
+                  ),
             ),
           ],
         ),

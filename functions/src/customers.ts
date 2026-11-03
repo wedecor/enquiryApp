@@ -87,10 +87,123 @@ function eventTypeLabelOf(data: FirebaseFirestore.DocumentData): string {
   return value ? titleCase(value) : "Event";
 }
 
+/** Callable core of [lookupCustomer], exported for tests. */
+export async function handleLookupCustomer(
+  db: FirebaseFirestore.Firestore,
+  callerUid: string | undefined,
+  data: unknown,
+): Promise<LookupCustomerResponse> {
+  if (!callerUid) {
+    throw new HttpsError("unauthenticated", "Must be signed in to look up customers");
+  }
+
+  const callerSnap = await db.collection("users").doc(callerUid).get();
+  const callerData = callerSnap.data();
+  const callerRole = callerData?.role;
+  if (
+    !callerSnap.exists ||
+    !isActiveUserData(callerData) ||
+    (callerRole !== "admin" && callerRole !== "staff")
+  ) {
+    throw new HttpsError("permission-denied", "Active account required");
+  }
+
+  const input = (data ?? {}) as Partial<LookupCustomerRequest>;
+  if (typeof input.phone !== "string" || input.phone.length > 30) {
+    throw new HttpsError("invalid-argument", "phone must be a string of at most 30 characters");
+  }
+  if (input.excludeEnquiryId !== undefined && typeof input.excludeEnquiryId !== "string") {
+    throw new HttpsError("invalid-argument", "excludeEnquiryId must be a string");
+  }
+  const excludeId = input.excludeEnquiryId?.trim() || null;
+
+  const empty: LookupCustomerResponse = { customer: null, events: [], totalEvents: 0, openEvents: 0 };
+  const normalized = normalizePhone(input.phone);
+  if (normalized.length < MIN_LOOKUP_DIGITS) {
+    return empty;
+  }
+
+  // Equality only → served by the automatic single-field index (no composite index).
+  const snap = await db
+    .collection("enquiries")
+    .where("phoneNormalized", "==", normalized)
+    .limit(MAX_RESULTS)
+    .get();
+
+  if (snap.empty) {
+    return empty;
+  }
+
+  const docs = [...snap.docs].sort((a, b) => {
+    const at = toDate(a.get("createdAt"))?.getTime() ?? 0;
+    const bt = toDate(b.get("createdAt"))?.getTime() ?? 0;
+    return bt - at;
+  });
+
+  const latest = docs[0].data();
+  const customer = {
+    name: stringOrNull(latest.customerName) ?? "Customer",
+    email: stringOrNull(latest.customerEmail),
+    whatsappNumber: stringOrNull(latest.whatsappNumber),
+    phone: stringOrNull(latest.customerPhone),
+  };
+
+  // Other events: skip the enquiry being viewed and enquiries already merged away.
+  const eventDocs = docs.filter((d) => d.id !== excludeId && !d.get("mergedInto"));
+
+  const assigneeIds = Array.from(
+    new Set(
+      eventDocs
+        .map((d) => stringOrNull(d.get("assignedTo")))
+        .filter((uid): uid is string => uid !== null)
+    )
+  );
+  const names = new Map<string, string>();
+  if (assigneeIds.length > 0) {
+    try {
+      const userSnaps = await db.getAll(...assigneeIds.map((uid) => db.collection("users").doc(uid)));
+      for (const u of userSnaps) {
+        const name = stringOrNull(u.get("name")) ?? stringOrNull(u.get("email"));
+        if (u.exists && name) names.set(u.id, name);
+      }
+    } catch (error: any) {
+      logger.warn("lookupCustomer: could not resolve assignee names", { error: error?.message });
+    }
+  }
+
+  const events: LookupCustomerEvent[] = eventDocs.map((d) => {
+    const data = d.data();
+    const status = canonicalStatus(data.statusValue);
+    const assignedTo = stringOrNull(data.assignedTo);
+    return {
+      id: d.id,
+      eventType: eventTypeLabelOf(data),
+      eventDate: toDate(data.eventDate)?.toISOString() ?? null,
+      status,
+      statusLabel: status ? statusLabel(status) : stringOrNull(data.statusLabel) ?? "Unknown",
+      assignedToName: assignedTo ? names.get(assignedTo) ?? "a teammate" : null,
+      assignedToMe: assignedTo === callerUid,
+      createdAt: toDate(data.createdAt)?.toISOString() ?? null,
+      isOpen: status !== null && OPEN_STATUSES.has(status),
+    };
+  });
+
+  const openEvents = events.filter((e) => e.isOpen).length;
+  logger.info("lookupCustomer completed", {
+    by: callerUid,
+    matches: docs.length,
+    events: events.length,
+    openEvents,
+  });
+
+  return { customer, events, totalEvents: events.length, openEvents };
+}
+
 /**
  * Finds a customer's other enquiries by phone. Runs server-side because staff can only
  * read enquiries assigned to them. Returns contact basics from the most recent enquiry
- * and a minimal summary per event (no money, notes or internal fields).
+ * and a minimal summary per event (no money, notes or internal fields). Read-only:
+ * related enquiries are listed, never merged.
  */
 export const lookupCustomer = onCall<LookupCustomerRequest, Promise<LookupCustomerResponse>>(
   {
@@ -98,112 +211,5 @@ export const lookupCustomer = onCall<LookupCustomerRequest, Promise<LookupCustom
     region: "asia-south1",
     enforceAppCheck: false,
   },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Must be signed in to look up customers");
-    }
-    const callerUid = request.auth.uid;
-    const db = getFirestore();
-
-    const callerSnap = await db.collection("users").doc(callerUid).get();
-    const callerData = callerSnap.data();
-    const callerRole = callerData?.role;
-    if (
-      !callerSnap.exists ||
-      !isActiveUserData(callerData) ||
-      (callerRole !== "admin" && callerRole !== "staff")
-    ) {
-      throw new HttpsError("permission-denied", "Active account required");
-    }
-
-    const input = (request.data ?? {}) as Partial<LookupCustomerRequest>;
-    if (typeof input.phone !== "string" || input.phone.length > 30) {
-      throw new HttpsError("invalid-argument", "phone must be a string of at most 30 characters");
-    }
-    if (input.excludeEnquiryId !== undefined && typeof input.excludeEnquiryId !== "string") {
-      throw new HttpsError("invalid-argument", "excludeEnquiryId must be a string");
-    }
-    const excludeId = input.excludeEnquiryId?.trim() || null;
-
-    const empty: LookupCustomerResponse = { customer: null, events: [], totalEvents: 0, openEvents: 0 };
-    const normalized = normalizePhone(input.phone);
-    if (normalized.length < MIN_LOOKUP_DIGITS) {
-      return empty;
-    }
-
-    // Equality only → served by the automatic single-field index (no composite index).
-    const snap = await db
-      .collection("enquiries")
-      .where("phoneNormalized", "==", normalized)
-      .limit(MAX_RESULTS)
-      .get();
-
-    if (snap.empty) {
-      return empty;
-    }
-
-    const docs = [...snap.docs].sort((a, b) => {
-      const at = toDate(a.get("createdAt"))?.getTime() ?? 0;
-      const bt = toDate(b.get("createdAt"))?.getTime() ?? 0;
-      return bt - at;
-    });
-
-    const latest = docs[0].data();
-    const customer = {
-      name: stringOrNull(latest.customerName) ?? "Customer",
-      email: stringOrNull(latest.customerEmail),
-      whatsappNumber: stringOrNull(latest.whatsappNumber),
-      phone: stringOrNull(latest.customerPhone),
-    };
-
-    // Other events: skip the enquiry being viewed and enquiries already merged away.
-    const eventDocs = docs.filter((d) => d.id !== excludeId && !d.get("mergedInto"));
-
-    const assigneeIds = Array.from(
-      new Set(
-        eventDocs
-          .map((d) => stringOrNull(d.get("assignedTo")))
-          .filter((uid): uid is string => uid !== null)
-      )
-    );
-    const names = new Map<string, string>();
-    if (assigneeIds.length > 0) {
-      try {
-        const userSnaps = await db.getAll(...assigneeIds.map((uid) => db.collection("users").doc(uid)));
-        for (const u of userSnaps) {
-          const name = stringOrNull(u.get("name")) ?? stringOrNull(u.get("email"));
-          if (u.exists && name) names.set(u.id, name);
-        }
-      } catch (error: any) {
-        logger.warn("lookupCustomer: could not resolve assignee names", { error: error?.message });
-      }
-    }
-
-    const events: LookupCustomerEvent[] = eventDocs.map((d) => {
-      const data = d.data();
-      const status = canonicalStatus(data.statusValue);
-      const assignedTo = stringOrNull(data.assignedTo);
-      return {
-        id: d.id,
-        eventType: eventTypeLabelOf(data),
-        eventDate: toDate(data.eventDate)?.toISOString() ?? null,
-        status,
-        statusLabel: status ? statusLabel(status) : stringOrNull(data.statusLabel) ?? "Unknown",
-        assignedToName: assignedTo ? names.get(assignedTo) ?? "a teammate" : null,
-        assignedToMe: assignedTo === callerUid,
-        createdAt: toDate(data.createdAt)?.toISOString() ?? null,
-        isOpen: status !== null && OPEN_STATUSES.has(status),
-      };
-    });
-
-    const openEvents = events.filter((e) => e.isOpen).length;
-    logger.info("lookupCustomer completed", {
-      by: callerUid,
-      matches: docs.length,
-      events: events.length,
-      openEvents,
-    });
-
-    return { customer, events, totalEvents: events.length, openEvents };
-  }
+  async (request) => handleLookupCustomer(getFirestore(), request.auth?.uid, request.data),
 );

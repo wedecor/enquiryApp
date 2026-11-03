@@ -309,21 +309,21 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         ),
       );
 
-      final snapshot = await firestoreService.fetchEnquiriesForRole(
-        isAdmin: userRole == UserRole.admin,
-        assignedToUid: userId,
+      // Walks every enquiry in pages of 500 and streams them into the CSV.
+      final exported = await CsvExport.exportEnquiryPages(
+        firestoreService.fetchEnquiriesForRole(
+          isAdmin: userRole == UserRole.admin,
+          assignedToUid: userId,
+        ),
+        ref,
       );
-      final enquiries = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {'id': doc.id, ...data};
-      }).toList();
 
       // Close loading dialog
       if (context.mounted) {
         Navigator.of(context).pop();
       }
 
-      if (enquiries.isEmpty) {
+      if (exported == 0) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -334,9 +334,6 @@ class _EnquiriesListScreenState extends ConsumerState<EnquiriesListScreen> {
         }
         return;
       }
-
-      // Export to CSV with role-based filtering
-      await CsvExport.exportEnquiries(enquiries, ref);
 
       if (context.mounted) {
         CsvExport.showExportSuccess(

@@ -69,6 +69,8 @@ jobs:
           cache-dependency-path: functions/package-lock.json
       - run: npm ci
       - run: npm run build
+      # Pure unit tests; the emulator-backed ones run in the rules job below.
+      - run: npm test
 
   rules:
     name: Firestore rules tests (emulator)
@@ -91,3 +93,9 @@ jobs:
       - run: npm ci
       # firebase-tools comes from rules-tests devDependencies; it finds ../firebase.json
       - run: npx firebase emulators:exec --only firestore --project demo-test "npm test"
+      # storage.rules (reads enquiries from Firestore, so both emulators run).
+      - run: npx firebase emulators:exec --only firestore,storage --project demo-test "npm run test:storage"
+      # Cloud Functions integration tests (notifications, website leads, follow-ups,
+      # auto-expire) against the same Firestore emulator.
+      - run: npm --prefix ../functions ci
+      - run: npx firebase emulators:exec --only firestore --project demo-functions-test "npm --prefix ../functions test"

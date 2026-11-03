@@ -9,6 +9,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/app_check/app_check_bootstrap.dart';
 import 'core/app_config.dart';
 import 'core/config/firebase_config.dart';
 import 'core/logging/logger.dart';
@@ -42,6 +43,9 @@ Future<void> _bootstrap() async {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     Log.i('Firebase initialized');
   }
+
+  // App Check (monitor only, never enforced here) before the first callable.
+  await AppCheckBootstrap.activate();
 
   // Configure Firestore offline persistence
   // Web: Persistence is automatic via IndexedDB, cache size can be configured

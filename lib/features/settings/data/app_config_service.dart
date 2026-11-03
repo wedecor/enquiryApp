@@ -94,6 +94,45 @@ class AppConfigService {
     }
   }
 
+  /// `app_config/notifications.followUpsEnabled` (absent = on). Read by the
+  /// follow-up Cloud Functions; kept outside [AppNotificationConfig] so older app
+  /// builds that save that model (merge) never reset it.
+  Stream<bool> watchFollowUpsEnabled() {
+    return _configDoc(AppConfigKind.notifications).snapshots().map((snap) {
+      final data = snap.data() as Map<String, dynamic>?;
+      return data?['followUpsEnabled'] != false;
+    });
+  }
+
+  /// `app_config/notifications.websiteAssigneeUid`: who website enquiries are
+  /// assigned to (null = nobody; admins are notified either way). Read by the
+  /// websiteLead function.
+  Stream<String?> watchWebsiteAssigneeUid() {
+    return _configDoc(AppConfigKind.notifications).snapshots().map((snap) {
+      final data = snap.data() as Map<String, dynamic>?;
+      final uid = data?['websiteAssigneeUid'];
+      return uid is String && uid.trim().isNotEmpty ? uid.trim() : null;
+    });
+  }
+
+  /// Sets (or clears, with null) the website enquiry assignee (admin only).
+  Future<void> setWebsiteAssigneeUid(String? uid) async {
+    await _configDoc(AppConfigKind.notifications).set({
+      'websiteAssigneeUid': uid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    safeLog('app_config_updated', {'kind': 'notifications', 'websiteAssigneeSet': uid != null});
+  }
+
+  /// Turns automatic follow-ups on or off for the whole team (admin only).
+  Future<void> setFollowUpsEnabled(bool enabled) async {
+    await _configDoc(AppConfigKind.notifications).set({
+      'followUpsEnabled': enabled,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    safeLog('app_config_updated', {'kind': 'notifications', 'followUpsEnabled': enabled});
+  }
+
   /// Update app notification config (admin only)
   Future<void> updateNotifications(AppNotificationConfig config) async {
     try {

@@ -76,7 +76,7 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
   }
 
   /// True when reopening a lost enquiry whose event date has already passed —
-  /// the nightly auto-close would close it again unless the date is updated.
+  /// an approved booking would be auto-completed; an open one is flagged for follow-up.
   bool _isReopeningPastEvent(String fromStatus, String toStatus) {
     if (!EnquiryStatus.isLost(fromStatus) || EnquiryStatus.isLost(toStatus)) return false;
     final eventDate = parseEnquiryDateTime(widget.enquiryData['eventDate']);
@@ -239,7 +239,8 @@ class _EnquiryStatusControlState extends ConsumerState<EnquiryStatusControl> {
         context: context,
         title: 'Event date has passed',
         message:
-            'Event date has passed — it will be auto-closed again unless you update the date. Continue?',
+            'Event date has passed. If it is approved it will be marked Completed; if it stays '
+            'open it will be flagged for follow-up. Update the date if the event moved. Continue?',
         confirmText: 'Continue',
         cancelText: 'Cancel',
         icon: Icons.event_busy_outlined,

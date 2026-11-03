@@ -1,3 +1,9 @@
+> **Historical document (Nov 2026).** This matrix describes an older version of the
+> app and is no longer maintained. The source of truth for who may read or write what
+> is `firestore.rules` (with `storage.rules`), and for enquiry statuses and staff
+> transitions it is `lib/core/constants/status_vocabulary.dart`. Where this file
+> disagrees with them, they win.
+
 # We Decor Enquiries - Feature Matrix
 
 ## 📋 Roles & Capabilities

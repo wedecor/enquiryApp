@@ -104,7 +104,9 @@ class DataIntegrationsTab extends ConsumerWidget {
             SettingsTile(
               icon: Icons.auto_fix_high_rounded,
               title: 'Auto-close',
-              subtitle: 'Past enquiries are closed automatically each night',
+              subtitle:
+                  'Past approved bookings are marked Completed; open enquiries '
+                  'are kept and flagged for follow-up',
             ),
           ],
         ),

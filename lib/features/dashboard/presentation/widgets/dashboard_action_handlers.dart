@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
+import '../../../enquiries/data/follow_up_service.dart';
 import '../../../enquiries/domain/enquiry.dart';
+import '../../../enquiries/domain/follow_up.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
 import '../../../settings/providers/settings_providers.dart';
@@ -291,11 +294,21 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
 
     if (status == ContactLaunchStatus.opened) {
       final firestore = ref.read(firestoreServiceProvider);
+      final followUps = ref.read(followUpServiceProvider);
+      final userId = ref.read(currentUserWithFirestoreProvider).valueOrNull?.uid;
+      // Automatic follow-up open on this enquiry: the WhatsApp counts as done.
+      FollowUpInfo? completed;
       try {
         await firestore.updateEnquiry(enquiryId, {
           'reminderClickCount': FieldValue.increment(1),
           'lastReminderSentAt': FieldValue.serverTimestamp(),
         });
+        final snap = await firestore.enquiriesCollection.doc(enquiryId).get();
+        final info = FollowUpInfo.fromData(snap.data() ?? const {});
+        if (userId != null && info.tracked && info.dueAt != null) {
+          await followUps.complete(enquiryId: enquiryId, userId: userId, previousDueAt: info.dueAt);
+          completed = info;
+        }
       } catch (e) {
         Log.e('Failed to mark follow-up as sent', error: e);
       }
@@ -313,6 +326,19 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
                     'reminderClickCount': FieldValue.increment(-1),
                     'lastReminderSentAt': FieldValue.delete(),
                   });
+                  // Put the follow-up back (a completion can't be un-recorded; it is
+                  // re-opened as a manual reschedule, kept in the history).
+                  final previous = completed?.dueAt;
+                  if (userId != null && previous != null) {
+                    final soon = DateTime.now().add(const Duration(minutes: 1));
+                    await followUps.reschedule(
+                      enquiryId: enquiryId,
+                      userId: userId,
+                      dueAt: previous.isAfter(soon) ? previous : soon,
+                      note: completed?.note,
+                      reason: 'manual',
+                    );
+                  }
                 } catch (e) {
                   Log.e('Failed to undo follow-up', error: e);
                 }

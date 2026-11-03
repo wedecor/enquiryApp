@@ -1,6 +1,23 @@
 {
   "indexes": [
     {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedTo", "order": "ASCENDING" },
+        { "fieldPath": "statusValue", "order": "ASCENDING" },
+        { "fieldPath": "eventDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "enquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "followUpNotifiedStage", "order": "ASCENDING" },
+        { "fieldPath": "followUpDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "items",
       "queryScope": "COLLECTION",
       "fields": [
@@ -124,5 +141,15 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "financial",
+      "fieldPath": "updatedAt",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

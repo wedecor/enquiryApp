@@ -39,7 +39,7 @@ class _NotificationsTabState extends ConsumerState<NotificationsTab> {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Notifications unavailable',
-        message: 'Error loading notification settings: $error',
+        message: 'Notification settings could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );

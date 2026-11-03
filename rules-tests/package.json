@@ -8,7 +8,8 @@
     "test:watch": "jest --testEnvironment=node --watch",
     "emulators:start": "firebase emulators:start --only firestore --project demo-test",
     "ci": "npm run test:emulator",
-    "test:emulator": "firebase emulators:exec --only firestore --project demo-test \"npm test\""
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-test \"npm test\"",
+    "test:storage": "jest spec/storage.spec.js --testEnvironment=node --runInBand"
   },
   "dependencies": {
     "@firebase/rules-unit-testing": "3.0.3",

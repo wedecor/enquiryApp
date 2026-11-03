@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
 import '../../../enquiries/domain/event_functions.dart';
+import '../../../enquiries/domain/follow_up.dart';
 
 DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
@@ -173,7 +174,22 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
       matchesDigits(data['phoneNormalized'] as String?);
 }
 
+/// Follow Up tab / "Follow-ups" counter.
+///
+/// Enquiries managed by automatic follow-ups (`followUpSeq` present) show while
+/// their follow-up is due or overdue (New / In Talks); "Mark done" or a reschedule
+/// removes them. Older documents keep the legacy rule (In Talks, event within
+/// 21 days, no follow-up WhatsApp sent) until the server backfills them.
 bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
+  final followUp = FollowUpInfo.fromData(enquiryData);
+  if (followUp.tracked) {
+    return FollowUpInfo.isEligibleStatus(enquiryData['statusValue'] as String?) &&
+        followUp.isActionableAt(now);
+  }
+  return _legacyShouldShowReminder(enquiryData, now);
+}
+
+bool _legacyShouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
   if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
     return false;
   }
@@ -206,7 +222,7 @@ int eventDayOffset(DateTime eventDate, DateTime now) {
   return eventDay.difference(today).inDays;
 }
 
-/// Past-dated enquiries stay visible until the nightly auto-close function moves them.
+/// Past-dated enquiries stay visible: they are flagged for follow-up, never auto-closed.
 bool shouldShowInTalks(Map<String, dynamic> enquiryData) =>
     EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?);
 

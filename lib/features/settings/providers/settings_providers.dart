@@ -44,6 +44,16 @@ final appNotificationConfigProvider = StreamProvider<AppNotificationConfig>((ref
   return service.observeNotifications();
 });
 
+/// Automatic follow-ups switch (`app_config/notifications.followUpsEnabled`).
+final followUpsEnabledProvider = StreamProvider<bool>((ref) {
+  return ref.watch(appConfigServiceProvider).watchFollowUpsEnabled();
+});
+
+/// Website enquiry assignee (`app_config/notifications.websiteAssigneeUid`).
+final websiteAssigneeUidProvider = StreamProvider<String?>((ref) {
+  return ref.watch(appConfigServiceProvider).watchWebsiteAssigneeUid();
+});
+
 final appSecurityConfigProvider = StreamProvider<AppSecurityConfig>((ref) {
   final service = ref.watch(appConfigServiceProvider);
   return service.observeSecurity();

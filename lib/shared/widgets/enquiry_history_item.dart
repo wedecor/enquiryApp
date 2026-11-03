@@ -162,6 +162,10 @@ class EnquiryHistoryTimelineItem extends StatelessWidget {
         return Icons.event_note_rounded;
       case 'description':
         return Icons.description;
+      case 'followup':
+        return Icons.event_repeat_rounded;
+      case 'pasteventreview':
+        return Icons.event_busy_rounded;
       default:
         return Icons.edit;
     }

@@ -4,7 +4,6 @@ import 'package:we_decor_enquiries/core/services/audit_service.dart';
 import 'package:we_decor_enquiries/core/services/firestore_service.dart';
 import 'package:we_decor_enquiries/core/services/notification_service.dart' as notification_service;
 import 'package:we_decor_enquiries/features/enquiries/data/enquiry_repository.dart';
-import 'package:we_decor_enquiries/features/enquiries/domain/enquiry.dart';
 import 'package:we_decor_enquiries/services/dropdown_lookup.dart';
 import '../../../test_helper.dart';
 
@@ -40,14 +39,6 @@ void main() {
         MockAuditService(),
         MockNotificationService(),
       );
-    });
-
-    group('getEnquiries', () {
-      test('returns a stream of enquiries', () {
-        if (!firebaseAvailable) return;
-        final stream = repository.getEnquiries();
-        expect(stream, isA<Stream<List<Enquiry>>>());
-      });
     });
 
     group('getPaginatedEnquiries', () {

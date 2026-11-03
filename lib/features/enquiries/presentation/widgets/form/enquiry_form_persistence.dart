@@ -89,7 +89,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     Log.d('EnquiryFormScreen load start', data: {'enquiryId': widget.enquiryId?.substring(0, 6)});
     try {
       final firestoreService = ref.read(firestoreServiceProvider);
-      final data = await firestoreService.getEnquiry(widget.enquiryId!);
+      // Money comes from the admin-only financial summary (legacy parent fallback).
+      final data = await firestoreService.getEnquiryWithFinancials(widget.enquiryId!);
 
       if (!mounted) return;
       if (data != null) {
@@ -709,7 +710,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     final quoteFields = _quoteFields(const {});
     if (quoteFields.isNotEmpty) {
-      await firestoreService.updateEnquiry(enquiryId, {
+      // Quote is money: it goes to the admin-only financial summary.
+      await firestoreService.updateEnquiryWithFinancials(enquiryId, {
         ...quoteFields,
         'updatedBy': currentUser.uid,
       });
@@ -807,7 +809,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final dropdownLookup = await ref.read(dropdownLookupProvider.future);
 
     // Fetch old enquiry data to compare changes
-    final oldEnquiryData = await firestoreService.getEnquiry(widget.enquiryId!) ?? {};
+    final oldEnquiryData = await firestoreService.getEnquiryWithFinancials(widget.enquiryId!) ?? {};
     if (!mounted) return;
 
     // Status: only the user's own change is written. If they didn't touch the status
@@ -1035,7 +1037,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     // Update the enquiry document. Status / assignee / images are written only when the
     // user changed them; cleared optional fields are deleted rather than left stale.
-    await firestoreService.updateEnquiry(widget.enquiryId!, {
+    // Money fields go to the admin-only financial summary, never the parent.
+    await firestoreService.updateEnquiryWithFinancials(widget.enquiryId!, {
       'customerName': newCustomerName,
       'customerPhone': newCustomerPhone,
       if (newCustomerEmail.isNotEmpty)
@@ -1192,6 +1195,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         enquiryId: widget.enquiryId!,
         customerName: newCustomerName,
         oldStatus: oldStatusLabel,
+        oldStatusValue: oldStatusValue,
         newStatus: statusLabel,
         updatedBy: currentUser.uid,
         // A new assignee gets "Assigned to You" below instead.

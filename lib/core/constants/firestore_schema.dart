@@ -1,271 +1,173 @@
-/// Firestore Collections and Schema Definitions
+/// Live Firestore data model of the We Decor Enquiries app (Nov 2026).
 ///
-/// This file defines the structure of all Firestore collections used in the We Decor Enquiries app.
-/// Each collection has a specific purpose and document structure.
+/// Reference only: nothing here builds or validates documents. The rules in
+/// `firestore.rules` and the canonical status list in
+/// `lib/core/constants/status_vocabulary.dart` are the source of truth; the
+/// `Enquiry` model, `FirestoreService`, `EnquiryFinancials` and the Cloud
+/// Functions are the write paths. Only [FirestoreCollections.users] and
+/// [FirestoreCollections.enquiries] are read at runtime (by FirestoreService).
 library;
 
-/// Collection: users/
-/// Purpose: Store user information and roles
-/// Document ID: Firebase Auth UID
+/// Top-level collections and well-known sub-paths.
 class FirestoreCollections {
-  /// Users collection path
+  /// `users/{uid}` — public profile: `name`, `role` (`admin` | `staff`),
+  /// `isActive` (legacy `active`), timestamps. Readable by every active user
+  /// (assignment labels). Phone and email are in [userPrivateProfile].
   static const String users = 'users';
 
-  /// Enquiries collection path
+  /// `enquiries/{id}` — one event enquiry (see [EnquiryFields]).
   static const String enquiries = 'enquiries';
 
-  /// Dropdowns collection path
+  /// `dropdowns/{group}/items/{value}` — event types, statuses, sources,
+  /// priorities, payment statuses. Group doc only carries `defaultsSeeded`.
   static const String dropdowns = 'dropdowns';
 
-  // AUDIT-FIXME(F-13): legacy 2-segment paths — retained for database_setup_service.dart only
-  /// Event types subcollection path
-  static const String eventTypes = 'dropdowns/event_types';
+  /// `enquiries/{id}/financial/summary` — booking money (admin only).
+  static const String financial = 'financial';
+  static const String financialSummaryDoc = 'summary';
 
-  /// Statuses subcollection path
-  static const String statuses = 'dropdowns/statuses';
+  /// `enquiries/{id}/history/{auto}` — append-only audit trail.
+  static const String history = 'history';
 
-  /// Payment statuses subcollection path
-  static const String paymentStatuses = 'dropdowns/payment_statuses';
+  /// `enquiries/{id}/contacts/{auto}` — append-only call / WhatsApp log.
+  static const String contacts = 'contacts';
+
+  /// `users/{uid}/private/profile` — `phone`, `email`, `updatedAt` (owner + admins).
+  static const String userPrivateProfile = 'private/profile';
+
+  /// `users/{uid}/private/notifications/tokens/{tokenId}` — FCM tokens (owner only).
+  static const String userTokens = 'private/notifications/tokens';
+
+  /// `users/{uid}/notifications/{id}` — in-app inbox; created by Cloud Functions only.
+  static const String userNotifications = 'notifications';
+
+  /// `reminders/{phone}_{kind}_{year}` — yearly re-engagement wish queue.
+  static const String reminders = 'reminders';
+
+  /// `customer_prefs/{phoneNormalized}` — `noReminders`; written by the
+  /// `setReengagementPref` function only.
+  static const String customerPrefs = 'customer_prefs';
+
+  /// `app_config/{general|notifications|security|reengagement|followups_state}`.
+  static const String appConfig = 'app_config';
+
+  /// `admin_audit/{auto}` — admin action log (admins only).
+  static const String adminAudit = 'admin_audit';
 }
 
-/// Document structure for users collection
-/// Collection: users/
-/// Document ID: Firebase Auth UID
-class UserDocument {
-  /// User's full name
-  final String name;
+/// `enquiries/{id}` fields written by the app, the website lead function and the
+/// scheduled jobs. Money is NOT here (see [FinancialSummaryFields]); older
+/// documents may still carry it until the 2026_11 migration is applied.
+class EnquiryFields {
+  // Customer
+  static const String customerName = 'customerName';
+  static const String customerNameLower = 'customerNameLower';
+  static const String customerPhone = 'customerPhone';
+  static const String phoneNormalized = 'phoneNormalized'; // customer identity (last 10 digits)
+  static const String customerEmail = 'customerEmail';
+  static const String whatsappNumber = 'whatsappNumber';
 
-  /// User's email address
-  final String email;
+  // Event (multi-function: `functions` array; top-level fields mirror it)
+  static const String eventTypeValue = 'eventTypeValue'; // legacy `eventType`
+  static const String eventTypeLabel = 'eventTypeLabel';
+  static const String eventDate = 'eventDate'; // LAST function day
+  static const String eventStartDate = 'eventStartDate'; // FIRST function day
+  static const String functions =
+      'functions'; // [{id, eventType, eventTypeLabel, date, time?, location?, ...}]
+  static const String functionCount = 'functionCount';
+  static const String eventLocation = 'eventLocation';
+  static const String locationArea = 'locationArea';
+  static const String locationPlaceId = 'locationPlaceId';
+  static const String guestCount = 'guestCount';
+  static const String budgetRange = 'budgetRange';
+  static const String notes = 'notes'; // and `description` (same text)
 
-  /// User's phone number
-  final String phone;
+  // Status (canonical values: status_vocabulary.dart)
+  static const String statusValue = 'statusValue';
+  static const String statusLabel = 'statusLabel';
+  static const String statusUpdatedAt = 'statusUpdatedAt';
+  static const String statusUpdatedBy = 'statusUpdatedBy';
+  static const String inTalksAt = 'inTalksAt';
+  static const String approvedAt = 'approvedAt';
+  static const String completedAt = 'completedAt';
+  static const String lostAt = 'lostAt';
+  static const String lostReason = 'lostReason';
+  static const String lostReasonNote = 'lostReasonNote';
+  static const String mergedInto = 'mergedInto'; // "Mark as duplicate of…"
 
-  /// User's role in the system (admin/staff)
-  final String role;
+  // Assignment / attribution
+  static const String assignedTo = 'assignedTo';
+  static const String assigneeName = 'assigneeName';
+  static const String createdBy = 'createdBy'; // uid or `system:website`
+  static const String priorityValue = 'priorityValue';
+  static const String sourceValue = 'sourceValue'; // `google_website` for the site
+  static const String websiteLeadId = 'websiteLeadId'; // doc id `web_{externalId}`
 
-  /// FCM token for push notifications (optional)
-  // fcmToken removed for security - stored in private subcollection
+  // Search
+  static const String textIndex = 'textIndex';
 
-  const UserDocument({
-    required this.name,
-    required this.email,
-    required this.phone,
-    required this.role,
-    // fcmToken constructor parameter removed
-  });
+  // Automatic follow-ups (server-managed; clients may complete / reschedule)
+  static const String followUpDueAt = 'followUpDueAt';
+  static const String followUpSeq = 'followUpSeq';
+  static const String followUpReason = 'followUpReason';
+  static const String followUpNotifiedStage = 'followUpNotifiedStage';
+  static const String followUpNote = 'followUpNote';
+  static const String followUpLastCompletedAt = 'followUpLastCompletedAt';
+  static const String pastEventReviewAt = 'pastEventReviewAt';
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'role': role,
-      // fcmToken removed for security
-    };
-  }
+  // Yearly re-engagement stamp (admin + server)
+  static const String occasionKind = 'occasionKind';
+  static const String occasionDate = 'occasionDate';
+
+  static const String createdAt = 'createdAt';
+  static const String updatedAt = 'updatedAt';
 }
 
-/// Document structure for enquiries collection
-/// Collection: enquiries/
-/// Document ID: Auto-generated
-class EnquiryDocument {
-  /// Customer's full name
-  final String customerName;
-
-  /// Customer's phone number
-  final String customerPhone;
-
-  /// Event location
-  final String location;
-
-  /// Event date
-  final DateTime eventDate;
-
-  /// Event type
-  final String eventType;
-
-  /// Event status - default: "Enquired" (deprecated, use statusValue)
-  @Deprecated('Use statusValue instead')
-  final String eventStatus;
-
-  /// Detailed notes
-  final String notes;
-
-  /// Reference images (list of Storage URLs)
-  final List<String> referenceImages;
-
-  /// Created by user ID (references users collection)
-  final String createdBy;
-
-  /// Assigned to user ID (references users collection, optional)
-  final String? assignedTo;
-
-  /// When the enquiry was created
-  final DateTime createdAt;
-
-  const EnquiryDocument({
-    required this.customerName,
-    required this.customerPhone,
-    required this.location,
-    required this.eventDate,
-    required this.eventType,
-    required this.eventStatus,
-    required this.notes,
-    required this.referenceImages,
-    required this.createdBy,
-    this.assignedTo,
-    required this.createdAt,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'customerName': customerName,
-      'customerPhone': customerPhone,
-      'location': location,
-      'eventDate': eventDate,
-      'eventType': eventType,
-      'statusValue': eventStatus, // Map to statusValue
-      'notes': notes,
-      'referenceImages': referenceImages,
-      'createdBy': createdBy,
-      'assignedTo': assignedTo,
-      'createdAt': createdAt,
-    };
-  }
+/// `enquiries/{id}/financial/summary` (admin read / write only).
+class FinancialSummaryFields {
+  static const String totalCost = 'totalCost';
+  static const String advancePaid = 'advancePaid';
+  static const String paymentStatusValue =
+      'paymentStatusValue'; // pending | partial | paid | overdue
+  static const String paymentStatus = 'paymentStatus'; // legacy mirror of the value
+  static const String paymentStatusLabel = 'paymentStatusLabel';
+  static const String quotedAmount = 'quotedAmount';
+  static const String quotedAt = 'quotedAt';
+  static const String updatedAt = 'updatedAt';
 }
 
-/// Document structure for financial subcollection
-/// Collection: enquiries/{enquiryId}/financial/
-/// Document ID: Auto-generated
-class FinancialDocument {
-  /// Total cost
-  final double totalCost;
-
-  /// Advance amount paid
-  final double advancePaid;
-
-  /// Payment status
-  final String paymentStatus;
-
-  const FinancialDocument({
-    required this.totalCost,
-    required this.advancePaid,
-    required this.paymentStatus,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {'totalCost': totalCost, 'advancePaid': advancePaid, 'paymentStatus': paymentStatus};
-  }
+/// `enquiries/{id}/history/{auto}` (AuditService.buildHistoryEntry; functions write
+/// `user_id: 'system'`). Append-only.
+class HistoryFields {
+  static const String fieldChanged = 'field_changed';
+  static const String oldValue = 'old_value';
+  static const String newValue = 'new_value';
+  static const String userId = 'user_id'; // must equal the writer's uid
+  static const String userEmail = 'user_email';
+  static const String timestamp = 'timestamp';
 }
 
-/// Document structure for history subcollection
-/// Collection: enquiries/{enquiryId}/history/
-/// Document ID: Auto-generated
-class HistoryDocument {
-  /// Field that was changed
-  final String fieldChanged;
-
-  /// Old value
-  final String oldValue;
-
-  /// New value
-  final String newValue;
-
-  /// User ID who made the change
-  final String changedBy;
-
-  /// When the change was made
-  final DateTime timestamp;
-
-  const HistoryDocument({
-    required this.fieldChanged,
-    required this.oldValue,
-    required this.newValue,
-    required this.changedBy,
-    required this.timestamp,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'fieldChanged': fieldChanged,
-      'oldValue': oldValue,
-      'newValue': newValue,
-      'changedBy': changedBy,
-      'timestamp': timestamp,
-    };
-  }
+/// `enquiries/{id}/contacts/{auto}`. Append-only.
+class ContactFields {
+  static const String type = 'type'; // call | whatsapp | reminder | review_request | reengagement
+  static const String by = 'by'; // writer's uid
+  static const String at = 'at';
 }
 
-/// AUDIT-FIXME(F-13): legacy dropdown doc types — retained for database_setup_service.dart only
-/// Document structure for event types dropdown
-/// Collection: dropdowns/event_types/
-/// Document ID: Auto-generated or lowercase eventType as ID
-class EventTypeDocument {
-  /// Event type value
-  final String value;
-
-  const EventTypeDocument({required this.value});
-
-  Map<String, dynamic> toMap() {
-    return {'value': value};
-  }
+/// `reminders/{phone}_{kind}_{year}` — created by scheduleReengagements; clients
+/// may only change the status bookkeeping.
+class ReminderFields {
+  static const String status = 'status'; // pending | sent | skipped
+  static const String assignedTo = 'assignedTo';
+  static const String occasionDate = 'occasionDate';
+  static const String sentAt = 'sentAt';
+  static const String sentBy = 'sentBy';
+  static const String skippedReason = 'skippedReason';
 }
 
-/// Document structure for statuses dropdown
-/// Collection: dropdowns/statuses/
-/// Document ID: Auto-generated or lowercase status as ID
-class StatusDocument {
-  /// Status value
-  final String value;
-
-  const StatusDocument({required this.value});
-
-  Map<String, dynamic> toMap() {
-    return {'value': value};
-  }
-}
-
-/// Document structure for payment statuses dropdown
-/// Collection: dropdowns/payment_statuses/
-/// Document ID: Auto-generated or lowercase payment status
-class PaymentStatusDocument {
-  /// Payment status value
-  final String value;
-
-  const PaymentStatusDocument({required this.value});
-
-  Map<String, dynamic> toMap() {
-    return {'value': value};
-  }
-}
-
-/// AUDIT-FIXME(F-13): legacy defaults — retained for database_setup_service.dart only
-/// Default values for dropdown collections
-class DefaultDropdownValues {
-  /// Default event types
-  static const List<String> eventTypes = [
-    'Wedding',
-    'Birthday Party',
-    'Corporate Event',
-    'Anniversary',
-    'Graduation',
-    'Baby Shower',
-    'Engagement',
-    'Other',
-  ];
-
-  /// Default enquiry statuses
-  static const List<String> statuses = [
-    'New',
-    'In Talks',
-    'Approved',
-    'Completed',
-    'Not Interested',
-    'Closed Lost',
-    'Cancelled',
-  ];
-
-  /// Default payment statuses
-  static const List<String> paymentStatuses = ['Pending', 'Partial', 'Paid', 'Overdue'];
+/// `users/{uid}/private/profile`.
+class UserPrivateProfileFields {
+  static const String phone = 'phone';
+  static const String email = 'email';
+  static const String updatedAt = 'updatedAt';
 }

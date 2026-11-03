@@ -769,14 +769,20 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       createdAt: new Date(),
     });
 
-    test('✅ Active user can queue a notification for a colleague', async () => {
-      await assertSucceeds(notifications(STAFF_UID, 'staff', ADMIN_UID).add(valid()));
+    // P0: notifications are server-created only (notifyEnquiryEvent / scheduled jobs).
+    test('❌ Staff cannot create a notification for a colleague (admin)', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', ADMIN_UID).add(valid()));
     });
 
-    test('✅ Contract keys type/enquiryId/createdBy/senderId are accepted', async () => {
-      await assertSucceeds(
+    test('❌ Staff cannot create a notification for another staff member', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).add(valid()));
+    });
+
+    test('❌ Staff cannot send arbitrary content even with the full contract keys', async () => {
+      await assertFails(
         notifications(STAFF_UID, 'staff', ADMIN_UID).add({
           ...valid(),
+          title: 'URGENT: transfer the advance to my account',
           type: 'status_update',
           enquiryId: 'enquiry-assigned-to-staff',
           createdBy: STAFF_UID,
@@ -785,23 +791,37 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
 
+    test('❌ Staff cannot create a notification with a fixed id (no overwrite of server ids)', async () => {
+      await assertFails(
+        notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).doc('fu_enquiry-1_1_due').set(valid())
+      );
+    });
+
+    test('❌ Users cannot create notifications in their own inbox either', async () => {
+      await assertFails(notifications(STAFF_UID, 'staff', STAFF_UID).add(valid()));
+    });
+
+    test('❌ Admins cannot create notifications from the client', async () => {
+      await assertFails(notifications(ADMIN_UID, 'admin', STAFF_UID).add(valid()));
+    });
+
     test('❌ Inactive user cannot queue notifications', async () => {
       await assertFails(notifications(INACTIVE_STAFF_UID, 'staff', ADMIN_UID).add(valid()));
     });
 
-    test('❌ Extra keys are rejected', async () => {
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), imageUrl: 'https://evil.example' })
-      );
-    });
-
-    test('❌ Title over 120 chars / body over 500 chars is rejected', async () => {
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), title: 'x'.repeat(121) })
-      );
-      await assertFails(
-        notifications(STAFF_UID, 'staff', ADMIN_UID).add({ ...valid(), body: 'x'.repeat(501) })
-      );
+    test('❌ Staff cannot read a colleague\'s notifications; ✅ admin can', async () => {
+      let id;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const ref = await context
+          .firestore()
+          .collection('users')
+          .doc(OTHER_STAFF_UID)
+          .collection('notifications')
+          .add(valid());
+        id = ref.id;
+      });
+      await assertFails(notifications(STAFF_UID, 'staff', OTHER_STAFF_UID).doc(id).get());
+      await assertSucceeds(notifications(ADMIN_UID, 'admin', OTHER_STAFF_UID).doc(id).get());
     });
 
     test('✅ Owner can mark read; ❌ owner cannot rewrite content', async () => {
@@ -821,6 +841,292 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(
         notifications(STAFF_UID, 'staff', STAFF_UID).doc(id).update({ title: 'changed' })
       );
+    });
+  });
+
+  describe('👥 Repeat customers (same phone, separate enquiries)', () => {
+    const seedPair = async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        const base = {
+          customerName: 'Priya Sharma',
+          customerPhone: '9876543210',
+          phoneNormalized: '9876543210',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+        };
+        await db.collection('enquiries').doc('web_birthday').set({ ...base, eventTypeValue: 'birthday' });
+        await db.collection('enquiries').doc('web_wedding').set({ ...base, eventTypeValue: 'wedding' });
+      });
+    };
+
+    test('✅ Assignee edits one enquiry; the other is untouched', async () => {
+      await seedPair();
+      const db = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(
+        db.collection('enquiries').doc('web_birthday').update({
+          statusValue: 'in_talks',
+          statusUpdatedBy: STAFF_UID,
+          inTalksAt: new Date(),
+        })
+      );
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const other = await context.firestore().collection('enquiries').doc('web_wedding').get();
+        expect(other.get('statusValue')).toBe('new');
+      });
+    });
+
+    test('❌ Staff cannot reassign a repeat enquiry; ✅ admin can still mark a genuine duplicate', async () => {
+      await seedPair();
+      const db = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertFails(
+        db.collection('enquiries').doc('web_wedding').update({ assignedTo: OTHER_STAFF_UID })
+      );
+      // Admin "Mark as duplicate of…" still works for genuine duplicates.
+      const admin = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore();
+      await assertSucceeds(
+        admin.collection('enquiries').doc('web_wedding').update({
+          statusValue: 'closed_lost',
+          lostReason: 'duplicate',
+          mergedInto: 'web_birthday',
+        })
+      );
+    });
+  });
+
+  describe('⏰ Follow-ups', () => {
+    const firebase = require('firebase/compat/app').default;
+    require('firebase/compat/firestore');
+    const FV = () => firebase.firestore.FieldValue;
+    const inDays = (n) => new Date(Date.now() + n * 24 * 60 * 60 * 1000);
+
+    const seed = async (overrides = {}) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('fu').set({
+          customerName: 'Priya Sharma',
+          statusValue: 'in_talks',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+          followUpDueAt: new Date(Date.now() - 60 * 60 * 1000),
+          followUpSeq: 4,
+          followUpReason: 'auto',
+          followUpNotifiedStage: 'due',
+          followUpScheduledBy: 'system:followups',
+          ...overrides,
+        });
+      });
+    };
+    const doc = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('fu');
+    const complete = (uid) => ({
+      followUpDueAt: null,
+      followUpSeq: FV().increment(1),
+      followUpNotifiedStage: null,
+      followUpLastCompletedAt: FV().serverTimestamp(),
+      followUpLastCompletedBy: uid,
+    });
+    const reschedule = (uid, due = inDays(2)) => ({
+      followUpDueAt: due,
+      followUpSeq: FV().increment(1),
+      followUpNotifiedStage: null,
+      followUpReason: 'callback',
+      followUpScheduledBy: uid,
+      followUpNote: 'Call after 6 pm',
+    });
+
+    test('✅ Assignee can complete their follow-up', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(complete(STAFF_UID)));
+    });
+
+    test('✅ Assignee can reschedule to a later callback; ✅ admin can too', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(reschedule(STAFF_UID)));
+      await assertSucceeds(doc(ADMIN_UID, 'admin').update(reschedule(ADMIN_UID, inDays(5))));
+    });
+
+    test('❌ Staff cannot touch a follow-up on an enquiry not assigned to them', async () => {
+      await seed({ assignedTo: OTHER_STAFF_UID });
+      await assertFails(doc(STAFF_UID, 'staff').update(complete(STAFF_UID)));
+    });
+
+    test('❌ Reschedule into the past or without bumping the sequence is rejected', async () => {
+      await seed();
+      await assertFails(doc(STAFF_UID, 'staff').update(reschedule(STAFF_UID, new Date(Date.now() - 60000))));
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({ ...reschedule(STAFF_UID), followUpSeq: 4 })
+      );
+    });
+
+    test('❌ Clients cannot suppress or fake reminder bookkeeping', async () => {
+      await seed({ followUpNotifiedStage: null });
+      await assertFails(doc(STAFF_UID, 'staff').update({ followUpNotifiedStage: 'overdue', followUpSeq: 5 }));
+      await assertFails(doc(STAFF_UID, 'staff').update({ followUpLastNotifiedAt: new Date() }));
+      await assertFails(doc(ADMIN_UID, 'admin').update({ pastEventReviewAt: null }));
+    });
+
+    test('❌ Completion must be attributed to the caller', async () => {
+      await seed();
+      await assertFails(doc(STAFF_UID, 'staff').update(complete(OTHER_STAFF_UID)));
+    });
+
+    test('❌ Callback notes are capped at 300 characters', async () => {
+      await seed();
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({ ...reschedule(STAFF_UID), followUpNote: 'x'.repeat(301) })
+      );
+    });
+
+    test('✅ Ordinary edits are unaffected by the follow-up rules', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update({ notes: 'Customer prefers evenings' }));
+    });
+  });
+
+  describe('💰 Financial summary (money is admin-only)', () => {
+    const seed = async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection('enquiries').doc('money').set({
+          customerName: 'Priya Sharma',
+          statusValue: 'in_talks',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+          totalCost: 90000, // legacy parent field, not yet migrated
+        });
+        await db.collection('enquiries').doc('money').collection('financial').doc('summary').set({
+          totalCost: 90000,
+          advancePaid: 20000,
+          paymentStatusValue: 'partial',
+        });
+      });
+    };
+    const summary = (uid, role) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('enquiries')
+        .doc('money')
+        .collection('financial')
+        .doc('summary');
+    const parent = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('money');
+
+    test('❌ Assigned staff cannot read the financial summary', async () => {
+      await seed();
+      await assertFails(summary(STAFF_UID, 'staff').get());
+    });
+
+    test('✅ Admin can read and write the financial summary', async () => {
+      await seed();
+      await assertSucceeds(summary(ADMIN_UID, 'admin').get());
+      await assertSucceeds(summary(ADMIN_UID, 'admin').set({ totalCost: 95000 }, { merge: true }));
+    });
+
+    test('❌ Staff cannot write the financial summary', async () => {
+      await seed();
+      await assertFails(summary(STAFF_UID, 'staff').set({ totalCost: 1 }, { merge: true }));
+    });
+
+    test('❌ Staff cannot write money fields on the enquiry', async () => {
+      await seed();
+      for (const field of ['totalCost', 'advancePaid', 'paymentStatusValue', 'quotedAmount']) {
+        await assertFails(parent(STAFF_UID, 'staff').update({ [field]: 5 }));
+      }
+    });
+
+    test('❌ Admins cannot put money back on the enquiry; ✅ they may remove it (migration)', async () => {
+      await seed();
+      await assertFails(parent(ADMIN_UID, 'admin').update({ advancePaid: 1000 }));
+      await assertFails(parent(ADMIN_UID, 'admin').update({ totalCost: 1 }));
+      const firebase = require('firebase/compat/app').default;
+      await assertSucceeds(
+        parent(ADMIN_UID, 'admin').update({ totalCost: firebase.firestore.FieldValue.delete() })
+      );
+      await assertFails(
+        testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore()
+          .collection('enquiries').doc('new-with-money')
+          .set({ customerName: 'X', statusValue: 'new', totalCost: 10 })
+      );
+    });
+
+    test('✅ Admin collection-group read of summaries; ❌ staff denied', async () => {
+      await seed();
+      const group = (uid, role) =>
+        testEnv.authenticatedContext(uid, { role }).firestore().collectionGroup('financial').get();
+      await assertSucceeds(group(ADMIN_UID, 'admin'));
+      await assertFails(group(STAFF_UID, 'staff'));
+    });
+  });
+
+  describe('📇 Colleague contact details (private profile)', () => {
+    const profile = (uid, role, target) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('users')
+        .doc(target)
+        .collection('private')
+        .doc('profile');
+    const seed = async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('users').doc(OTHER_STAFF_UID)
+          .collection('private').doc('profile')
+          .set({ phone: '9876543210', email: 'other@example.com' });
+      });
+    };
+
+    test('❌ A colleague cannot read another user\'s phone / email', async () => {
+      await seed();
+      await assertFails(profile(STAFF_UID, 'staff', OTHER_STAFF_UID).get());
+    });
+
+    test('✅ The owner and admins can read; owner can update their own', async () => {
+      await seed();
+      await assertSucceeds(profile(OTHER_STAFF_UID, 'staff', OTHER_STAFF_UID).get());
+      await assertSucceeds(profile(ADMIN_UID, 'admin', OTHER_STAFF_UID).get());
+      await assertSucceeds(
+        profile(OTHER_STAFF_UID, 'staff', OTHER_STAFF_UID).set({ phone: '9000000000' }, { merge: true })
+      );
+      await assertSucceeds(
+        profile(ADMIN_UID, 'admin', OTHER_STAFF_UID).set({ email: 'new@example.com' }, { merge: true })
+      );
+    });
+
+    test('❌ Colleagues cannot write it; ❌ only phone / email / updatedAt are allowed', async () => {
+      await seed();
+      await assertFails(profile(STAFF_UID, 'staff', OTHER_STAFF_UID).set({ phone: '1' }, { merge: true }));
+      await assertFails(
+        profile(OTHER_STAFF_UID, 'staff', OTHER_STAFF_UID).set({ role: 'admin' }, { merge: true })
+      );
+    });
+
+    test('✅ Active users still read the public users doc (name / role / isActive)', async () => {
+      const db = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      await assertSucceeds(db.collection('users').doc(OTHER_STAFF_UID).get());
+    });
+  });
+
+  describe('🔕 customer_prefs (server-written only)', () => {
+    const pref = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('customer_prefs').doc('9876543210');
+
+    test('❌ Staff and admins cannot write customer_prefs from the client', async () => {
+      const body = { noReminders: true, updatedAt: new Date(), updatedBy: STAFF_UID };
+      await assertFails(pref(STAFF_UID, 'staff').set(body));
+      await assertFails(pref(ADMIN_UID, 'admin').set({ ...body, updatedBy: ADMIN_UID }));
+      await assertFails(pref(ADMIN_UID, 'admin').delete());
+    });
+
+    test('✅ Active users can read customer_prefs', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('customer_prefs').doc('9876543210').set({ noReminders: true });
+      });
+      await assertSucceeds(pref(STAFF_UID, 'staff').get());
     });
   });
 

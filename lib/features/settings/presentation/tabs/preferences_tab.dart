@@ -41,7 +41,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       error: (error, stack) => GlassStateMessage(
         icon: Icons.error_outline_rounded,
         title: 'Preferences unavailable',
-        message: 'Error loading preferences: $error',
+        message: 'Preferences could not be loaded. Please try again.',
         color: Theme.of(context).colorScheme.error,
       ),
     );
@@ -189,7 +189,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
       setState(() {
         _isSaving = false;
       });
-      _showSnackBar('Failed to save preferences: ${e.toString()}', isError: true);
+      _showSnackBar('Preferences could not be saved. Please try again.', isError: true);
     }
   }
 

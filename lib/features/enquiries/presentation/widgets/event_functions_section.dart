@@ -117,8 +117,8 @@ class _EventFunctionsSectionState extends ConsumerState<EventFunctionsSection> {
         SnackBar(
           content: Text(
             active && lastDay.isBefore(today)
-                ? 'Functions saved — every function is in the past, so this active '
-                      'enquiry will be auto-closed overnight.'
+                ? 'Functions saved — every function is in the past: an approved booking '
+                      'is marked Completed, an open enquiry is flagged for follow-up.'
                 : 'Functions saved',
           ),
         ),

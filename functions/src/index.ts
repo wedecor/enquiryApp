@@ -54,6 +54,11 @@ function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boo
   return isActive !== false;
 }
 
+/** users/{uid}/private/profile — phone and email (owner + admins only, firestore.rules). */
+export function privateProfileRef(userRef: FirebaseFirestore.DocumentReference) {
+  return userRef.collection('private').doc('profile');
+}
+
 // Utility function to check if user is admin
 async function isAdmin(uid: string): Promise<boolean> {
   try {
@@ -145,16 +150,24 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
       // Generate password reset link
       const resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
 
-      await db.collection('users').doc(userRecord.uid).set({
+      // Public profile: name / role / isActive only (every active user can read it).
+      // Contact details go to users/{uid}/private/profile (owner + admins only).
+      const userRef = db.collection('users').doc(userRecord.uid);
+      const profileBatch = db.batch();
+      profileBatch.set(userRef, {
         uid: userRecord.uid,
         name: displayName,
-        email,
-        phone: '', // UserModel expects string, not null
         role,
         isActive: true, // Standardized field name
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      profileBatch.set(privateProfileRef(userRef), {
+        email,
+        phone: '',
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      await profileBatch.commit();
 
       logger.info('User invitation completed', {
         uid: userRecord.uid,
@@ -321,7 +334,8 @@ If you didn't expect this invitation, please ignore this email.`
 // pushes and pushes to the person who made the change.
 
 // Sends the FCM push for every notification doc created under users/{userId}/notifications
-// (queued by the app's NotificationService and by autoExpireEnquiries).
+// (queued by notifyEnquiryEvent and by server jobs: website leads, auto-expire,
+// follow-up reminders, re-engagement). Clients cannot create these docs (firestore.rules).
 export const sendNotificationToUser = onDocumentCreated(
   "users/{userId}/notifications/{notificationId}",
   async (event) => {
@@ -469,6 +483,8 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
     }
 
     const updates: Record<string, unknown> = {};
+    /** Written to users/{uid}/private/profile, never the public doc. */
+    const privateUpdates: Record<string, unknown> = {};
 
     if (input.name !== undefined) {
       if (typeof input.name !== 'string' || !input.name.trim() || input.name.trim().length > 100) {
@@ -485,8 +501,8 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
       if (phone.length > 30) {
         throw new HttpsError('invalid-argument', 'Phone number is too long');
       }
-      // Stored as '' when cleared (same convention as inviteUser).
-      updates.phone = phone;
+      // Stored as '' when cleared (same convention as inviteUser), in the private profile.
+      privateUpdates.phone = phone;
     }
 
     if (input.role !== undefined) {
@@ -503,7 +519,7 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
       updates.isActive = input.isActive;
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0 && Object.keys(privateUpdates).length === 0) {
       throw new HttpsError('invalid-argument', 'No changes provided');
     }
 
@@ -545,11 +561,26 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
         }
       }
 
+      // Legacy public phone / email move to the private profile on the first edit.
+      const legacyContact: Record<string, unknown> = {};
+      if (typeof current.email === 'string' && current.email) legacyContact.email = current.email;
+      if (typeof current.phone === 'string' && current.phone) legacyContact.phone = current.phone;
+      const privateWrite = { ...legacyContact, ...privateUpdates };
+
       tx.update(userRef, {
         ...updates,
+        ...('email' in current ? { email: FieldValue.delete() } : {}),
+        ...('phone' in current ? { phone: FieldValue.delete() } : {}),
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: callerUid,
       });
+      if (Object.keys(privateWrite).length > 0) {
+        tx.set(
+          privateProfileRef(userRef),
+          { ...privateWrite, updatedAt: FieldValue.serverTimestamp() },
+          { merge: true },
+        );
+      }
 
       tx.set(db.collection('admin_audit').doc(), {
         action: 'user_updated',
@@ -558,10 +589,9 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
         timestamp: FieldValue.serverTimestamp(),
         data: {
           targetUid: uid,
-          changes: updates,
+          changes: { ...updates, ...privateUpdates },
           previous: {
             ...(updates.name !== undefined ? { name: current.name ?? null } : {}),
-            ...(updates.phone !== undefined ? { phone: current.phone ?? null } : {}),
             ...(updates.role !== undefined ? { role: currentRole ?? null } : {}),
             ...(updates.isActive !== undefined ? { isActive: currentlyActive } : {}),
           },
@@ -630,6 +660,9 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
 
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
+export { setReengagementPref } from "./customerPrefs";
+export { notifyEnquiryEvent } from "./notifications";
+export { onEnquiryWrittenFollowUp, followUpReminders } from "./followUps";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";
 export { scheduleReengagements, onEnquiryCompletedStampOccasion, runReengagementNow } from "./reengagement";
