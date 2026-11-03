@@ -160,6 +160,12 @@ class ContactLauncher {
     unawaited(log.record(enquiryId: enquiryId, type: type));
   }
 
+  /// Records a contact made outside [openWhatsApp] (e.g. a wish card shared
+  /// through the share sheet) in the enquiry's contact log.
+  void recordContact({required String? enquiryId, required ContactType type}) {
+    _recordContact(enquiryId, type, ContactLaunchStatus.opened);
+  }
+
   /// Launch phone call with audit logging
   Future<ContactLaunchStatus> callNumberWithAudit(String rawPhone, {String? enquiryId}) async {
     final status = await callNumber(rawPhone);

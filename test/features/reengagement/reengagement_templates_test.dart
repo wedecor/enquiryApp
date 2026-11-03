@@ -24,30 +24,35 @@ void main() {
     test('wedding anniversary uses first name, ordinal and IST date', () {
       expect(
         render(OccasionKind.weddingAnniversary, nth: 2),
-        'Hi Ayesha! Your 2nd wedding anniversary is coming up on 12 December 💐 We loved being '
-        "part of your celebrations. Planning something special? We'd love to decorate it. "
-        '– We Decor Events',
+        'Hi Ayesha, your 2nd wedding anniversary is on 12 December. Wishing you both many more '
+        'happy years together. Warm wishes from We Decor Events.',
       );
     });
 
     test('birthday with a person', () {
       expect(
         render(OccasionKind.birthday, person: 'Aarav'),
-        startsWith("Hi Ayesha! Aarav's birthday is coming up on 12 December 🎉"),
+        startsWith("Hi Ayesha, Aarav's birthday is coming up on 12 December."),
       );
     });
 
     test('birthday without a person reads "A birthday"', () {
       final text = render(OccasionKind.birthday);
-      expect(text, startsWith('Hi Ayesha! A birthday is coming up on 12 December 🎉'));
+      expect(text, startsWith('Hi Ayesha, a birthday is coming up on 12 December.'));
       expect(text, isNot(contains('{person}')));
     });
 
-    test('anniversary without a person reads "An anniversary"', () {
-      expect(
-        render(OccasionKind.anniversary, person: '  '),
-        startsWith('Hi Ayesha! An anniversary is coming up'),
-      );
+    test('wishes never sell and never use emoji', () {
+      for (final kind in OccasionKind.values) {
+        final text = render(kind, person: 'Aarav');
+        expect(text.toLowerCase(), isNot(contains('decorat')), reason: kind.value);
+        expect(text.toLowerCase(), isNot(contains('planning')), reason: kind.value);
+        expect(
+          RegExp(r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]', unicode: true).hasMatch(text),
+          isFalse,
+          reason: kind.value,
+        );
+      }
     });
 
     test('mid-sentence possessive becomes lower-case article', () {
@@ -73,19 +78,19 @@ void main() {
         eventType: 'Diwali Party',
         business: ' ',
       );
-      expect(text, startsWith('Hi there! Same time last year we decorated your diwali party ✨'));
-      expect(text, endsWith('– We Decor Events'));
+      expect(text, startsWith('Hi there, thinking of you as 12 December comes round again.'));
+      expect(text, endsWith('Warm wishes from We Decor Events.'));
     });
 
     test('nth below 1 is rendered as 1st', () {
-      expect(render(OccasionKind.home, nth: 0), contains("Your home's 1st anniversary"));
+      expect(render(OccasionKind.home, nth: 0), contains('happy 1st anniversary of your home'));
     });
 
     test('every default fills all placeholders', () {
       for (final kind in OccasionKind.values) {
         final text = render(kind, person: 'Aarav');
         expect(text, isNot(contains('{')), reason: kind.value);
-        expect(text, endsWith('– We Decor Events'), reason: kind.value);
+        expect(text, endsWith('We Decor Events.'), reason: kind.value);
       }
     });
   });
@@ -94,7 +99,7 @@ void main() {
     test('defaults when the doc is missing', () {
       final config = ReengagementConfig.fromMap(null);
       expect(config.enabled, isTrue);
-      expect(config.leadDays, 30);
+      expect(config.leadDays, 7);
       expect(
         config.templateFor(OccasionKind.birthday),
         ReengagementTemplates.defaults[OccasionKind.birthday],
@@ -108,7 +113,7 @@ void main() {
         'templates': {'birthday': 'Custom {name}', 'home': '  ', 'nope': 'x'},
       });
       expect(config.enabled, isFalse);
-      expect(config.leadDays, 30);
+      expect(config.leadDays, 7);
       expect(config.templateFor(OccasionKind.birthday), 'Custom {name}');
       expect(
         config.templateFor(OccasionKind.home),

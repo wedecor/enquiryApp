@@ -23,32 +23,29 @@ class ReengagementTemplates {
     '{business}',
   ];
 
-  /// Warm, short, never pushy.
+  /// Wishes only: no sales line, no emoji. Sent with the wish card, and to past
+  /// customers and wish-eligible lost enquiries alike, so they never mention last
+  /// year's decor. Corporate occasions get no yearly wish (the server skips them).
   static const Map<OccasionKind, String> defaults = {
     OccasionKind.weddingAnniversary:
-        'Hi {name}! Your {nth} wedding anniversary is coming up on {date} 💐 We loved being '
-        "part of your celebrations. Planning something special? We'd love to decorate it. "
-        '– {business}',
+        'Hi {name}, your {nth} wedding anniversary is on {date}. Wishing you both many more '
+        'happy years together. Warm wishes from {business}.',
     OccasionKind.birthday:
-        "Hi {name}! {person}'s birthday is coming up on {date} 🎉 We loved decorating last "
-        "year's celebration. Planning something this year? – {business}",
+        "Hi {name}, {person}'s birthday is coming up on {date}. Wishing {person} a happy year "
+        'ahead, full of good moments. Warm wishes from all of us at {business}.',
     OccasionKind.anniversary:
-        "Hi {name}! {person}'s anniversary is coming up on {date} 💐 It was lovely decorating "
-        "last year's celebration. If you're planning something this year, we'd be happy to "
-        'help. – {business}',
+        'Hi {name}, wishing you a very happy anniversary on {date}. May the year ahead be full '
+        'of happiness. Warm wishes from {business}.',
     OccasionKind.baby:
-        "Hi {name}! It's been almost a year since we celebrated your little one's special day "
-        "🍼 Hope everyone is doing wonderfully. If you're planning a celebration around "
-        "{date}, we'd love to make it beautiful. – {business}",
+        'Hi {name}, thinking of you and the little one as {date} comes round again. Hope '
+        "you're all keeping well and happy. Warm wishes from {business}.",
     OccasionKind.home:
-        "Hi {name}! Your home's {nth} anniversary is on {date} 🏡 Hope it's full of happy "
-        "memories. Planning a get-together this year? We'd love to help. – {business}",
-    OccasionKind.corporate:
-        "Hi {name}! It's almost a year since we decorated your {event} ✨ If you're planning "
-        "this year's edition around {date}, we'd love to be part of it again. – {business}",
+        'Hi {name}, happy {nth} anniversary of your home on {date}. Wishing you many more '
+        'happy years there. Warm wishes from {business}.',
+    OccasionKind.corporate: 'Hi {name}, warm wishes from all of us at {business}.',
     OccasionKind.celebration:
-        'Hi {name}! Same time last year we decorated your {event} ✨ Planning something '
-        "around {date} this year? We'd love to make it special again. – {business}",
+        "Hi {name}, thinking of you as {date} comes round again. Hope it's a lovely one. "
+        'Warm wishes from {business}.',
   };
 
   /// First word of a customer name ("Ayesha Khan" → "Ayesha"); "there" when blank.

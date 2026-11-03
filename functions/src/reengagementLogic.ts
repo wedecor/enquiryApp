@@ -242,6 +242,28 @@ export type OccasionStamp = {
 
 const LOST_STATUSES = new Set(["not_interested", "closed_lost", "cancelled"]);
 
+/** Lost reasons that never get a yearly wish (not a real lead / not our kind of event). */
+const NO_WISH_LOST_REASONS = new Set(["duplicate", "out_of_scope"]);
+
+/** Occasion kinds that never get a yearly wish: a company has no personal occasion. */
+export const NO_WISH_KINDS: ReadonlySet<OccasionKind> = new Set<OccasionKind>(["corporate"]);
+
+/**
+ * A lost enquiry still gets a yearly wish (it's the customer's own occasion) when its
+ * date is trustworthy: the enquiry reached In Talks, or it was auto-closed after the
+ * event date passed. Duplicates and "not something we do" never do.
+ */
+export function isWishEligibleLost(input: {
+  status: string | null;
+  lostReason: unknown;
+  reachedInTalks: boolean;
+  autoClosed: boolean;
+}): boolean {
+  if (!input.status || !LOST_STATUSES.has(input.status)) return false;
+  if (typeof input.lostReason === "string" && NO_WISH_LOST_REASONS.has(input.lostReason)) return false;
+  return input.reachedInTalks || input.autoClosed;
+}
+
 export function hasOccasionStamp(s: Pick<StampSource, "occasionKind" | "occasionMonthDay" | "occasionDate">): boolean {
   return isOccasionKind(s.occasionKind) && typeof s.occasionMonthDay === "string" && !!s.occasionDate;
 }
@@ -324,6 +346,8 @@ export type ReminderSource = {
   eventTypeLabel: string;
   eventDate: Date | null;
   assignedTo: string | null;
+  /** Lost enquiry that still gets a wish (see isWishEligibleLost). */
+  lostEligible: boolean;
 };
 
 export type ReminderPlan = {
@@ -340,19 +364,25 @@ export function reminderDocId(phoneNormalized: string, kind: OccasionKind, year:
   return `${phoneNormalized}_${kind}_${year}`;
 }
 
-export type SkipCounts = Record<"notCompleted" | "merged" | "remindersOff" | "sameYear" | "noPhone" | "optedOut" | "duplicate", number>;
+export type SkipCounts = Record<
+  "notCompleted" | "merged" | "remindersOff" | "sameYear" | "noPhone" | "optedOut" | "duplicate" | "noWishKind" | "activeEnquiry",
+  number
+>;
 
 /**
- * One reminder per (phone, kind, year) for the target year. Skips: not completed,
- * merged duplicates, `occasionReminders == false`, occasion in the target year or
- * later (not an anniversary yet), no usable phone, opted-out customers.
+ * One reminder per (phone, kind, year) for the target year. Skips: neither completed
+ * nor a wish-eligible lost enquiry, corporate occasions, merged duplicates,
+ * `occasionReminders == false`, occasion in the target year or later (not an
+ * anniversary yet), no usable phone, opted-out customers, and customers who have an
+ * open enquiry right now (the team is already talking to them).
  * Within a (phone, kind) group the wedding itself wins, then a filled-in person,
  * then the latest event.
  */
 export function selectReminders(
   sources: readonly ReminderSource[],
   targetYear: number,
-  optedOutPhones: ReadonlySet<string>
+  optedOutPhones: ReadonlySet<string>,
+  activePhones: ReadonlySet<string> = new Set<string>()
 ): { plans: ReminderPlan[]; skipped: SkipCounts } {
   const skipped: SkipCounts = {
     notCompleted: 0,
@@ -362,11 +392,17 @@ export function selectReminders(
     noPhone: 0,
     optedOut: 0,
     duplicate: 0,
+    noWishKind: 0,
+    activeEnquiry: 0,
   };
   const groups = new Map<string, ReminderSource[]>();
   for (const s of sources) {
-    if (s.status !== "completed") {
+    if (s.status !== "completed" && !s.lostEligible) {
       skipped.notCompleted++;
+      continue;
+    }
+    if (NO_WISH_KINDS.has(s.occasionKind)) {
+      skipped.noWishKind++;
       continue;
     }
     if (s.merged) {
@@ -387,6 +423,10 @@ export function selectReminders(
     }
     if (optedOutPhones.has(s.phoneNormalized)) {
       skipped.optedOut++;
+      continue;
+    }
+    if (activePhones.has(s.phoneNormalized)) {
+      skipped.activeEnquiry++;
       continue;
     }
     const key = reminderDocId(s.phoneNormalized, s.occasionKind, targetYear);
@@ -413,6 +453,10 @@ export function selectReminders(
 }
 
 function compareReminderSources(a: ReminderSource, b: ReminderSource): number {
+  // An event we actually did beats one that didn't book.
+  const ca = a.status === "completed" ? 0 : 1;
+  const cb = b.status === "completed" ? 0 : 1;
+  if (ca !== cb) return ca - cb;
   const wa = isWeddingAnchor(a.eventTypeValue, a.eventTypeLabel) ? 0 : 1;
   const wb = isWeddingAnchor(b.eventTypeValue, b.eventTypeLabel) ? 0 : 1;
   if (wa !== wb) return wa - wb;

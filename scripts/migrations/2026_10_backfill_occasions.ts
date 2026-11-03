@@ -1,7 +1,9 @@
 #!/usr/bin/env tsx
 /**
  * Migration: stamp yearly re-engagement occasion fields on every existing
- * completed enquiry:
+ * completed enquiry, and (Nov 2026) every lost enquiry that still gets a yearly
+ * wish (reached In Talks or auto-closed after its date; not duplicate / not
+ * something we do — reengagementLogic.isWishEligibleLost):
  *   occasionKind      — wedding_anniversary | birthday | anniversary | baby | home | corporate | celebration
  *   occasionDate      — Timestamp (event date; wedding-family events use the wedding's date)
  *   occasionMonthDay  — 'MM-DD' in IST (queried daily by scheduleReengagements)
@@ -83,12 +85,14 @@ async function main() {
 
   const sources = new Map<string, StampSource>();
   const refs = new Map<string, DocumentReference>();
+  const raw = new Map<string, DocumentData>();
   const byPhone = new Map<string, StampSource[]>();
   for (const doc of snap.docs) {
     const data = doc.data();
     const s = toSource(doc.id, data);
     sources.set(doc.id, s);
     refs.set(doc.id, doc.ref);
+    raw.set(doc.id, data);
     const phone = str(data.phoneNormalized) ?? normalizePhone(data.customerPhone);
     if (phone.length >= 7) {
       const list = byPhone.get(phone) ?? [];
@@ -102,6 +106,8 @@ async function main() {
   const ops: Array<{ ref: DocumentReference; data: Record<string, unknown> }> = [];
   const kindCounts = new Map<string, number>();
   let completed = 0;
+  let lostEligible = 0;
+  let lostNoDate = 0;
   let skippedMerged = 0;
   let skippedManual = 0;
   let alreadyCorrect = 0;
@@ -109,8 +115,24 @@ async function main() {
   let noEventDate = 0;
 
   for (const s of sources.values()) {
-    if (s.status !== "completed") continue;
-    completed++;
+    const data = raw.get(s.id)!;
+    const isLostWish = logic.isWishEligibleLost({
+      status: s.status,
+      lostReason: data.lostReason,
+      reachedInTalks: data.inTalksAt != null,
+      autoClosed: data.statusUpdatedBy === "system:auto-expire",
+    });
+    if (s.status !== "completed" && !isLostWish) continue;
+    if (isLostWish) {
+      // A lost enquiry's only trustworthy date is its event date.
+      if (!s.eventDate) {
+        lostNoDate++;
+        continue;
+      }
+      lostEligible++;
+    } else {
+      completed++;
+    }
     if (s.merged) {
       skippedMerged++;
       continue;
@@ -149,6 +171,7 @@ async function main() {
 
   console.log(`Enquiries scanned: ${snap.size}`);
   console.log(`  completed: ${completed}`);
+  console.log(`  lost, still wished: ${lostEligible} (skipped, no event date: ${lostNoDate})`);
   console.log(`    merged duplicates (skipped): ${skippedMerged}`);
   console.log(`    edited by hand (skipped): ${skippedManual}`);
   console.log(`    already stamped correctly: ${alreadyCorrect}`);

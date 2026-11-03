@@ -11,6 +11,7 @@ import {
   ReminderSource,
   hasOccasionStamp,
   isOccasionKind,
+  isWishEligibleLost,
   istDatePlusDays,
   monthDaysForTarget,
   reminderSummary,
@@ -20,7 +21,8 @@ import { canonicalStatus } from "./statusVocabulary";
 
 /** Firestore allows 500 writes per batch; leave headroom like autoExpireEnquiries. */
 const MAX_BATCH_WRITES = 450;
-const DEFAULT_LEAD_DAYS = 30;
+/** Wishes go out a week ahead (a wish 30 days early reads as a sales nudge). */
+const DEFAULT_LEAD_DAYS = 7;
 const MIN_LEAD_DAYS = 1;
 const MAX_LEAD_DAYS = 90;
 
@@ -60,6 +62,16 @@ function eventTypeLabelOf(data: FirebaseFirestore.DocumentData): string {
   return value ? titleCase(value) : "Event";
 }
 
+/** Lost enquiry that still gets a yearly wish (see isWishEligibleLost). */
+export function lostEligibleOf(data: FirebaseFirestore.DocumentData, status: string | null): boolean {
+  return isWishEligibleLost({
+    status,
+    lostReason: data.lostReason,
+    reachedInTalks: data.inTalksAt != null,
+    autoClosed: data.statusUpdatedBy === "system:auto-expire",
+  });
+}
+
 export function parseReengagementConfig(data: FirebaseFirestore.DocumentData | undefined): ReengagementConfig {
   const lead = Number(data?.leadDays);
   return {
@@ -80,9 +92,12 @@ export const onEnquiryCompletedStampOccasion = onDocumentWritten("enquiries/{enq
   const after = event.data?.after?.data();
   if (!after) return;
   const before = event.data?.before?.data();
-  if (canonicalStatus(after.statusValue) !== "completed") return;
+  const afterStatus = canonicalStatus(after.statusValue);
+  // Completed events, and lost enquiries that still get a yearly wish.
+  const wishable = afterStatus === "completed" || lostEligibleOf(after, afterStatus);
+  if (!wishable) return;
   if (after.occasionManual === true) return;
-  const becameCompleted = !before || canonicalStatus(before.statusValue) !== "completed";
+  const becameCompleted = !before || canonicalStatus(before.statusValue) !== afterStatus;
   const stamped = hasOccasionStamp({
     occasionKind: after.occasionKind,
     occasionMonthDay: after.occasionMonthDay,
@@ -144,12 +159,13 @@ function toReminderSource(doc: FirebaseFirestore.QueryDocumentSnapshot): Reminde
     eventTypeLabel: eventTypeLabelOf(data),
     eventDate: toDate(data.eventDate),
     assignedTo: stringOrNull(data.assignedTo),
+    lostEligible: lostEligibleOf(data, canonicalStatus(data.statusValue)),
   };
 }
 
 /**
- * Daily at 09:00 IST: for every completed event whose occasion falls within the next `leadDays`
- * (default 30, `app_config/reengagement`), create one idempotent
+ * Daily at 09:00 IST: for every completed event (and wish-eligible lost enquiry) whose
+ * occasion falls within the next `leadDays` (default 7, `app_config/reengagement`), create one idempotent
  * `reminders/{phone}_{kind}_{year}` doc per customer and occasion kind, then send
  * ONE summary notification per recipient (assignee if active, else all active admins).
  */
@@ -208,7 +224,23 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
         for (const s of prefSnaps) if (s.get("noReminders") === true) optedOut.add(s.id);
       }
 
-      const result = selectReminders(sources, year, optedOut);
+      // Customers with an open enquiry right now: the team is already talking to them.
+      const activePhones = new Set<string>();
+      for (let j = 0; j < phones.length; j += 30) {
+        const openSnap = await db
+          .collection("enquiries")
+          .where("phoneNormalized", "in", phones.slice(j, j + 30))
+          .get();
+        for (const d of openSnap.docs) {
+          const st = canonicalStatus(d.get("statusValue"));
+          if (st === "new" || st === "in_talks" || st === "approved") {
+            const phone = phoneOf(d.data());
+            if (phone) activePhones.add(phone);
+          }
+        }
+      }
+
+      const result = selectReminders(sources, year, optedOut, activePhones);
       for (const [k, v] of Object.entries(result.skipped)) skipped[k] = (skipped[k] ?? 0) + (v as number);
       for (const plan of result.plans) {
         if (!plans.some((p) => p.docId === plan.docId)) plans.push(plan);

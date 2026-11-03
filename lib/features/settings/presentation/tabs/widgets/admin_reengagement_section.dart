@@ -17,6 +17,12 @@ import '../../widgets/settings_tiles.dart';
 
 /// Settings → Admin → Re-engagement: yearly reminders on/off, lead time and the
 /// WhatsApp templates per occasion kind (`app_config/reengagement`).
+
+/// Occasions that get a yearly wish (corporate is skipped by the server).
+final List<OccasionKind> _editableKinds = OccasionKind.values
+    .where((k) => k != OccasionKind.corporate)
+    .toList(growable: false);
+
 class ReengagementConfigTab extends ConsumerStatefulWidget {
   const ReengagementConfigTab({super.key});
 
@@ -172,7 +178,8 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
               separated: false,
               padding: const EdgeInsets.all(AppTokens.space4),
               children: [
-                for (final kind in OccasionKind.values) ...[
+                // Corporate occasions get no yearly wish, so there's no template to edit.
+                for (final kind in _editableKinds) ...[
                   _TemplateField(
                     kind: kind,
                     controller: _templateControllers[kind]!,
@@ -181,7 +188,7 @@ class _ReengagementConfigTabState extends ConsumerState<ReengagementConfigTab> {
                       _recompute();
                     },
                   ),
-                  if (kind != OccasionKind.values.last) const SizedBox(height: AppTokens.space4),
+                  if (kind != _editableKinds.last) const SizedBox(height: AppTokens.space4),
                 ],
               ],
             ),

@@ -12,7 +12,9 @@ class ReengagementConfig {
   });
 
   static const String docId = 'reengagement';
-  static const int defaultLeadDays = 30;
+
+  /// A week ahead: early enough to plan, close enough to read as a wish.
+  static const int defaultLeadDays = 7;
   static const int minLeadDays = 1;
   static const int maxLeadDays = 90;
 
