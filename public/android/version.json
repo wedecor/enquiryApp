@@ -1,20 +1,19 @@
 {
-  "version": "2.0.26",
-  "buildNumber": 57,
+  "version": "2.0.27",
+  "buildNumber": 58,
   "releaseDate": "2026-11-03",
-  "releaseNotes": "\ud83d\uddd3\ufe0f Wishes list now shows only the next 7 days\n\ud83d\udcac Sending a wish opens the customer's WhatsApp chat with the card ready\n\u2728 New app icon and opening screen",
+  "releaseNotes": "\ud83d\udc8c Wishes now have two versions, for past customers and for people who enquired\n\ud83d\udccb Upcoming occasions shows who's who, with a filter",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "6a08c25e67189918a53edf155cc65dd2cb1bed029a4c009705de6cc76f0b7f60",
+  "sha256": "b56735da9081bb38652030d97d419ebec112ae930af627f0ab68b083058e7b8e",
   "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
-    "FIXED: Upcoming occasions follows Settings \u2192 Lead days (7)",
-    "IMPROVED: Wish card opens the customer's WhatsApp chat on Android",
-    "NEW: Real WD logo, charcoal app icon, and branded opening screen"
+    "NEW: Separate wish messages for past customers and for people who only enquired",
+    "NEW: Upcoming occasions marks PAST CUSTOMER / ENQUIRED and filters by either",
+    "IMPROVED: Wish cards are timing-neutral (no date, no \"Happy\u2026\")"
   ],
   "bugFixes": [
-    "Fixed Upcoming occasions still listing 30 days when Lead days is 7",
-    "Fixed wish share opening WhatsApp without the customer's chat",
-    "Replaced the old green icon and drawn gold-disc logo with the real WD mark"
+    "Lost-enquiry wishes no longer read as if we decorated their event",
+    "Wish card no longer implies the occasion is today"
   ]
 }
