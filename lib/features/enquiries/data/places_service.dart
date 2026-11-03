@@ -155,6 +155,18 @@ class PlacesService {
     }
   }
 
+  /// Starts the search function in the background (it sleeps when unused), so the
+  /// first real search doesn't wait for it to boot. No Google request, no cost.
+  Future<void> warmUp() async {
+    try {
+      await FirebaseFunctions.instanceFor(
+        region: 'asia-south1',
+      ).httpsCallable('placesAutocomplete').call<dynamic>(<String, dynamic>{'warmUp': true});
+    } catch (_) {
+      // Best effort only.
+    }
+  }
+
   /// Address, coordinates and area for a picked suggestion, or null on failure.
   Future<PlaceDetails?> details(String placeId, {required String sessionToken}) async {
     try {

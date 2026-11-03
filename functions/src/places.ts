@@ -23,7 +23,12 @@ const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY");
 const PLACES_BASE = "https://places.googleapis.com/v1";
 const REQUEST_TIMEOUT_MS = 5000;
 
-type PlacesAutocompleteRequest = { input: string; sessionToken: string };
+type PlacesAutocompleteRequest = {
+  input: string;
+  sessionToken: string;
+  /** Sent when the enquiry form opens: starts this function so the first real search is fast. No Google call. */
+  warmUp?: boolean;
+};
 type PlacesAutocompleteResponse = { suggestions: PlaceSuggestion[] };
 type PlaceDetailsRequest = { placeId: string; sessionToken: string };
 
@@ -33,16 +38,25 @@ function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boo
   return isActive !== false;
 }
 
+/** Active-user checks remembered per instance, so typing doesn't re-read the user doc. */
+const ACTIVE_USER_TTL_MS = 5 * 60 * 1000;
+const activeUserUntil = new Map<string, number>();
+
 async function requireActiveUser(uid: string | undefined): Promise<string> {
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be signed in to search locations");
   }
+  const cachedUntil = activeUserUntil.get(uid);
+  if (cachedUntil && cachedUntil > Date.now()) return uid;
+
   const snap = await getFirestore().collection("users").doc(uid).get();
   const data = snap.data();
   const role = data?.role;
   if (!snap.exists || !isActiveUserData(data) || (role !== "admin" && role !== "staff")) {
+    activeUserUntil.delete(uid);
     throw new HttpsError("permission-denied", "Active account required");
   }
+  activeUserUntil.set(uid, Date.now() + ACTIVE_USER_TTL_MS);
   return uid;
 }
 
@@ -115,8 +129,11 @@ export const placesAutocomplete = onCall<PlacesAutocompleteRequest, Promise<Plac
     secrets: [GOOGLE_MAPS_API_KEY],
   },
   async (request) => {
-    const uid = await requireActiveUser(request.auth?.uid);
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "Must be signed in to search locations");
+    }
     const data = (request.data ?? {}) as Partial<PlacesAutocompleteRequest>;
+    if (data.warmUp === true) return { suggestions: [] };
     const input = normalizeAutocompleteInput(data.input);
     if (!input) {
       throw new HttpsError("invalid-argument", "input must be 2 to 100 characters");
@@ -126,15 +143,20 @@ export const placesAutocomplete = onCall<PlacesAutocompleteRequest, Promise<Plac
     }
     const key = apiKeyOrThrow();
 
-    const json = await placesFetch(
-      `${PLACES_BASE}/places:autocomplete`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key },
-        body: JSON.stringify(buildAutocompleteBody(input, data.sessionToken)),
-      },
-      "placesAutocomplete"
-    );
+    // User check and Google request run side by side; results are only returned
+    // once the user check has passed.
+    const [uid, json] = await Promise.all([
+      requireActiveUser(request.auth.uid),
+      placesFetch(
+        `${PLACES_BASE}/places:autocomplete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key },
+          body: JSON.stringify(buildAutocompleteBody(input, data.sessionToken)),
+        },
+        "placesAutocomplete"
+      ),
+    ]);
     const suggestions = parseAutocompleteResponse(json);
     logger.info("placesAutocomplete completed", { by: uid, count: suggestions.length });
     return { suggestions };

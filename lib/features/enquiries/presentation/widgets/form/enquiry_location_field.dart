@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -51,7 +53,7 @@ class EnquiryLocationField extends ConsumerStatefulWidget {
 }
 
 class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
-  static const Duration _debounce = Duration(milliseconds: 350);
+  static const Duration _debounce = Duration(milliseconds: 250);
 
   /// Google ends idle sessions after a few minutes; start a fresh one before then.
   static const Duration _sessionMaxAge = Duration(minutes: 3);
@@ -66,12 +68,20 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
   int _querySeq = 0;
   int _pickSeq = 0;
   bool _resolving = false;
+
+  /// A Maps search is in flight (shows the spinner while typing).
+  bool _searching = false;
   Iterable<_LocationOption> _latest = const [];
+
+  /// Results already fetched in this form, so retyping or backspacing is instant.
+  final Map<String, List<_LocationOption>> _resultCache = {};
 
   @override
   void initState() {
     super.initState();
     if (widget.place != null) _pickedText = widget.controller.text.trim();
+    // Wake the Maps search while the rest of the form is being filled in.
+    unawaited(ref.read(placesServiceProvider).warmUp());
     widget.controller.addListener(_onTextChanged);
   }
 
@@ -116,16 +126,30 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
       _latest = const [];
       return _latest;
     }
+    final cacheKey = query.toLowerCase();
+    final cached = _resultCache[cacheKey];
+    if (cached != null) {
+      _latest = cached;
+      return _latest;
+    }
     await Future<void>.delayed(_debounce);
     if (!mounted || seq != _querySeq) return _latest; // superseded by newer typing
     if (DateTime.now().difference(_sessionStarted) > _sessionMaxAge) _renewSession();
-    final results = await ref
-        .read(placesServiceProvider)
-        .autocomplete(query, sessionToken: _sessionToken);
+    setState(() => _searching = true);
+    final List<PlaceSuggestion> results;
+    try {
+      results = await ref
+          .read(placesServiceProvider)
+          .autocomplete(query, sessionToken: _sessionToken);
+    } finally {
+      if (mounted && seq == _querySeq) setState(() => _searching = false);
+    }
     if (!mounted || seq != _querySeq) return _latest;
-    _latest = results.isEmpty
+    final options = results.isEmpty
         ? const <_LocationOption>[]
         : [for (final s in results) _LocationOption.place(s), _LocationOption.typed(query)];
+    if (options.isNotEmpty) _resultCache[cacheKey] = options;
+    _latest = options;
     return _latest;
   }
 
@@ -164,7 +188,7 @@ class _EnquiryLocationFieldState extends ConsumerState<EnquiryLocationField> {
       option.suggestion?.mainText ?? option.typed ?? widget.controller.text;
 
   Widget? _suffix(BuildContext context) {
-    if (_resolving) {
+    if (_resolving || _searching) {
       return const Padding(
         padding: EdgeInsets.all(AppTokens.space3 + 2),
         child: SizedBox(
