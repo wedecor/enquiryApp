@@ -70,7 +70,9 @@ class AnalyticsController extends _$AnalyticsController {
   /// Refresh data with current filters
   Future<void> refresh() async {
     final currentState = await future;
-    // Drop the cached rows so this reload (and the pipeline tabs) re-download.
+    // Drop the cached rows so this reload (and the pipeline tabs) re-download
+    // everything (a full read also picks up writes that don't bump updatedAt).
+    ref.read(analyticsRowCacheHolderProvider).forceFullReload = true;
     ref.invalidate(analyticsRawRowsProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _loadAnalyticsData(currentState.filters));

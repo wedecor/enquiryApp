@@ -4,11 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/status_vocabulary.dart';
+import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/utils/enquiry_fields.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../domain/analytics_models.dart';
 import '../domain/pipeline_metrics.dart';
+import 'analytics_row_cache.dart';
 
 /// Repository for analytics data from Firestore
 class AnalyticsRepository {
@@ -42,6 +44,40 @@ class AnalyticsRepository {
   Future<List<Map<String, dynamic>>> fetchAllEnquiriesRaw() async {
     final snapshot = await _firestore.collection('enquiries').get();
     return snapshot.docs.map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()}).toList();
+  }
+
+  /// [fetchAllEnquiriesRaw] with an incremental refresh (see [AnalyticsRowCache]):
+  /// after the first full read, only enquiries updated since the last load are
+  /// read, plus one `count()` to detect deletions. Falls back to a full read when
+  /// [force] is set, the user changed, the cache is older than
+  /// [AnalyticsRowCache.maxAge], or the counts disagree.
+  Future<AnalyticsRowCache> loadEnquiryRows({
+    AnalyticsRowCache? previous,
+    required String? uid,
+    bool force = false,
+    DateTime? now,
+  }) async {
+    final at = now ?? DateTime.now();
+    final since = previous?.deltaSince;
+    if (AnalyticsRowCache.needsFullReload(previous, uid: uid, now: at, force: force) ||
+        since == null) {
+      return AnalyticsRowCache.fromFullRead(await fetchAllEnquiriesRaw(), uid: uid, now: at);
+    }
+    final collection = _firestore.collection('enquiries');
+    final results = await Future.wait([
+      collection.where('updatedAt', isGreaterThan: Timestamp.fromDate(since)).get(),
+      collection.count().get(),
+    ]);
+    final changed = (results[0] as QuerySnapshot<Map<String, dynamic>>).docs
+        .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})
+        .toList();
+    final total = (results[1] as AggregateQuerySnapshot).count;
+    final merged = previous!.applyDelta(changed);
+    if (total != merged.rowsById.length) {
+      // Deleted (or never-stamped) documents: reload so the rows match exactly.
+      return AnalyticsRowCache.fromFullRead(await fetchAllEnquiriesRaw(), uid: uid, now: at);
+    }
+    return merged;
   }
 
   /// Fetch all enquiry documents for a period in a single query.
@@ -353,22 +389,45 @@ final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
 /// How long [analyticsRawRowsProvider] keeps its rows once nothing watches it.
 const Duration analyticsRawRowsTtl = Duration(minutes: 5);
 
-/// Every enquiry row (see [AnalyticsRepository.fetchAllEnquiriesRaw]), cached
+/// Holds the session's [AnalyticsRowCache] between rebuilds of
+/// [analyticsRawRowsProvider] (which is auto-disposed after its TTL).
+class AnalyticsRowCacheHolder {
+  AnalyticsRowCache? cache;
+
+  /// Set by the refresh button: the next load reads everything.
+  bool forceFullReload = false;
+}
+
+final analyticsRowCacheHolderProvider = Provider<AnalyticsRowCacheHolder>(
+  (ref) => AnalyticsRowCacheHolder(),
+);
+
+/// Every enquiry row (see [AnalyticsRepository.loadEnquiryRows]), cached
 /// so filter changes and tab switches reuse one download.
 ///
-/// Kept alive for [analyticsRawRowsTtl] after a successful fetch; the analytics
-/// refresh button invalidates it. Errors are not cached.
+/// Kept alive for [analyticsRawRowsTtl] after a successful fetch. When it is
+/// rebuilt later in the session only changed enquiries are read; the analytics
+/// refresh button forces a full read. Errors are not cached.
 final analyticsRawRowsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((
   ref,
 ) async {
   final repository = ref.watch(analyticsRepositoryProvider);
+  final holder = ref.watch(analyticsRowCacheHolderProvider);
+  final uid = ref.watch(currentUserUidProvider);
   final link = ref.keepAlive();
   Timer? expiry;
   ref.onDispose(() => expiry?.cancel());
   try {
-    final rows = await repository.fetchAllEnquiriesRaw();
+    final cache = await repository.loadEnquiryRows(
+      previous: holder.cache,
+      uid: uid,
+      force: holder.forceFullReload,
+    );
+    holder
+      ..cache = cache
+      ..forceFullReload = false;
     expiry = Timer(analyticsRawRowsTtl, link.close);
-    return rows;
+    return cache.rows;
   } catch (_) {
     link.close();
     rethrow;
