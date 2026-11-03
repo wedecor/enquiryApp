@@ -5,11 +5,11 @@ import '../../../core/constants/status_vocabulary.dart';
 import '../../../core/providers/audit_provider.dart';
 import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
+import '../../../core/services/enquiry_financials.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../services/dropdown_lookup.dart';
 import '../domain/booking_amounts.dart';
-import '../domain/enquiry.dart';
 import '../domain/enquiry_lifecycle.dart';
 import '../domain/enquiry_location.dart';
 import 'pagination_state.dart';
@@ -41,14 +41,6 @@ class EnquiryRepository {
   );
 
   CollectionReference<Map<String, dynamic>> get _enquiries => _firestoreService.enquiriesCollection;
-
-  /// Get all enquiries as a stream
-  Stream<List<Enquiry>> getEnquiries() {
-    return _enquiries
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Enquiry.fromFirestore(doc)).toList());
-  }
 
   /// Newest-first list query; staff are scoped to their own enquiries.
   Query<Map<String, dynamic>> _listQuery({
@@ -160,6 +152,17 @@ class EnquiryRepository {
       if (oldStatusValue == canonicalNext) return null;
 
       final extras = extraFields ?? const <String, Object?>{};
+      // Amounts (admin only) go to the admin-only financial summary, never the parent.
+      final parts = EnquiryFinancials.split(Map<String, dynamic>.from(extras));
+      final summaryRef = parts.money.isEmpty
+          ? null
+          : EnquiryFinancials.ref(_firestoreService.firestore, id);
+      Map<String, dynamic>? oldSummary;
+      if (summaryRef != null) {
+        final summarySnap = await transaction.get(summaryRef);
+        oldSummary = summarySnap.exists ? summarySnap.data() : null;
+      }
+      final oldMoneyData = EnquiryFinancials.merge(oldEnquiryData, oldSummary);
       if (EnquiryStatus.isApproved(canonicalNext) && !EnquiryStatus.isApproved(oldStatusValue)) {
         final merged = <String, dynamic>{...oldEnquiryData};
         extras.forEach((key, value) {
@@ -173,7 +176,7 @@ class EnquiryRepository {
       }
 
       transaction.update(docRef, {
-        ...extras,
+        ...parts.parent,
         'statusValue': canonicalNext,
         'statusLabel': statusLabel,
         'statusUpdatedAt': FieldValue.serverTimestamp(),
@@ -213,7 +216,14 @@ class EnquiryRepository {
 
       // Amounts entered in the Confirm booking sheet (admin only): same history
       // entries as the edit form records for financial changes.
-      bookingAmountAuditChanges(oldEnquiryData, extras).forEach((field, change) {
+      if (summaryRef != null) {
+        transaction.set(
+          summaryRef,
+          EnquiryFinancials.summaryWrite(parts.money),
+          SetOptions(merge: true),
+        );
+      }
+      bookingAmountAuditChanges(oldMoneyData, extras).forEach((field, change) {
         transaction.set(
           _auditService.newHistoryRef(id),
           _auditService.buildHistoryEntry(

@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/enquiries/domain/event_functions.dart';
 import '../constants/firestore_schema.dart';
 import '../constants/status_vocabulary.dart';
+import '../logging/logger.dart';
 import '../utils/enquiry_fields.dart';
 import '../utils/phone_normalizer.dart';
+import 'enquiry_financials.dart';
 
 /// Status slice of the enquiries collection loaded by a role-scoped listener.
 enum EnquiryScope {
@@ -42,8 +46,8 @@ enum EnquiryScope {
 ///   // ... other parameters
 /// );
 ///
-/// // Get real-time stream of enquiries
-/// final enquiriesStream = firestoreService.getEnquiries();
+/// // Real-time, role-scoped enquiries for a viewer
+/// final enquiriesStream = firestoreService.watchEnquiriesForRole(isAdmin: true);
 /// ```
 class FirestoreService {
   /// The underlying Firebase Firestore instance.
@@ -157,17 +161,23 @@ class FirestoreService {
     required String phone,
     required String role,
   }) async {
-    final userData = {
-      'name': name,
-      'email': email,
-      'phone': phone,
-      'role': role,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'isActive': true, // Standardized field name
-    };
-
-    await _usersCollection.doc(uid).set(userData);
+    // Public profile: name / role / isActive. Phone and email go to the private
+    // profile (owner + admins only), same as the inviteUser function.
+    final userRef = _usersCollection.doc(uid);
+    final batch = firestore.batch()
+      ..set(userRef, {
+        'name': name,
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'isActive': true, // Standardized field name
+      })
+      ..set(userRef.collection('private').doc('profile'), {
+        'email': email,
+        'phone': phone,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    await batch.commit();
   }
 
   /// Retrieves a user document by UID.
@@ -408,7 +418,22 @@ class FirestoreService {
       ...functionFields,
     };
 
-    final docRef = await _enquiriesCollection.add(enquiryData);
+    return _createWithFinancials(enquiryData);
+  }
+
+  /// Writes a new enquiry (without money) and its admin-only financial summary in
+  /// one batch. See [EnquiryFinancials].
+  Future<String> _createWithFinancials(Map<String, dynamic> data) async {
+    final parts = EnquiryFinancials.split(data);
+    final docRef = _enquiriesCollection.doc();
+    final batch = firestore.batch()..set(docRef, parts.parent);
+    if (parts.money.isNotEmpty) {
+      batch.set(
+        EnquiryFinancials.ref(firestore, docRef.id),
+        EnquiryFinancials.summaryWrite(parts.money),
+      );
+    }
+    await batch.commit();
     return docRef.id;
   }
 
@@ -428,32 +453,7 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
-    final docRef = await _enquiriesCollection.add(payload);
-    return docRef.id;
-  }
-
-  /// Retrieves a real-time stream of all enquiries.
-  ///
-  /// This method returns a stream that emits the latest enquiry data
-  /// whenever there are changes in the enquiries collection. The enquiries
-  /// are ordered by creation date (newest first).
-  ///
-  /// Returns a [Stream<QuerySnapshot>] that emits:
-  /// - Current enquiry data on subscription
-  /// - Updated data whenever enquiries are added, modified, or deleted
-  ///
-  /// Example:
-  /// ```dart
-  /// final enquiriesStream = firestoreService.getEnquiries();
-  /// enquiriesStream.listen((snapshot) {
-  ///   for (final doc in snapshot.docs) {
-  ///     final data = doc.data() as Map<String, dynamic>;
-  ///     print('Enquiry: ${data['customerName']}');
-  ///   }
-  /// });
-  /// ```
-  Stream<QuerySnapshot> getEnquiries() {
-    return _enquiriesCollection.orderBy('createdAt', descending: true).snapshots();
+    return _createWithFinancials(payload);
   }
 
   /// Retrieves a real-time stream of enquiries filtered by status.
@@ -550,15 +550,137 @@ class FirestoreService {
     return query.snapshots();
   }
 
-  /// One-shot enquiry fetch for export (same visibility as [watchEnquiriesForRole]).
-  Future<QuerySnapshot> fetchEnquiriesForRole({required bool isAdmin, String? assignedToUid}) {
-    Query query = _enquiriesCollection.orderBy('createdAt', descending: true);
-    if (!isAdmin && assignedToUid != null) {
-      query = _enquiriesCollection
-          .where('assignedTo', isEqualTo: assignedToUid)
-          .orderBy('createdAt', descending: true);
+  /// Approved bookings stay in the live dashboard listener while their last
+  /// function day (`eventDate`) is at most this far in the past — the calendar's
+  /// look-back. Older approved bookings are auto-completed, so the listener never
+  /// carries the whole Approved history.
+  static const Duration approvedLiveLookback = Duration(days: 31);
+
+  /// The open pipeline is logged once per session when it grows past this.
+  static const int activePipelineLogThreshold = 1500;
+  static bool _activeCountLogged = false;
+
+  /// Live documents of the active dashboard scope for a viewer:
+  /// every New / In Talks enquiry (never capped — hiding open work is worse than
+  /// the read cost) plus Approved bookings whose last function day is within
+  /// [approvedLiveLookback] (indexes `statusValue + eventDate`, staff
+  /// `assignedTo + statusValue + eventDate`). Emits once both queries have.
+  Stream<List<QueryDocumentSnapshot<Object?>>> watchActiveEnquiryDocs({
+    required bool isAdmin,
+    String? assignedToUid,
+    DateTime? now,
+  }) {
+    Query base = _enquiriesCollection;
+    if (!isAdmin) base = base.where('assignedTo', isEqualTo: assignedToUid);
+    final open = base
+        .where(
+          'statusValue',
+          whereIn: [
+            ...EnquiryStatus.rawValuesFor(EnquiryStatus.newEnquiry.value),
+            ...EnquiryStatus.rawValuesFor(EnquiryStatus.inTalks.value),
+          ],
+        )
+        .orderBy('createdAt', descending: true);
+    final today = now ?? DateTime.now();
+    final approvedFrom = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(approvedLiveLookback);
+    final approved = base
+        .where('statusValue', whereIn: EnquiryStatus.rawValuesFor(EnquiryStatus.approved.value))
+        .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(approvedFrom))
+        .orderBy('eventDate');
+    _logLargeActivePipelineOnce(isAdmin: isAdmin, assignedToUid: assignedToUid);
+    return combineLatestDocs(open.snapshots(), approved.snapshots());
+  }
+
+  /// Merges two query streams: emits the docs of both once each has emitted, and
+  /// again whenever either changes. Errors from either are forwarded.
+  static Stream<List<QueryDocumentSnapshot<Object?>>> combineLatestDocs(
+    Stream<QuerySnapshot> a,
+    Stream<QuerySnapshot> b,
+  ) {
+    late StreamController<List<QueryDocumentSnapshot<Object?>>> controller;
+    StreamSubscription<QuerySnapshot>? subA;
+    StreamSubscription<QuerySnapshot>? subB;
+    QuerySnapshot? lastA;
+    QuerySnapshot? lastB;
+    void emit() {
+      if (lastA != null && lastB != null) controller.add([...lastA!.docs, ...lastB!.docs]);
     }
-    return query.get();
+
+    controller = StreamController<List<QueryDocumentSnapshot<Object?>>>(
+      onListen: () {
+        subA = a.listen((s) {
+          lastA = s;
+          emit();
+        }, onError: controller.addError);
+        subB = b.listen((s) {
+          lastB = s;
+          emit();
+        }, onError: controller.addError);
+      },
+      onCancel: () async {
+        await subA?.cancel();
+        await subB?.cancel();
+      },
+    );
+    return controller.stream;
+  }
+
+  /// One `count()` of the active scope per session; above
+  /// [activePipelineLogThreshold] a single line with the count and role only.
+  void _logLargeActivePipelineOnce({required bool isAdmin, String? assignedToUid}) {
+    if (_activeCountLogged) return;
+    _activeCountLogged = true;
+    Query query = _enquiriesCollection;
+    if (!isAdmin) query = query.where('assignedTo', isEqualTo: assignedToUid);
+    query
+        .where('statusValue', whereIn: rawStatusValuesForScope(EnquiryScope.active))
+        .count()
+        .get()
+        .then((snap) {
+          final count = snap.count ?? 0;
+          if (count > activePipelineLogThreshold) {
+            Log.w('dashboard_active_pipeline_large', data: {'count': count, 'admin': isAdmin});
+          }
+        }, onError: (Object _) {});
+  }
+
+  /// Rows per page when [fetchEnquiriesForRole] walks the collection.
+  static const int exportPageSize = 500;
+
+  /// Every enquiry the user may export, newest first (`createdAt DESC`), as pages of
+  /// [pageSize] rows walked with `startAfterDocument`; no row cap. Each row carries
+  /// its `id`. Admin rows include money from the financial summaries (legacy parent
+  /// fields as fallback); staff rows are their assigned enquiries without money.
+  Stream<List<Map<String, dynamic>>> fetchEnquiriesForRole({
+    required bool isAdmin,
+    String? assignedToUid,
+    int pageSize = exportPageSize,
+  }) async* {
+    if (!isAdmin && (assignedToUid == null || assignedToUid.isEmpty)) return;
+    Query<Map<String, dynamic>> query = enquiriesCollection;
+    if (!isAdmin) query = query.where('assignedTo', isEqualTo: assignedToUid);
+    query = query.orderBy('createdAt', descending: true).limit(pageSize);
+
+    final summaries = isAdmin
+        ? await EnquiryFinancials.readAll(firestore)
+        : const <String, Map<String, dynamic>>{};
+    DocumentSnapshot<Map<String, dynamic>>? last;
+    while (true) {
+      final page = await (last == null ? query : query.startAfterDocument(last)).get();
+      if (page.docs.isEmpty) return;
+      yield [
+        for (final doc in page.docs)
+          isAdmin
+              ? EnquiryFinancials.merge({'id': doc.id, ...doc.data()}, summaries[doc.id])
+              : EnquiryFinancials.strip({'id': doc.id, ...doc.data()}),
+      ];
+      if (page.docs.length < pageSize) return;
+      last = page.docs.last;
+    }
   }
 
   /// Retrieves a specific enquiry by its ID.
@@ -718,6 +840,38 @@ class FirestoreService {
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
 
+  /// Admin read: the enquiry with its money taken from the financial summary
+  /// (falling back to legacy parent fields). Non-admins can't read the summary;
+  /// for them this returns the parent without money fields.
+  Future<Map<String, dynamic>?> getEnquiryWithFinancials(String enquiryId) async {
+    final parent = await getEnquiry(enquiryId);
+    if (parent == null) return null;
+    try {
+      return EnquiryFinancials.merge(parent, await EnquiryFinancials.read(firestore, enquiryId));
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      return EnquiryFinancials.strip(parent);
+    }
+  }
+
+  /// [updateEnquiry] that sends money fields to the financial summary (admin only)
+  /// in the same batch; the parent never receives them.
+  Future<void> updateEnquiryWithFinancials(String enquiryId, Map<String, dynamic> data) async {
+    final parts = EnquiryFinancials.split(data);
+    if (parts.money.isEmpty) return updateEnquiry(enquiryId, parts.parent);
+    final batch = firestore.batch()
+      ..update(_enquiriesCollection.doc(enquiryId), {
+        ...parts.parent,
+        'updatedAt': FieldValue.serverTimestamp(),
+      })
+      ..set(
+        EnquiryFinancials.ref(firestore, enquiryId),
+        EnquiryFinancials.summaryWrite(parts.money),
+        SetOptions(merge: true),
+      );
+    await batch.commit();
+  }
+
   /// Deletes an enquiry document from Firestore.
   ///
   /// This method permanently removes the specified enquiry from the database.
@@ -736,7 +890,11 @@ class FirestoreService {
   /// await firestoreService.deleteEnquiry('enquiry123');
   /// ```
   Future<void> deleteEnquiry(String enquiryId) async {
-    await _enquiriesCollection.doc(enquiryId).delete();
+    // Subcollections are not deleted with the parent: drop the money doc too (admin only).
+    final batch = firestore.batch()
+      ..delete(_enquiriesCollection.doc(enquiryId))
+      ..delete(EnquiryFinancials.ref(firestore, enquiryId));
+    await batch.commit();
   }
 
   /// Retrieves a real-time stream of all active users.

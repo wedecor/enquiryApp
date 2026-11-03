@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/status_vocabulary.dart';
@@ -14,12 +15,23 @@ final reengagementRepositoryProvider = Provider<ReengagementRepository>((ref) {
   return ReengagementRepository(ref.watch(firestoreServiceProvider).firestore);
 });
 
+/// Calls the `setReengagementPref` function (customer_prefs is server-written only).
+typedef ReengagementPrefSetter = Future<void> Function(String phone, bool noReminders);
+
+Future<void> _callSetReengagementPref(String phone, bool noReminders) async {
+  await FirebaseFunctions.instanceFor(region: 'asia-south1')
+      .httpsCallable('setReengagementPref')
+      .call<dynamic>({'phone': phone, 'noReminders': noReminders});
+}
+
 /// Reads/writes `reminders`, `customer_prefs`, `app_config/reengagement` and the
 /// yearly-reminder fields of enquiries.
 class ReengagementRepository {
-  ReengagementRepository(this._firestore);
+  ReengagementRepository(this._firestore, {ReengagementPrefSetter? prefSetter})
+    : _setPref = prefSetter ?? _callSetReengagementPref;
 
   final FirebaseFirestore _firestore;
+  final ReengagementPrefSetter _setPref;
 
   CollectionReference<Map<String, dynamic>> get _reminders => _firestore.collection('reminders');
 
@@ -67,13 +79,12 @@ class ReengagementRepository {
     });
   }
 
-  /// "Don't remind again" for a customer (normalized phone).
+  /// "Don't remind again" for a customer (normalized phone). Goes through the
+  /// `setReengagementPref` function, which checks the caller is an admin or is
+  /// assigned to an enquiry for that phone and records them as `updatedBy`
+  /// ([uid] is kept for callers; the server uses the signed-in user).
   Future<void> setNoReminders(String phoneNormalized, {required bool value, required String uid}) {
-    return _prefs.doc(phoneNormalized).set({
-      'noReminders': value,
-      'updatedAt': FieldValue.serverTimestamp(),
-      'updatedBy': uid,
-    }, SetOptions(merge: true));
+    return _setPref(phoneNormalized, value);
   }
 
   Stream<bool> watchNoReminders(String phoneNormalized) {

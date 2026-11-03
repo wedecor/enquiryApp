@@ -16,8 +16,12 @@ typedef CalendarEnquiriesKey = ({bool isAdmin, String? uid, DateTime start, Date
 /// filter the documents in memory.
 final roleScopedEnquiriesProvider = StreamProvider.autoDispose
     .family<List<QueryDocumentSnapshot<Object?>>, RoleScopedEnquiriesKey>((ref, key) {
-      return ref
-          .watch(firestoreServiceProvider)
+      final service = ref.watch(firestoreServiceProvider);
+      // Active: all New / In Talks + Approved bookings still in the calendar window.
+      if (key.scope == EnquiryScope.active) {
+        return service.watchActiveEnquiryDocs(isAdmin: key.isAdmin, assignedToUid: key.uid);
+      }
+      return service
           .watchEnquiriesForRoleScope(
             isAdmin: key.isAdmin,
             assignedToUid: key.uid,

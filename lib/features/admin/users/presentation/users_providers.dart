@@ -141,7 +141,8 @@ final currentUserProvider = Provider<UserModel?>((ref) {
   return UserModel(
     uid: authUser.uid,
     name: userData['name'] as String? ?? '',
-    email: userData['email'] as String? ?? '',
+    // Own email: Firebase Auth (the public users doc no longer carries it).
+    email: userData['email'] as String? ?? authUser.email ?? '',
     phone: userData['phone'] as String?,
     role: userData['role'] as String? ?? 'staff',
     isActive: (userData['isActive'] ?? userData['active']) as bool? ?? true,

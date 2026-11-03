@@ -21,7 +21,9 @@ void main() {
   });
 
   testWidgets('edit mode disables submit until enquiry data loads (T11)', (tester) async {
-    when(() => mockFirestore.getEnquiry(any())).thenAnswer((_) async {
+    // The edit form loads through getEnquiryWithFinancials (money from the
+    // admin-only financial summary, legacy parent fields as fallback).
+    when(() => mockFirestore.getEnquiryWithFinancials(any())).thenAnswer((_) async {
       await Future<void>.delayed(const Duration(milliseconds: 300));
       return {
         'customerName': 'Jane Doe',

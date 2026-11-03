@@ -43,7 +43,7 @@ class AccountTab extends ConsumerWidget {
               error: (error, stack) => SettingsTile(
                 icon: Icons.error_outline_rounded,
                 iconColor: Theme.of(context).colorScheme.error,
-                title: 'Error loading profile: $error',
+                title: 'Your profile could not be loaded. Please try again.',
               ),
             ),
           ],
