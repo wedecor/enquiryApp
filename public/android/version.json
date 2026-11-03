@@ -1,23 +1,20 @@
 {
-  "version": "2.0.25",
-  "buildNumber": 56,
+  "version": "2.0.26",
+  "buildNumber": 57,
   "releaseDate": "2026-11-03",
-  "releaseNotes": "💌 Yearly wishes are now a shareable card — pick WhatsApp and send image + text together\n🗓️ Wishes go out 7 days ahead (not 30), so they feel like a greeting not a sales nudge\n💛 Lost enquiries that reached In Talks still get a yearly wish; corporate and open leads are skipped\n📋 Event Types in Dropdown Manager stay visible; accidental Eng removed; App lead source restored\n⚡ Faster location search, capitalised names, readable event type in pushes",
+  "releaseNotes": "\ud83d\uddd3\ufe0f Wishes list now shows only the next 7 days\n\ud83d\udcac Sending a wish opens the customer's WhatsApp chat with the card ready\n\u2728 New app icon and opening screen",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "6a3133bda8cf09c417b83ad29efe55a84a2d86c0209ea6f3a4c91d6ce8bfd710",
+  "sha256": "6a08c25e67189918a53edf155cc65dd2cb1bed029a4c009705de6cc76f0b7f60",
   "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
-    "NEW: Share a branded wish card (image + warm message) for birthdays and anniversaries",
-    "IMPROVED: Re-engagement lead time defaults to 7 days",
-    "IMPROVED: Wish-eligible lost enquiries can get a yearly occasion stamp and reminder",
-    "FIXED: Dropdown Manager Event Types list; App lead source available again",
-    "FASTER: Location / Maps search with warm-up and cache"
+    "FIXED: Upcoming occasions follows Settings \u2192 Lead days (7)",
+    "IMPROVED: Wish card opens the customer's WhatsApp chat on Android",
+    "NEW: Real WD logo, charcoal app icon, and branded opening screen"
   ],
   "bugFixes": [
-    "Fixed Event Types going empty after a quick-add from the form",
-    "Fixed missing App lead source for most historical enquiries",
-    "Fixed wish messages that read like a sales pitch",
-    "Fixed corporate occasions getting a personal yearly wish"
+    "Fixed Upcoming occasions still listing 30 days when Lead days is 7",
+    "Fixed wish share opening WhatsApp without the customer's chat",
+    "Replaced the old green icon and drawn gold-disc logo with the real WD mark"
   ]
 }
