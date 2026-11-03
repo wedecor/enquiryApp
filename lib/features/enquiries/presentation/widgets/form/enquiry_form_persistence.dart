@@ -710,7 +710,8 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
 
     final quoteFields = _quoteFields(const {});
     if (quoteFields.isNotEmpty) {
-      await firestoreService.updateEnquiry(enquiryId, {
+      // Quote is money: it goes to the admin-only financial summary.
+      await firestoreService.updateEnquiryWithFinancials(enquiryId, {
         ...quoteFields,
         'updatedBy': currentUser.uid,
       });
