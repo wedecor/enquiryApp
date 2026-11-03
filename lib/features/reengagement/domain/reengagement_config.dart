@@ -57,8 +57,9 @@ class ReengagementConfig {
   String templateFor(OccasionKind kind) =>
       templates[kind] ?? ReengagementTemplates.defaults[kind] ?? '';
 
-  /// Days ahead the "Upcoming occasions" list covers (at least 30).
-  int get windowDays => leadDays > 30 ? leadDays : 30;
+  /// Days ahead the "Upcoming occasions" list covers: the lead time, so the list
+  /// shows exactly what Settings → Lead days says (it used to be at least 30).
+  int get windowDays => leadDays;
 
   ReengagementConfig copyWith({
     bool? enabled,

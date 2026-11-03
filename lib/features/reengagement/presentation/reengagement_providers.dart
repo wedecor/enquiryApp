@@ -13,8 +13,8 @@ final reengagementConfigProvider = StreamProvider<ReengagementConfig>((ref) {
   return ref.watch(reengagementRepositoryProvider).watchConfig();
 });
 
-/// Pending reminders from today for the next 30 days (or the lead time, if
-/// longer), soonest first. Admins: all; staff: their own.
+/// Pending reminders from today up to the lead time (Settings → Lead days),
+/// soonest first. Admins: all; staff: their own.
 final upcomingRemindersProvider = StreamProvider.autoDispose<List<OccasionReminder>>((ref) {
   final uid = ref.watch(currentUserUidProvider);
   final role = ref.watch(roleProvider).valueOrNull;

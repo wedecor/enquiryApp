@@ -122,8 +122,8 @@ void main() {
       expect(config.toMap()['templates'], {'birthday': 'Custom {name}'});
     });
 
-    test('window covers at least 30 days', () {
-      expect(const ReengagementConfig(leadDays: 10).windowDays, 30);
+    test('the list window follows lead days', () {
+      expect(const ReengagementConfig(leadDays: 7).windowDays, 7);
       expect(const ReengagementConfig(leadDays: 45).windowDays, 45);
     });
   });

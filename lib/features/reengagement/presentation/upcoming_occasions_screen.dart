@@ -9,13 +9,14 @@ import '../../../ui/components/glass_segmented_tabs.dart';
 import '../../../ui/components/glass_state_message.dart';
 import '../../../ui/primitives/primitives.dart';
 import '../domain/past_customer_occasion.dart';
+import '../domain/reengagement_config.dart';
 import 'reengagement_actions.dart';
 import 'reengagement_providers.dart';
 import 'widgets/occasion_row.dart';
 import 'widgets/past_customer_row_tile.dart';
 
 /// Customer occasions, two tabs:
-/// * **Due now** — pending yearly reminders for the next 30 days, soonest first.
+/// * **Due now** — pending yearly wishes up to Lead days ahead, soonest first.
 /// * **All past customers** — every completed customer with an occasion, by next
 ///   yearly date, with a WhatsApp wish button.
 ///
@@ -92,6 +93,9 @@ class _DueNowTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final remindersAsync = ref.watch(upcomingRemindersProvider);
     final isAdmin = ref.watch(roleProvider).valueOrNull == UserRole.admin;
+    final leadDays =
+        ref.watch(reengagementConfigProvider).valueOrNull?.leadDays ??
+        ReengagementConfig.defaultLeadDays;
 
     return remindersAsync.when(
       loading: () => const GlassLoadingState(),
@@ -107,7 +111,7 @@ class _DueNowTab extends ConsumerWidget {
             icon: Icons.celebration_outlined,
             title: 'Nothing to send right now',
             message:
-                "Reminders appear 30 days before a past customer's occasion (1 year or "
+                'Wishes appear $leadDays days before a customer\'s occasion (1 year or '
                 'more after their event). The app checks every morning at 9.',
             action: isAdmin ? const _CheckNowButton() : null,
           );
