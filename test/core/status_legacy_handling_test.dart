@@ -86,6 +86,20 @@ void main() {
     });
   });
 
+  group('FirestoreService.parseDropdownOptionMaps', () {
+    test('skips inactive, falls back to doc id, sorts by order', () {
+      final options = FirestoreService.parseDropdownOptionMaps([
+        ('rand', {'value': 'mehendi', 'label': 'Mehendi', 'order': 2, 'active': true}),
+        ('dead', {'value': 'old', 'label': 'Old', 'order': 1, 'active': false}),
+        ('wedding', {'label': 'Wedding', 'order': 1}), // missing active + value
+      ]);
+      expect(options, [
+        {'label': 'Wedding', 'value': 'wedding'},
+        {'label': 'Mehendi', 'value': 'mehendi'},
+      ]);
+    });
+  });
+
   group('DropdownLookup.statusLabelOf', () {
     test('legacy values show the canonical label', () {
       expect(DropdownLookup.statusLabelOf(null, 'quote_sent'), 'In Talks');

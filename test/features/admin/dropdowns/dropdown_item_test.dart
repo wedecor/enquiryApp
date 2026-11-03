@@ -41,6 +41,23 @@ void main() {
       expect(item.updatedAt, DateTime.fromMillisecondsSinceEpoch(0));
     });
 
+    test('tolerates wrong field types without throwing', () {
+      final item = DropdownItem.fromMap('x', {
+        'value': 12,
+        'label': true,
+        'order': '7',
+        'active': 'false',
+      });
+      expect(item.value, '12');
+      expect(item.label, 'true');
+      expect(item.order, 7);
+      expect(item.active, isFalse);
+    });
+
+    test('missing active counts as active', () {
+      expect(DropdownItem.fromMap('wedding', {'label': 'Wedding'}).active, isTrue);
+    });
+
     test('falls back to doc id when value/label missing', () {
       final item = DropdownItem.fromMap('wedding', const {});
       expect(item.value, 'wedding');

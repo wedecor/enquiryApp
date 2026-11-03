@@ -196,10 +196,10 @@ class DropdownsRepository {
   /// Reorder dropdown items
   Future<void> reorder(DropdownGroup group, List<String> orderedValues) async {
     final batch = _firestore.batch();
-    final collection = _getCollection(group);
 
     for (int i = 0; i < orderedValues.length; i++) {
-      final docRef = collection.doc(orderedValues[i]);
+      final docRef = await _docForValue(group, orderedValues[i]);
+      if (docRef == null) continue;
       batch.update(docRef, {'order': i + 1, 'updatedAt': FieldValue.serverTimestamp()});
     }
 
@@ -234,6 +234,11 @@ class DropdownsRepository {
             enquiryField: newValue,
             'updatedAt': FieldValue.serverTimestamp(),
           };
+          // Keep sibling type fields in sync when replacing event types.
+          if (group == DropdownGroup.eventTypes) {
+            updates['eventType'] = newValue;
+            updates['eventTypeValue'] = newValue;
+          }
           if (newLabel != null && labelField != null) {
             updates[labelField] = newLabel;
           }
@@ -245,6 +250,52 @@ class DropdownsRepository {
         if (snapshot.docs.length < batchSize) break;
         lastDoc = snapshot.docs.last;
       }
+    }
+
+    if (group == DropdownGroup.eventTypes) {
+      await _replaceInFunctionArrays(oldValue, newValue, newLabel);
+    }
+  }
+
+  /// Multi-function bookings store secondary types only on `functions[]`.
+  Future<void> _replaceInFunctionArrays(String oldValue, String newValue, String? newLabel) async {
+    const batchSize = 100;
+    QueryDocumentSnapshot? lastDoc;
+    while (true) {
+      Query query = _firestore
+          .collection('enquiries')
+          .where('functionCount', isGreaterThanOrEqualTo: 2)
+          .limit(batchSize);
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) break;
+
+      final batch = _firestore.batch();
+      var writes = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? const {};
+        final functions = data['functions'];
+        if (functions is! List) continue;
+        var changed = false;
+        final next = <Map<String, dynamic>>[];
+        for (final raw in functions) {
+          if (raw is! Map) continue;
+          final fn = Map<String, dynamic>.from(raw);
+          if (fn['eventType'] == oldValue || fn['eventTypeValue'] == oldValue) {
+            fn['eventType'] = newValue;
+            fn['eventTypeValue'] = newValue;
+            if (newLabel != null) fn['eventTypeLabel'] = newLabel;
+            changed = true;
+          }
+          next.add(fn);
+        }
+        if (!changed) continue;
+        batch.update(doc.reference, {'functions': next, 'updatedAt': FieldValue.serverTimestamp()});
+        writes++;
+      }
+      if (writes > 0) await batch.commit();
+      if (snapshot.docs.length < batchSize) break;
+      lastDoc = snapshot.docs.last;
     }
   }
 
@@ -271,7 +322,36 @@ class DropdownsRepository {
       if (snapshot.docs.isNotEmpty) return true;
     }
 
+    // Secondary function types live only on `functions[]` (top-level stays the main).
+    if (group == DropdownGroup.eventTypes && await _hasFunctionEventTypeReference(value)) {
+      return true;
+    }
+
     return false;
+  }
+
+  Future<bool> _hasFunctionEventTypeReference(String value) async {
+    const batchSize = 100;
+    QueryDocumentSnapshot? lastDoc;
+    while (true) {
+      Query query = _firestore
+          .collection('enquiries')
+          .where('functionCount', isGreaterThanOrEqualTo: 2)
+          .limit(batchSize);
+      if (lastDoc != null) query = query.startAfterDocument(lastDoc);
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) return false;
+      for (final doc in snapshot.docs) {
+        final functions = (doc.data() as Map<String, dynamic>?)?['functions'];
+        if (functions is! List) continue;
+        for (final raw in functions) {
+          if (raw is! Map) continue;
+          if (raw['eventType'] == value || raw['eventTypeValue'] == value) return true;
+        }
+      }
+      if (snapshot.docs.length < batchSize) return false;
+      lastDoc = snapshot.docs.last;
+    }
   }
 
   /// Get dropdown items for a specific group (non-stream)

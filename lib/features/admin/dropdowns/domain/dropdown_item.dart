@@ -114,19 +114,43 @@ class DropdownItem with _$DropdownItem {
   /// use the semantic value even before [DropdownsRepository.repairGroup]
   /// moves the doc to `items/{value}`.
   factory DropdownItem.fromMap(String docId, Map<String, dynamic> data) {
-    final label = (data['label'] as String?)?.trim();
-    final storedValue = (data['value'] as String?)?.trim();
     DateTime when(Object? raw) =>
         raw is Timestamp ? raw.toDate() : DateTime.fromMillisecondsSinceEpoch(0);
+    final storedValue = _asTrimmedString(data['value']);
+    final label = _asTrimmedString(data['label']);
+    final color = _asTrimmedString(data['color']);
     return DropdownItem(
       value: storedValue != null && storedValue.isNotEmpty ? storedValue : docId,
       label: label == null || label.isEmpty ? (storedValue ?? docId) : label,
-      order: (data['order'] as num?)?.toInt() ?? 0,
-      active: data['active'] as bool? ?? true,
-      color: data['color'] as String?,
+      order: _asOrder(data['order']),
+      active: _asActive(data['active']),
+      color: color,
       createdAt: when(data['createdAt']),
       updatedAt: when(data['updatedAt']),
     );
+  }
+
+  static String? _asTrimmedString(Object? raw) {
+    if (raw is String) {
+      final trimmed = raw.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (raw is num || raw is bool) return raw.toString();
+    return null;
+  }
+
+  static int _asOrder(Object? raw) {
+    if (raw is num) return raw.toInt();
+    if (raw is String) return int.tryParse(raw.trim()) ?? 0;
+    return 0;
+  }
+
+  /// Missing / unknown `active` counts as active (matches website loadEventTypes).
+  static bool _asActive(Object? raw) {
+    if (raw is bool) return raw;
+    if (raw == 1 || raw == '1' || raw == 'true') return true;
+    if (raw == 0 || raw == '0' || raw == 'false') return false;
+    return true;
   }
 
   /// Slug used as the Firestore doc id / `value` for a typed label.

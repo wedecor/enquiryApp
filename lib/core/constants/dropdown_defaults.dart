@@ -22,6 +22,7 @@ class DropdownDefaults {
   ];
 
   static const List<Map<String, String>> sources = [
+    {'label': 'App', 'value': 'app'},
     {'label': 'Instagram', 'value': 'instagram'},
     {'label': 'Facebook', 'value': 'facebook'},
     {'label': 'WhatsApp', 'value': 'whatsapp'},

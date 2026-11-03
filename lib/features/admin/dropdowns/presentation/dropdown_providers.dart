@@ -46,31 +46,24 @@ final dropdownQueryProvider = StateNotifierProvider<DropdownQueryState, String>(
   return DropdownQueryState();
 });
 
-/// Provider for filtered dropdown items
-final filteredDropdownsProvider = StreamProvider.family<List<DropdownItem>, DropdownGroup>((
+/// Filtered dropdown items. Preserves loading/error from the stream — never
+/// maps failures to an empty list (that made the manager look blank).
+final filteredDropdownsProvider = Provider.family<AsyncValue<List<DropdownItem>>, DropdownGroup>((
   ref,
   group,
 ) {
   final dropdownsAsync = ref.watch(dropdownsStreamProvider(group));
-  final query = ref.watch(dropdownQueryProvider);
+  final query = ref.watch(dropdownQueryProvider).toLowerCase().trim();
 
-  return dropdownsAsync.when(
-    data: (items) {
-      final searchQuery = query.toLowerCase().trim();
-      if (searchQuery.isEmpty) {
-        return Stream.value(items);
-      }
-
-      final filtered = items.where((item) {
-        return item.value.toLowerCase().contains(searchQuery) ||
-            item.label.toLowerCase().contains(searchQuery);
-      }).toList();
-
-      return Stream.value(filtered);
-    },
-    loading: () => Stream.value(<DropdownItem>[]),
-    error: (_, __) => Stream.value(<DropdownItem>[]),
-  );
+  return dropdownsAsync.whenData((items) {
+    if (query.isEmpty) return items;
+    return items
+        .where(
+          (item) =>
+              item.value.toLowerCase().contains(query) || item.label.toLowerCase().contains(query),
+        )
+        .toList();
+  });
 });
 
 /// Controller for dropdown form operations

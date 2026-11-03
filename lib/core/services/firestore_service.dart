@@ -593,14 +593,15 @@ class FirestoreService {
     return _enquiriesCollection.doc(enquiryId).snapshots();
   }
 
-  /// Active dropdown items from `dropdowns/{kind}/items`.
+  /// Dropdown items from `dropdowns/{kind}/items` (no `orderBy` — callers filter
+  /// / sort client-side so a doc missing `order` or `active` cannot blank the list).
   Stream<QuerySnapshot<Map<String, dynamic>>> watchActiveDropdownItems(String kind) {
-    return _activeDropdownItemsQuery(kind).snapshots();
+    return _dropdownItemsCollection(kind).snapshots();
   }
 
-  /// One-shot fetch of active dropdown items (e.g. dashboard color priming).
+  /// One-shot fetch of dropdown items (e.g. dashboard color priming).
   Future<QuerySnapshot<Map<String, dynamic>>> fetchActiveDropdownItems(String kind) {
-    return _activeDropdownItemsQuery(kind).get();
+    return _dropdownItemsCollection(kind).get();
   }
 
   /// Active dropdown options as label/value maps for form widgets.
@@ -609,22 +610,34 @@ class FirestoreService {
     return parseDropdownOptions(snapshot.docs);
   }
 
-  /// Parses active dropdown documents into label/value maps.
+  /// Parses dropdown documents into active label/value maps.
   static List<Map<String, String>> parseDropdownOptions(
     Iterable<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) => parseDropdownOptionMaps(docs.map((doc) => (doc.id, doc.data())));
+
+  /// Missing `active` counts as active (same as website `loadEventTypes`).
+  /// Missing `value` falls back to the document id. Sorted by `order` then label.
+  static List<Map<String, String>> parseDropdownOptionMaps(
+    Iterable<(String, Map<String, dynamic>)> docs,
   ) {
-    return docs
-        .map((doc) {
-          final data = doc.data();
-          final label = (data['label'] as String?)?.trim();
-          final value = (data['value'] as String?)?.trim();
-          return {
-            'label': label?.isNotEmpty == true ? label! : (value ?? ''),
-            'value': value ?? '',
-          };
-        })
-        .where((entry) => entry['value']!.isNotEmpty)
-        .toList();
+    final parsed = <({int order, String label, String value})>[];
+    for (final (id, data) in docs) {
+      if (data['active'] == false) continue;
+      final rawValue = data['value'];
+      final value = rawValue is String && rawValue.trim().isNotEmpty ? rawValue.trim() : id;
+      if (value.isEmpty) continue;
+      final rawLabel = data['label'];
+      final label = rawLabel is String && rawLabel.trim().isNotEmpty ? rawLabel.trim() : value;
+      final order = data['order'] is num ? (data['order'] as num).toInt() : 0;
+      parsed.add((order: order, label: label, value: value));
+    }
+    parsed.sort((a, b) {
+      final byOrder = a.order.compareTo(b.order);
+      return byOrder != 0 ? byOrder : a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+    return [
+      for (final item in parsed) {'label': item.label, 'value': item.value},
+    ];
   }
 
   /// Value→label map for a dropdown kind (includes inactive items for history display).
@@ -652,13 +665,8 @@ class FirestoreService {
     return map;
   }
 
-  Query<Map<String, dynamic>> _activeDropdownItemsQuery(String kind) {
-    return _firestore
-        .collection('dropdowns')
-        .doc(kind)
-        .collection('items')
-        .where('active', isEqualTo: true)
-        .orderBy('order');
+  CollectionReference<Map<String, dynamic>> _dropdownItemsCollection(String kind) {
+    return _firestore.collection('dropdowns').doc(kind).collection('items');
   }
 
   /// Active status options for enquiry status dropdowns.

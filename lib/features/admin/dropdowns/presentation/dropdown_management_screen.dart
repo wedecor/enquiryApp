@@ -32,6 +32,7 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   bool _repairing = true;
+  String? _repairError;
 
   @override
   void initState() {
@@ -47,14 +48,22 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
   /// showing the list so delete/toggle always hit `items/{value}` docs.
   Future<void> _repairGroups() async {
     final repository = ref.read(dropdownsRepositoryProvider);
+    final failures = <String>[];
     for (final group in DropdownGroup.values) {
       try {
         await repository.repairGroup(group);
       } catch (e) {
+        failures.add(group.displayName);
         Log.w('Dropdown repair failed', data: {'group': group.collectionPath, 'error': '$e'});
       }
     }
-    if (mounted) setState(() => _repairing = false);
+    if (!mounted) return;
+    setState(() {
+      _repairing = false;
+      _repairError = failures.isEmpty
+          ? null
+          : 'Could not repair: ${failures.join(', ')}. Some items may be missing fields.';
+    });
   }
 
   @override
@@ -148,6 +157,21 @@ class _DropdownManagementScreenState extends ConsumerState<DropdownManagementScr
               ],
             ),
           ),
+          if (_repairError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppTokens.space4,
+                AppTokens.space2,
+                AppTokens.space4,
+                0,
+              ),
+              child: Text(
+                _repairError!,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           Expanded(
             child: _repairing
                 ? const Center(child: CircularProgressIndicator())
