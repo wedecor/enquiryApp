@@ -94,7 +94,7 @@ describe("autoExpireEnquiries (emulator)", { skip: !hasEmulator }, () => {
 
   it("a flagged enquiry becomes due for the assignee through the follow-up workflow", async () => {
     await ref("e1").set(base({ statusValue: "in_talks", createdAt: Timestamp.fromDate(ist("2026-11-05T09:00")) }));
-    // The regular automatic follow-up, scheduled when the enquiry came in (due 11-07 10:00).
+    // The regular automatic follow-up, scheduled when the enquiry came in (due next morning, 11-06 10:00).
     await applyFollowUpOnWrite(db, "e1", null, DEFAULT_FOLLOW_UP_CONFIG, ist("2026-11-05T09:00"));
     assert.equal((await ref("e1").get()).get("followUpReason"), "auto");
     const before = (await ref("e1").get()).data()!;

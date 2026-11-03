@@ -5,6 +5,7 @@ import {
   DEFAULT_FOLLOW_UP_CONFIG,
   FollowUpConfig,
   nextAutoDueAt,
+  nextIstSlot,
   parseFollowUpConfig,
   planFollowUpOnWrite,
   reminderNotificationId,
@@ -33,7 +34,7 @@ function enquiry(over: Record<string, unknown> = {}): Record<string, unknown> {
 }
 
 describe("follow-up config (pure)", () => {
-  it("defaults to every 3 days at 10:00 IST, overdue after 24 h, New + In Talks", () => {
+  it("defaults: next morning first, then 3 days after each completion, 10:00 IST, overdue after 24 h, New + In Talks", () => {
     assert.deepEqual(parseFollowUpConfig(undefined), DEFAULT_FOLLOW_UP_CONFIG);
   });
   it("reads admin overrides and ignores out-of-range or terminal values", () => {
@@ -53,15 +54,42 @@ describe("follow-up config (pure)", () => {
 describe("due-time calculation (pure)", () => {
   const now = ist("2026-11-04T08:05");
 
-  it("first follow-up: creation + 3 days at 10:00 IST", () => {
-    const r = nextAutoDueAt(enquiry(), cfg, now);
-    assert.equal(r.dueAt.toISOString(), ist("2026-11-07T10:00").toISOString());
-    assert.equal(r.reason, "auto");
+  it("(1) first follow-up: 10:00 IST on the next IST day after creation, whatever the time", () => {
+    for (const created of ["2026-11-04T00:05", "2026-11-04T08:00", "2026-11-04T15:00", "2026-11-04T23:55"]) {
+      const at = ist(created);
+      const r = nextAutoDueAt(enquiry({ createdAt: at }), cfg, new Date(at.getTime() + 60_000));
+      assert.equal(r.dueAt.toISOString(), ist("2026-11-05T10:00").toISOString(), created);
+      assert.equal(r.reason, "auto");
+    }
   });
 
-  it("multi-function: capped before the EARLIEST upcoming function, not the last", () => {
+  it("the first chase ignores reminderDaysDefault (it only spaces later follow-ups)", () => {
+    const fiveDays = { ...cfg, cadenceDays: 5 };
+    assert.equal(nextAutoDueAt(enquiry(), fiveDays, now).dueAt.toISOString(), ist("2026-11-05T10:00").toISOString());
+    const done = enquiry({ followUpLastCompletedAt: ist("2026-11-05T11:00") });
+    assert.equal(
+      nextAutoDueAt(done, fiveDays, ist("2026-11-05T11:01")).dueAt.toISOString(),
+      ist("2026-11-10T10:00").toISOString(),
+    );
+  });
+
+  it("(3) event sooner than the first morning: capped at 10:00 IST the day before the EARLIEST upcoming function", () => {
     const data = enquiry({
       eventDate: ist("2026-11-10T00:00"), // top-level = last function
+      functions: [
+        { id: "a", eventType: "haldi", date: ist("2026-11-05T00:00") },
+        { id: "b", eventType: "wedding", date: ist("2026-11-10T00:00") },
+      ],
+    });
+    // Created 11-04 08:00: next morning would be 11-05 10:00, but the Haldi is on 11-05.
+    assert.equal(nextAutoDueAt(data, cfg, now).dueAt.toISOString(), ist("2026-11-04T10:00").toISOString());
+    // Single-event enquiry with the event tomorrow: same cap.
+    const single = enquiry({ eventDate: ist("2026-11-05T00:00") });
+    assert.equal(nextAutoDueAt(single, cfg, now).dueAt.toISOString(), ist("2026-11-04T10:00").toISOString());
+  });
+
+  it("a later earliest function does not cap the next-morning chase", () => {
+    const data = enquiry({
       functions: [
         { id: "a", eventType: "haldi", date: ist("2026-11-06T00:00") },
         { id: "b", eventType: "wedding", date: ist("2026-11-10T00:00") },
@@ -74,10 +102,10 @@ describe("due-time calculation (pure)", () => {
     const data = enquiry({
       functions: [
         { id: "a", eventType: "engagement", date: ist("2026-11-01T00:00") },
-        { id: "b", eventType: "wedding", date: ist("2026-11-06T00:00") },
+        { id: "b", eventType: "wedding", date: ist("2026-11-05T00:00") },
       ],
     });
-    assert.equal(nextAutoDueAt(data, cfg, now).dueAt.toISOString(), ist("2026-11-05T10:00").toISOString());
+    assert.equal(nextAutoDueAt(data, cfg, now).dueAt.toISOString(), ist("2026-11-04T10:00").toISOString());
   });
 
   it("event today → due now", () => {
@@ -92,9 +120,22 @@ describe("due-time calculation (pure)", () => {
     assert.equal(nextAutoDueAt(followedUp, cfg, now).dueAt.toISOString(), ist("2026-11-06T10:00").toISOString());
   });
 
-  it("next follow-up counts from the last completion", () => {
+  it("(2) marked done: the next follow-up is 3 days after completion at 10:00 IST", () => {
     const r = nextAutoDueAt(enquiry({ followUpLastCompletedAt: ist("2026-11-08T17:00") }), cfg, ist("2026-11-08T17:01"));
     assert.equal(r.dueAt.toISOString(), ist("2026-11-11T10:00").toISOString());
+    assert.equal(r.reason, "auto");
+  });
+
+  it("(4) backfill of an old open enquiry: next 10:00 IST slot, never immediate or in the past", () => {
+    const old = enquiry({ createdAt: ist("2026-09-01T10:00") });
+    const afternoon = ist("2026-11-04T12:00");
+    const r1 = nextAutoDueAt(old, cfg, afternoon, nextIstSlot(afternoon, cfg.dueHourIst));
+    assert.equal(r1.dueAt.toISOString(), ist("2026-11-05T10:00").toISOString());
+    const morning = ist("2026-11-04T08:00");
+    const r2 = nextAutoDueAt(old, cfg, morning, nextIstSlot(morning, cfg.dueHourIst));
+    assert.equal(r2.dueAt.toISOString(), ist("2026-11-04T10:00").toISOString());
+    for (const r of [r1, r2]) assert.equal(r.reason, "auto");
+    assert.ok(r1.dueAt.getTime() > afternoon.getTime() && r2.dueAt.getTime() > morning.getTime());
   });
 });
 
@@ -106,7 +147,7 @@ describe("planFollowUpOnWrite (pure)", () => {
     assert.ok(update);
     assert.equal(update.fields.followUpSeq, 1);
     assert.equal(update.fields.followUpNotifiedStage, null);
-    assert.match(update.history!.newValue, /^scheduled: due 2026-11-07 10:00 IST \(auto\)/);
+    assert.match(update.history!.newValue, /^scheduled: due 2026-11-05 10:00 IST \(auto\)/);
     const written = { ...enquiry(), ...update.fields };
     assert.equal(planFollowUpOnWrite(enquiry(), written, cfg, now), null);
   });
@@ -217,7 +258,7 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("(6) a new open enquiry is scheduled automatically with history", async () => {
     const doc = await write("e1", enquiry(), T0, false);
-    assert.equal(doc.followUpDueAt.toDate().toISOString(), ist("2026-11-07T10:00").toISOString());
+    assert.equal(doc.followUpDueAt.toDate().toISOString(), ist("2026-11-05T10:00").toISOString());
     assert.equal(doc.followUpSeq, 1);
     assert.equal(doc.followUpReason, "auto");
     assert.equal((await history("e1")).length, 1);
@@ -225,7 +266,7 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("(7) the due reminder is delivered once, even if the job runs again or is retried", async () => {
     await write("e1", enquiry(), T0, false);
-    const at = ist("2026-11-07T10:05");
+    const at = ist("2026-11-05T10:05");
     const first = await runFollowUpReminders(db, at, cfg);
     await runFollowUpReminders(db, at, cfg);
     await runFollowUpReminders(db, new Date(at.getTime() + 15 * 60 * 1000), cfg);
@@ -239,10 +280,10 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("(8) one overdue reminder after 24 h, none after that", async () => {
     await write("e1", enquiry(), T0, false);
-    await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg);
-    await runFollowUpReminders(db, ist("2026-11-07T22:00"), cfg);
-    await runFollowUpReminders(db, ist("2026-11-08T10:15"), cfg);
-    await runFollowUpReminders(db, ist("2026-11-12T10:15"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-05T22:00"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-06T10:15"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-10T10:15"), cfg);
     const ids = (await followUpInbox("staff1")).map((n) => n.id).sort();
     assert.deepEqual(ids, ["fu_e1_1_due", "fu_e1_1_overdue"]);
   });
@@ -257,8 +298,8 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
       followUpNotifiedStage: null,
       followUpScheduledBy: "staff1",
       followUpNote: "Call after 6 pm",
-    }, ist("2026-11-05T09:00"));
-    await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg); // old due time
+    }, ist("2026-11-04T18:00"));
+    await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg); // old due time
     assert.equal((await followUpInbox("staff1")).length, 0);
     await runFollowUpReminders(db, ist("2026-11-09T18:45"), cfg);
     const items = await followUpInbox("staff1");
@@ -269,8 +310,8 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("(10) a completed follow-up is not notified again; the next one is scheduled from completion", async () => {
     await write("e1", enquiry(), T0, false);
-    await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg);
-    const doneAt = ist("2026-11-07T11:00");
+    await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg);
+    const doneAt = ist("2026-11-05T11:00");
     const doc = await write("e1", {
       followUpDueAt: null,
       followUpSeq: 2,
@@ -279,8 +320,8 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
       followUpLastCompletedBy: "staff1",
     }, doneAt);
     assert.equal(doc.followUpSeq, 3);
-    assert.equal(doc.followUpDueAt.toDate().toISOString(), ist("2026-11-10T10:00").toISOString());
-    await runFollowUpReminders(db, ist("2026-11-08T12:00"), cfg); // would be overdue for the old one
+    assert.equal(doc.followUpDueAt.toDate().toISOString(), ist("2026-11-08T10:00").toISOString());
+    await runFollowUpReminders(db, ist("2026-11-06T12:00"), cfg); // would be overdue for the old one
     assert.deepEqual((await followUpInbox("staff1")).map((n) => n.id), ["fu_e1_1_due"]);
     const actions = (await history("e1")).map((h) => h.new_value);
     assert.equal(actions.filter((v: string) => v.startsWith("scheduled")).length, 2);
@@ -288,9 +329,9 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("(11) reassignment: the new assignee gets the reminder, the old one is not re-notified", async () => {
     await write("e1", enquiry(), T0, false);
-    await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg);
-    await write("e1", { assignedTo: "staff2" }, ist("2026-11-07T12:00"));
-    await runFollowUpReminders(db, ist("2026-11-07T12:15"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg);
+    await write("e1", { assignedTo: "staff2" }, ist("2026-11-05T12:00"));
+    await runFollowUpReminders(db, ist("2026-11-05T12:15"), cfg);
     assert.equal((await followUpInbox("staff1")).length, 1);
     assert.deepEqual((await followUpInbox("staff2")).map((n) => n.id), ["fu_e1_1_due"]);
   });
@@ -298,8 +339,8 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
   it("(12) terminal / booked enquiries get no reminders", async () => {
     await write("lost", enquiry(), T0, false);
     await write("booked", enquiry(), T0, false);
-    await write("lost", { statusValue: "not_interested" }, ist("2026-11-05T10:00"));
-    await write("booked", { statusValue: "approved" }, ist("2026-11-05T10:00"));
+    await write("lost", { statusValue: "not_interested" }, ist("2026-11-04T09:00"));
+    await write("booked", { statusValue: "approved" }, ist("2026-11-04T09:00"));
     await write("closed", enquiry({ statusValue: "completed" }), T0, false);
     await runFollowUpReminders(db, ist("2026-11-08T12:00"), cfg);
     assert.equal((await followUpInbox("staff1")).length, 0);
@@ -311,7 +352,7 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("unassigned enquiries remind every active admin", async () => {
     await write("e1", enquiry({ assignedTo: null }), T0, false);
-    await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg);
+    await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg);
     assert.equal((await followUpInbox("admin1")).length, 1);
     assert.equal((await followUpInbox("admin2")).length, 1);
     assert.equal((await followUpInbox("adminOff")).length, 0);
@@ -333,7 +374,7 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
 
   it("flood guard: over 5 due for one person → 5 pushes + 1 summary", async () => {
     for (let i = 0; i < 7; i++) await write(`e${i}`, enquiry({ customerName: `C${i}` }), T0, false);
-    const stats = await runFollowUpReminders(db, ist("2026-11-07T10:05"), cfg);
+    const stats = await runFollowUpReminders(db, ist("2026-11-05T10:05"), cfg);
     assert.equal(stats.sent, 5);
     assert.equal(stats.summarised, 2);
     const items = await inbox(db, "staff1");
@@ -341,6 +382,6 @@ describe("follow-up workflow (emulator)", { skip: !hasEmulator }, () => {
     const summary = items.find((n) => n.type === "follow_up_summary");
     assert.equal(summary?.title, "2 more follow-ups due");
     // Summarised follow-ups are marked, so they don't come back next run.
-    assert.equal((await runFollowUpReminders(db, ist("2026-11-07T10:20"), cfg)).sent, 0);
+    assert.equal((await runFollowUpReminders(db, ist("2026-11-05T10:20"), cfg)).sent, 0);
   });
 });

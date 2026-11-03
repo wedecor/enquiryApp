@@ -27,7 +27,11 @@ export type ReminderStage = "due" | "overdue";
 
 export type FollowUpConfig = {
   enabled: boolean;
-  /** Days between follow-ups (app_config/notifications.reminderDaysDefault). */
+  /**
+   * Days from a completed follow-up to the next one
+   * (app_config/notifications.reminderDaysDefault). Not used for the first chase,
+   * which is always the next morning after the enquiry is created.
+   */
   cadenceDays: number;
   /** IST hour (0–23) at which automatic follow-ups fall due. */
   dueHourIst: number;
@@ -38,7 +42,11 @@ export type FollowUpConfig = {
   maxPushesPerRecipient: number;
 };
 
-/** Approved defaults (Nov 2026): every 3 days at 10:00 IST, overdue after 24 h. */
+/**
+ * Approved defaults (Nov 2026): first follow-up 10:00 IST the day after the enquiry
+ * is created; after each completed follow-up, the next one 3 days later at 10:00 IST;
+ * one overdue reminder 24 h after the due time.
+ */
 export const DEFAULT_FOLLOW_UP_CONFIG: FollowUpConfig = {
   enabled: true,
   cadenceDays: 3,
@@ -123,10 +131,13 @@ export function allEventDaysPassed(data: Record<string, unknown>, now: Date): bo
 export type AutoSchedule = { dueAt: Date; reason: FollowUpReason };
 
 /**
- * Next automatic due time: [cadenceDays] after the last completion (or creation)
- * at the configured IST hour, but no later than that hour on the day before the
- * earliest upcoming function. Never before [floor] (default now). When every event
- * day has passed the enquiry needs review now (reason past_event).
+ * Next automatic due time, at the configured IST hour:
+ * - no completed follow-up yet → the first chase is the NEXT IST calendar day after
+ *   creation (created 08:00 or 15:00 today → due tomorrow 10:00), whatever the cadence;
+ * - after a completion → [cadenceDays] after the completion.
+ * No later than that hour on the day before the earliest upcoming function, and never
+ * before [floor] (default now; the backfill passes the next due-hour slot). When every
+ * event day has passed the enquiry needs review now (reason past_event).
  */
 export function nextAutoDueAt(
   data: Record<string, unknown>,
@@ -144,8 +155,10 @@ export function nextAutoDueAt(
     }
     return { dueAt: floor, reason: "past_event" };
   }
-  const base = completedAt ?? toDate(data.createdAt) ?? now;
-  let due = istSlot(new Date(base.getTime() + config.cadenceDays * DAY_MS), config.dueHourIst);
+  // reminderDaysDefault (cadenceDays) is the interval after a completed follow-up only.
+  let due = completedAt
+    ? istSlot(new Date(completedAt.getTime() + config.cadenceDays * DAY_MS), config.dueHourIst)
+    : istSlot(new Date(istDayStart(toDate(data.createdAt) ?? now).getTime() + DAY_MS), config.dueHourIst);
   const upcoming = earliestUpcomingFunctionDate(data, now);
   if (upcoming) {
     const dayBefore = istSlot(new Date(istDayStart(upcoming).getTime() - DAY_MS + 12 * 60 * 60 * 1000), config.dueHourIst);

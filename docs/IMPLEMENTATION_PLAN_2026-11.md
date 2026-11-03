@@ -106,22 +106,25 @@ All fields are optional. Absent means a legacy document.
 - Rescheduling bumps `followUpSeq` and resets the stage, so the old reminder can never
   fire.
 
-## 4. Reminder cadence (approved: every 3 days)
+## 4. Reminder cadence (approved: next morning, then every 3 days after a completion)
 
 Server defaults below are overridable from `app_config/notifications` without a deploy:
 
 | Setting | Default | Where admins change it |
 |---|---|---|
 | `followUpsEnabled` | `true` | Settings → Admin → Notifications (new toggle) |
-| `reminderDaysDefault` | `3` | Settings → Admin → Notifications (existing field, now used) |
+| `reminderDaysDefault` | `3` | Settings → Admin → Notifications (existing field, now used). Days from a **completed** follow-up to the next one; not used for the first chase. |
 | `followUpDueHourIst` | `10` | Firestore console (`app_config/notifications`) |
 | `followUpOverdueHours` | `24` | Firestore console |
 | `followUpEligibleStatuses` | `["new","in_talks"]` | Firestore console |
 
 Rules:
 
-- **First follow-up:** `createdAt + reminderDaysDefault` days, at 10:00 IST.
-- **Next follow-up:** `followUpLastCompletedAt + reminderDaysDefault` days, at 10:00 IST.
+- **First follow-up (no `followUpLastCompletedAt`):** 10:00 IST on the next IST calendar
+  day after `createdAt`. An enquiry created today at 08:00 or at 15:00 is due tomorrow at
+  10:00 IST, never today. `reminderDaysDefault` does not affect it.
+- **Next follow-up (after a completion):** `followUpLastCompletedAt + reminderDaysDefault`
+  days, at 10:00 IST.
 - **Multi-function enquiries:** the due time is capped at 10:00 IST on the day *before*
   the earliest **upcoming** function (Haldi before the Wedding), not the top-level
   `eventDate`, which is the *last* function. If that time has already passed, the
@@ -201,7 +204,7 @@ order:
      were caught and logged, so the save still succeeds.
 5. **Verify:**
    - Create a test enquiry and check that admins get "New Enquiry Created".
-   - Check that the Follow-up section shows "Due in 3 days".
+   - Check that the Follow-up section shows "Due tomorrow" (and, after Mark done, "Due in 3 days").
    - Check the function logs for `Follow-up reminders run` and
      `Auto-expire enquiries completed` (`flaggedForReview`).
 

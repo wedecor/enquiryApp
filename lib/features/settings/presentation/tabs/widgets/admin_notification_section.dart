@@ -101,7 +101,9 @@ class NotificationConfigTab extends ConsumerWidget {
             SettingsTile(
               icon: Icons.alarm_rounded,
               title: 'Follow-up every',
-              subtitle: '${config.reminderDaysDefault} days · due 10:00 IST · overdue after 24 h',
+              subtitle:
+                  'First reminder: next morning at 10:00 IST. After each completed '
+                  'follow-up: every ${config.reminderDaysDefault} days. Overdue after 24 h',
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => _showReminderDaysDialog(context, ref, config),
             ),
@@ -139,7 +141,7 @@ class NotificationConfigTab extends ConsumerWidget {
       context: context,
       builder: (context) => GlassDialog(
         icon: Icons.alarm_rounded,
-        title: 'Follow-up every (days)',
+        title: 'Days between follow-ups (after one is done)',
         content: TextFormField(
           controller: controller,
           keyboardType: TextInputType.number,
