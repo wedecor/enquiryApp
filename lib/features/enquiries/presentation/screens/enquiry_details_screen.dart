@@ -8,6 +8,7 @@ import '../../../../core/auth/role_guards.dart' show logAdminAction;
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/services/enquiry_financials.dart';
 import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../services/dropdown_lookup.dart';
@@ -15,6 +16,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../../data/customer_lookup_service.dart';
+import '../../data/enquiry_financials_provider.dart';
 import '../../data/enquiry_merge_service.dart';
 import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
@@ -30,8 +32,6 @@ import '../widgets/enquiry_round_button.dart';
 import '../widgets/enquiry_sheet_header.dart';
 import '../widgets/form/enquiry_customer_match_cards.dart';
 import 'enquiry_form_screen.dart';
-import '../../../../core/services/enquiry_financials.dart';
-import '../../data/enquiry_financials_provider.dart';
 
 class EnquiryDetailsScreen extends ConsumerStatefulWidget {
   final String enquiryId;
