@@ -49,6 +49,16 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Wish cards handed to WhatsApp (MainActivity.shareImageToChat). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.wishprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/wish_file_paths" />
+        </provider>
     </application>
     <!-- Package visibility queries required for contact actions and text processing -->
     <queries>

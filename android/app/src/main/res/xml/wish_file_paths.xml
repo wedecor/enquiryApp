@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wish cards written by MainActivity (shareImageToChat) and handed to WhatsApp. -->
+<paths>
+    <cache-path name="wishes" path="wishes/" />
+</paths>

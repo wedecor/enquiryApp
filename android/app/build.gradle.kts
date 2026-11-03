@@ -110,3 +110,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // FileProvider for wish cards handed to WhatsApp (MainActivity.shareImageToChat).
+    implementation("androidx.core:core-ktx:1.13.1")
+}

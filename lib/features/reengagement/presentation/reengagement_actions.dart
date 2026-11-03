@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -120,6 +123,27 @@ class ReengagementActions {
     }
   }
 
+  static const MethodChannel _whatsAppChannel = MethodChannel('wedecor/whatsapp');
+
+  /// Android only: opens [phone]'s WhatsApp chat (WhatsApp Business first) with the
+  /// card attached and [text] as the caption (MainActivity.shareImageToChat).
+  /// False when WhatsApp isn't installed or the hand-off failed.
+  static Future<bool> _shareToChat(Uint8List png, String phone, String text) async {
+    try {
+      final opened = await _whatsAppChannel.invokeMethod<bool>('shareImageToChat', {
+        'png': png,
+        'phone': phone,
+        'text': text,
+      });
+      return opened ?? false;
+    } on PlatformException catch (e) {
+      Log.w('WhatsApp direct share failed', data: {'error': e.message});
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   /// True when the wish went out (card shared, or WhatsApp opened with the text).
   static Future<bool> _sendWish(
     BuildContext context,
@@ -154,6 +178,14 @@ class ReengagementActions {
             person: person,
           ),
         );
+        // Android app: straight into this customer's WhatsApp chat, card + text attached.
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+          final opened = await _shareToChat(png, launcher.normalize(phone), text);
+          if (opened) {
+            launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
+            return true;
+          }
+        }
         if (context.mounted) {
           _snack(
             context,
