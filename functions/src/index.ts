@@ -633,5 +633,7 @@ export { lookupCustomer } from "./customers";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";
 export { scheduleReengagements, onEnquiryCompletedStampOccasion, runReengagementNow } from "./reengagement";
+export { websiteLead, websiteFormOptions } from "./websiteLeads";
+export { websitePlacesAutocomplete, websitePlaceDetails } from "./websitePlaces";
 // Removed: migrateStatusFields - Migration complete, no longer needed
 // Removed: notifyOverdueInTalks - 4-hour scheduled reminders disabled
