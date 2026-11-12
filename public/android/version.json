@@ -2,9 +2,9 @@
   "version": "2.0.28",
   "buildNumber": 59,
   "releaseDate": "2026-11-12",
-  "releaseNotes": "📋 Line-item quotations on enquiry details — draft, send, and share a branded We Decor PDF\n✉️ Marking a quote sent updates the enquiry quoted amount\n🎨 Letterhead PDF with company address, phones, and email",
+  "releaseNotes": "\ud83d\udccb Line-item quotations on enquiry details \u2014 draft, send, and share a branded We Decor PDF\n\u2709\ufe0f Marking a quote sent updates the enquiry quoted amount\n\ud83c\udfa8 Letterhead PDF with company address, phones, and email",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "",
+  "sha256": "ecae39f7e70996372bb16a619b4336bf765112727076ffc32f94537b491fdae5",
   "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
