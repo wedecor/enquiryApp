@@ -63,7 +63,7 @@ class AnalyticsRepository {
     Future<AnalyticsRowCache> fullRead() async {
       final results = await Future.wait([
         fetchAllEnquiriesRaw(),
-        EnquiryFinancials.readAll(_firestore),
+        EnquiryFinancials.readAllAvailable(_firestore),
       ]);
       return AnalyticsRowCache.fromFullRead(
         results[0] as List<Map<String, dynamic>>,
@@ -81,7 +81,7 @@ class AnalyticsRepository {
     final results = await Future.wait([
       collection.where('updatedAt', isGreaterThan: Timestamp.fromDate(since)).get(),
       collection.count().get(),
-      EnquiryFinancials.readAll(_firestore, since: since),
+      EnquiryFinancials.readAllAvailable(_firestore, since: since),
     ]);
     final changed = (results[0] as QuerySnapshot<Map<String, dynamic>>).docs
         .map((doc) => <String, dynamic>{'id': doc.id, ...doc.data()})

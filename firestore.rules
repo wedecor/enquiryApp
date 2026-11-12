@@ -289,6 +289,16 @@ service cloud.firestore {
           && request.resource.data.type in ['call', 'whatsapp', 'reminder', 'review_request', 'reengagement'];
         allow update, delete: if false;
       }
+
+      // Line-item quotations (PDF quotes). Admin only — same privacy as money.
+      match /quotations/{quoteId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Shared catalog of quote line items (admin only).
+    match /catalog/{itemId} {
+      allow read, write: if isAdmin();
     }
 
     // Per-user notifications (created by Cloud Functions)

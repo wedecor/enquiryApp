@@ -1517,6 +1517,72 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
   });
+
+  describe('Quotations and catalog (admin only)', () => {
+    const seed = async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.collection('enquiries').doc('quote-enq').set({
+          customerName: 'Ayesha',
+          statusValue: 'in_talks',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+        });
+      });
+    };
+
+    const quote = (uid, role) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('enquiries')
+        .doc('quote-enq')
+        .collection('quotations')
+        .doc('q1');
+
+    const catalog = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('catalog').doc('item1');
+
+    test('✅ Admin can create and read a quotation', async () => {
+      await seed();
+      await assertSucceeds(
+        quote(ADMIN_UID, 'admin').set({
+          status: 'draft',
+          items: [{ description: 'Mandap', quantity: 1, unitPrice: 10000, gstPercent: 18 }],
+          total: 11800,
+          createdBy: ADMIN_UID,
+        })
+      );
+      await assertSucceeds(quote(ADMIN_UID, 'admin').get());
+    });
+
+    test('❌ Assigned staff cannot read or write quotations', async () => {
+      await seed();
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('enquiries')
+          .doc('quote-enq')
+          .collection('quotations')
+          .doc('q1')
+          .set({ status: 'draft', total: 1 });
+      });
+      await assertFails(quote(STAFF_UID, 'staff').get());
+      await assertFails(quote(STAFF_UID, 'staff').set({ status: 'draft', total: 2 }));
+    });
+
+    test('✅ Admin can manage catalog; staff cannot', async () => {
+      await assertSucceeds(
+        catalog(ADMIN_UID, 'admin').set({ name: 'Floral arch', unitPrice: 8000, gstPercent: 18 })
+      );
+      await assertSucceeds(catalog(ADMIN_UID, 'admin').get());
+      await assertFails(catalog(STAFF_UID, 'staff').get());
+      await assertFails(
+        catalog(STAFF_UID, 'staff').set({ name: 'Hack', unitPrice: 1 })
+      );
+    });
+  });
 });
 
 // Add test completion logging

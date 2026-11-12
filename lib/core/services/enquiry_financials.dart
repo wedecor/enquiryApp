@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../logging/safe_log.dart';
+
 /// Booking money lives in `enquiries/{id}/financial/summary`, not on the enquiry.
 ///
 /// Firestore cannot hide fields of a document a user may read, and staff may read
@@ -89,4 +91,26 @@ class EnquiryFinancials {
           doc.reference.parent.parent!.id: doc.data(),
     };
   }
+
+  /// [readAll], or an empty map when the summary collection is not readable yet.
+  ///
+  /// The rules that allow this collection-group read ship with the financial
+  /// move. Until they are deployed, analytics and export keep the enquiry rows
+  /// and the legacy parent amounts instead of failing the whole load.
+  static Future<Map<String, Map<String, dynamic>>> readAllAvailable(
+    FirebaseFirestore db, {
+    DateTime? since,
+  }) async {
+    try {
+      return await readAll(db, since: since);
+    } on FirebaseException catch (e) {
+      if (!summariesUnavailable(e)) rethrow;
+      safeLog('financial_summaries_unavailable', {'code': e.code});
+      return const {};
+    }
+  }
+
+  /// Permission or index not ready for the summary collection-group query.
+  static bool summariesUnavailable(FirebaseException error) =>
+      error.code == 'permission-denied' || error.code == 'failed-precondition';
 }

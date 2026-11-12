@@ -1,19 +1,18 @@
 {
-  "version": "2.0.27",
-  "buildNumber": 58,
-  "releaseDate": "2026-11-03",
-  "releaseNotes": "\ud83d\udc8c Wishes now have two versions, for past customers and for people who enquired\n\ud83d\udccb Upcoming occasions shows who's who, with a filter",
+  "version": "2.0.28",
+  "buildNumber": 59,
+  "releaseDate": "2026-11-12",
+  "releaseNotes": "📋 Line-item quotations on enquiry details — draft, send, and share a branded We Decor PDF\n✉️ Marking a quote sent updates the enquiry quoted amount\n🎨 Letterhead PDF with company address, phones, and email",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "b56735da9081bb38652030d97d419ebec112ae930af627f0ab68b083058e7b8e",
+  "sha256": "",
   "forceUpdate": false,
   "minSupportedBuildNumber": 54,
   "features": [
-    "NEW: Separate wish messages for past customers and for people who only enquired",
-    "NEW: Upcoming occasions marks PAST CUSTOMER / ENQUIRED and filters by either",
-    "IMPROVED: Wish cards are timing-neutral (no date, no \"Happy\u2026\")"
+    "NEW: Create and share letterhead quotation PDFs from an enquiry (admin)",
+    "NEW: Quotation GST optional; off by default",
+    "IMPROVED: Sent quotations update financial quoted amount"
   ],
   "bugFixes": [
-    "Lost-enquiry wishes no longer read as if we decorated their event",
-    "Wish card no longer implies the occasion is today"
+    "Analytics shows an error state when the load fails instead of an empty screen"
   ]
 }

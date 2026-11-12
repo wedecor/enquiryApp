@@ -34,6 +34,10 @@ class _AnalyticsTabBody extends ConsumerWidget {
 
     return analyticsAsync.when(
       data: (state) {
+        final error = state.error;
+        if (error != null && error.isNotEmpty) {
+          return AnalyticsErrorView(error: error, onRetry: onRetry);
+        }
         final children = sections(state);
         return ListView(
           padding: const EdgeInsets.fromLTRB(

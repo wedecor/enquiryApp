@@ -32,6 +32,12 @@ class FirestoreCollections {
   /// `enquiries/{id}/contacts/{auto}` — append-only call / WhatsApp log.
   static const String contacts = 'contacts';
 
+  /// `enquiries/{id}/quotations/{quoteId}` — line-item quotes (admin only).
+  static const String quotations = 'quotations';
+
+  /// `catalog/{itemId}` — reusable quote line items (admin only).
+  static const String catalog = 'catalog';
+
   /// `users/{uid}/private/profile` — `phone`, `email`, `updatedAt` (owner + admins).
   static const String userPrivateProfile = 'private/profile';
 
@@ -152,6 +158,45 @@ class ContactFields {
   static const String type = 'type'; // call | whatsapp | reminder | review_request | reengagement
   static const String by = 'by'; // writer's uid
   static const String at = 'at';
+}
+
+/// `enquiries/{id}/quotations/{quoteId}` (admin read / write only).
+class QuotationFields {
+  static const String status = 'status'; // draft | sent
+  static const String reference = 'reference';
+  static const String items = 'items';
+  static const String subtotal = 'subtotal';
+  static const String gstTotal = 'gstTotal';
+  static const String discountTotal = 'discountTotal';
+  static const String total = 'total';
+  static const String notes = 'notes';
+  static const String validUntil = 'validUntil';
+  static const String createdAt = 'createdAt';
+  static const String updatedAt = 'updatedAt';
+  static const String createdBy = 'createdBy';
+  static const String sentAt = 'sentAt';
+  static const String sentBy = 'sentBy';
+}
+
+/// One entry in [QuotationFields.items].
+class QuotationItemFields {
+  static const String description = 'description';
+  static const String quantity = 'quantity';
+  static const String unitPrice = 'unitPrice';
+  static const String gstPercent = 'gstPercent';
+  static const String discount = 'discount';
+  static const String amount = 'amount';
+  static const String catalogId = 'catalogId';
+}
+
+/// `catalog/{itemId}` (admin only).
+class CatalogItemFields {
+  static const String name = 'name';
+  static const String description = 'description';
+  static const String unitPrice = 'unitPrice';
+  static const String unit = 'unit';
+  static const String gstPercent = 'gstPercent';
+  static const String updatedAt = 'updatedAt';
 }
 
 /// `reminders/{phone}_{kind}_{year}` — created by scheduleReengagements; clients

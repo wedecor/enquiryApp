@@ -39,6 +39,27 @@ void main() {
       expect(EnquiryFinancials.merge(parent, null), same(parent));
     });
 
+    test('summariesUnavailable is only a missing rule or index', () {
+      expect(
+        EnquiryFinancials.summariesUnavailable(
+          FirebaseException(plugin: 'cloud_firestore', code: 'permission-denied'),
+        ),
+        isTrue,
+      );
+      expect(
+        EnquiryFinancials.summariesUnavailable(
+          FirebaseException(plugin: 'cloud_firestore', code: 'failed-precondition'),
+        ),
+        isTrue,
+      );
+      expect(
+        EnquiryFinancials.summariesUnavailable(
+          FirebaseException(plugin: 'cloud_firestore', code: 'unavailable'),
+        ),
+        isFalse,
+      );
+    });
+
     test('strip removes every money field (non-admin views)', () {
       final stripped = EnquiryFinancials.strip({
         'customerName': 'Priya',

@@ -23,6 +23,7 @@ import 'event_details_section.dart';
 import 'event_functions_section.dart';
 import 'follow_up_section.dart';
 import 'payment_section.dart';
+import 'quotation_section.dart';
 
 /// Sliver list of the enquiry detail sections, cascading in on first build.
 class EnquiryDetailsBody extends StatelessWidget {
@@ -93,6 +94,15 @@ class EnquiryDetailsBody extends StatelessWidget {
         enquiryData: enquiryData,
         canEdit: canEditFunctions,
       ),
+      if (userRole == UserRole.admin)
+        QuotationSection(
+          enquiryId: enquiryId,
+          customerName: (enquiryData['customerName'] as String?)?.trim().isNotEmpty == true
+              ? (enquiryData['customerName'] as String).trim()
+              : 'Customer',
+          customerPhone: enquiryData['customerPhone'] as String?,
+          eventLabel: labels.eventTypeLabel,
+        ),
       if (userRole == UserRole.admin)
         PaymentSection(
           totalCost: enquiryData['totalCost'],

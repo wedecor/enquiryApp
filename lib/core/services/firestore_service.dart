@@ -666,7 +666,7 @@ class FirestoreService {
     query = query.orderBy('createdAt', descending: true).limit(pageSize);
 
     final summaries = isAdmin
-        ? await EnquiryFinancials.readAll(firestore)
+        ? await EnquiryFinancials.readAllAvailable(firestore)
         : const <String, Map<String, dynamic>>{};
     DocumentSnapshot<Map<String, dynamic>>? last;
     while (true) {

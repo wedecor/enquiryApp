@@ -12,7 +12,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
 # Keep public/android/version.json (version + buildNumber) in sync on every release.
-version: 2.0.27+58
+version: 2.0.28+59
 
 environment:
   sdk: ^3.8.1
@@ -55,6 +55,9 @@ dependencies:
   table_calendar: ^3.1.2
   google_fonts: ^8.1.0
   flutter_animate: ^4.5.2
+  # Quotation PDFs (line-item quotes on enquiry details). Shared via share_plus.
+  pdf: ^3.11.3
+  path_provider: ^2.1.5
 
 dev_dependencies:
   build_runner: ^2.4.13
@@ -67,6 +70,10 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+
+# pdf → image 4.11 expects archive.decodeLazy, which archive 4.0.9 lacks.
+dependency_overrides:
+  image: 4.5.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -83,6 +90,9 @@ flutter:
     - assets/brand/wd_mark_gold.png
     - assets/brand/wd_mark_ink.png
     - assets/brand/splash_lockup.png
+    - assets/brand/lockup_horizontal_ink.png
+    - assets/brand/lockup_horizontal_gold.png
+    - assets/fonts/NotoSans-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
