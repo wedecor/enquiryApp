@@ -86,8 +86,17 @@ Future<void> _bootstrap() async {
     );
   }
 
-  // Global error handlers (only in release with Crashlytics enabled)
-  if (!kIsWeb && kReleaseMode && AppConfig.enableCrashlytics) {
+  // Global error handlers
+  if (kIsWeb) {
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      Log.e('FlutterError', error: details.exception, stackTrace: details.stack);
+    };
+    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+      Log.e('PlatformDispatcher.onError', error: error, stackTrace: stack);
+      return true;
+    };
+  } else if (kReleaseMode && AppConfig.enableCrashlytics) {
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
       FirebaseCrashlytics.instance.recordFlutterFatalError(details);
