@@ -127,12 +127,15 @@ export function parseWebsiteLead(body: WebsiteLeadPayload, now: Date = new Date(
 
   const eventDate = parseIstDate(body.event?.date);
   if (!eventDate) return "event date required (YYYY-MM-DD)";
-  if (eventDate.getTime() < istDayStart(now).getTime()) return "event date is in the past";
+  const todayStart = istDayStart(now);
+  if (eventDate.getTime() < todayStart.getTime()) return "event date is in the past";
+  const maxDate = new Date(todayStart.getTime());
+  maxDate.setUTCFullYear(maxDate.getUTCFullYear() + 5);
+  if (eventDate.getTime() > maxDate.getTime()) return "event date is too far in the future";
 
   const location = str(body.event?.location, 200) || str(body.event?.area, 200);
   if (!location) return "location required";
 
-  const pageUrlRaw = str(body.metadata?.pageUrl, 500);
   return {
     externalId,
     name,
@@ -145,8 +148,19 @@ export function parseWebsiteLead(body: WebsiteLeadPayload, now: Date = new Date(
     message: str(body.event?.notes, 4000),
     area: location,
     place: parsePlace(body.event?.place),
-    pageUrl: pageUrlRaw || null,
+    pageUrl: safePageUrl(body.metadata?.pageUrl),
   };
+}
+
+function safePageUrl(raw: unknown): string | null {
+  const s = str(raw, 500);
+  if (!s) return null;
+  try {
+    const parsed = new URL(s);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? s : null;
+  } catch {
+    return null;
+  }
 }
 
 function finiteOrNull(raw: unknown): number | null {
