@@ -29,11 +29,79 @@ service cloud.firestore {
     // eventDate / eventType / location fields) are staff-editable on their own enquiry.
     // Yearly re-engagement stamp (occasionKind/Date/MonthDay/Manual) is admin + server only;
     // staff may edit occasionPerson and toggle occasionReminders (Yearly reminder card).
+    // Allowlist of enquiry fields a staff member may modify on their own assigned
+    // enquiry. Kept in sync with lib/core/constants/staff_editable_fields.dart
+    // (enforced by test/core/constants/staff_editable_fields_test.dart).
+    function staffEditableFields() {
+      return [
+        'customerName',
+        'customerPhone',
+        'customerEmail',
+        'eventLocation',
+        'locationPlaceId',
+        'locationAddress',
+        'locationLat',
+        'locationLng',
+        'locationArea',
+        'locationCity',
+        'eventType',
+        'eventTypeValue',
+        'eventTypeLabel',
+        'eventDate',
+        'functions',
+        'functionCount',
+        'eventStartDate',
+        'notes',
+        'description',
+        'guestCount',
+        'budgetRange',
+        'source',
+        'sourceValue',
+        'sourceLabel',
+        'priority',
+        'priorityValue',
+        'priorityLabel',
+        'images',
+        'statusValue',
+        'statusLabel',
+        'statusUpdatedAt',
+        'statusUpdatedBy',
+        'inTalksAt',
+        'approvedAt',
+        'completedAt',
+        'lostAt',
+        'lostReason',
+        'lostReasonNote',
+        'eventStatus',
+        'status',
+        'status_slug',
+        'followUpDueAt',
+        'followUpSeq',
+        'followUpReason',
+        'followUpNotifiedStage',
+        'followUpScheduledBy',
+        'followUpNote',
+        'followUpLastCompletedAt',
+        'followUpLastCompletedBy',
+        'reminderClickCount',
+        'lastReminderSentAt',
+        'lastContactAt',
+        'contactCount',
+        'firstContactAt',
+        'firstContactEstimated',
+        'occasionPerson',
+        'occasionReminders',
+        'customerNameLower',
+        'phoneNormalized',
+        'textIndex',
+        'updatedAt',
+        'updatedBy'
+      ];
+    }
+
     function isModifyingOnlyStaffEditableFields() {
-      let protectedFields = ['totalCost', 'advancePaid', 'paymentStatus', 'paymentStatusValue', 'paymentStatusLabel', 'assignedTo', 'createdBy', 'createdAt', 'quotedAmount', 'quotedAt',
-        'occasionKind', 'occasionDate', 'occasionMonthDay', 'occasionManual'];
       let modifiedFields = request.resource.data.diff(resource.data).affectedKeys();
-      return !modifiedFields.hasAny(protectedFields);
+      return modifiedFields.hasOnly(staffEditableFields());
     }
 
     // Booking money lives in enquiries/{id}/financial/summary (admin only), because

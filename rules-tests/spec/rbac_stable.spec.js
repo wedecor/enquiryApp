@@ -1649,6 +1649,89 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
   });
+
+  describe('Staff Enquiry Allowlist Rules', () => {
+    test('❌ Staff cannot set mergedInto or other non-allowlisted fields', async () => {
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+      await assertFails(ref.update({ mergedInto: 'other-id', updatedBy: STAFF_UID }));
+      await assertFails(ref.update({ websiteLeadId: 'web_123', updatedBy: STAFF_UID }));
+      await assertFails(ref.update({ pastEventReviewAt: new Date(), updatedBy: STAFF_UID }));
+    });
+
+    test('✅ Staff can save a full realistic edit-form payload', async () => {
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+      await assertSucceeds(
+        ref.update({
+          customerName: 'John Updated',
+          customerPhone: '+919876543210',
+          customerEmail: 'john.updated@example.com',
+          eventLocation: 'Palace Grounds, Bengaluru',
+          locationArea: 'Sadashivanagar',
+          eventType: 'wedding',
+          eventTypeValue: 'wedding',
+          eventTypeLabel: 'Wedding',
+          eventDate: new Date('2027-01-15'),
+          notes: 'Updated decor notes',
+          description: 'Updated decor notes',
+          guestCount: 250,
+          budgetRange: '1L-2L',
+          source: 'referral',
+          sourceValue: 'referral',
+          sourceLabel: 'Referral',
+          priority: 'high',
+          priorityValue: 'high',
+          priorityLabel: 'High',
+          images: ['https://example.com/a.jpg'],
+          customerNameLower: 'john updated',
+          phoneNormalized: '9876543210',
+          textIndex: 'john updated 9876543210 wedding',
+          updatedBy: STAFF_UID,
+        })
+      );
+    });
+
+    test('✅ Staff can save status change, follow-up complete, and follow-up reschedule payloads', async () => {
+      const { serverTimestamp, increment } = require('firebase/firestore');
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+
+      await assertSucceeds(
+        ref.update({
+          statusValue: 'in_talks',
+          statusLabel: 'In Talks',
+          statusUpdatedAt: serverTimestamp(),
+          statusUpdatedBy: STAFF_UID,
+          inTalksAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertSucceeds(
+        ref.update({
+          followUpDueAt: null,
+          followUpSeq: increment(1),
+          followUpNotifiedStage: null,
+          followUpLastCompletedAt: serverTimestamp(),
+          followUpLastCompletedBy: STAFF_UID,
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertSucceeds(
+        ref.update({
+          followUpDueAt: new Date(Date.now() + 86400000),
+          followUpSeq: increment(1),
+          followUpNotifiedStage: null,
+          followUpReason: 'callback',
+          followUpScheduledBy: STAFF_UID,
+          followUpNote: 'Call back tomorrow',
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+  });
 });
 
 // Add test completion logging
