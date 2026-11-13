@@ -71,57 +71,77 @@ void main() {
         throwsStateError,
       );
 
-      await fakeDb.collection('enquiries').doc('e1').set({'customerName': 'A', 'statusValue': 'new'});
+      await fakeDb.collection('enquiries').doc('e1').set({
+        'customerName': 'A',
+        'statusValue': 'new',
+      });
       await expectLater(
         service.markAsDuplicate(sourceId: 'e1', targetId: 'missing', userId: 'admin-1'),
         throwsStateError,
       );
 
-      await fakeDb.collection('enquiries').doc('e2').set({
-        'customerName': 'B',
-        'mergedInto': 'e3',
-      });
+      await fakeDb.collection('enquiries').doc('e2').set({'customerName': 'B', 'mergedInto': 'e3'});
       await expectLater(
         service.markAsDuplicate(sourceId: 'e1', targetId: 'e2', userId: 'admin-1'),
         throwsStateError,
       );
     });
 
-    test('markAsDuplicate closes source as duplicate, merges notes and images into target, and writes history', () async {
-      await fakeDb.collection('enquiries').doc('src').set({
-        'customerName': 'Priya Sharma',
-        'statusValue': 'new',
-        'notes': 'Stage + entrance',
-        'images': ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
-        'createdAt': Timestamp.fromDate(DateTime(2026, 11, 1)),
-      });
-      await fakeDb.collection('enquiries').doc('tgt').set({
-        'customerName': 'Priya Sharma',
-        'customerPhone': '9876543210',
-        'statusValue': 'in_talks',
-        'notes': 'Initial call',
-        'images': ['https://example.com/a.jpg'],
-      });
+    test(
+      'markAsDuplicate closes source as duplicate, merges notes and images into target, and writes history',
+      () async {
+        await fakeDb.collection('enquiries').doc('src').set({
+          'customerName': 'Priya Sharma',
+          'statusValue': 'new',
+          'notes': 'Stage + entrance',
+          'images': ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
+          'createdAt': Timestamp.fromDate(DateTime(2026, 11, 1)),
+        });
+        await fakeDb.collection('enquiries').doc('tgt').set({
+          'customerName': 'Priya Sharma',
+          'customerPhone': '9876543210',
+          'statusValue': 'in_talks',
+          'notes': 'Initial call',
+          'images': ['https://example.com/a.jpg'],
+        });
 
-      await service.markAsDuplicate(sourceId: 'src', targetId: 'tgt', userId: 'admin-1');
+        await service.markAsDuplicate(sourceId: 'src', targetId: 'tgt', userId: 'admin-1');
 
-      final srcSnap = await fakeDb.collection('enquiries').doc('src').get();
-      expect(srcSnap.data()!['statusValue'], 'closed_lost');
-      expect(srcSnap.data()!['lostReason'], 'duplicate');
-      expect(srcSnap.data()!['mergedInto'], 'tgt');
+        final srcSnap = await fakeDb.collection('enquiries').doc('src').get();
+        expect(srcSnap.data()!['statusValue'], 'closed_lost');
+        expect(srcSnap.data()!['lostReason'], 'duplicate');
+        expect(srcSnap.data()!['mergedInto'], 'tgt');
 
-      final tgtSnap = await fakeDb.collection('enquiries').doc('tgt').get();
-      expect(tgtSnap.data()!['notes'], contains('Initial call'));
-      expect(tgtSnap.data()!['notes'], contains('Merged from duplicate enquiry Priya Sharma 1 Nov 2026: Stage + entrance'));
-      expect(
-        List<String>.from(tgtSnap.data()!['images'] as List),
-        unorderedEquals(['https://example.com/a.jpg', 'https://example.com/b.jpg']),
-      );
+        final tgtSnap = await fakeDb.collection('enquiries').doc('tgt').get();
+        expect(tgtSnap.data()!['notes'], contains('Initial call'));
+        expect(
+          tgtSnap.data()!['notes'],
+          contains('Merged from duplicate enquiry Priya Sharma 1 Nov 2026: Stage + entrance'),
+        );
+        expect(
+          List<String>.from(tgtSnap.data()!['images'] as List),
+          unorderedEquals(['https://example.com/a.jpg', 'https://example.com/b.jpg']),
+        );
 
-      final srcHistory = await fakeDb.collection('enquiries').doc('src').collection('history').get();
-      final tgtHistory = await fakeDb.collection('enquiries').doc('tgt').collection('history').get();
-      expect(srcHistory.docs.map((d) => d.data()['field_changed']), containsAll(['statusValue', 'lostReason', 'mergedInto']));
-      expect(tgtHistory.docs.map((d) => d.data()['field_changed']), containsAll(['mergedFrom', 'notes', 'images']));
-    });
+        final srcHistory = await fakeDb
+            .collection('enquiries')
+            .doc('src')
+            .collection('history')
+            .get();
+        final tgtHistory = await fakeDb
+            .collection('enquiries')
+            .doc('tgt')
+            .collection('history')
+            .get();
+        expect(
+          srcHistory.docs.map((d) => d.data()['field_changed']),
+          containsAll(['statusValue', 'lostReason', 'mergedInto']),
+        );
+        expect(
+          tgtHistory.docs.map((d) => d.data()['field_changed']),
+          containsAll(['mergedFrom', 'notes', 'images']),
+        );
+      },
+    );
   });
 }

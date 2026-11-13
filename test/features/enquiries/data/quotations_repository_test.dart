@@ -41,33 +41,41 @@ void main() {
   });
 
   group('QuotationsRepository', () {
-    test('createDraft creates draft quote, writes history without amount, and getQuotation reads it', () async {
-      final id = await repo.createDraft(
-        enquiryId: 'enq-1',
-        actorUid: 'admin-1',
-        items: const [
-          QuotationLineItem(description: 'Stage Decor', quantity: 1, unitPrice: 50000, gstPercent: 18),
-        ],
-        reference: 'Q-2026-001',
-        notes: 'Includes setup',
-      );
+    test(
+      'createDraft creates draft quote, writes history without amount, and getQuotation reads it',
+      () async {
+        final id = await repo.createDraft(
+          enquiryId: 'enq-1',
+          actorUid: 'admin-1',
+          items: const [
+            QuotationLineItem(
+              description: 'Stage Decor',
+              quantity: 1,
+              unitPrice: 50000,
+              gstPercent: 18,
+            ),
+          ],
+          reference: 'Q-2026-001',
+          notes: 'Includes setup',
+        );
 
-      final quote = await repo.getQuotation('enq-1', id);
-      expect(quote, isNotNull);
-      expect(quote!.status, Quotation.statusDraft);
-      expect(quote.reference, 'Q-2026-001');
-      expect(quote.items, hasLength(1));
+        final quote = await repo.getQuotation('enq-1', id);
+        expect(quote, isNotNull);
+        expect(quote!.status, Quotation.statusDraft);
+        expect(quote.reference, 'Q-2026-001');
+        expect(quote.items, hasLength(1));
 
-      expect(await repo.getQuotation('enq-1', 'missing'), isNull);
+        expect(await repo.getQuotation('enq-1', 'missing'), isNull);
 
-      final historySnap = await fakeDb
-          .collection(FirestoreCollections.enquiries)
-          .doc('enq-1')
-          .collection('history')
-          .get();
-      expect(historySnap.docs, hasLength(1));
-      expect(historySnap.docs.first.data()['new_value'], 'draft Q-2026-001');
-    });
+        final historySnap = await fakeDb
+            .collection(FirestoreCollections.enquiries)
+            .doc('enq-1')
+            .collection('history')
+            .get();
+        expect(historySnap.docs, hasLength(1));
+        expect(historySnap.docs.first.data()['new_value'], 'draft Q-2026-001');
+      },
+    );
 
     test('updateDraft updates draft and rejects non-draft status', () async {
       final id = await repo.createDraft(
@@ -144,10 +152,7 @@ void main() {
         items: const [QuotationLineItem(description: 'Item', unitPrice: 1000)],
       );
       await repo.markSent(enquiryId: 'enq-1', quoteId: sentId, actorUid: 'admin-1');
-      await expectLater(
-        repo.deleteDraft(enquiryId: 'enq-1', quoteId: sentId),
-        throwsStateError,
-      );
+      await expectLater(repo.deleteDraft(enquiryId: 'enq-1', quoteId: sentId), throwsStateError);
     });
 
     test('watchQuotations, upsertCatalogItem, and watchCatalog stream data', () async {
