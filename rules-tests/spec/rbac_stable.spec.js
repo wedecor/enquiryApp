@@ -1583,6 +1583,65 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
   });
+
+  describe('Enquiries Trash & Restore Rules', () => {
+    const trashRef = (uid, role, id = 'trash-enq-1') =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries_trash').doc(id);
+
+    test('❌ Staff cannot read, create, update, or delete enquiries_trash', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries_trash').doc('trash-enq-1').set({
+          enquiry: { customerName: 'Test', statusValue: 'new' },
+          financial: null,
+          deletedAt: new Date(),
+          deletedBy: ADMIN_UID,
+        });
+      });
+
+      await assertFails(trashRef(STAFF_UID, 'staff').get());
+      await assertFails(trashRef(STAFF_UID, 'staff', 'trash-enq-2').set({ enquiry: {} }));
+      await assertFails(trashRef(STAFF_UID, 'staff').update({ deletedBy: STAFF_UID }));
+      await assertFails(trashRef(STAFF_UID, 'staff').delete());
+    });
+
+    test('✅ Admin can create, read, and delete enquiries_trash, but cannot update', async () => {
+      await assertSucceeds(
+        trashRef(ADMIN_UID, 'admin').set({
+          enquiry: { customerName: 'Test', statusValue: 'new' },
+          financial: { totalCost: 50000 },
+          deletedAt: new Date(),
+          deletedBy: ADMIN_UID,
+        })
+      );
+      await assertSucceeds(trashRef(ADMIN_UID, 'admin').get());
+      await assertFails(trashRef(ADMIN_UID, 'admin').update({ deletedBy: 'other' }));
+      await assertSucceeds(trashRef(ADMIN_UID, 'admin').delete());
+    });
+
+    test('✅ Admin restore passes no-money check on enquiries and fails if money is on parent', async () => {
+      const adminDb = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore();
+      await assertSucceeds(
+        adminDb.collection('enquiries').doc('restored-1').set({
+          customerName: 'Restored Client',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+        })
+      );
+      await assertSucceeds(
+        adminDb.collection('enquiries').doc('restored-1').collection('financial').doc('summary').set({
+          totalCost: 75000,
+          advancePaid: 20000,
+        })
+      );
+      await assertFails(
+        adminDb.collection('enquiries').doc('restored-bad').set({
+          customerName: 'Bad Restore',
+          statusValue: 'new',
+          totalCost: 75000,
+        })
+      );
+    });
+  });
 });
 
 // Add test completion logging

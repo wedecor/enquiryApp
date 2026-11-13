@@ -1,7 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../../../../core/services/firestore_service.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/theme/tokens.dart';
 import '../../../../../ui/primitives/primitives.dart';
@@ -110,6 +113,7 @@ class DataIntegrationsTab extends ConsumerWidget {
             ),
           ],
         ),
+        const _RecentlyDeletedGroup(),
         const SettingsNote(
           title: 'Integration Status',
           child: Column(
@@ -167,6 +171,102 @@ class _StatusItem extends StatelessWidget {
             style: t.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w600),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RecentlyDeletedGroup extends ConsumerWidget {
+  const _RecentlyDeletedGroup();
+
+  static final _dateFmt = DateFormat('d MMM yyyy');
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final service = ref.watch(firestoreServiceProvider);
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: service.watchRecentlyDeletedEnquiries(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        if (docs.isEmpty) {
+          return const SettingsGroup(
+            eyebrow: 'Trash',
+            title: 'Recently deleted',
+            separated: false,
+            children: [
+              SettingsTile(
+                icon: Icons.delete_outline_rounded,
+                title: 'No deleted enquiries',
+                subtitle: 'Deleted enquiries appear here and can be restored.',
+              ),
+            ],
+          );
+        }
+        return SettingsGroup(
+          eyebrow: 'Trash',
+          title: 'Recently deleted',
+          children: [
+            for (final doc in docs) _DeletedEnquiryTile(doc: doc, dateFmt: _dateFmt),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DeletedEnquiryTile extends ConsumerStatefulWidget {
+  const _DeletedEnquiryTile({required this.doc, required this.dateFmt});
+
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+  final DateFormat dateFmt;
+
+  @override
+  ConsumerState<_DeletedEnquiryTile> createState() => _DeletedEnquiryTileState();
+}
+
+class _DeletedEnquiryTileState extends ConsumerState<_DeletedEnquiryTile> {
+  bool _restoring = false;
+
+  Future<void> _restore() async {
+    if (_restoring) return;
+    setState(() => _restoring = true);
+    try {
+      await ref.read(firestoreServiceProvider).restoreEnquiry(widget.doc.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enquiry restored')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to restore enquiry: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _restoring = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.doc.data();
+    final enquiry = data['enquiry'] is Map ? data['enquiry'] as Map : const <String, dynamic>{};
+    final customerName = (enquiry['customerName'] as String?)?.trim();
+    final title = (customerName != null && customerName.isNotEmpty) ? customerName : widget.doc.id;
+    final eventDateRaw = enquiry['eventDate'];
+    final deletedAtRaw = data['deletedAt'];
+    final eventText = eventDateRaw is Timestamp ? widget.dateFmt.format(eventDateRaw.toDate()) : 'No date';
+    final deletedText =
+        deletedAtRaw is Timestamp ? widget.dateFmt.format(deletedAtRaw.toDate()) : 'Just now';
+
+    return SettingsTile(
+      icon: Icons.restore_from_trash_outlined,
+      title: title,
+      subtitle: 'Event: $eventText · Deleted: $deletedText',
+      trailing: TextButton(
+        onPressed: _restoring ? null : _restore,
+        child: Text(_restoring ? 'Restoring…' : 'Restore'),
       ),
     );
   }

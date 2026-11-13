@@ -508,10 +508,11 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
         _isUpdatingStatus = true;
       });
 
-      await ref.read(firestoreServiceProvider).deleteEnquiry(widget.enquiryId);
+      final uid = ref.read(currentUserUidProvider);
+      await ref.read(firestoreServiceProvider).deleteEnquiry(widget.enquiryId, deletedBy: uid);
 
-      // The enquiry's history subcollection goes with it, so the delete is recorded in
-      // the top-level admin_audit log instead (non-fatal; logged on failure).
+      // The enquiry's subcollections stay intact under the same id for recovery;
+      // record the soft-delete in admin_audit as well (non-fatal; logged on failure).
       await logAdminAction(ref, 'enquiry_deleted', {'enquiryId': widget.enquiryId});
 
       if (context.mounted) {

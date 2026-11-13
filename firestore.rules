@@ -384,5 +384,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if isAdmin();
     }
+
+    // Soft-deleted enquiries (admin-only trash + restore).
+    match /enquiries_trash/{id} {
+      allow read, create, delete: if isAdmin();
+      allow update: if false;
+    }
   }
 }
