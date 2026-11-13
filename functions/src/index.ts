@@ -656,7 +656,7 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
 export { setReengagementPref } from "./customerPrefs";
-export { notifyEnquiryEvent } from "./notifications";
+export { notifyEnquiryEvent, onEnquiryWrittenNotify } from "./notifications";
 export { onEnquiryWrittenFollowUp, followUpReminders } from "./followUps";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";

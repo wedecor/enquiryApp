@@ -20,7 +20,8 @@ import { notificationExpireAt } from "./notificationTtl";
  */
 const WEBSITE_LEAD_SECRET = defineSecret("WEBSITE_LEAD_SECRET");
 
-const CREATED_BY = "system:website";
+export const WEBSITE_LEAD_CREATED_BY = "system:website";
+const CREATED_BY = WEBSITE_LEAD_CREATED_BY;
 const SOURCE_VALUE = "google_website";
 const SOURCE_LABEL_FALLBACK = "Google / Website";
 const OTHER_EVENT_TYPE = { value: "others", label: "Others" };

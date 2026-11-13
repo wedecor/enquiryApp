@@ -136,9 +136,7 @@ class EnquiryRepository {
     final clearLost = EnquiryStageFields.clearsLostFields(canonicalNext);
     final docRef = _enquiries.doc(id);
 
-    final result = await _firestoreService.firestore.runTransaction<_StatusChangeResult?>((
-      transaction,
-    ) async {
+    await _firestoreService.firestore.runTransaction<void>((transaction) async {
       final oldEnquiryDoc = await transaction.get(docRef);
       if (!oldEnquiryDoc.exists) {
         throw Exception('Enquiry not found: $id');
@@ -149,7 +147,7 @@ class EnquiryRepository {
           EnquiryStatus.canonicalValue(oldEnquiryData['statusValue'] as String?) ??
           (oldEnquiryData['statusValue'] as String? ?? 'new');
 
-      if (oldStatusValue == canonicalNext) return null;
+      if (oldStatusValue == canonicalNext) return;
 
       final extras = extraFields ?? const <String, Object?>{};
       // Amounts (admin only) go to the admin-only financial summary, never the parent.
@@ -255,28 +253,7 @@ class EnquiryRepository {
         );
       }
 
-      return _StatusChangeResult(
-        oldStatusValue: oldStatusValue,
-        customerName: oldEnquiryData['customerName'] as String? ?? 'Unknown Customer',
-        assignedTo: oldEnquiryData['assignedTo'] as String?,
-      );
     });
-
-    if (result == null) return;
-
-    try {
-      await _notificationService.notifyStatusUpdated(
-        enquiryId: id,
-        customerName: result.customerName,
-        oldStatus: lookup.labelForStatus(result.oldStatusValue),
-        oldStatusValue: result.oldStatusValue,
-        newStatus: statusLabel,
-        updatedBy: userId,
-        assignedTo: result.assignedTo,
-      );
-    } catch (_) {
-      // Status update already succeeded; notification errors are non-fatal.
-    }
   }
 
   /// Create enquiry via [FirestoreService] (single write path + search indexes).
@@ -292,17 +269,4 @@ class ApprovalLocationRequiredException implements Exception {
 
   @override
   String toString() => 'Add the area (e.g. JP Nagar) or the venue before approving.';
-}
-
-/// What [EnquiryRepository.updateStatus] needs from inside its transaction afterwards.
-class _StatusChangeResult {
-  const _StatusChangeResult({
-    required this.oldStatusValue,
-    required this.customerName,
-    required this.assignedTo,
-  });
-
-  final String oldStatusValue;
-  final String customerName;
-  final String? assignedTo;
 }
