@@ -133,60 +133,6 @@ class FirestoreService {
     };
   }
 
-  /// Creates a new user document in Firestore.
-  ///
-  /// This method creates a user record with the provided information
-  /// and stores it in the users collection. The document ID is set to
-  /// the user's UID for easy retrieval and updates.
-  ///
-  /// Parameters:
-  /// - [uid]: Unique identifier for the user (typically from Firebase Auth)
-  /// - [name]: User's full name
-  /// - [email]: User's email address
-  /// - [phone]: User's phone number
-  /// - [role]: User's role in the system (admin/staff)
-  ///
-  /// Returns a [Future<void>] that completes when the user document is created.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.createUser(
-  ///   uid: 'user123',
-  ///   name: 'John Doe',
-  ///   email: 'john@example.com',
-  ///   phone: '+1234567890',
-  ///   role: 'admin',
-  /// );
-  /// ```
-  Future<void> createUser({
-    required String uid,
-    required String name,
-    required String email,
-    required String phone,
-    required String role,
-  }) async {
-    // Public profile: name / role / isActive. Phone and email go to the private
-    // profile (owner + admins only), same as the inviteUser function.
-    final userRef = _usersCollection.doc(uid);
-    final batch = firestore.batch()
-      ..set(userRef, {
-        'name': name,
-        'role': role,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'isActive': true, // Standardized field name
-      })
-      ..set(userRef.collection('private').doc('profile'), {
-        'email': email,
-        'phone': phone,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    await batch.commit();
-  }
-
   /// Retrieves a user document by UID.
   ///
   /// This method fetches the user data from Firestore using the provided UID.
@@ -251,32 +197,6 @@ class FirestoreService {
 
   Future<void> deleteFcmToken(String uid, String token) async {
     await fcmTokensCollection(uid).doc(token).delete();
-  }
-
-  /// Updates an existing user document.
-  ///
-  /// This method updates the specified user document with new data.
-  /// The `updatedAt` timestamp is automatically set to the current time.
-  ///
-  /// Parameters:
-  /// - [uid]: The unique identifier of the user to update
-  /// - [data]: Map containing the fields to update
-  ///
-  /// Returns a [Future<void>] that completes when the update is finished.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails or user doesn't exist
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.updateUser('user123', {
-  ///   'name': 'Jane Doe',
-  ///   'phone': '+0987654321',
-  /// });
-  /// ```
-  Future<void> updateUser(String uid, Map<String, dynamic> data) async {
-    data['updatedAt'] = FieldValue.serverTimestamp();
-    await _usersCollection.doc(uid).update(data);
   }
 
   /// Creates a new enquiry document in Firestore.
@@ -937,7 +857,10 @@ class FirestoreService {
 
   /// Stream of recently deleted enquiries from `enquiries_trash`, newest first.
   Stream<QuerySnapshot<Map<String, dynamic>>> watchRecentlyDeletedEnquiries({int limit = 50}) {
-    return _enquiriesTrashCollection.orderBy('deletedAt', descending: true).limit(limit).snapshots();
+    return _enquiriesTrashCollection
+        .orderBy('deletedAt', descending: true)
+        .limit(limit)
+        .snapshots();
   }
 
   /// Retrieves a real-time stream of all active users.

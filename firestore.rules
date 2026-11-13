@@ -203,7 +203,7 @@ service cloud.firestore {
     // The owner can always read their own doc so the app can show "Access disabled".
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isActiveUser());
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     // Colleague contact details (phone, email) — the owner and admins only. The

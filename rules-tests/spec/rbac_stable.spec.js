@@ -1469,22 +1469,29 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
 
-    test('✅ Admin can manage user roles', async () => {
+    test('❌ Admins cannot write users/{uid} directly from the client (server-only)', async () => {
       const adminContext = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' });
       const firestore = adminContext.firestore();
 
-      await assertSucceeds(
+      await assertFails(
         firestore.collection('users').doc(STAFF_UID).update({
           active: false,
           updatedAt: new Date(),
         })
       );
 
-      // Restore for other tests
-      await assertSucceeds(
-        firestore.collection('users').doc(STAFF_UID).update({
-          active: true,
+      await assertFails(
+        firestore.collection('users').doc(ADMIN_UID).update({
+          role: 'staff',
           updatedAt: new Date(),
+        })
+      );
+
+      await assertFails(
+        firestore.collection('users').doc('new-user-999').set({
+          name: 'Direct Create',
+          role: 'staff',
+          isActive: true,
         })
       );
     });
