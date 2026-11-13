@@ -206,4 +206,3 @@ public/android/*.apk.sha256.txt
 # Local Cursor prompts / audit docs (not product code)
 *_PROMPT.md
 WeDecor_App_Audit_Report.docx
-ship_release.sh
