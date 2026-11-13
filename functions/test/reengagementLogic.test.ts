@@ -65,9 +65,10 @@ describe("isWishEligible", () => {
     assert.equal(baseEligible({ eventDate: FUTURE }), false);
   });
 
-  it("duplicate / out_of_scope → not eligible", () => {
+  it("duplicate / out_of_scope / event_cancelled → not eligible", () => {
     assert.equal(baseEligible({ lostReason: "duplicate" }), false);
     assert.equal(baseEligible({ lostReason: "out_of_scope" }), false);
+    assert.equal(baseEligible({ lostReason: "event_cancelled" }), false);
   });
 
   it("corporate → not eligible", () => {

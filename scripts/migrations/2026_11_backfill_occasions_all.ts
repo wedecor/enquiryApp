@@ -3,7 +3,7 @@
  * Migration: stamp yearly re-engagement occasion fields on every enquiry that is
  * wish-eligible under the Nov 2026 rule (functions/src/reengagementLogic.isWishEligible):
  *   - occasion event date (main / wedding-anchor function) is in the past (IST)
- *   - not merged, lostReason not duplicate/out_of_scope, kind not corporate
+ *   - not merged, lostReason not duplicate/out_of_scope/event_cancelled, kind not corporate
  *   - usable phone, occasionReminders not false
  * Status does not matter: completed, lost, and open-past all qualify.
  *
@@ -110,6 +110,7 @@ async function main() {
   const toStampByCat = { completed: 0, lost: 0, "open-past": 0, other: 0 };
   let skippedMerged = 0;
   let skippedManual = 0;
+  let skippedEventCancelled = 0;
   let alreadyCorrect = 0;
   let notEligible = 0;
 
@@ -129,6 +130,7 @@ async function main() {
     });
     if (!eligible) {
       notEligible++;
+      if (data.lostReason === "event_cancelled") skippedEventCancelled++;
       continue;
     }
     const cat = categoryOf(s.status);
@@ -168,6 +170,7 @@ async function main() {
 
   console.log(`Enquiries scanned: ${snap.size}`);
   console.log(`  not eligible: ${notEligible}`);
+  console.log(`    event_cancelled (skipped): ${skippedEventCancelled}`);
   console.log(`  eligible: completed=${eligibleByCat.completed} lost=${eligibleByCat.lost} open-past=${eligibleByCat["open-past"]} other=${eligibleByCat.other}`);
   console.log(`    merged (skipped): ${skippedMerged}`);
   console.log(`    edited by hand (skipped): ${skippedManual}`);

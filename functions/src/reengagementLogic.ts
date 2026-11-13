@@ -243,7 +243,7 @@ export type OccasionStamp = {
 const LOST_STATUSES = new Set(["not_interested", "closed_lost", "cancelled"]);
 
 /** Lost reasons that never get a yearly wish (not a real lead / not our kind of event). */
-const NO_WISH_LOST_REASONS = new Set(["duplicate", "out_of_scope"]);
+const NO_WISH_LOST_REASONS = new Set(["duplicate", "out_of_scope", "event_cancelled"]);
 
 /** Open pipeline statuses: "still talking" only when the event date is today or future. */
 export const OPEN_STATUSES = new Set(["new", "in_talks", "approved"]);
@@ -273,8 +273,9 @@ export type WishEligibilityInput = {
 
 /**
  * Yearly-wish eligibility: occasion date is in the past (IST), not merged, not
- * duplicate/out_of_scope, not corporate, reminders on, usable phone when given,
- * not opted out. Status does not matter (completed, lost, or open-past all qualify).
+ * duplicate/out_of_scope/event_cancelled, not corporate, reminders on, usable phone
+ * when given, not opted out. Status does not matter (completed, lost, or open-past
+ * all qualify).
  */
 export function isWishEligible(input: WishEligibilityInput): boolean {
   if (!input.eventDate) return false;
