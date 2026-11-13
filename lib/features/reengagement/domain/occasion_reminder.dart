@@ -117,9 +117,9 @@ class OccasionReminder {
   final String status;
   final DateTime? sentAt;
 
-  /// True when we decorated their event; false when they only enquired (a lost
-  /// enquiry that still gets a wish). Reminders created before Nov 2026 have no
-  /// flag and were all past customers.
+  /// True when we decorated their event (`status == completed`); false when they
+  /// only enquired (lost or open-past — still get a wish). Reminders created
+  /// before Nov 2026 have no flag and were all past customers.
   final bool pastCustomer;
 
   factory OccasionReminder.fromMap(String id, Map<String, dynamic> data) {

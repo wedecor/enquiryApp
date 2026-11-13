@@ -24,23 +24,23 @@ void main() {
     test('wedding anniversary uses first name, ordinal and IST date', () {
       expect(
         render(OccasionKind.weddingAnniversary, nth: 2),
-        'Hi Ayesha, your 2nd wedding anniversary is coming up soon. Wishing you both many '
-        'more happy years together. It was lovely being part of your wedding. If you\'re '
-        "planning something to celebrate, we'd love to be part of it again. Warm wishes from "
-        'We Decor Events.',
+        'Hi Ayesha, your 2nd wedding anniversary is just around the corner. It feels like '
+        'only yesterday we were part of your big day. Wishing you both a wonderful '
+        'celebration and many happy years ahead. If we can help make the day special in any '
+        "way, we're just a message away. Warm wishes from We Decor Events.",
       );
     });
 
     test('birthday with a person', () {
       expect(
         render(OccasionKind.birthday, person: 'Aarav'),
-        startsWith("Hi Ayesha, Aarav's birthday is coming up soon."),
+        startsWith("Hi Ayesha, Aarav's birthday is just around the corner."),
       );
     });
 
     test('birthday without a person reads "A birthday"', () {
       final text = render(OccasionKind.birthday);
-      expect(text, startsWith('Hi Ayesha, a birthday is coming up soon.'));
+      expect(text, startsWith('Hi Ayesha, a birthday is just around the corner.'));
       expect(text, isNot(contains('{person}')));
     });
 
@@ -88,10 +88,21 @@ void main() {
       }
     });
 
+    test('enquired-only messages never claim the event happened or name an anniversary number', () {
+      for (final kind in OccasionKind.values) {
+        final raw = ReengagementTemplates.defaultFor(kind, enquired: true);
+        final text = raw.toLowerCase();
+        expect(raw, isNot(contains('{nth}')), reason: kind.value);
+        expect(text, isNot(contains('it was a joy')), reason: kind.value);
+        expect(text, isNot(contains('it was lovely')), reason: kind.value);
+        expect(text, isNot(contains('we were part')), reason: kind.value);
+      }
+    });
+
     test('past-customer messages remember the event; enquired ones leave the door open', () {
       expect(
         ReengagementTemplates.defaultFor(OccasionKind.birthday),
-        contains('It was lovely being part of your celebration'),
+        contains('It was a joy being part of the celebration last time'),
       );
       expect(
         ReengagementTemplates.defaultFor(OccasionKind.birthday, enquired: true),
@@ -130,7 +141,7 @@ void main() {
     test('nth below 1 is rendered as 1st', () {
       expect(
         render(OccasionKind.home, nth: 0),
-        contains('the 1st anniversary of your home is coming up soon'),
+        contains('the 1st anniversary of your home is just around the corner'),
       );
     });
 

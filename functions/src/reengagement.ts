@@ -4,15 +4,16 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { occasionEventOf } from "./eventFunctions";
-import { IST_TIME_ZONE } from "./istTime";
+import { IST_TIME_ZONE, istDayStart } from "./istTime";
 import { notificationExpireAt } from "./notificationTtl";
 import { phoneOf, planOccasionStamps, stampFields } from "./occasionStamping";
 import {
   ReminderPlan,
   ReminderSource,
   hasOccasionStamp,
+  isActiveOpenEnquiry,
   isOccasionKind,
-  isWishEligibleLost,
+  isWishEligible,
   istDatePlusDays,
   monthDaysForTarget,
   reminderSummary,
@@ -27,6 +28,11 @@ const MAX_BATCH_WRITES = 450;
 const DEFAULT_LEAD_DAYS = 7;
 const MIN_LEAD_DAYS = 1;
 const MAX_LEAD_DAYS = 90;
+/**
+ * Daily stamp catch-up: open enquiries become eligible when the event date passes
+ * with no write. Bound the scan to eventDate in the last N days before today IST.
+ */
+export const STAMP_CATCHUP_DAYS = 14;
 
 type ReengagementConfig = { leadDays: number; enabled: boolean };
 
@@ -58,14 +64,28 @@ function eventTypeLabelOf(data: FirebaseFirestore.DocumentData): string {
   return value ? titleCase(value) : "Event";
 }
 
-/** Lost enquiry that still gets a yearly wish (see isWishEligibleLost). */
-export function lostEligibleOf(data: FirebaseFirestore.DocumentData, status: string | null): boolean {
-  return isWishEligibleLost({
-    status,
+/** Wish-eligible under the past-event rule (see isWishEligible). Status is ignored. */
+export function wishEligibleOf(
+  data: FirebaseFirestore.DocumentData,
+  now: Date = new Date()
+): boolean {
+  const event = occasionEventOf(data);
+  return isWishEligible({
+    eventDate: event.eventDate,
+    now,
+    merged: !!data.mergedInto || data.lostReason === "duplicate",
     lostReason: data.lostReason,
-    reachedInTalks: data.inTalksAt != null,
-    autoClosed: data.statusUpdatedBy === "system:auto-expire",
+    occasionKind: data.occasionKind,
+    eventTypeValue: event.eventTypeValue,
+    eventTypeLabel: event.eventTypeLabel,
+    remindersOn: data.occasionReminders !== false,
+    phoneNormalized: phoneOf(data),
   });
+}
+
+/** @deprecated Use wishEligibleOf — kept for migration scripts importing the old name. */
+export function lostEligibleOf(data: FirebaseFirestore.DocumentData, _status: string | null): boolean {
+  return wishEligibleOf(data);
 }
 
 export function parseReengagementConfig(data: FirebaseFirestore.DocumentData | undefined): ReengagementConfig {
@@ -78,31 +98,29 @@ export function parseReengagementConfig(data: FirebaseFirestore.DocumentData | u
 
 /**
  * Stamps `occasionKind` / `occasionDate` / `occasionMonthDay` when an enquiry
- * becomes canonical `completed` by any client path (status control, kanban, form).
- * autoExpireEnquiries stamps in its own write, so this sees the fields and stops.
+ * becomes wish-eligible (past occasion date under [isWishEligible]) or when the
+ * event type/date changes on an already-stamped eligible enquiry.
+ * autoExpireEnquiries stamps completed in its own write; open-past enquiries are
+ * also stamped by the daily schedule (no write when only time passes).
  *
- * Loop-safe: acts only on a transition INTO completed and only when the stamp is
- * missing; sibling re-stamps are on already-completed docs (no transition).
+ * Loop-safe: stamp fields never change status or eventDate/type, so a stamp write
+ * cannot re-enter the "needs stamp" path. Never overwrites occasionManual.
  */
 export const onEnquiryCompletedStampOccasion = onDocumentWritten("enquiries/{enquiryId}", async (event) => {
   const after = event.data?.after?.data();
   if (!after) return;
   const before = event.data?.before?.data();
-  const afterStatus = canonicalStatus(after.statusValue);
-  // Completed events, and lost enquiries that still get a yearly wish.
-  const wishable = afterStatus === "completed" || lostEligibleOf(after, afterStatus);
-  if (!wishable) return;
+  if (!wishEligibleOf(after)) return;
   if (after.occasionManual === true) return;
-  const becameCompleted = !before || canonicalStatus(before.statusValue) !== afterStatus;
   const stamped = hasOccasionStamp({
     occasionKind: after.occasionKind,
     occasionMonthDay: after.occasionMonthDay,
     occasionDate: toDate(after.occasionDate),
   });
-  // Event date / type corrected on an already-completed enquiry → re-stamp
-  // (the stamp never changes eventDate / event type, so this cannot loop).
-  // Multi-function bookings: the occasion follows the main (wedding) function, which
-  // can change without touching eventDate (= last function), so compare that too.
+  const beforeStatus = before ? canonicalStatus(before.statusValue) : null;
+  const afterStatus = canonicalStatus(after.statusValue);
+  const statusChanged = !before || beforeStatus !== afterStatus;
+  // Event date / type corrected → re-stamp (stamp never changes those fields).
   const beforeEvent = before ? occasionEventOf(before) : null;
   const afterEvent = occasionEventOf(after);
   const eventChanged =
@@ -111,7 +129,11 @@ export const onEnquiryCompletedStampOccasion = onDocumentWritten("enquiries/{enq
       before.eventTypeValue !== after.eventTypeValue ||
       beforeEvent?.eventDate?.getTime() !== afterEvent.eventDate?.getTime() ||
       beforeEvent?.eventTypeValue !== afterEvent.eventTypeValue);
-  if (!(becameCompleted && !stamped) && !(stamped && eventChanged)) return;
+  const newlyEligible =
+    statusChanged ||
+    eventChanged ||
+    (!!before && !wishEligibleOf(before) && wishEligibleOf(after));
+  if (!(newlyEligible && !stamped) && !(stamped && eventChanged)) return;
 
   const enquiryId = event.params.enquiryId;
   const db = getFirestore();
@@ -155,12 +177,12 @@ function toReminderSource(doc: FirebaseFirestore.QueryDocumentSnapshot): Reminde
     eventTypeLabel: eventTypeLabelOf(data),
     eventDate: toDate(data.eventDate),
     assignedTo: stringOrNull(data.assignedTo),
-    lostEligible: lostEligibleOf(data, canonicalStatus(data.statusValue)),
+    wishEligible: wishEligibleOf(data),
   };
 }
 
 /**
- * Daily at 09:00 IST: for every completed event (and wish-eligible lost enquiry) whose
+ * Daily at 09:00 IST: for every wish-eligible enquiry (past occasion date) whose
  * occasion falls within the next `leadDays` (default 7, `app_config/reengagement`), create one idempotent
  * `reminders/{phone}_{kind}_{year}` doc per customer and occasion kind, then send
  * ONE summary notification per recipient (assignee if active, else all active admins).
@@ -172,6 +194,79 @@ export type ReengagementRunResult = { created: number; planned: number; enabled:
  * missing reminders for occasions within the next `leadDays` and notifies recipients.
  * Idempotent — existing reminder docs are never touched.
  */
+/**
+ * Stamp unstamped wish-eligible enquiries whose top-level eventDate fell into the
+ * past within [STAMP_CATCHUP_DAYS] (bounded). Covers open enquiries that become
+ * eligible only because time passed. Skips occasionManual; idempotent.
+ */
+export async function stampNewlyEligibleEnquiries(
+  db: FirebaseFirestore.Firestore,
+  now: Date
+): Promise<{ scanned: number; stamped: number; reads: number }> {
+  const todayStart = istDayStart(now);
+  const windowStart = new Date(todayStart.getTime() - STAMP_CATCHUP_DAYS * 24 * 60 * 60 * 1000);
+  let scanned = 0;
+  let stampedCount = 0;
+  let reads = 0;
+  let last: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+
+  for (;;) {
+    let q: FirebaseFirestore.Query = db
+      .collection("enquiries")
+      .where("eventDate", ">=", Timestamp.fromDate(windowStart))
+      .where("eventDate", "<", Timestamp.fromDate(todayStart))
+      .orderBy("eventDate")
+      .limit(200);
+    if (last) q = q.startAfter(last);
+    const snap = await q.get();
+    reads += 1;
+    if (snap.empty) break;
+    last = snap.docs[snap.docs.length - 1];
+    scanned += snap.size;
+
+    let batch = db.batch();
+    let pending = 0;
+    const flush = async () => {
+      if (pending === 0) return;
+      await batch.commit();
+      batch = db.batch();
+      pending = 0;
+    };
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      if (data.occasionManual === true) continue;
+      if (
+        hasOccasionStamp({
+          occasionKind: data.occasionKind,
+          occasionMonthDay: data.occasionMonthDay,
+          occasionDate: toDate(data.occasionDate),
+        })
+      ) {
+        continue;
+      }
+      if (!wishEligibleOf(data, now)) continue;
+      try {
+        const stamps = await planOccasionStamps(db, doc.id, data);
+        // Sibling lookup is an extra read when the phone is known.
+        if (phoneOf(data).length >= 7) reads += 1;
+        if (stamps.size === 0) continue;
+        for (const [id, stamp] of stamps) {
+          if (pending + 1 > MAX_BATCH_WRITES) await flush();
+          batch.update(db.collection("enquiries").doc(id), stampFields(stamp));
+          pending += 1;
+          stampedCount += 1;
+        }
+      } catch (error: any) {
+        logger.warn("Daily occasion stamp failed", { enquiryId: doc.id, error: error?.message });
+      }
+    }
+    await flush();
+    if (snap.size < 200) break;
+  }
+  return { scanned, stamped: stampedCount, reads };
+}
+
 export async function scheduleReengagementsCore(now: Date): Promise<ReengagementRunResult> {
   const db = getFirestore();
 
@@ -185,6 +280,15 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
   if (!config.enabled) {
     logger.info("Re-engagement: disabled in app_config/reengagement");
     return { created: 0, planned: 0, enabled: false };
+  }
+
+  try {
+    const stampPass = await stampNewlyEligibleEnquiries(db, now);
+    if (stampPass.scanned > 0 || stampPass.stamped > 0) {
+      logger.info("Re-engagement: daily stamp pass", stampPass);
+    }
+  } catch (error: any) {
+    logger.error("Re-engagement: daily stamp pass failed", { error: error?.message });
   }
 
   // Window: every day from today to `leadDays` ahead. Reminder ids are
@@ -220,7 +324,7 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
         for (const s of prefSnaps) if (s.get("noReminders") === true) optedOut.add(s.id);
       }
 
-      // Customers with an open enquiry right now: the team is already talking to them.
+      // Still talking: open status AND event date today/future. Open+past does not block.
       const activePhones = new Set<string>();
       for (let j = 0; j < phones.length; j += 30) {
         const openSnap = await db
@@ -228,9 +332,11 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
           .where("phoneNormalized", "in", phones.slice(j, j + 30))
           .get();
         for (const d of openSnap.docs) {
-          const st = canonicalStatus(d.get("statusValue"));
-          if (st === "new" || st === "in_talks" || st === "approved") {
-            const phone = phoneOf(d.data());
+          const data = d.data();
+          const st = canonicalStatus(data.statusValue);
+          const eventDate = occasionEventOf(data).eventDate;
+          if (isActiveOpenEnquiry(st, eventDate, now)) {
+            const phone = phoneOf(data);
             if (phone) activePhones.add(phone);
           }
         }

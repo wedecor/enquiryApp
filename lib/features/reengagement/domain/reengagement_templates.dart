@@ -26,63 +26,70 @@ class ReengagementTemplates {
   /// Past customers (we decorated their event): a wish, a warm line about being
   /// part of it, and one soft open door. No prices, offers or emoji. Never says
   /// "last year" (the event may be years back) and never names the day: wishes go
-  /// out a few days early, and the stored date may be a haldi or a weekend party.
+  /// out about 10 days early, and the stored date may be a haldi or a weekend party.
   static const Map<OccasionKind, String> defaults = {
     OccasionKind.weddingAnniversary:
-        'Hi {name}, your {nth} wedding anniversary is coming up soon. Wishing you both many '
-        'more happy years together. It was lovely being part of your wedding. If you\'re '
-        "planning something to celebrate, we'd love to be part of it again. Warm wishes from "
-        '{business}.',
+        'Hi {name}, your {nth} wedding anniversary is just around the corner. It feels like '
+        'only yesterday we were part of your big day. Wishing you both a wonderful '
+        'celebration and many happy years ahead. If we can help make the day special in any '
+        "way, we're just a message away. Warm wishes from {business}.",
     OccasionKind.birthday:
-        "Hi {name}, {person}'s birthday is coming up soon. Wishing {person} a happy year ahead. "
-        "It was lovely being part of your celebration. If you're planning something this year, "
-        "we'd love to be part of it again. Warm wishes from {business}.",
+        "Hi {name}, {person}'s birthday is just around the corner. It was a joy being part of "
+        'the celebration last time. Wishing {person} a wonderful day and a happy year ahead. '
+        "If we can help make it special in any way, we're just a message away. Warm wishes "
+        'from {business}.',
     OccasionKind.anniversary:
-        'Hi {name}, your anniversary is coming up soon. Wishing you a very happy one. It was '
-        "lovely being part of your celebration. If you're planning something this year, we'd "
-        'love to be part of it again. Warm wishes from {business}.',
+        'Hi {name}, your anniversary is just around the corner. It was a joy being part of '
+        'your celebration. Wishing you a wonderful day and many happy years ahead. If we can '
+        "help make it special in any way, we're just a message away. Warm wishes from "
+        '{business}.',
     OccasionKind.baby:
         'Hi {name}, thinking of you and the little one as this special time comes round again. '
-        "It was lovely being part of that day. If you're planning a celebration, we'd love to "
-        'be part of it again. Warm wishes from {business}.',
+        'It was a joy being part of that day. Wishing your family good health and happy days '
+        "ahead. If we can help make the next celebration special in any way, we're just a "
+        'message away. Warm wishes from {business}.',
     OccasionKind.home:
-        'Hi {name}, the {nth} anniversary of your home is coming up soon. It was lovely being '
-        "part of your housewarming. If you're planning a get-together, we'd love to be part of "
-        'it again. Warm wishes from {business}.',
+        'Hi {name}, the {nth} anniversary of your home is just around the corner. It was a joy '
+        'being part of your housewarming. Wishing you many more happy years there. If we can '
+        "help make a get-together special in any way, we're just a message away. Warm wishes "
+        'from {business}.',
     OccasionKind.corporate: 'Hi {name}, warm wishes from all of us at {business}.',
     OccasionKind.celebration:
-        'Hi {name}, thinking of you as this time of year comes round again. It was lovely being '
-        "part of your {event}. If you're planning something this year, we'd love to be part of "
-        'it again. Warm wishes from {business}.',
+        'Hi {name}, thinking of you as this time of year comes round again. It was a joy being '
+        'part of your {event}. Wishing you a happy year ahead. If we can help make your next '
+        "celebration special in any way, we're just a message away. Warm wishes from "
+        '{business}.',
   };
 
-  /// People who only enquired (lost enquiries that still get a wish): a wish and
-  /// one soft open door. Never mentions working together; never names the day.
+  /// People who only enquired (lost or open-past — not completed): warm reach-out
+  /// without saying the event happened or naming an anniversary number.
   static const Map<OccasionKind, String> enquiredDefaults = {
     OccasionKind.weddingAnniversary:
-        'Hi {name}, your {nth} wedding anniversary is coming up soon. Wishing you both many '
-        "more happy years together. If you're planning something to celebrate, we're just a "
-        'message away. Warm wishes from {business}.',
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        'about your wedding. Wishing you both happiness and a wonderful year ahead. If we can '
+        "ever help make a day special, we're just a message away. Warm wishes from {business}.",
     OccasionKind.birthday:
-        "Hi {name}, {person}'s birthday is coming up soon. Wishing {person} a happy year ahead, "
-        "full of good moments. If you're planning something, we're just a message away. Warm "
-        'wishes from {business}.',
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        "about {person}'s birthday. Wishing {person} a happy and healthy year ahead. If we can "
+        "ever help make a day special, we're just a message away. Warm wishes from {business}.",
     OccasionKind.anniversary:
-        "Hi {name}, your anniversary is coming up soon. Wishing you a very happy one. If you're "
-        "planning something, we're just a message away. Warm wishes from {business}.",
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        'about your anniversary celebration. Wishing you many happy years ahead. If we can '
+        "ever help make a day special, we're just a message away. Warm wishes from {business}.",
     OccasionKind.baby:
-        'Hi {name}, thinking of you and the little one as this special time comes round again. '
-        "Hope you're all keeping well. If you're planning a celebration, we're just a message "
-        'away. Warm wishes from {business}.',
-    OccasionKind.home:
-        'Hi {name}, the {nth} anniversary of your home is coming up soon. Wishing you many more '
-        "happy years there. If you're planning a get-together, we're just a message away. Warm "
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        'about your celebration for the little one. Wishing your family good health and happy '
+        "days ahead. If we can ever help make a day special, we're just a message away. Warm "
         'wishes from {business}.',
+    OccasionKind.home:
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        'about your housewarming. Wishing you many happy years in your home. If we can ever '
+        "help make a day special, we're just a message away. Warm wishes from {business}.",
     OccasionKind.corporate: 'Hi {name}, warm wishes from all of us at {business}.',
     OccasionKind.celebration:
-        "Hi {name}, thinking of you as this time of year comes round again. Hope it's a lovely "
-        "one. If you're planning something, we're just a message away. Warm wishes from "
-        '{business}.',
+        "Hi {name}, hope you're doing well. It's been a while since you got in touch with us "
+        'about your {event}. Wishing you a happy year ahead. If we can ever help make a day '
+        "special, we're just a message away. Warm wishes from {business}.",
   };
 
   /// Default for [kind] for a past customer, or for someone who only [enquired].

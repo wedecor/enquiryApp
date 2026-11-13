@@ -1,16 +1,16 @@
 {
-  "version": "2.0.30",
-  "buildNumber": 61,
-  "releaseDate": "2026-11-13",
-  "releaseNotes": "Security: payment changes are now visible to admins only. Deleted enquiries can be restored from Settings. More reliable notifications.",
+  "version": "2.0.31",
+  "buildNumber": 62,
+  "releaseDate": "2026-11-14",
+  "releaseNotes": "Yearly wishes now cover everyone who enquired, with gentler wording.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "ab17984668543c9837d509b1eb425888825356b5477b2c2f17ed9084aec90b99",
-  "forceUpdate": true,
+  "forceUpdate": false,
   "minSupportedBuildNumber": 61,
   "features": [
-    "Security: quotation amounts removed from enquiry change history"
+    "Yearly wishes for all past-event enquiries, not only completed"
   ],
   "bugFixes": [
-    "Places autocomplete authorises the user before calling Google"
+    "Cancelled events excluded from yearly wishes"
   ]
 }

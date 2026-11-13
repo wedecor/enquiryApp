@@ -11,7 +11,7 @@ import '../reengagement_actions.dart';
 
 enum _RowMenu { markSent, skip, dontRemind }
 
-/// One upcoming occasion: a gold (past customer) or grey (only enquired) dot,
+/// One upcoming occasion: a gold (past customer / completed) or grey (enquired) dot,
 /// customer, "PAST CUSTOMER · 2nd wedding anniversary · 12 Dec", the event they
 /// booked or enquired about, and WhatsApp / Mark sent / Skip / Don't remind again.
 class OccasionRow extends ConsumerWidget {
