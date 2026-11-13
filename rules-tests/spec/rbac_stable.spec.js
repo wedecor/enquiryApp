@@ -1122,11 +1122,17 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(pref(ADMIN_UID, 'admin').delete());
     });
 
-    test('✅ Active users can read customer_prefs', async () => {
+    test('✅ Active users can get a single customer_prefs doc; ❌ staff cannot list; ✅ admin can list', async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await context.firestore().collection('customer_prefs').doc('9876543210').set({ noReminders: true });
       });
       await assertSucceeds(pref(STAFF_UID, 'staff').get());
+      await assertFails(
+        testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore().collection('customer_prefs').get()
+      );
+      await assertSucceeds(
+        testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore().collection('customer_prefs').get()
+      );
     });
   });
 

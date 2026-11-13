@@ -38,7 +38,10 @@ final pastCustomerOccasionsProvider = FutureProvider.autoDispose<List<PastCustom
   final repo = ref.watch(reengagementRepositoryProvider);
   final role = await ref.watch(roleProvider.future);
   if (uid == null) return const [];
-  final sources = await repo.fetchCompletedOccasions(isAdmin: role == UserRole.admin, uid: uid);
-  final optedOut = await repo.fetchOptedOutPhones();
+  final isAdmin = role == UserRole.admin;
+  final sources = await repo.fetchCompletedOccasions(isAdmin: isAdmin, uid: uid);
+  final optedOut = isAdmin
+      ? await repo.fetchOptedOutPhones()
+      : await repo.fetchOptedOutPhonesFor(sources.map((s) => s.phoneNormalized));
   return PastCustomers.build(sources, now: DateTime.now(), optedOutPhones: optedOut);
 });

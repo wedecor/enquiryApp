@@ -451,7 +451,8 @@ service cloud.firestore {
     // Written only by the setReengagementPref function (caller must be an admin or
     // assigned to an enquiry with that phone); clients read.
     match /customer_prefs/{phone} {
-      allow read: if isActiveUser();
+      allow get: if isActiveUser();
+      allow list: if isAdmin();
       allow create, update, delete: if false;
     }
 
