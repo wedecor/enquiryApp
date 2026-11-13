@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/logging/logger.dart';
 import 'firestore_service.dart';
@@ -325,13 +326,14 @@ class AuditService {
     try {
       final currentUser = _auth.currentUser;
 
+      final packageInfo = await PackageInfo.fromPlatform();
       await _firestore.collection('admin_audit').add({
         'action': action,
         'user_id': currentUser?.uid ?? 'unknown',
         'user_email': currentUser?.email ?? 'unknown',
         'timestamp': FieldValue.serverTimestamp(),
         'data': data,
-        'app_version': '1.0.1+10', // TODO: Get from package_info
+        'app_version': '${packageInfo.version}+${packageInfo.buildNumber}',
       });
 
       Log.i(

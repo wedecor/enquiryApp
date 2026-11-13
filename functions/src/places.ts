@@ -143,20 +143,19 @@ export const placesAutocomplete = onCall<PlacesAutocompleteRequest, Promise<Plac
     }
     const key = apiKeyOrThrow();
 
-    // User check and Google request run side by side; results are only returned
-    // once the user check has passed.
-    const [uid, json] = await Promise.all([
-      requireActiveUser(request.auth.uid),
-      placesFetch(
-        `${PLACES_BASE}/places:autocomplete`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key },
-          body: JSON.stringify(buildAutocompleteBody(input, data.sessionToken)),
-        },
-        "placesAutocomplete"
-      ),
-    ]);
+    // The user check comes first: Google bills every request, so a signed-in but
+    // inactive (or unknown) account must never reach it. The check is cached per
+    // instance (ACTIVE_USER_TTL_MS), so typing costs one user read at most.
+    const uid = await requireActiveUser(request.auth.uid);
+    const json = await placesFetch(
+      `${PLACES_BASE}/places:autocomplete`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key },
+        body: JSON.stringify(buildAutocompleteBody(input, data.sessionToken)),
+      },
+      "placesAutocomplete"
+    );
     const suggestions = parseAutocompleteResponse(json);
     logger.info("placesAutocomplete completed", { by: uid, count: suggestions.length });
     return { suggestions };

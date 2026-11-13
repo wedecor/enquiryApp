@@ -1,18 +1,16 @@
 {
-  "version": "2.0.28",
-  "buildNumber": 59,
-  "releaseDate": "2026-11-12",
-  "releaseNotes": "\ud83d\udccb Line-item quotations on enquiry details \u2014 draft, send, and share a branded We Decor PDF\n\u2709\ufe0f Marking a quote sent updates the enquiry quoted amount\n\ud83c\udfa8 Letterhead PDF with company address, phones, and email",
+  "version": "2.0.29",
+  "buildNumber": 60,
+  "releaseDate": "2026-11-14",
+  "releaseNotes": "Security fix: quotation amounts no longer appear in change history",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "ecae39f7e70996372bb16a619b4336bf765112727076ffc32f94537b491fdae5",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 54,
+  "sha256": "",
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 60,
   "features": [
-    "NEW: Create and share letterhead quotation PDFs from an enquiry (admin)",
-    "NEW: Quotation GST optional; off by default",
-    "IMPROVED: Sent quotations update financial quoted amount"
+    "Security: quotation amounts removed from enquiry change history"
   ],
   "bugFixes": [
-    "Analytics shows an error state when the load fails instead of an empty screen"
+    "Places autocomplete authorises the user before calling Google"
   ]
 }

@@ -148,7 +148,8 @@ class QuotationsRepository {
         _audit.buildHistoryEntry(
           fieldChanged: 'quotation',
           oldValue: quote.status,
-          newValue: 'sent ${quote.reference ?? quoteId} ₹${totals.total.toStringAsFixed(0)}',
+          // No amount here: assigned staff can read history, money is admin-only.
+          newValue: 'sent ${quote.reference ?? quoteId}',
         ),
       );
     await batch.commit();
