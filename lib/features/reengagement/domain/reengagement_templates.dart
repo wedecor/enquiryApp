@@ -56,7 +56,7 @@ class ReengagementTemplates {
         'it again. Warm wishes from {business}.',
   };
 
-  /// People who only enquired (lost enquiries that still get a wish): a wish and
+  /// People who only enquired (lost or open-past — not completed): a wish and
   /// one soft open door. Never mentions working together; never names the day.
   static const Map<OccasionKind, String> enquiredDefaults = {
     OccasionKind.weddingAnniversary:
