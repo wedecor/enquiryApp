@@ -383,12 +383,6 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Per-user notifications (created by Cloud Functions)
-    match /notifications/{uid}/items/{nid} {
-      allow read, update, delete: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isAdmin(); // created by CF with admin privileges
-    }
-
     // Dropdowns - active users can read, admin can manage
     // Group doc only carries the one-time `defaultsSeeded` marker (DropdownsRepository.repairGroup).
     match /dropdowns/{group} {
