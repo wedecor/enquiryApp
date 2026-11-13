@@ -27,6 +27,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   final List<String> _existingImageUrls = []; // URLs from Firestore
   bool _isLoading = false;
   bool _hydrated = false;
+  String? _pendingCreateEnquiryId;
 
   /// Google Maps place picked for the location text; null for free text.
   EnquiryPlace? _locationPlace;
@@ -675,7 +676,12 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
+    final quoteFields = _quoteFields(const {});
+    final pendingId = _pendingCreateEnquiryId ??= firestoreService.newEnquiryId();
+
     final enquiryId = await firestoreService.createEnquiry(
+      enquiryId: pendingId,
+      extraFinancialFields: quoteFields.isNotEmpty ? quoteFields : null,
       customerName: tidyPersonName(_nameController.text),
       customerEmail: _emailController.text.trim(),
       customerPhone: _phoneController.text.trim(),
@@ -707,15 +713,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       locationCity: place?.city,
       functions: functions,
     );
-
-    final quoteFields = _quoteFields(const {});
-    if (quoteFields.isNotEmpty) {
-      // Quote is money: it goes to the admin-only financial summary.
-      await firestoreService.updateEnquiryWithFinancials(enquiryId, {
-        ...quoteFields,
-        'updatedBy': currentUser.uid,
-      });
-    }
 
     // Upload reference images if any and save URLs
     if (_selectedImages.isNotEmpty) {

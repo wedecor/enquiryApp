@@ -276,6 +276,8 @@ class FirestoreService {
     String? locationArea,
     String? locationCity,
     List<EventFunction>? functions,
+    String? enquiryId,
+    Map<String, dynamic>? extraFinancialFields,
   }) async {
     final placeId = locationPlaceId?.trim() ?? '';
     // Multi-function booking (or one function with a time / notes): write the
@@ -343,16 +345,20 @@ class FirestoreService {
         eventTypes: typeLabels,
       ),
       ...functionFields,
+      if (extraFinancialFields != null) ...extraFinancialFields,
     };
 
-    return _createWithFinancials(enquiryData);
+    return _createWithFinancials(enquiryData, enquiryId: enquiryId);
   }
+
+  /// Generates a new Firestore document ID under `enquiries`.
+  String newEnquiryId() => _enquiriesCollection.doc().id;
 
   /// Writes a new enquiry (without money) and its admin-only financial summary in
   /// one batch. See [EnquiryFinancials].
-  Future<String> _createWithFinancials(Map<String, dynamic> data) async {
+  Future<String> _createWithFinancials(Map<String, dynamic> data, {String? enquiryId}) async {
     final parts = EnquiryFinancials.split(data);
-    final docRef = _enquiriesCollection.doc();
+    final docRef = enquiryId != null ? _enquiriesCollection.doc(enquiryId) : _enquiriesCollection.doc();
     final batch = firestore.batch()..set(docRef, parts.parent);
     if (parts.money.isNotEmpty) {
       batch.set(
