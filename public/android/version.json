@@ -1,10 +1,10 @@
 {
   "version": "2.0.30",
   "buildNumber": 61,
-  "releaseDate": "2026-11-14",
+  "releaseDate": "2026-11-13",
   "releaseNotes": "Security: payment changes are now visible to admins only. Deleted enquiries can be restored from Settings. More reliable notifications.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "fe292a525c394bc9857163fc86ec5b4a263334bc2b3d447d599c6fd18f55efe8",
+  "sha256": "ab17984668543c9837d509b1eb425888825356b5477b2c2f17ed9084aec90b99",
   "forceUpdate": true,
   "minSupportedBuildNumber": 61,
   "features": [
