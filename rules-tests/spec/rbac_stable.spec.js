@@ -1732,6 +1732,100 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
   });
+
+  describe('History Validation & Immutability Rules', () => {
+    test('✅ Valid history entry succeeds (string, num, timestamp, null); extra/oversize fields fail', async () => {
+      const { serverTimestamp, Timestamp } = require('firebase/firestore');
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const histCol = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff').collection('history');
+
+      await assertSucceeds(
+        histCol.add({
+          field_changed: 'statusValue',
+          old_value: 'new',
+          new_value: 'in_talks',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertSucceeds(
+        histCol.add({
+          field_changed: 'eventDate',
+          old_value: null,
+          new_value: Timestamp.fromDate(new Date('2027-01-01')),
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'statusValue',
+          old_value: 'new',
+          new_value: 'in_talks',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+          extra: 'not-allowed',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'x'.repeat(61),
+          old_value: 'a',
+          new_value: 'b',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'notes',
+          old_value: 'a',
+          new_value: 'y'.repeat(2001),
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+    });
+
+    test('❌ Neither staff nor admin can delete history entries', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('history')
+          .doc('hist-1')
+          .set({ field_changed: 'notes', old_value: 'a', new_value: 'b', user_id: STAFF_UID });
+      });
+
+      const staffHist = testEnv
+        .authenticatedContext(STAFF_UID, { role: 'staff' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history')
+        .doc('hist-1');
+      const adminHist = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history')
+        .doc('hist-1');
+
+      await assertFails(staffHist.delete());
+      await assertFails(adminHist.delete());
+    });
+  });
 });
 
 // Add test completion logging
