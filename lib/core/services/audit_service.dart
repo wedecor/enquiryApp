@@ -131,6 +131,7 @@ class AuditService {
           .doc(enquiryId)
           .collection('history')
           .orderBy('timestamp', descending: true)
+          .limit(100)
           .snapshots()
           .timeout(const Duration(seconds: 30))
           .map((snapshot) {
@@ -144,48 +145,13 @@ class AuditService {
               return <Map<String, dynamic>>[];
             }
 
-            // Manual sorting since orderBy might require index
             final docs = snapshot.docs.map((doc) {
               final data = doc.data();
               return {'id': doc.id, ...data};
             }).toList();
 
-            // Sort by timestamp if available (most recent first)
-            docs.sort((a, b) {
-              final aTime = a['timestamp'];
-              final bTime = b['timestamp'];
-
-              // Handle null timestamps - put them at the end
-              if (aTime == null && bTime == null) return 0;
-              if (aTime == null) return 1;
-              if (bTime == null) return -1;
-
-              // Handle different timestamp formats
-              DateTime? aDateTime;
-              DateTime? bDateTime;
-
-              if (aTime is Timestamp) {
-                aDateTime = aTime.toDate();
-              } else if (aTime is DateTime) {
-                aDateTime = aTime;
-              }
-
-              if (bTime is Timestamp) {
-                bDateTime = bTime.toDate();
-              } else if (bTime is DateTime) {
-                bDateTime = bTime;
-              }
-
-              if (aDateTime != null && bDateTime != null) {
-                return bDateTime.compareTo(aDateTime); // Descending order (newest first)
-              }
-
-              // Fallback: compare by document ID if timestamps are invalid
-              return (a['id'] as String? ?? '').compareTo(b['id'] as String? ?? '');
-            });
-
             Log.d(
-              'AuditService: returning sorted history items',
+              'AuditService: returning history items',
               data: {'enquiryId': enquiryId, 'count': docs.length},
             );
             return docs;
