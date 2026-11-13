@@ -3,6 +3,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { canonicalStatus, statusLabel } from "./statusVocabulary";
 import { notificationExpireAt } from "./notificationTtl";
+import { isActiveUserData } from "./auth";
 
 /**
  * Trusted enquiry notifications (create / assign / status change / edit).
@@ -229,10 +230,6 @@ export function eventNotificationId(
         ? str(enquiry.assignedTo) ?? "none"
         : "x";
   return `ev_${enquiryId}_${event}_${detail}_${actorUid}_${bucket}`.slice(0, 1400);
-}
-
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  return (data?.isActive ?? data?.active ?? true) !== false;
 }
 
 function toActiveUser(snap: FirebaseFirestore.DocumentSnapshot): ActiveUser | null {

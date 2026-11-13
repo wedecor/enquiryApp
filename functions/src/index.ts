@@ -7,6 +7,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 // Removed deprecated config import for Firebase Functions v2
 import { createEmailTransporter, getSmtpFromAddress, SMTP_SECRET_NAMES } from "./smtp";
+import { isActiveUserData } from "./auth";
 
 setGlobalOptions({
   region: "asia-south1",
@@ -46,12 +47,6 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
 }
 
 /** users/{uid}/private/profile — phone and email (owner + admins only, firestore.rules). */

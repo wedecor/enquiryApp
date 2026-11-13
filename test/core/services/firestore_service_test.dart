@@ -63,73 +63,81 @@ void main() {
     });
 
     group('Soft delete and restore', () {
-      test('deleteEnquiry moves enquiry and financial summary to enquiries_trash and keeps subcollections', () async {
-        final fakeDb = FakeFirebaseFirestore();
-        final service = FirestoreService(firestore: fakeDb);
+      test(
+        'deleteEnquiry moves enquiry and financial summary to enquiries_trash and keeps subcollections',
+        () async {
+          final fakeDb = FakeFirebaseFirestore();
+          final service = FirestoreService(firestore: fakeDb);
 
-        await fakeDb.collection('enquiries').doc('enq-1').set({
-          'customerName': 'Asha',
-          'statusValue': 'new',
-        });
-        await EnquiryFinancials.ref(fakeDb, 'enq-1').set({
-          'totalCost': 50000,
-          'advancePaid': 10000,
-        });
-        await fakeDb.collection('enquiries').doc('enq-1').collection('history').doc('h1').set({
-          'field_changed': 'statusValue',
-        });
+          await fakeDb.collection('enquiries').doc('enq-1').set({
+            'customerName': 'Asha',
+            'statusValue': 'new',
+          });
+          await EnquiryFinancials.ref(
+            fakeDb,
+            'enq-1',
+          ).set({'totalCost': 50000, 'advancePaid': 10000});
+          await fakeDb.collection('enquiries').doc('enq-1').collection('history').doc('h1').set({
+            'field_changed': 'statusValue',
+          });
 
-        await service.deleteEnquiry('enq-1', deletedBy: 'admin-1');
+          await service.deleteEnquiry('enq-1', deletedBy: 'admin-1');
 
-        expect((await fakeDb.collection('enquiries').doc('enq-1').get()).exists, isFalse);
-        expect((await EnquiryFinancials.ref(fakeDb, 'enq-1').get()).exists, isFalse);
-        expect(
-          (await fakeDb.collection('enquiries').doc('enq-1').collection('history').doc('h1').get())
-              .exists,
-          isTrue,
-        );
+          expect((await fakeDb.collection('enquiries').doc('enq-1').get()).exists, isFalse);
+          expect((await EnquiryFinancials.ref(fakeDb, 'enq-1').get()).exists, isFalse);
+          expect(
+            (await fakeDb
+                    .collection('enquiries')
+                    .doc('enq-1')
+                    .collection('history')
+                    .doc('h1')
+                    .get())
+                .exists,
+            isTrue,
+          );
 
-        final trashSnap = await fakeDb.collection('enquiries_trash').doc('enq-1').get();
-        expect(trashSnap.exists, isTrue);
-        final trash = trashSnap.data()!;
-        expect((trash['enquiry'] as Map)['customerName'], 'Asha');
-        expect((trash['financial'] as Map)['totalCost'], 50000);
-        expect(trash['deletedBy'], 'admin-1');
-        expect(trash['deletedAt'], isNotNull);
-      });
+          final trashSnap = await fakeDb.collection('enquiries_trash').doc('enq-1').get();
+          expect(trashSnap.exists, isTrue);
+          final trash = trashSnap.data()!;
+          expect((trash['enquiry'] as Map)['customerName'], 'Asha');
+          expect((trash['financial'] as Map)['totalCost'], 50000);
+          expect(trash['deletedBy'], 'admin-1');
+          expect(trash['deletedAt'], isNotNull);
+        },
+      );
 
-      test('restoreEnquiry recreates enquiry without money on parent and restores financial summary', () async {
-        final fakeDb = FakeFirebaseFirestore();
-        final service = FirestoreService(firestore: fakeDb);
+      test(
+        'restoreEnquiry recreates enquiry without money on parent and restores financial summary',
+        () async {
+          final fakeDb = FakeFirebaseFirestore();
+          final service = FirestoreService(firestore: fakeDb);
 
-        await fakeDb.collection('enquiries_trash').doc('enq-2').set({
-          'enquiry': {
-            'customerName': 'Rohan',
-            'statusValue': 'approved',
-            'totalCost': 80000, // legacy money field on parent must be stripped
-          },
-          'financial': {
-            'totalCost': 80000,
-            'advancePaid': 25000,
-          },
-          'deletedAt': Timestamp.now(),
-          'deletedBy': 'admin-1',
-        });
+          await fakeDb.collection('enquiries_trash').doc('enq-2').set({
+            'enquiry': {
+              'customerName': 'Rohan',
+              'statusValue': 'approved',
+              'totalCost': 80000, // legacy money field on parent must be stripped
+            },
+            'financial': {'totalCost': 80000, 'advancePaid': 25000},
+            'deletedAt': Timestamp.now(),
+            'deletedBy': 'admin-1',
+          });
 
-        await service.restoreEnquiry('enq-2');
+          await service.restoreEnquiry('enq-2');
 
-        final restoredEnq = await fakeDb.collection('enquiries').doc('enq-2').get();
-        expect(restoredEnq.exists, isTrue);
-        expect(restoredEnq.data()!['customerName'], 'Rohan');
-        expect(restoredEnq.data()!.containsKey('totalCost'), isFalse);
+          final restoredEnq = await fakeDb.collection('enquiries').doc('enq-2').get();
+          expect(restoredEnq.exists, isTrue);
+          expect(restoredEnq.data()!['customerName'], 'Rohan');
+          expect(restoredEnq.data()!.containsKey('totalCost'), isFalse);
 
-        final restoredFin = await EnquiryFinancials.ref(fakeDb, 'enq-2').get();
-        expect(restoredFin.exists, isTrue);
-        expect(restoredFin.data()!['totalCost'], 80000);
-        expect(restoredFin.data()!['advancePaid'], 25000);
+          final restoredFin = await EnquiryFinancials.ref(fakeDb, 'enq-2').get();
+          expect(restoredFin.exists, isTrue);
+          expect(restoredFin.data()!['totalCost'], 80000);
+          expect(restoredFin.data()!['advancePaid'], 25000);
 
-        expect((await fakeDb.collection('enquiries_trash').doc('enq-2').get()).exists, isFalse);
-      });
+          expect((await fakeDb.collection('enquiries_trash').doc('enq-2').get()).exists, isFalse);
+        },
+      );
 
       test('restoreEnquiry refuses when enquiries/{id} already exists', () async {
         final fakeDb = FakeFirebaseFirestore();

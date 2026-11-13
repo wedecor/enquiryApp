@@ -205,9 +205,7 @@ class _RecentlyDeletedGroup extends ConsumerWidget {
         return SettingsGroup(
           eyebrow: 'Trash',
           title: 'Recently deleted',
-          children: [
-            for (final doc in docs) _DeletedEnquiryTile(doc: doc, dateFmt: _dateFmt),
-          ],
+          children: [for (final doc in docs) _DeletedEnquiryTile(doc: doc, dateFmt: _dateFmt)],
         );
       },
     );
@@ -233,15 +231,15 @@ class _DeletedEnquiryTileState extends ConsumerState<_DeletedEnquiryTile> {
     try {
       await ref.read(firestoreServiceProvider).restoreEnquiry(widget.doc.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enquiry restored')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Enquiry restored')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to restore enquiry: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to restore enquiry: $e')));
       }
     } finally {
       if (mounted) setState(() => _restoring = false);
@@ -256,9 +254,12 @@ class _DeletedEnquiryTileState extends ConsumerState<_DeletedEnquiryTile> {
     final title = (customerName != null && customerName.isNotEmpty) ? customerName : widget.doc.id;
     final eventDateRaw = enquiry['eventDate'];
     final deletedAtRaw = data['deletedAt'];
-    final eventText = eventDateRaw is Timestamp ? widget.dateFmt.format(eventDateRaw.toDate()) : 'No date';
-    final deletedText =
-        deletedAtRaw is Timestamp ? widget.dateFmt.format(deletedAtRaw.toDate()) : 'Just now';
+    final eventText = eventDateRaw is Timestamp
+        ? widget.dateFmt.format(eventDateRaw.toDate())
+        : 'No date';
+    final deletedText = deletedAtRaw is Timestamp
+        ? widget.dateFmt.format(deletedAtRaw.toDate())
+        : 'Just now';
 
     return SettingsTile(
       icon: Icons.restore_from_trash_outlined,

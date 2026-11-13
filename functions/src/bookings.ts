@@ -4,6 +4,7 @@ import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { EventFunction, eventFunctionsOf, functionLabel, istDayKey } from "./eventFunctions";
 import { IST_OFFSET_MS } from "./istTime";
 import { rawStatusValuesFor } from "./statusVocabulary";
+import { requireActiveCaller } from "./auth";
 
 /**
  * Safety cap on approved bookings read per call. The query spans the requested
@@ -79,12 +80,6 @@ export function matchApprovedFunctions(
   });
 }
 
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
-}
-
 /**
  * [start, end) UTC instants of the IST calendar day `YYYY-MM-DD`, or null if invalid.
  *
@@ -128,22 +123,11 @@ export const approvedOnDate = onCall<ApprovedOnDateRequest, Promise<ApprovedOnDa
     enforceAppCheck: false,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Must be signed in to check bookings");
-    }
-    const callerUid = request.auth.uid;
     const db = getFirestore();
-
-    const callerSnap = await db.collection("users").doc(callerUid).get();
-    const callerData = callerSnap.data();
-    const callerRole = callerData?.role;
-    if (
-      !callerSnap.exists ||
-      !isActiveUserData(callerData) ||
-      (callerRole !== "admin" && callerRole !== "staff")
-    ) {
-      throw new HttpsError("permission-denied", "Active account required");
-    }
+    const caller = await requireActiveCaller(db, request.auth?.uid, {
+      unauthenticatedMessage: "Must be signed in to check bookings",
+    });
+    const callerUid = caller.uid;
 
     const input = (request.data ?? {}) as Partial<ApprovedOnDateRequest>;
     let rawDates: unknown[];

@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 import { canonicalStatus, CanonicalStatus, statusLabel } from "./statusVocabulary";
+import { requireActiveCaller } from "./auth";
 
 /**
  * Customer identity = normalized phone. MUST match
@@ -53,12 +54,6 @@ type LookupCustomerResponse = {
   openEvents: number;
 };
 
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
-}
-
 function toDate(raw: unknown): Date | null {
   if (raw instanceof Date) return raw;
   if (raw && typeof (raw as { toDate?: unknown }).toDate === "function") {
@@ -93,20 +88,9 @@ export async function handleLookupCustomer(
   callerUid: string | undefined,
   data: unknown,
 ): Promise<LookupCustomerResponse> {
-  if (!callerUid) {
-    throw new HttpsError("unauthenticated", "Must be signed in to look up customers");
-  }
-
-  const callerSnap = await db.collection("users").doc(callerUid).get();
-  const callerData = callerSnap.data();
-  const callerRole = callerData?.role;
-  if (
-    !callerSnap.exists ||
-    !isActiveUserData(callerData) ||
-    (callerRole !== "admin" && callerRole !== "staff")
-  ) {
-    throw new HttpsError("permission-denied", "Active account required");
-  }
+  await requireActiveCaller(db, callerUid, {
+    unauthenticatedMessage: "Must be signed in to look up customers",
+  });
 
   const input = (data ?? {}) as Partial<LookupCustomerRequest>;
   if (typeof input.phone !== "string" || input.phone.length > 30) {

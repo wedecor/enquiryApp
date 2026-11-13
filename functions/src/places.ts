@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { getFirestore } from "firebase-admin/firestore";
+import { requireActiveCaller } from "./auth";
 import {
   buildAutocompleteBody,
   isValidPlaceId,
@@ -32,12 +33,6 @@ type PlacesAutocompleteRequest = {
 type PlacesAutocompleteResponse = { suggestions: PlaceSuggestion[] };
 type PlaceDetailsRequest = { placeId: string; sessionToken: string };
 
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
-}
-
 /** Active-user checks remembered per instance, so typing doesn't re-read the user doc. */
 const ACTIVE_USER_TTL_MS = 5 * 60 * 1000;
 const activeUserUntil = new Map<string, number>();
@@ -49,12 +44,13 @@ async function requireActiveUser(uid: string | undefined): Promise<string> {
   const cachedUntil = activeUserUntil.get(uid);
   if (cachedUntil && cachedUntil > Date.now()) return uid;
 
-  const snap = await getFirestore().collection("users").doc(uid).get();
-  const data = snap.data();
-  const role = data?.role;
-  if (!snap.exists || !isActiveUserData(data) || (role !== "admin" && role !== "staff")) {
+  try {
+    await requireActiveCaller(getFirestore(), uid, {
+      unauthenticatedMessage: "Must be signed in to search locations",
+    });
+  } catch (err) {
     activeUserUntil.delete(uid);
-    throw new HttpsError("permission-denied", "Active account required");
+    throw err;
   }
   activeUserUntil.set(uid, Date.now() + ACTIVE_USER_TTL_MS);
   return uid;

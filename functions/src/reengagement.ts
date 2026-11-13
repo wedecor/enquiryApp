@@ -19,6 +19,7 @@ import {
   selectReminders,
 } from "./reengagementLogic";
 import { canonicalStatus } from "./statusVocabulary";
+import { isActiveUserData, requireActiveAdmin } from "./auth";
 
 /** Firestore allows 500 writes per batch; leave headroom like autoExpireEnquiries. */
 const MAX_BATCH_WRITES = 450;
@@ -28,12 +29,6 @@ const MIN_LEAD_DAYS = 1;
 const MAX_LEAD_DAYS = 90;
 
 type ReengagementConfig = { leadDays: number; enabled: boolean };
-
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
-}
 
 function stringOrNull(raw: unknown): string | null {
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
@@ -390,17 +385,11 @@ export const runReengagementNow = onCall<unknown, Promise<ReengagementRunResult>
     timeoutSeconds: 300,
   },
   async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Must be signed in");
-    }
-    const callerSnap = await getFirestore().collection("users").doc(request.auth.uid).get();
-    const callerData = callerSnap.data();
-    if (!callerSnap.exists || !isActiveUserData(callerData) || callerData?.role !== "admin") {
-      throw new HttpsError("permission-denied", "Only active admins can run reminders");
-    }
+    const { uid: caller } = await requireActiveAdmin(getFirestore(), request.auth?.uid, {
+      deniedMessage: "Only active admins can run reminders",
+    });
     try {
       const result = await scheduleReengagementsCore(new Date());
-      const caller = request.auth.uid;
       logger.info("Re-engagement: manual run", { caller, ...result });
       return result;
     } catch (error: any) {
