@@ -88,7 +88,7 @@ export async function handleLookupCustomer(
   callerUid: string | undefined,
   data: unknown,
 ): Promise<LookupCustomerResponse> {
-  await requireActiveCaller(db, callerUid, {
+  const caller = await requireActiveCaller(db, callerUid, {
     unauthenticatedMessage: "Must be signed in to look up customers",
   });
 
@@ -125,11 +125,13 @@ export async function handleLookupCustomer(
   });
 
   const latest = docs[0].data();
+  const canSeeContact =
+    caller.role === "admin" || docs.some((d) => stringOrNull(d.get("assignedTo")) === caller.uid);
   const customer = {
     name: stringOrNull(latest.customerName) ?? "Customer",
-    email: stringOrNull(latest.customerEmail),
-    whatsappNumber: stringOrNull(latest.whatsappNumber),
-    phone: stringOrNull(latest.customerPhone),
+    email: canSeeContact ? stringOrNull(latest.customerEmail) : null,
+    whatsappNumber: canSeeContact ? stringOrNull(latest.whatsappNumber) : null,
+    phone: canSeeContact ? stringOrNull(latest.customerPhone) : null,
   };
 
   // Other events: skip the enquiry being viewed and enquiries already merged away.

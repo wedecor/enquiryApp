@@ -109,6 +109,14 @@ describe("websiteLead + lookupCustomer (emulator)", { skip: !hasEmulator }, () =
     assert.equal(result.events[0].id, "web_lead-birthday-01");
     assert.equal(result.events[0].isOpen, true);
     assert.equal(result.customer?.name, "Priya Sharma");
+    assert.equal(result.customer?.phone, "+919876543210");
+    assert.equal(result.customer?.email, "priya@example.com");
+
+    const unassigned = await handleLookupCustomer(db, "staff2", { phone: "98765 43210" });
+    assert.equal(unassigned.customer?.name, "Priya Sharma");
+    assert.equal(unassigned.customer?.email, null);
+    assert.equal(unassigned.customer?.whatsappNumber, null);
+    assert.equal(unassigned.customer?.phone, null);
 
     const after = (await db.collection("enquiries").get()).docs.map((d) => d.data());
     assert.deepEqual(after, before, "lookup is read-only");
