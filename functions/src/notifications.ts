@@ -323,11 +323,13 @@ export type DerivedEnquiryEvent = {
 export function deriveEnquiryNotificationEvents(
   before: FirebaseFirestore.DocumentData | undefined,
   after: FirebaseFirestore.DocumentData | undefined,
+  now: Date = new Date(),
 ): DerivedEnquiryEvent[] {
   if (!after) return [];
 
   if (!before) {
     if (str(after.createdBy) === WEBSITE_LEAD_CREATED_BY) return [];
+    if (!isRecentEvent("created", after, now)) return [];
     const actorUid = triggerActorUid(after, "created");
     const out: DerivedEnquiryEvent[] = [
       { event: "created", actorUid, notifyAdmins: true, notifyAssignee: false },
@@ -387,7 +389,7 @@ export async function handleEnquiryWrittenNotify(
   after: FirebaseFirestore.DocumentData | undefined,
   now: Date = new Date(),
 ): Promise<number> {
-  const derived = deriveEnquiryNotificationEvents(before, after);
+  const derived = deriveEnquiryNotificationEvents(before, after, now);
   if (derived.length === 0 || !after) return 0;
 
   const assigneeUid = str(after.assignedTo);

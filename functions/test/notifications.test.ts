@@ -93,13 +93,22 @@ describe("canAnnounce / isRecentEvent (pure)", () => {
 });
 
 describe("deriveEnquiryNotificationEvents (pure)", () => {
-  it("no before → created (and assigned if assignedTo set)", () => {
+  it("no before → created (and assigned if assignedTo set) when createdAt is recent", () => {
+    const recent = Timestamp.fromDate(new Date(NOW.getTime() - 2 * 60 * 1000));
     assert.deepEqual(
-      deriveEnquiryNotificationEvents(undefined, { customerName: "A", createdBy: "admin1" }),
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", createdAt: recent },
+        NOW,
+      ),
       [{ event: "created", actorUid: "admin1", notifyAdmins: true, notifyAssignee: false }],
     );
     assert.deepEqual(
-      deriveEnquiryNotificationEvents(undefined, { customerName: "A", createdBy: "admin1", assignedTo: "staff1" }),
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", assignedTo: "staff1", createdAt: recent },
+        NOW,
+      ),
       [
         { event: "created", actorUid: "admin1", notifyAdmins: true, notifyAssignee: false },
         { event: "assigned", actorUid: "admin1", notifyAdmins: false, notifyAssignee: true },
@@ -107,13 +116,38 @@ describe("deriveEnquiryNotificationEvents (pure)", () => {
     );
   });
 
+  it("no before with old or missing createdAt (restore / import) → nothing", () => {
+    const oldCreatedAt = Timestamp.fromDate(new Date(NOW.getTime() - 60 * 60 * 1000));
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", assignedTo: "staff1", createdAt: oldCreatedAt },
+        NOW,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1" },
+        NOW,
+      ),
+      [],
+    );
+  });
+
   it("website lead create → nothing", () => {
     assert.deepEqual(
-      deriveEnquiryNotificationEvents(undefined, {
-        customerName: "A",
-        createdBy: WEBSITE_LEAD_CREATED_BY,
-        assignedTo: "staff1",
-      }),
+      deriveEnquiryNotificationEvents(
+        undefined,
+        {
+          customerName: "A",
+          createdBy: WEBSITE_LEAD_CREATED_BY,
+          assignedTo: "staff1",
+          createdAt: Timestamp.fromDate(NOW),
+        },
+        NOW,
+      ),
       [],
     );
   });
