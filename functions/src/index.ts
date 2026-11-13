@@ -164,7 +164,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         await profileBatch.commit();
       } catch (err) {
         await auth.deleteUser(userRecord.uid).catch((delErr) => {
-          logger.error('Failed to roll back Auth user after inviteUser failure', {
+          logger.error('inviteUser: could not remove the new sign-in account after a failed profile write', {
             uid: userRecord.uid,
             delErr,
           });
