@@ -25,6 +25,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   String _selectedSource = 'instagram'; // default — user changes at creation
   final List<XFile> _selectedImages = [];
   final List<String> _existingImageUrls = []; // URLs from Firestore
+  final List<String> _pendingRemovedImageUrls = [];
   bool _isLoading = false;
   bool _hydrated = false;
   String? _pendingCreateEnquiryId;
@@ -1134,6 +1135,24 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
+    // Delete removed images from Storage only after the enquiry save succeeds,
+    // and only for admins (staff do not have Storage delete permissions).
+    if (_pendingRemovedImageUrls.isNotEmpty) {
+      if (ref.read(isAdminProvider)) {
+        for (final url in List<String>.of(_pendingRemovedImageUrls)) {
+          try {
+            await FirebaseStorage.instance.refFromURL(url).delete();
+          } catch (e) {
+            Log.w(
+              'Could not delete image from storage',
+              data: {'url': url, 'error': e.toString()},
+            );
+          }
+        }
+      }
+      _pendingRemovedImageUrls.clear();
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -1156,41 +1175,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
   }
 
-  Future<void> _removeExistingImage(int index) async {
+  void _removeExistingImage(int index) {
     if (index < 0 || index >= _existingImageUrls.length) return;
-    final removedUrl = _existingImageUrls[index];
-    final firestoreService = ref.read(firestoreServiceProvider);
     setState(() {
-      _existingImageUrls.removeAt(index);
-    });
-
-    if (widget.mode != 'edit' || widget.enquiryId == null) return;
-
-    try {
-      final storageRef = FirebaseStorage.instance.refFromURL(removedUrl);
-      await storageRef.delete();
-    } catch (e) {
-      Log.w(
-        'Could not delete image from storage',
-        data: {'url': removedUrl, 'error': e.toString()},
-      );
-    }
-
-    try {
-      await firestoreService.updateEnquiry(widget.enquiryId!, {
-        'images': List<String>.of(_existingImageUrls),
-      });
-      // Persisted: a later form save no longer needs to rewrite the whole list.
-      _initialImageUrls = List.unmodifiable(_existingImageUrls);
-    } catch (e) {
-      Log.e('Failed to update enquiry images after removal', error: e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image removed locally but failed to save — try saving the form'),
-          ),
-        );
+      final removedUrl = _existingImageUrls.removeAt(index);
+      if (!_pendingRemovedImageUrls.contains(removedUrl)) {
+        _pendingRemovedImageUrls.add(removedUrl);
       }
-    }
+    });
   }
 }
