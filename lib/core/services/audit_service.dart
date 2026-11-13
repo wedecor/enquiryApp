@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/logging/logger.dart';
+import '../utils/string_extension.dart';
 import 'firestore_service.dart';
 
 /// Service for tracking audit trail and change history
@@ -430,18 +431,5 @@ class AuditService {
         'users_involved': <String>[],
       };
     }
-  }
-}
-
-/// Extension to convert string to title case
-extension StringExtension on String {
-  String toTitleCase() {
-    if (isEmpty) return this;
-    return split(' ')
-        .map((word) {
-          if (word.isEmpty) return word;
-          return word[0].toUpperCase() + word.substring(1).toLowerCase();
-        })
-        .join(' ');
   }
 }

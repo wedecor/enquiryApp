@@ -53,15 +53,12 @@ void main() {
       });
 
       test('enquiryRow sanitizes all cells', () {
-        final row = CsvExport.enquiryRow(
-          {
-            'id': 'e1',
-            'customerName': '=1+1',
-            'customerPhone': '+919876543210',
-            'notes': '@evil',
-          },
-          isAdminUser: false,
-        );
+        final row = CsvExport.enquiryRow({
+          'id': 'e1',
+          'customerName': '=1+1',
+          'customerPhone': '+919876543210',
+          'notes': '@evil',
+        }, isAdminUser: false);
         expect(row[0], 'e1');
         expect(row[1], "'=1+1");
         expect(row[2], "'+919876543210");

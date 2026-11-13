@@ -358,7 +358,9 @@ class FirestoreService {
   /// one batch. See [EnquiryFinancials].
   Future<String> _createWithFinancials(Map<String, dynamic> data, {String? enquiryId}) async {
     final parts = EnquiryFinancials.split(data);
-    final docRef = enquiryId != null ? _enquiriesCollection.doc(enquiryId) : _enquiriesCollection.doc();
+    final docRef = enquiryId != null
+        ? _enquiriesCollection.doc(enquiryId)
+        : _enquiriesCollection.doc();
     final batch = firestore.batch()..set(docRef, parts.parent);
     if (parts.money.isNotEmpty) {
       batch.set(

@@ -153,42 +153,45 @@ void main() {
         expect((await fakeDb.collection('enquiries_trash').doc('enq-3').get()).exists, isTrue);
       });
 
-      test('createEnquiry uses client-generated id and writes financial summary atomically', () async {
-        final fakeDb = FakeFirebaseFirestore();
-        final service = FirestoreService(firestore: fakeDb);
-        final id = service.newEnquiryId();
+      test(
+        'createEnquiry uses client-generated id and writes financial summary atomically',
+        () async {
+          final fakeDb = FakeFirebaseFirestore();
+          final service = FirestoreService(firestore: fakeDb);
+          final id = service.newEnquiryId();
 
-        final createdId = await service.createEnquiry(
-          enquiryId: id,
-          customerName: 'Priya',
-          customerEmail: 'priya@example.com',
-          customerPhone: '9876543210',
-          eventType: 'wedding',
-          eventDate: DateTime(2027, 2, 14),
-          eventLocation: 'Bangalore',
-          guestCount: 150,
-          budgetRange: '1L-2L',
-          description: 'Floral decor',
-          createdBy: 'admin-1',
-          priority: 'high',
-          source: 'instagram',
-          totalCost: 120000,
-          advancePaid: 30000,
-          extraFinancialFields: {'quotedAmount': 125000},
-        );
+          final createdId = await service.createEnquiry(
+            enquiryId: id,
+            customerName: 'Priya',
+            customerEmail: 'priya@example.com',
+            customerPhone: '9876543210',
+            eventType: 'wedding',
+            eventDate: DateTime(2027, 2, 14),
+            eventLocation: 'Bangalore',
+            guestCount: 150,
+            budgetRange: '1L-2L',
+            description: 'Floral decor',
+            createdBy: 'admin-1',
+            priority: 'high',
+            source: 'instagram',
+            totalCost: 120000,
+            advancePaid: 30000,
+            extraFinancialFields: {'quotedAmount': 125000},
+          );
 
-        expect(createdId, id);
-        final parent = await fakeDb.collection('enquiries').doc(id).get();
-        expect(parent.exists, isTrue);
-        expect(parent.data()!.containsKey('totalCost'), isFalse);
-        expect(parent.data()!.containsKey('quotedAmount'), isFalse);
+          expect(createdId, id);
+          final parent = await fakeDb.collection('enquiries').doc(id).get();
+          expect(parent.exists, isTrue);
+          expect(parent.data()!.containsKey('totalCost'), isFalse);
+          expect(parent.data()!.containsKey('quotedAmount'), isFalse);
 
-        final fin = await EnquiryFinancials.ref(fakeDb, id).get();
-        expect(fin.exists, isTrue);
-        expect(fin.data()!['totalCost'], 120000);
-        expect(fin.data()!['advancePaid'], 30000);
-        expect(fin.data()!['quotedAmount'], 125000);
-      });
+          final fin = await EnquiryFinancials.ref(fakeDb, id).get();
+          expect(fin.exists, isTrue);
+          expect(fin.data()!['totalCost'], 120000);
+          expect(fin.data()!['advancePaid'], 30000);
+          expect(fin.data()!['quotedAmount'], 125000);
+        },
+      );
     });
   });
 }

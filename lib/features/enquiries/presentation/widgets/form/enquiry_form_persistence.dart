@@ -1143,10 +1143,7 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
           try {
             await FirebaseStorage.instance.refFromURL(url).delete();
           } catch (e) {
-            Log.w(
-              'Could not delete image from storage',
-              data: {'url': url, 'error': e.toString()},
-            );
+            Log.w('Could not delete image from storage', data: {'url': url, 'error': e.toString()});
           }
         }
       }

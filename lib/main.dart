@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_check/app_check_bootstrap.dart';
 import 'core/app_config.dart';
-import 'core/config/firebase_config.dart';
 import 'core/logging/logger.dart';
 import 'core/notifications/fcm_bootstrap.dart';
 import 'core/notifications/notification_router.dart';
@@ -103,9 +102,8 @@ Future<void> _bootstrap() async {
     };
   }
 
-  // Security check for environment variables
+  // Runtime configuration check
   if (kDebugMode) {
-    Log.w('Firebase security warning', data: FirebaseConfig.securityWarning);
     Log.d(
       'Runtime configuration',
       data: {

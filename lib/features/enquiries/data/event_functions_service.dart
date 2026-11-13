@@ -13,10 +13,7 @@ import '../domain/event_functions.dart';
 /// the search index, then a "Functions" history entry.
 /// None of these fields are staff-protected in firestore.rules.
 class EventFunctionsService {
-  const EventFunctionsService(
-    this._firestoreService,
-    this._auditService,
-  );
+  const EventFunctionsService(this._firestoreService, this._auditService);
 
   final FirestoreService _firestoreService;
   final AuditService _auditService;
@@ -69,8 +66,6 @@ class EventFunctionsService {
 }
 
 final eventFunctionsServiceProvider = Provider<EventFunctionsService>(
-  (ref) => EventFunctionsService(
-    ref.watch(firestoreServiceProvider),
-    ref.watch(auditServiceProvider),
-  ),
+  (ref) =>
+      EventFunctionsService(ref.watch(firestoreServiceProvider), ref.watch(auditServiceProvider)),
 );

@@ -3,13 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-// Import our secure configuration
-import 'package:we_decor_enquiries/core/config/firebase_config.dart';
-
 /// Default Firebase configuration options for the current platform.
-///
-/// This class provides platform-specific Firebase configuration options
-/// using secure environment variable handling instead of hardcoded API keys.
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -19,14 +13,11 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        return ios;
       case TargetPlatform.macOS:
-        return macos;
       case TargetPlatform.windows:
-        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
+          'DefaultFirebaseOptions have not been configured for $defaultTargetPlatform - '
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
@@ -52,32 +43,5 @@ class DefaultFirebaseOptions {
     messagingSenderId: '747327664982',
     projectId: 'wedecorenquries',
     storageBucket: 'wedecorenquries.firebasestorage.app',
-  );
-
-  static FirebaseOptions get ios => FirebaseOptions(
-    apiKey: FirebaseConfig.apiKey,
-    appId: '1:270194759200:ios:add1c459e9abd7879cce45',
-    messagingSenderId: '270194759200',
-    projectId: 'wedecorenquries',
-    storageBucket: 'wedecorenquries.appspot.com',
-    iosBundleId: 'com.example.weDecorEnquiries',
-  );
-
-  static FirebaseOptions get macos => FirebaseOptions(
-    apiKey: FirebaseConfig.apiKey,
-    appId: '1:270194759200:ios:add1c459e9abd7879cce45',
-    messagingSenderId: '270194759200',
-    projectId: 'wedecorenquries',
-    storageBucket: 'wedecorenquries.appspot.com',
-    iosBundleId: 'com.example.weDecorEnquiries',
-  );
-
-  static FirebaseOptions get windows => FirebaseOptions(
-    apiKey: FirebaseConfig.apiKey,
-    appId: '1:270194759200:web:we_decor_enquiries',
-    messagingSenderId: '270194759200',
-    projectId: 'wedecorenquries',
-    authDomain: 'wedecorenquries.firebaseapp.com',
-    storageBucket: 'wedecorenquries.appspot.com',
   );
 }
