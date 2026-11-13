@@ -5,6 +5,7 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { occasionEventOf } from "./eventFunctions";
 import { IST_TIME_ZONE } from "./istTime";
+import { notificationExpireAt } from "./notificationTtl";
 import { phoneOf, planOccasionStamps, stampFields } from "./occasionStamping";
 import {
   ReminderPlan,
@@ -345,6 +346,7 @@ export async function scheduleReengagementsCore(now: Date): Promise<Reengagement
       },
       read: false,
       createdAt: FieldValue.serverTimestamp(),
+      expireAt: notificationExpireAt(now),
     });
     pendingWrites += 1;
   }

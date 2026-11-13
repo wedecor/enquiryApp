@@ -5,6 +5,7 @@ import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { normalizePhone } from "./customers";
 import { IST_OFFSET_MS, istDayStart, istShortDate } from "./istTime";
+import { notificationExpireAt } from "./notificationTtl";
 
 /**
  * Website → app enquiries.
@@ -405,6 +406,7 @@ export async function handleWebsiteLead(
       },
       read: false,
       createdAt: FieldValue.serverTimestamp(),
+      expireAt: notificationExpireAt(now),
     });
   }
 

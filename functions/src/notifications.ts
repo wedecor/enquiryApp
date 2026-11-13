@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { canonicalStatus, statusLabel } from "./statusVocabulary";
+import { notificationExpireAt } from "./notificationTtl";
 
 /**
  * Trusted enquiry notifications (create / assign / status change / edit).
@@ -330,6 +331,7 @@ export async function handleNotifyEnquiryEvent(
           read: false,
           createdBy: callerUid,
           createdAt: FieldValue.serverTimestamp(),
+          expireAt: notificationExpireAt(now),
         });
         queued += 1;
       } catch (error: any) {

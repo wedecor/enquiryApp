@@ -10,6 +10,7 @@ import {
 import { allEventDaysPassed } from "./followUpsLogic";
 import { IST_TIME_ZONE, istDayStart } from "./istTime";
 import { planOccasionStamps, stampFields } from "./occasionStamping";
+import { notificationExpireAt } from "./notificationTtl";
 import { OccasionStamp } from "./reengagementLogic";
 
 const PAGE_SIZE = 300;
@@ -140,6 +141,7 @@ export async function flagPastEventOpenEnquiries(
             read: false,
             createdBy: "system:auto-expire",
             createdAt: FieldValue.serverTimestamp(),
+            expireAt: notificationExpireAt(now),
           });
         });
         return true;
@@ -296,6 +298,7 @@ export async function runAutoExpire(
               },
               read: false,
               createdAt: FieldValue.serverTimestamp(),
+              expireAt: notificationExpireAt(now),
             }
           );
         }

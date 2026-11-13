@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { notificationExpireAt } from "./notificationTtl";
 import {
   DEFAULT_FOLLOW_UP_CONFIG,
   FollowUpConfig,
@@ -222,6 +223,7 @@ export async function runFollowUpReminders(
           read: false,
           createdBy: SYSTEM_FOLLOW_UPS,
           createdAt: FieldValue.serverTimestamp(),
+          expireAt: notificationExpireAt(now),
         });
       });
       return { stage, individual, summarised, name: content.data.customerName };
@@ -256,6 +258,7 @@ export async function runFollowUpReminders(
         read: false,
         createdBy: SYSTEM_FOLLOW_UPS,
         createdAt: FieldValue.serverTimestamp(),
+        expireAt: notificationExpireAt(now),
       });
     } catch (error: any) {
       if (error?.code !== 6) logger.warn("followUps: summary failed", { uid, error: error?.message });
