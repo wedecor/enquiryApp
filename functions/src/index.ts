@@ -127,10 +127,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         }
       }
 
-      const emailLower = email.toLowerCase();
-      const existingDocs = await db.collection('users').where('email', 'in', Array.from(new Set([email, emailLower]))).limit(1).get();
-
-      if (authUserExists || !existingDocs.empty) {
+      if (authUserExists) {
         throw new HttpsError('already-exists', 'A user with this email already exists');
       }
 
@@ -142,27 +139,38 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         displayName,
       });
 
-      // Generate password reset link
-      const resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
+      let resetLink: string;
+      try {
+        // Generate password reset link
+        resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
 
-      // Public profile: name / role / isActive only (every active user can read it).
-      // Contact details go to users/{uid}/private/profile (owner + admins only).
-      const userRef = db.collection('users').doc(userRecord.uid);
-      const profileBatch = db.batch();
-      profileBatch.set(userRef, {
-        uid: userRecord.uid,
-        name: displayName,
-        role,
-        isActive: true, // Standardized field name
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      profileBatch.set(privateProfileRef(userRef), {
-        email,
-        phone: '',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      await profileBatch.commit();
+        // Public profile: name / role / isActive only (every active user can read it).
+        // Contact details go to users/{uid}/private/profile (owner + admins only).
+        const userRef = db.collection('users').doc(userRecord.uid);
+        const profileBatch = db.batch();
+        profileBatch.set(userRef, {
+          uid: userRecord.uid,
+          name: displayName,
+          role,
+          isActive: true, // Standardized field name
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        profileBatch.set(privateProfileRef(userRef), {
+          email,
+          phone: '',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        await profileBatch.commit();
+      } catch (err) {
+        await auth.deleteUser(userRecord.uid).catch((delErr) => {
+          logger.error('Failed to roll back Auth user after inviteUser failure', {
+            uid: userRecord.uid,
+            delErr,
+          });
+        });
+        throw err;
+      }
 
       logger.info('User invitation completed', {
         uid: userRecord.uid,
