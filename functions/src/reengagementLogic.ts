@@ -9,7 +9,7 @@
  * lib/features/reengagement/domain/occasion_kind.dart.
  */
 
-import { IST_OFFSET_MS } from "./istTime";
+import { IST_OFFSET_MS, istDayStart } from "./istTime";
 
 export type OccasionKind =
   | "wedding_anniversary"
@@ -245,23 +245,82 @@ const LOST_STATUSES = new Set(["not_interested", "closed_lost", "cancelled"]);
 /** Lost reasons that never get a yearly wish (not a real lead / not our kind of event). */
 const NO_WISH_LOST_REASONS = new Set(["duplicate", "out_of_scope"]);
 
+/** Open pipeline statuses: "still talking" only when the event date is today or future. */
+export const OPEN_STATUSES = new Set(["new", "in_talks", "approved"]);
+
 /** Occasion kinds that never get a yearly wish: a company has no personal occasion. */
 export const NO_WISH_KINDS: ReadonlySet<OccasionKind> = new Set<OccasionKind>(["corporate"]);
 
-/**
- * A lost enquiry still gets a yearly wish (it's the customer's own occasion) when its
- * date is trustworthy: the enquiry reached In Talks, or it was auto-closed after the
- * event date passed. Duplicates and "not something we do" never do.
- */
-export function isWishEligibleLost(input: {
-  status: string | null;
+/** Inputs for [isWishEligible]. Status is irrelevant — only the occasion date and exclusions. */
+export type WishEligibilityInput = {
+  /** Occasion event date (main / wedding-anchor function). Must be before today IST. */
+  eventDate: Date | null;
+  /** Clock for tests; defaults to now. */
+  now?: Date;
+  merged: boolean;
   lostReason: unknown;
-  reachedInTalks: boolean;
-  autoClosed: boolean;
-}): boolean {
-  if (!input.status || !LOST_STATUSES.has(input.status)) return false;
+  /** Stamped kind when present; otherwise derived from event type. */
+  occasionKind?: unknown;
+  eventTypeValue?: unknown;
+  eventTypeLabel?: unknown;
+  /** `occasionReminders !== false`. Defaults to on when omitted. */
+  remindersOn?: boolean;
+  /** When provided, must have at least [MIN_PHONE_DIGITS] digits. */
+  phoneNormalized?: string;
+  /** `customer_prefs.noReminders === true`. */
+  optedOut?: boolean;
+};
+
+/**
+ * Yearly-wish eligibility: occasion date is in the past (IST), not merged, not
+ * duplicate/out_of_scope, not corporate, reminders on, usable phone when given,
+ * not opted out. Status does not matter (completed, lost, or open-past all qualify).
+ */
+export function isWishEligible(input: WishEligibilityInput): boolean {
+  if (!input.eventDate) return false;
+  const now = input.now ?? new Date();
+  if (istDayStart(input.eventDate).getTime() >= istDayStart(now).getTime()) return false;
+  if (input.merged) return false;
   if (typeof input.lostReason === "string" && NO_WISH_LOST_REASONS.has(input.lostReason)) return false;
-  return input.reachedInTalks || input.autoClosed;
+  const kind = isOccasionKind(input.occasionKind)
+    ? input.occasionKind
+    : occasionKindFor(input.eventTypeValue, input.eventTypeLabel);
+  if (NO_WISH_KINDS.has(kind)) return false;
+  if (input.remindersOn === false) return false;
+  if (input.phoneNormalized !== undefined && input.phoneNormalized.length < MIN_PHONE_DIGITS) {
+    return false;
+  }
+  if (input.optedOut === true) return false;
+  return true;
+}
+
+/**
+ * Thin wrapper around [isWishEligible] for older call sites. Status / reachedInTalks /
+ * autoClosed are ignored — past event date is what matters now.
+ */
+export function isWishEligibleLost(
+  input: WishEligibilityInput & {
+    status?: string | null;
+    reachedInTalks?: boolean;
+    autoClosed?: boolean;
+  }
+): boolean {
+  return isWishEligible(input);
+}
+
+/**
+ * "Still talking to them": open status (new / in_talks / approved) whose occasion
+ * event date is today or in the future (IST). Open + past date does not block wishes.
+ * Missing event date is treated as still active (conservative).
+ */
+export function isActiveOpenEnquiry(
+  status: string | null,
+  eventDate: Date | null,
+  now: Date = new Date()
+): boolean {
+  if (!status || !OPEN_STATUSES.has(status)) return false;
+  if (!eventDate) return true;
+  return istDayStart(eventDate).getTime() >= istDayStart(now).getTime();
 }
 
 export function hasOccasionStamp(s: Pick<StampSource, "occasionKind" | "occasionMonthDay" | "occasionDate">): boolean {
@@ -346,8 +405,8 @@ export type ReminderSource = {
   eventTypeLabel: string;
   eventDate: Date | null;
   assignedTo: string | null;
-  /** Lost enquiry that still gets a wish (see isWishEligibleLost). */
-  lostEligible: boolean;
+  /** Wish-eligible under [isWishEligible] (past occasion date; not blocked). */
+  wishEligible: boolean;
 };
 
 export type ReminderPlan = {
@@ -365,18 +424,25 @@ export function reminderDocId(phoneNormalized: string, kind: OccasionKind, year:
 }
 
 export type SkipCounts = Record<
-  "notCompleted" | "merged" | "remindersOff" | "sameYear" | "noPhone" | "optedOut" | "duplicate" | "noWishKind" | "activeEnquiry",
+  | "notEligible"
+  | "merged"
+  | "remindersOff"
+  | "sameYear"
+  | "noPhone"
+  | "optedOut"
+  | "duplicate"
+  | "noWishKind"
+  | "activeEnquiry",
   number
 >;
 
 /**
- * One reminder per (phone, kind, year) for the target year. Skips: neither completed
- * nor a wish-eligible lost enquiry, corporate occasions, merged duplicates,
- * `occasionReminders == false`, occasion in the target year or later (not an
- * anniversary yet), no usable phone, opted-out customers, and customers who have an
- * open enquiry right now (the team is already talking to them).
- * Within a (phone, kind) group the wedding itself wins, then a filled-in person,
- * then the latest event.
+ * One reminder per (phone, kind, year) for the target year. Skips: not wish-eligible
+ * (see [isWishEligible]), corporate occasions, merged duplicates, reminders off,
+ * occasion in the target year or later, no usable phone, opted-out customers, and
+ * customers with an open enquiry whose event is today/future (still talking).
+ * Within a (phone, kind) group: completed first, then wedding anchor, then a
+ * filled-in person, then the latest event.
  */
 export function selectReminders(
   sources: readonly ReminderSource[],
@@ -385,7 +451,7 @@ export function selectReminders(
   activePhones: ReadonlySet<string> = new Set<string>()
 ): { plans: ReminderPlan[]; skipped: SkipCounts } {
   const skipped: SkipCounts = {
-    notCompleted: 0,
+    notEligible: 0,
     merged: 0,
     remindersOff: 0,
     sameYear: 0,
@@ -397,8 +463,8 @@ export function selectReminders(
   };
   const groups = new Map<string, ReminderSource[]>();
   for (const s of sources) {
-    if (s.status !== "completed" && !s.lostEligible) {
-      skipped.notCompleted++;
+    if (!s.wishEligible) {
+      skipped.notEligible++;
       continue;
     }
     if (NO_WISH_KINDS.has(s.occasionKind)) {
