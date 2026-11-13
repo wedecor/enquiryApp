@@ -249,9 +249,7 @@ class AuditService {
         .limit(100)
         .snapshots()
         .timeout(const Duration(seconds: 30))
-        .map(
-          (snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList(),
-        )
+        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList())
         .handleError((Object error) {
           Log.e(
             'AuditService: financial_history stream error',
