@@ -16,6 +16,7 @@
     <application
         android:label="We Decor"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher">
         <!-- Default channel for FCM pushes without an explicit channel;
              created in MainActivity. -->

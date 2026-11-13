@@ -1122,11 +1122,17 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(pref(ADMIN_UID, 'admin').delete());
     });
 
-    test('✅ Active users can read customer_prefs', async () => {
+    test('✅ Active users can get a single customer_prefs doc; ❌ staff cannot list; ✅ admin can list', async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         await context.firestore().collection('customer_prefs').doc('9876543210').set({ noReminders: true });
       });
       await assertSucceeds(pref(STAFF_UID, 'staff').get());
+      await assertFails(
+        testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore().collection('customer_prefs').get()
+      );
+      await assertSucceeds(
+        testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore().collection('customer_prefs').get()
+      );
     });
   });
 
@@ -1469,22 +1475,29 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       );
     });
 
-    test('✅ Admin can manage user roles', async () => {
+    test('❌ Admins cannot write users/{uid} directly from the client (server-only)', async () => {
       const adminContext = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' });
       const firestore = adminContext.firestore();
 
-      await assertSucceeds(
+      await assertFails(
         firestore.collection('users').doc(STAFF_UID).update({
           active: false,
           updatedAt: new Date(),
         })
       );
 
-      // Restore for other tests
-      await assertSucceeds(
-        firestore.collection('users').doc(STAFF_UID).update({
-          active: true,
+      await assertFails(
+        firestore.collection('users').doc(ADMIN_UID).update({
+          role: 'staff',
           updatedAt: new Date(),
+        })
+      );
+
+      await assertFails(
+        firestore.collection('users').doc('new-user-999').set({
+          name: 'Direct Create',
+          role: 'staff',
+          isActive: true,
         })
       );
     });
@@ -1581,6 +1594,362 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(
         catalog(STAFF_UID, 'staff').set({ name: 'Hack', unitPrice: 1 })
       );
+    });
+  });
+
+  describe('Enquiries Trash & Restore Rules', () => {
+    const trashRef = (uid, role, id = 'trash-enq-1') =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries_trash').doc(id);
+
+    test('❌ Staff cannot read, create, update, or delete enquiries_trash', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries_trash').doc('trash-enq-1').set({
+          enquiry: { customerName: 'Test', statusValue: 'new' },
+          financial: null,
+          deletedAt: new Date(),
+          deletedBy: ADMIN_UID,
+        });
+      });
+
+      await assertFails(trashRef(STAFF_UID, 'staff').get());
+      await assertFails(trashRef(STAFF_UID, 'staff', 'trash-enq-2').set({ enquiry: {} }));
+      await assertFails(trashRef(STAFF_UID, 'staff').update({ deletedBy: STAFF_UID }));
+      await assertFails(trashRef(STAFF_UID, 'staff').delete());
+    });
+
+    test('✅ Admin can create, read, and delete enquiries_trash, but cannot update', async () => {
+      await assertSucceeds(
+        trashRef(ADMIN_UID, 'admin').set({
+          enquiry: { customerName: 'Test', statusValue: 'new' },
+          financial: { totalCost: 50000 },
+          deletedAt: new Date(),
+          deletedBy: ADMIN_UID,
+        })
+      );
+      await assertSucceeds(trashRef(ADMIN_UID, 'admin').get());
+      await assertFails(trashRef(ADMIN_UID, 'admin').update({ deletedBy: 'other' }));
+      await assertSucceeds(trashRef(ADMIN_UID, 'admin').delete());
+    });
+
+    test('✅ Admin restore passes no-money check on enquiries and fails if money is on parent', async () => {
+      const adminDb = testEnv.authenticatedContext(ADMIN_UID, { role: 'admin' }).firestore();
+      await assertSucceeds(
+        adminDb.collection('enquiries').doc('restored-1').set({
+          customerName: 'Restored Client',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+        })
+      );
+      await assertSucceeds(
+        adminDb.collection('enquiries').doc('restored-1').collection('financial').doc('summary').set({
+          totalCost: 75000,
+          advancePaid: 20000,
+        })
+      );
+      await assertFails(
+        adminDb.collection('enquiries').doc('restored-bad').set({
+          customerName: 'Bad Restore',
+          statusValue: 'new',
+          totalCost: 75000,
+        })
+      );
+    });
+  });
+
+  describe('Staff Enquiry Allowlist Rules', () => {
+    test('❌ Staff cannot set mergedInto or other non-allowlisted fields', async () => {
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+      await assertFails(ref.update({ mergedInto: 'other-id', updatedBy: STAFF_UID }));
+      await assertFails(ref.update({ websiteLeadId: 'web_123', updatedBy: STAFF_UID }));
+      await assertFails(ref.update({ pastEventReviewAt: new Date(), updatedBy: STAFF_UID }));
+    });
+
+    test('✅ Staff can save a full realistic edit-form payload', async () => {
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+      await assertSucceeds(
+        ref.update({
+          customerName: 'John Updated',
+          customerPhone: '+919876543210',
+          customerEmail: 'john.updated@example.com',
+          eventLocation: 'Palace Grounds, Bengaluru',
+          locationArea: 'Sadashivanagar',
+          eventType: 'wedding',
+          eventTypeValue: 'wedding',
+          eventTypeLabel: 'Wedding',
+          eventDate: new Date('2027-01-15'),
+          notes: 'Updated decor notes',
+          description: 'Updated decor notes',
+          guestCount: 250,
+          budgetRange: '1L-2L',
+          source: 'referral',
+          sourceValue: 'referral',
+          sourceLabel: 'Referral',
+          priority: 'high',
+          priorityValue: 'high',
+          priorityLabel: 'High',
+          images: ['https://example.com/a.jpg'],
+          customerNameLower: 'john updated',
+          phoneNormalized: '9876543210',
+          textIndex: 'john updated 9876543210 wedding',
+          updatedBy: STAFF_UID,
+        })
+      );
+    });
+
+    test('✅ Staff can save status change, follow-up complete, and follow-up reschedule payloads', async () => {
+      const { serverTimestamp, increment } = require('firebase/firestore');
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('enquiry-allowlist-flow').set({
+          customerName: 'Flow User',
+          customerEmail: 'flow@example.com',
+          customerPhone: '+1234567890',
+          eventType: 'Wedding',
+          eventDate: new Date('2024-12-01'),
+          eventLocation: 'Grand Hotel',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+        });
+      });
+
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const ref = staffDb.collection('enquiries').doc('enquiry-allowlist-flow');
+
+      await assertSucceeds(
+        ref.update({
+          statusValue: 'in_talks',
+          statusLabel: 'In Talks',
+          statusUpdatedAt: serverTimestamp(),
+          statusUpdatedBy: STAFF_UID,
+          inTalksAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertSucceeds(
+        ref.update({
+          followUpDueAt: null,
+          followUpSeq: increment(1),
+          followUpNotifiedStage: null,
+          followUpLastCompletedAt: serverTimestamp(),
+          followUpLastCompletedBy: STAFF_UID,
+          updatedAt: serverTimestamp(),
+        })
+      );
+
+      await assertSucceeds(
+        ref.update({
+          followUpDueAt: new Date(Date.now() + 86400000),
+          followUpSeq: increment(1),
+          followUpNotifiedStage: null,
+          followUpReason: 'callback',
+          followUpScheduledBy: STAFF_UID,
+          followUpNote: 'Call back tomorrow',
+          updatedAt: serverTimestamp(),
+        })
+      );
+    });
+  });
+
+  describe('History Validation & Immutability Rules', () => {
+    test('✅ Valid history entry succeeds (string, num, timestamp, null); extra/oversize fields fail', async () => {
+      const { serverTimestamp, Timestamp } = require('firebase/firestore');
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const histCol = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff').collection('history');
+
+      await assertSucceeds(
+        histCol.add({
+          field_changed: 'statusValue',
+          old_value: 'new',
+          new_value: 'in_talks',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertSucceeds(
+        histCol.add({
+          field_changed: 'eventDate',
+          old_value: null,
+          new_value: Timestamp.fromDate(new Date('2027-01-01')),
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'statusValue',
+          old_value: 'new',
+          new_value: 'in_talks',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+          extra: 'not-allowed',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'x'.repeat(61),
+          old_value: 'a',
+          new_value: 'b',
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+
+      await assertFails(
+        histCol.add({
+          field_changed: 'notes',
+          old_value: 'a',
+          new_value: 'y'.repeat(2001),
+          user_id: STAFF_UID,
+          timestamp: serverTimestamp(),
+          user_email: 'staff@example.com',
+        })
+      );
+    });
+
+    test('❌ Neither staff nor admin can delete history entries', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('history')
+          .doc('hist-1')
+          .set({ field_changed: 'notes', old_value: 'a', new_value: 'b', user_id: STAFF_UID });
+      });
+
+      const staffHist = testEnv
+        .authenticatedContext(STAFF_UID, { role: 'staff' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history')
+        .doc('hist-1');
+      const adminHist = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history')
+        .doc('hist-1');
+
+      await assertFails(staffHist.delete());
+      await assertFails(adminHist.delete());
+    });
+  });
+
+  describe('Financial History Rules (Money History Isolation)', () => {
+    it('❌ Staff cannot read or create financial_history', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('financial_history')
+          .doc('fh-1')
+          .set({
+            field_changed: 'totalCost',
+            old_value: 1000,
+            new_value: 2000,
+            user_id: ADMIN_UID,
+            user_email: 'admin@test.com',
+          });
+      });
+
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const fhCol = staffDb
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('financial_history');
+
+      await assertFails(fhCol.doc('fh-1').get());
+      await assertFails(fhCol.get());
+      await assertFails(
+        fhCol.doc('fh-2').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: STAFF_UID,
+          user_email: 'staff@test.com',
+        }),
+      );
+    });
+
+    it('❌ Neither staff nor admin can create a history doc with money field_changed (totalCost / totalcost)', async () => {
+      const staffHist = testEnv
+        .authenticatedContext(STAFF_UID, { role: 'staff' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history');
+      const adminHist = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history');
+
+      await assertFails(
+        staffHist.doc('bad-1').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: STAFF_UID,
+          user_email: 'staff@test.com',
+        }),
+      );
+      await assertFails(
+        adminHist.doc('bad-2').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+      await assertFails(
+        adminHist.doc('bad-3').set({
+          field_changed: 'totalcost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+    });
+
+    it('✅ Admin can create and read financial_history, but cannot update or delete', async () => {
+      const adminFh = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('financial_history')
+        .doc('fh-admin-1');
+
+      await assertSucceeds(
+        adminFh.set({
+          field_changed: 'totalCost',
+          old_value: 10000,
+          new_value: 15000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+      await assertSucceeds(adminFh.get());
+      await assertFails(adminFh.update({ new_value: 20000 }));
+      await assertFails(adminFh.delete());
     });
   });
 });

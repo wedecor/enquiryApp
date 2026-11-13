@@ -7,6 +7,7 @@ import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 // Removed deprecated config import for Firebase Functions v2
 import { createEmailTransporter, getSmtpFromAddress, SMTP_SECRET_NAMES } from "./smtp";
+import { isActiveUserData } from "./auth";
 
 setGlobalOptions({
   region: "asia-south1",
@@ -46,12 +47,6 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
 }
 
 /** users/{uid}/private/profile — phone and email (owner + admins only, firestore.rules). */
@@ -132,10 +127,7 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         }
       }
 
-      const emailLower = email.toLowerCase();
-      const existingDocs = await db.collection('users').where('email', 'in', Array.from(new Set([email, emailLower]))).limit(1).get();
-
-      if (authUserExists || !existingDocs.empty) {
+      if (authUserExists) {
         throw new HttpsError('already-exists', 'A user with this email already exists');
       }
 
@@ -147,27 +139,38 @@ export const inviteUser = onCall<InviteUserRequest, Promise<InviteUserResponse>>
         displayName,
       });
 
-      // Generate password reset link
-      const resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
+      let resetLink: string;
+      try {
+        // Generate password reset link
+        resetLink = await auth.generatePasswordResetLink(email, ACTION_CODE_SETTINGS);
 
-      // Public profile: name / role / isActive only (every active user can read it).
-      // Contact details go to users/{uid}/private/profile (owner + admins only).
-      const userRef = db.collection('users').doc(userRecord.uid);
-      const profileBatch = db.batch();
-      profileBatch.set(userRef, {
-        uid: userRecord.uid,
-        name: displayName,
-        role,
-        isActive: true, // Standardized field name
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      profileBatch.set(privateProfileRef(userRef), {
-        email,
-        phone: '',
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      await profileBatch.commit();
+        // Public profile: name / role / isActive only (every active user can read it).
+        // Contact details go to users/{uid}/private/profile (owner + admins only).
+        const userRef = db.collection('users').doc(userRecord.uid);
+        const profileBatch = db.batch();
+        profileBatch.set(userRef, {
+          uid: userRecord.uid,
+          name: displayName,
+          role,
+          isActive: true, // Standardized field name
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        profileBatch.set(privateProfileRef(userRef), {
+          email,
+          phone: '',
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        await profileBatch.commit();
+      } catch (err) {
+        await auth.deleteUser(userRecord.uid).catch((delErr) => {
+          logger.error('Failed to roll back Auth user after inviteUser failure', {
+            uid: userRecord.uid,
+            delErr,
+          });
+        });
+        throw err;
+      }
 
       logger.info('User invitation completed', {
         uid: userRecord.uid,
@@ -661,7 +664,7 @@ export const adminUpdateUser = onCall<AdminUpdateUserRequest, Promise<{ ok: true
 export { autoExpireEnquiries } from "./autoExpireEnquiries";
 export { lookupCustomer } from "./customers";
 export { setReengagementPref } from "./customerPrefs";
-export { notifyEnquiryEvent } from "./notifications";
+export { notifyEnquiryEvent, onEnquiryWrittenNotify } from "./notifications";
 export { onEnquiryWrittenFollowUp, followUpReminders } from "./followUps";
 export { approvedOnDate } from "./bookings";
 export { placesAutocomplete, placeDetails } from "./places";

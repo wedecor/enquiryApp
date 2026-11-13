@@ -12,7 +12,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
 # Keep public/android/version.json (version + buildNumber) in sync on every release.
-version: 2.0.29+60
+version: 2.0.30+61
 
 environment:
   sdk: ^3.8.1
@@ -70,6 +70,7 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  fake_cloud_firestore: ">=4.0.0 <4.1.1"
 
 # pdf → image 4.11 expects archive.decodeLazy, which archive 4.0.9 lacks.
 dependency_overrides:

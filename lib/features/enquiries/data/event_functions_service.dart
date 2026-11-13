@@ -1,30 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/logging/logger.dart';
 import '../../../core/providers/audit_provider.dart';
-import '../../../core/providers/notification_provider.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../core/services/notification_service.dart' as notification_service;
 import '../../../core/utils/enquiry_fields.dart';
 import '../domain/event_functions.dart';
 
 /// Saves a booking's functions from the details screen (admins and the assigned staff).
 ///
 /// Writes `functions` plus the synced top-level fields ([functionsWriteFields]) and
-/// the search index, then a "Functions" history entry and an update push.
+/// the search index, then a "Functions" history entry.
 /// None of these fields are staff-protected in firestore.rules.
 class EventFunctionsService {
-  const EventFunctionsService(
-    this._firestoreService,
-    this._auditService,
-    this._notificationService,
-  );
+  const EventFunctionsService(this._firestoreService, this._auditService);
 
   final FirestoreService _firestoreService;
   final AuditService _auditService;
-  final notification_service.NotificationService _notificationService;
 
   /// Firestore update for [functions] on a booking whose current data is [oldData].
   static Map<String, dynamic> updateFields({
@@ -70,25 +62,10 @@ class EventFunctionsService {
         newValue: newSummary,
       );
     }
-
-    try {
-      await _notificationService.notifyEnquiryUpdated(
-        enquiryId: enquiryId,
-        customerName: (oldData['customerName'] as String?) ?? 'Customer',
-        eventType: mainFunctionOf(functions)?.label ?? 'Event',
-        updatedBy: userId,
-        assignedTo: oldData['assignedTo'] as String?,
-      );
-    } catch (e) {
-      Log.w('EventFunctionsService: update push failed', data: {'error': e.toString()});
-    }
   }
 }
 
 final eventFunctionsServiceProvider = Provider<EventFunctionsService>(
-  (ref) => EventFunctionsService(
-    ref.watch(firestoreServiceProvider),
-    ref.watch(auditServiceProvider),
-    ref.watch(notificationServiceProvider),
-  ),
+  (ref) =>
+      EventFunctionsService(ref.watch(firestoreServiceProvider), ref.watch(auditServiceProvider)),
 );

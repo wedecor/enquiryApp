@@ -10,6 +10,8 @@ import {
 import { allEventDaysPassed } from "./followUpsLogic";
 import { IST_TIME_ZONE, istDayStart } from "./istTime";
 import { planOccasionStamps, stampFields } from "./occasionStamping";
+import { notificationExpireAt } from "./notificationTtl";
+import { isActiveUserData } from "./auth";
 import { OccasionStamp } from "./reengagementLogic";
 
 const PAGE_SIZE = 300;
@@ -24,12 +26,6 @@ type Recipient = { uid: string };
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
-}
-
-/** Users docs written before the isActive migration may still carry `active`. */
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  const isActive = data?.isActive ?? data?.active ?? true;
-  return isActive !== false;
 }
 
 async function loadActiveAdminIds(db: FirebaseFirestore.Firestore): Promise<string[]> {
@@ -140,6 +136,7 @@ export async function flagPastEventOpenEnquiries(
             read: false,
             createdBy: "system:auto-expire",
             createdAt: FieldValue.serverTimestamp(),
+            expireAt: notificationExpireAt(now),
           });
         });
         return true;
@@ -296,6 +293,7 @@ export async function runAutoExpire(
               },
               read: false,
               createdAt: FieldValue.serverTimestamp(),
+              expireAt: notificationExpireAt(now),
             }
           );
         }

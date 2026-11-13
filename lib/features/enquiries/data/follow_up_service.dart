@@ -39,6 +39,7 @@ class FollowUpService {
     'followUpLastCompletedAt': FieldValue.serverTimestamp(),
     'followUpLastCompletedBy': userId,
     'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': userId,
   };
 
   /// Fields written when [userId] moves the follow-up to [dueAt].
@@ -55,6 +56,7 @@ class FollowUpService {
     'followUpScheduledBy': userId,
     'followUpNote': cleanNote(note),
     'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': userId,
   };
 
   static String _describe(DateTime? dueAt) =>

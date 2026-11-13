@@ -30,10 +30,27 @@ describe("website lead parsing (pure)", () => {
     assert.equal(parsed.name, "Priya Sharma");
   });
 
-  it("rejects past dates, missing location and bad ids", () => {
+  it("rejects past dates, dates > 5 years ahead, missing location and bad ids", () => {
     assert.equal(parseWebsiteLead(payload({ date: "2026-11-01" }), NOW), "event date is in the past");
+    assert.equal(parseWebsiteLead(payload({ date: "2032-11-05" }), NOW), "event date is too far in the future");
     assert.equal(parseWebsiteLead({ ...payload(), event: { type: "Birthday", date: "2026-12-12" } }, NOW), "location required");
     assert.equal(parseWebsiteLead(payload({ externalId: "x" }), NOW), "externalId missing or invalid");
+  });
+
+  it("allows http/https pageUrl and nulls out non-http(s) or invalid urls", () => {
+    const valid = parseWebsiteLead(payload(), NOW);
+    assert.notEqual(typeof valid, "string");
+    if (typeof valid !== "string") {
+      assert.equal(valid.pageUrl, "https://www.wedecorevents.com/contact");
+    }
+
+    for (const bad of ["javascript:alert(1)", "data:text/html,hi", "not a url", "ftp://example.com/a"]) {
+      const parsed = parseWebsiteLead({ ...payload(), metadata: { pageUrl: bad } }, NOW);
+      assert.notEqual(typeof parsed, "string");
+      if (typeof parsed !== "string") {
+        assert.equal(parsed.pageUrl, null, `expected null for ${bad}`);
+      }
+    }
   });
 
   it("secret comparison is exact", () => {
@@ -109,6 +126,14 @@ describe("websiteLead + lookupCustomer (emulator)", { skip: !hasEmulator }, () =
     assert.equal(result.events[0].id, "web_lead-birthday-01");
     assert.equal(result.events[0].isOpen, true);
     assert.equal(result.customer?.name, "Priya Sharma");
+    assert.equal(result.customer?.phone, "+91 98765 43210");
+    assert.equal(result.customer?.email, "priya@example.com");
+
+    const unassigned = await handleLookupCustomer(db, "staff2", { phone: "98765 43210" });
+    assert.equal(unassigned.customer?.name, "Priya Sharma");
+    assert.equal(unassigned.customer?.email, null);
+    assert.equal(unassigned.customer?.whatsappNumber, null);
+    assert.equal(unassigned.customer?.phone, null);
 
     const after = (await db.collection("enquiries").get()).docs.map((d) => d.data());
     assert.deepEqual(after, before, "lookup is read-only");

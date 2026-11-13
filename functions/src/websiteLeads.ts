@@ -5,6 +5,7 @@ import { defineSecret } from "firebase-functions/params";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { normalizePhone } from "./customers";
 import { IST_OFFSET_MS, istDayStart, istShortDate } from "./istTime";
+import { notificationExpireAt } from "./notificationTtl";
 
 /**
  * Website → app enquiries.
@@ -19,7 +20,8 @@ import { IST_OFFSET_MS, istDayStart, istShortDate } from "./istTime";
  */
 const WEBSITE_LEAD_SECRET = defineSecret("WEBSITE_LEAD_SECRET");
 
-const CREATED_BY = "system:website";
+export const WEBSITE_LEAD_CREATED_BY = "system:website";
+const CREATED_BY = WEBSITE_LEAD_CREATED_BY;
 const SOURCE_VALUE = "google_website";
 const SOURCE_LABEL_FALLBACK = "Google / Website";
 const OTHER_EVENT_TYPE = { value: "others", label: "Others" };
@@ -125,12 +127,15 @@ export function parseWebsiteLead(body: WebsiteLeadPayload, now: Date = new Date(
 
   const eventDate = parseIstDate(body.event?.date);
   if (!eventDate) return "event date required (YYYY-MM-DD)";
-  if (eventDate.getTime() < istDayStart(now).getTime()) return "event date is in the past";
+  const todayStart = istDayStart(now);
+  if (eventDate.getTime() < todayStart.getTime()) return "event date is in the past";
+  const maxDate = new Date(todayStart.getTime());
+  maxDate.setUTCFullYear(maxDate.getUTCFullYear() + 5);
+  if (eventDate.getTime() > maxDate.getTime()) return "event date is too far in the future";
 
   const location = str(body.event?.location, 200) || str(body.event?.area, 200);
   if (!location) return "location required";
 
-  const pageUrlRaw = str(body.metadata?.pageUrl, 500);
   return {
     externalId,
     name,
@@ -143,8 +148,19 @@ export function parseWebsiteLead(body: WebsiteLeadPayload, now: Date = new Date(
     message: str(body.event?.notes, 4000),
     area: location,
     place: parsePlace(body.event?.place),
-    pageUrl: pageUrlRaw || null,
+    pageUrl: safePageUrl(body.metadata?.pageUrl),
   };
+}
+
+function safePageUrl(raw: unknown): string | null {
+  const s = str(raw, 500);
+  if (!s) return null;
+  try {
+    const parsed = new URL(s);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? s : null;
+  } catch {
+    return null;
+  }
 }
 
 function finiteOrNull(raw: unknown): number | null {
@@ -405,6 +421,7 @@ export async function handleWebsiteLead(
       },
       read: false,
       createdAt: FieldValue.serverTimestamp(),
+      expireAt: notificationExpireAt(now),
     });
   }
 

@@ -2,6 +2,8 @@ import { logger } from "firebase-functions/v2";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { notificationExpireAt } from "./notificationTtl";
+import { isActiveUserData } from "./auth";
 import {
   DEFAULT_FOLLOW_UP_CONFIG,
   FollowUpConfig,
@@ -108,10 +110,6 @@ export const onEnquiryWrittenFollowUp = onDocumentWritten("enquiries/{id}", asyn
     throw error; // let Functions retry the event
   }
 });
-
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  return (data?.isActive ?? data?.active ?? true) !== false;
-}
 
 /**
  * One-time schedule for open enquiries written before follow-ups existed. Due times
@@ -222,6 +220,7 @@ export async function runFollowUpReminders(
           read: false,
           createdBy: SYSTEM_FOLLOW_UPS,
           createdAt: FieldValue.serverTimestamp(),
+          expireAt: notificationExpireAt(now),
         });
       });
       return { stage, individual, summarised, name: content.data.customerName };
@@ -256,6 +255,7 @@ export async function runFollowUpReminders(
         read: false,
         createdBy: SYSTEM_FOLLOW_UPS,
         createdAt: FieldValue.serverTimestamp(),
+        expireAt: notificationExpireAt(now),
       });
     } catch (error: any) {
       if (error?.code !== 6) logger.warn("followUps: summary failed", { uid, error: error?.message });

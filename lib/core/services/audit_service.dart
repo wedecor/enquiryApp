@@ -1,18 +1,50 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/logging/logger.dart';
+import '../utils/string_extension.dart';
 import 'firestore_service.dart';
+
+/// Lowercase set of enquiry history `field_changed` names that carry money or
+/// payment information. These must NEVER be written to staff-readable `history`.
+const Set<String> moneyHistoryFieldsLower = {
+  'totalcost',
+  'advancepaid',
+  'quotedamount',
+  'quotedat',
+  'paymentstatus',
+  'paymentstatusvalue',
+  'paymentstatuslabel',
+};
+
+/// Maximum character length allowed by Firestore rules for string values in
+/// `history` and `financial_history` (`old_value` / `new_value`).
+const int maxHistoryStringLength = 2000;
 
 /// Service for tracking audit trail and change history
 class AuditService {
-  AuditService(this._firestoreService);
+  AuditService(this._firestoreService, {FirebaseAuth? auth})
+    : _auth = auth ?? FirebaseAuth.instance;
 
   final FirestoreService _firestoreService;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth;
 
   FirebaseFirestore get _firestore => _firestoreService.firestore;
+
+  /// Returns `true` when [fieldChanged] belongs to the money/payment history set
+  /// (case-insensitive).
+  static bool isMoneyHistoryField(String fieldChanged) =>
+      moneyHistoryFieldsLower.contains(fieldChanged.trim().toLowerCase());
+
+  static dynamic _truncateHistoryValue(dynamic value) {
+    if (value is String && value.length > maxHistoryStringLength) {
+      return value.substring(0, maxHistoryStringLength);
+    }
+    return value;
+  }
 
   /// UID that history docs are attributed to. Security rules require
   /// `user_id == request.auth.uid` on create, so this is always the signed-in user.
@@ -22,6 +54,18 @@ class AuditService {
   /// history entry inside their own transaction or batch.
   DocumentReference<Map<String, dynamic>> newHistoryRef(String enquiryId) =>
       _firestore.collection('enquiries').doc(enquiryId).collection('history').doc();
+
+  /// A fresh `enquiries/{enquiryId}/financial_history/{auto}` reference (admin-only).
+  DocumentReference<Map<String, dynamic>> newFinancialHistoryRef(String enquiryId) =>
+      _firestore.collection('enquiries').doc(enquiryId).collection('financial_history').doc();
+
+  /// Routes money/payment fields to `financial_history` and everything else to `history`.
+  DocumentReference<Map<String, dynamic>> historyRefForField(
+    String enquiryId,
+    String fieldChanged,
+  ) => isMoneyHistoryField(fieldChanged)
+      ? newFinancialHistoryRef(enquiryId)
+      : newHistoryRef(enquiryId);
 
   /// History document data for a change made by the signed-in user.
   ///
@@ -38,8 +82,8 @@ class AuditService {
     }
     return {
       'field_changed': fieldChanged,
-      'old_value': oldValue,
-      'new_value': newValue,
+      'old_value': _truncateHistoryValue(oldValue),
+      'new_value': _truncateHistoryValue(newValue),
       'user_id': uid,
       'timestamp': FieldValue.serverTimestamp(),
       'user_email': currentUser?.email ?? 'unknown',
@@ -69,8 +113,9 @@ class AuditService {
   }) async {
     try {
       _warnIfForeignUserId(userId);
-      await newHistoryRef(
+      await historyRefForField(
         enquiryId,
+        fieldChanged,
       ).set(buildHistoryEntry(fieldChanged: fieldChanged, oldValue: oldValue, newValue: newValue));
 
       Log.d('AuditService: recorded change', data: {'field': fieldChanged, 'enquiryId': enquiryId});
@@ -97,7 +142,7 @@ class AuditService {
       for (final entry in changes.entries) {
         final changeData = entry.value;
         batch.set(
-          newHistoryRef(enquiryId),
+          historyRefForField(enquiryId, entry.key),
           buildHistoryEntry(
             fieldChanged: entry.key,
             oldValue: changeData['old_value'],
@@ -131,6 +176,7 @@ class AuditService {
           .doc(enquiryId)
           .collection('history')
           .orderBy('timestamp', descending: true)
+          .limit(100)
           .snapshots()
           .timeout(const Duration(seconds: 30))
           .map((snapshot) {
@@ -144,48 +190,13 @@ class AuditService {
               return <Map<String, dynamic>>[];
             }
 
-            // Manual sorting since orderBy might require index
             final docs = snapshot.docs.map((doc) {
               final data = doc.data();
               return {'id': doc.id, ...data};
             }).toList();
 
-            // Sort by timestamp if available (most recent first)
-            docs.sort((a, b) {
-              final aTime = a['timestamp'];
-              final bTime = b['timestamp'];
-
-              // Handle null timestamps - put them at the end
-              if (aTime == null && bTime == null) return 0;
-              if (aTime == null) return 1;
-              if (bTime == null) return -1;
-
-              // Handle different timestamp formats
-              DateTime? aDateTime;
-              DateTime? bDateTime;
-
-              if (aTime is Timestamp) {
-                aDateTime = aTime.toDate();
-              } else if (aTime is DateTime) {
-                aDateTime = aTime;
-              }
-
-              if (bTime is Timestamp) {
-                bDateTime = bTime.toDate();
-              } else if (bTime is DateTime) {
-                bDateTime = bTime;
-              }
-
-              if (aDateTime != null && bDateTime != null) {
-                return bDateTime.compareTo(aDateTime); // Descending order (newest first)
-              }
-
-              // Fallback: compare by document ID if timestamps are invalid
-              return (a['id'] as String? ?? '').compareTo(b['id'] as String? ?? '');
-            });
-
             Log.d(
-              'AuditService: returning sorted history items',
+              'AuditService: returning history items',
               data: {'enquiryId': enquiryId, 'count': docs.length},
             );
             return docs;
@@ -225,6 +236,101 @@ class AuditService {
         return <Map<String, dynamic>>[];
       });
     }
+  }
+
+  /// Real-time stream of admin-only `financial_history` for an enquiry.
+  /// Must only be subscribed for admins.
+  Stream<List<Map<String, dynamic>>> getEnquiryFinancialHistoryStream(String enquiryId) {
+    return _firestore
+        .collection('enquiries')
+        .doc(enquiryId)
+        .collection('financial_history')
+        .orderBy('timestamp', descending: true)
+        .limit(100)
+        .snapshots()
+        .timeout(const Duration(seconds: 30))
+        .map((snapshot) => snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList())
+        .handleError((Object error) {
+          Log.e(
+            'AuditService: financial_history stream error',
+            error: error,
+            data: {'enquiryId': enquiryId},
+          );
+          return <Map<String, dynamic>>[];
+        });
+  }
+
+  /// Merged history stream: staff receive `history` only (never attempting a
+  /// `financial_history` read); admins receive both `history` and
+  /// `financial_history` merged by timestamp descending.
+  Stream<List<Map<String, dynamic>>> getMergedEnquiryHistoryStream(
+    String enquiryId, {
+    required bool includeFinancial,
+  }) {
+    if (!includeFinancial) {
+      return getEnquiryHistoryStream(enquiryId);
+    }
+
+    late final StreamController<List<Map<String, dynamic>>> controller;
+    List<Map<String, dynamic>> latestPublic = const [];
+    List<Map<String, dynamic>> latestFinancial = const [];
+    var hasPublic = false;
+    var hasFinancial = false;
+    StreamSubscription<List<Map<String, dynamic>>>? subPublic;
+    StreamSubscription<List<Map<String, dynamic>>>? subFinancial;
+
+    DateTime? toDate(dynamic ts) {
+      if (ts is Timestamp) return ts.toDate();
+      if (ts is DateTime) return ts;
+      return null;
+    }
+
+    void emitMerged() {
+      if (!hasPublic && !hasFinancial) return;
+      final combined = <Map<String, dynamic>>[...latestPublic, ...latestFinancial];
+      combined.sort((a, b) {
+        final da = toDate(a['timestamp']);
+        final db = toDate(b['timestamp']);
+        if (da == null && db == null) return 0;
+        if (da == null) return -1;
+        if (db == null) return 1;
+        return db.compareTo(da);
+      });
+      if (!controller.isClosed) {
+        controller.add(combined);
+      }
+    }
+
+    controller = StreamController<List<Map<String, dynamic>>>(
+      onListen: () {
+        subPublic = getEnquiryHistoryStream(enquiryId).listen(
+          (items) {
+            latestPublic = items;
+            hasPublic = true;
+            emitMerged();
+          },
+          onError: (Object err, StackTrace st) {
+            Log.e('AuditService: public history stream error', error: err, stackTrace: st);
+          },
+        );
+        subFinancial = getEnquiryFinancialHistoryStream(enquiryId).listen(
+          (items) {
+            latestFinancial = items;
+            hasFinancial = true;
+            emitMerged();
+          },
+          onError: (Object err, StackTrace st) {
+            Log.e('AuditService: financial history stream error', error: err, stackTrace: st);
+          },
+        );
+      },
+      onCancel: () async {
+        await subPublic?.cancel();
+        await subFinancial?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Get change history for an enquiry (one-time fetch)
@@ -464,18 +570,5 @@ class AuditService {
         'users_involved': <String>[],
       };
     }
-  }
-}
-
-/// Extension to convert string to title case
-extension StringExtension on String {
-  String toTitleCase() {
-    if (isEmpty) return this;
-    return split(' ')
-        .map((word) {
-          if (word.isEmpty) return word;
-          return word[0].toUpperCase() + word.substring(1).toLowerCase();
-        })
-        .join(' ');
   }
 }

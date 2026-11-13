@@ -149,10 +149,24 @@ class ReengagementRepository {
         .toList(growable: false);
   }
 
-  /// Normalized phones of customers who chose "Don't remind again".
+  /// Normalized phones of customers who chose "Don't remind again" (admin list query).
   Future<Set<String>> fetchOptedOutPhones() async {
     final snap = await _prefs.where('noReminders', isEqualTo: true).get();
     return {for (final d in snap.docs) d.id};
+  }
+
+  /// Per-document lookup of opt-outs for [phones] (safe for staff, who cannot list `customer_prefs`).
+  Future<Set<String>> fetchOptedOutPhonesFor(Iterable<String> phones) async {
+    final unique = {
+      for (final p in phones)
+        if (p.trim().isNotEmpty) p.trim(),
+    };
+    if (unique.isEmpty) return const {};
+    final snaps = await Future.wait([for (final p in unique) _prefs.doc(p).get()]);
+    return {
+      for (final s in snaps)
+        if (s.exists && s.data()?['noReminders'] == true) s.id,
+    };
   }
 
   /// Marks `reminders/{id}` sent if it exists and is not sent yet. Returns true

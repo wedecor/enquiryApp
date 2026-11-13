@@ -25,8 +25,10 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   String _selectedSource = 'instagram'; // default — user changes at creation
   final List<XFile> _selectedImages = [];
   final List<String> _existingImageUrls = []; // URLs from Firestore
+  final List<String> _pendingRemovedImageUrls = [];
   bool _isLoading = false;
   bool _hydrated = false;
+  String? _pendingCreateEnquiryId;
 
   /// Google Maps place picked for the location text; null for free text.
   EnquiryPlace? _locationPlace;
@@ -675,7 +677,12 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     final sourceValue = _selectedSource;
     final sourceLabel = dropdownLookup.labelForSource(sourceValue);
 
+    final quoteFields = _quoteFields(const {});
+    final pendingId = _pendingCreateEnquiryId ??= firestoreService.newEnquiryId();
+
     final enquiryId = await firestoreService.createEnquiry(
+      enquiryId: pendingId,
+      extraFinancialFields: quoteFields.isNotEmpty ? quoteFields : null,
       customerName: tidyPersonName(_nameController.text),
       customerEmail: _emailController.text.trim(),
       customerPhone: _phoneController.text.trim(),
@@ -708,15 +715,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       functions: functions,
     );
 
-    final quoteFields = _quoteFields(const {});
-    if (quoteFields.isNotEmpty) {
-      // Quote is money: it goes to the admin-only financial summary.
-      await firestoreService.updateEnquiryWithFinancials(enquiryId, {
-        ...quoteFields,
-        'updatedBy': currentUser.uid,
-      });
-    }
-
     // Upload reference images if any and save URLs
     if (_selectedImages.isNotEmpty) {
       try {
@@ -743,15 +741,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       }
     }
 
-    // Send notification for new enquiry creation
-    final notificationService = ref.read(notificationServiceProvider);
-    await notificationService.notifyEnquiryCreated(
-      enquiryId: enquiryId,
-      customerName: tidyPersonName(_nameController.text),
-      eventType: eventTypeLabel,
-      createdBy: currentUser.uid,
-    );
-
     // Record audit trail for assignment if assigned
     if (_selectedAssignedTo != null) {
       final auditService = ref.read(auditServiceProvider);
@@ -761,23 +750,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         oldValue: null,
         newValue: _selectedAssignedTo!,
       );
-
-      // Admins already got "New Enquiry Created"; only the assignee hears about it here.
-      // An admin assignee (other than the creator) was in that push already — don't
-      // send them a second one.
-      final assignee = _selectedAssignedTo!;
-      final assigneeAlreadyNotified =
-          assignee != currentUser.uid && await _isAdminUser(firestoreService, assignee);
-      if (!assigneeAlreadyNotified) {
-        await notificationService.notifyEnquiryAssigned(
-          enquiryId: enquiryId,
-          customerName: tidyPersonName(_nameController.text),
-          eventType: eventTypeLabel,
-          assignedTo: assignee,
-          assignedBy: currentUser.uid,
-          notifyAdmins: false,
-        );
-      }
     }
 
     if (mounted) {
@@ -791,17 +763,6 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
   static String _canonicalOldStatus(Map<String, dynamic> data) {
     final raw = data['statusValue'] as String?;
     return EnquiryStatus.canonicalValue(raw) ?? raw ?? 'new';
-  }
-
-  /// Whether [uid] is an admin (admins already receive the generic admin pushes).
-  static Future<bool> _isAdminUser(FirestoreService firestoreService, String uid) async {
-    try {
-      final data = await firestoreService.getUser(uid);
-      return data?['role'] == 'admin';
-    } catch (e) {
-      Log.w('EnquiryFormScreen: could not look up user role', data: {'error': e.toString()});
-      return false;
-    }
   }
 
   Future<void> _updateEnquiry(UserModel currentUser) async {
@@ -1174,70 +1135,19 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       await auditService.recordMultipleChanges(enquiryId: widget.enquiryId!, changes: changes);
     }
 
-    // Send notifications: at most one push per person for this save.
-    final notificationService = ref.read(notificationServiceProvider);
-    final reassigned =
-        userChangedAssignee &&
-        assignedTo != null &&
-        assignedTo.isNotEmpty &&
-        assignedTo != previousAssignee;
-
-    // If status changed, send specific status update notification to admins
-    if (statusDidChange) {
-      if (kDebugMode) {
-        debugPrint('📝 EDIT FORM: Status changed via edit form');
-        debugPrint('   OldStatus: $oldStatusValue → NewStatus: $statusValue');
-        debugPrint('   EnquiryId: ${widget.enquiryId}');
+    // Delete removed images from Storage only after the enquiry save succeeds,
+    // and only for admins (staff do not have Storage delete permissions).
+    if (_pendingRemovedImageUrls.isNotEmpty) {
+      if (ref.read(isAdminProvider)) {
+        for (final url in List<String>.of(_pendingRemovedImageUrls)) {
+          try {
+            await FirebaseStorage.instance.refFromURL(url).delete();
+          } catch (e) {
+            Log.w('Could not delete image from storage', data: {'url': url, 'error': e.toString()});
+          }
+        }
       }
-
-      final oldStatusLabel = dropdownLookup.labelForStatus(oldStatusValue);
-      await notificationService.notifyStatusUpdated(
-        enquiryId: widget.enquiryId!,
-        customerName: newCustomerName,
-        oldStatus: oldStatusLabel,
-        oldStatusValue: oldStatusValue,
-        newStatus: statusLabel,
-        updatedBy: currentUser.uid,
-        // A new assignee gets "Assigned to You" below instead.
-        assignedTo: reassigned ? null : assignedTo,
-      );
-    } else if (!reassigned) {
-      // Only send generic enquiry update notification if status didn't change
-      // (to avoid duplicate notifications when status changes)
-      if (kDebugMode) {
-        debugPrint('📝 EDIT FORM: Enquiry updated (status unchanged)');
-        debugPrint('   EnquiryId: ${widget.enquiryId}');
-        debugPrint('   UpdatedBy: ${currentUser.uid}');
-      }
-
-      await notificationService.notifyEnquiryUpdated(
-        enquiryId: widget.enquiryId!,
-        customerName: newCustomerName,
-        eventType: eventTypeLabel,
-        updatedBy: currentUser.uid,
-        assignedTo: assignedTo,
-      );
-    }
-
-    // Re-assignment from the edit form: tell the new assignee, and other admins unless
-    // they were already told about the status change above. An admin assignee already got
-    // the status push (it goes to every admin but the updater), so skip a second one.
-    if (reassigned) {
-      final newAssignee = assignedTo;
-      final assigneeAlreadyNotified =
-          statusDidChange &&
-          newAssignee != currentUser.uid &&
-          await _isAdminUser(firestoreService, newAssignee);
-      if (!assigneeAlreadyNotified) {
-        await notificationService.notifyEnquiryAssigned(
-          enquiryId: widget.enquiryId!,
-          customerName: newCustomerName,
-          eventType: eventTypeLabel,
-          assignedTo: newAssignee,
-          assignedBy: currentUser.uid,
-          notifyAdmins: !statusDidChange,
-        );
-      }
+      _pendingRemovedImageUrls.clear();
     }
 
     if (mounted) {
@@ -1262,41 +1172,13 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
     );
   }
 
-  Future<void> _removeExistingImage(int index) async {
+  void _removeExistingImage(int index) {
     if (index < 0 || index >= _existingImageUrls.length) return;
-    final removedUrl = _existingImageUrls[index];
-    final firestoreService = ref.read(firestoreServiceProvider);
     setState(() {
-      _existingImageUrls.removeAt(index);
-    });
-
-    if (widget.mode != 'edit' || widget.enquiryId == null) return;
-
-    try {
-      final storageRef = FirebaseStorage.instance.refFromURL(removedUrl);
-      await storageRef.delete();
-    } catch (e) {
-      Log.w(
-        'Could not delete image from storage',
-        data: {'url': removedUrl, 'error': e.toString()},
-      );
-    }
-
-    try {
-      await firestoreService.updateEnquiry(widget.enquiryId!, {
-        'images': List<String>.of(_existingImageUrls),
-      });
-      // Persisted: a later form save no longer needs to rewrite the whole list.
-      _initialImageUrls = List.unmodifiable(_existingImageUrls);
-    } catch (e) {
-      Log.e('Failed to update enquiry images after removal', error: e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image removed locally but failed to save — try saving the form'),
-          ),
-        );
+      final removedUrl = _existingImageUrls.removeAt(index);
+      if (!_pendingRemovedImageUrls.contains(removedUrl)) {
+        _pendingRemovedImageUrls.add(removedUrl);
       }
-    }
+    });
   }
 }

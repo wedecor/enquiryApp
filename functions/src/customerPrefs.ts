@@ -2,6 +2,7 @@ import { logger } from "firebase-functions/v2";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { normalizePhone } from "./customers";
+import { requireActiveCaller } from "./auth";
 
 /**
  * "Don't remind again" (yearly re-engagement wishes) for one customer phone.
@@ -13,10 +14,6 @@ import { normalizePhone } from "./customers";
  */
 
 export type SetReengagementPrefRequest = { phone?: unknown; noReminders?: unknown };
-
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  return (data?.isActive ?? data?.active ?? true) !== false;
-}
 
 /** Callable core, exported for tests. */
 export async function handleSetReengagementPref(
@@ -34,11 +31,7 @@ export async function handleSetReengagementPref(
   const phone = normalizePhone(input.phone);
   if (phone.length < 7) throw new HttpsError("invalid-argument", "phone is too short");
 
-  const caller = await db.collection("users").doc(callerUid).get();
-  const role = caller.get("role");
-  if (!caller.exists || !isActiveUserData(caller.data()) || (role !== "admin" && role !== "staff")) {
-    throw new HttpsError("permission-denied", "Active account required");
-  }
+  const { role } = await requireActiveCaller(db, callerUid);
   if (role === "staff") {
     const assigned = await db
       .collection("enquiries")

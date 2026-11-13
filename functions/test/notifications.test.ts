@@ -4,10 +4,13 @@ import { Timestamp } from "firebase-admin/firestore";
 import {
   ActiveUser,
   canAnnounce,
+  deriveEnquiryNotificationEvents,
+  handleEnquiryWrittenNotify,
   handleNotifyEnquiryEvent,
   isRecentEvent,
   planEnquiryNotifications,
 } from "../src/notifications";
+import { WEBSITE_LEAD_CREATED_BY } from "../src/websiteLeads";
 import { clearEmulator, hasEmulator, inbox, seedUsers, testDb } from "./helpers";
 
 const NOW = new Date("2026-11-04T06:00:00Z");
@@ -89,7 +92,176 @@ describe("canAnnounce / isRecentEvent (pure)", () => {
   });
 });
 
-describe("notifyEnquiryEvent (emulator)", { skip: !hasEmulator }, () => {
+describe("deriveEnquiryNotificationEvents (pure)", () => {
+  it("no before → created (and assigned if assignedTo set) when createdAt is recent", () => {
+    const recent = Timestamp.fromDate(new Date(NOW.getTime() - 2 * 60 * 1000));
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", createdAt: recent },
+        NOW,
+      ),
+      [{ event: "created", actorUid: "admin1", notifyAdmins: true, notifyAssignee: false }],
+    );
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", assignedTo: "staff1", createdAt: recent },
+        NOW,
+      ),
+      [
+        { event: "created", actorUid: "admin1", notifyAdmins: true, notifyAssignee: false },
+        { event: "assigned", actorUid: "admin1", notifyAdmins: false, notifyAssignee: true },
+      ],
+    );
+  });
+
+  it("no before with old or missing createdAt (restore / import) → nothing", () => {
+    const oldCreatedAt = Timestamp.fromDate(new Date(NOW.getTime() - 60 * 60 * 1000));
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1", assignedTo: "staff1", createdAt: oldCreatedAt },
+        NOW,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        { customerName: "A", createdBy: "admin1" },
+        NOW,
+      ),
+      [],
+    );
+  });
+
+  it("website lead create → nothing", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        undefined,
+        {
+          customerName: "A",
+          createdBy: WEBSITE_LEAD_CREATED_BY,
+          assignedTo: "staff1",
+          createdAt: Timestamp.fromDate(NOW),
+        },
+        NOW,
+      ),
+      [],
+    );
+  });
+
+  it("assignedTo changed → assigned", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", assignedTo: "staff1", statusValue: "new" },
+        { customerName: "A", assignedTo: "staff2", statusValue: "new", updatedBy: "admin1" },
+      ),
+      [{ event: "assigned", actorUid: "admin1", notifyAdmins: true, notifyAssignee: true }],
+    );
+  });
+
+  it("canonical status changed → status_changed with oldStatus and statusUpdatedBy actor", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", statusValue: "new", assignedTo: "staff1" },
+        { customerName: "A", statusValue: "in_talks", assignedTo: "staff1", statusUpdatedBy: "staff1", updatedBy: "admin1" },
+      ),
+      [
+        {
+          event: "status_changed",
+          actorUid: "staff1",
+          oldStatus: "new",
+          notifyAdmins: true,
+          notifyAssignee: true,
+        },
+      ],
+    );
+  });
+
+  it("user-facing field changed (including functions) → updated", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", statusValue: "new", notes: "old" },
+        { customerName: "A", statusValue: "new", notes: "new", updatedBy: "staff1" },
+      ),
+      [{ event: "updated", actorUid: "staff1", notifyAdmins: true, notifyAssignee: true }],
+    );
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        {
+          customerName: "A",
+          statusValue: "new",
+          functions: [{ id: "f1", eventType: "haldi", date: "2026-12-01" }],
+        },
+        {
+          customerName: "A",
+          statusValue: "new",
+          functions: [
+            { id: "f1", eventType: "haldi", date: "2026-12-01" },
+            { id: "f2", eventType: "wedding", date: "2026-12-02" },
+          ],
+          updatedBy: "staff1",
+        },
+      ),
+      [{ event: "updated", actorUid: "staff1", notifyAdmins: true, notifyAssignee: true }],
+    );
+  });
+
+  it("server-only change → nothing", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", statusValue: "new", followUpSeq: 1, textIndex: "a" },
+        {
+          customerName: "A",
+          statusValue: "new",
+          followUpSeq: 2,
+          followUpDueAt: Timestamp.fromDate(NOW),
+          pastEventReviewAt: Timestamp.fromDate(NOW),
+          occasionStamps: { birthday: true },
+          textIndex: "a b",
+          updatedAt: Timestamp.fromDate(NOW),
+          updatedBy: "system",
+        },
+      ),
+      [],
+    );
+  });
+
+  it("assignedTo + status_changed emits assigned to new assignee and status_changed to others", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", statusValue: "new", assignedTo: "staff1" },
+        { customerName: "A", statusValue: "in_talks", assignedTo: "staff2", statusUpdatedBy: "admin1", updatedBy: "admin1" },
+      ),
+      [
+        { event: "assigned", actorUid: "admin1", notifyAdmins: false, notifyAssignee: true },
+        { event: "status_changed", actorUid: "admin1", oldStatus: "new", notifyAdmins: true, notifyAssignee: false },
+      ],
+    );
+  });
+
+  it("missing or system actor produces empty actorUid so nobody is excluded", () => {
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        { customerName: "A", statusValue: "approved" },
+        { customerName: "A", statusValue: "completed", statusUpdatedBy: "system" },
+      ),
+      [
+        {
+          event: "status_changed",
+          actorUid: "",
+          oldStatus: "approved",
+          notifyAdmins: true,
+          notifyAssignee: true,
+        },
+      ],
+    );
+  });
+});
+
+describe("onEnquiryWrittenNotify & notifyEnquiryEvent (emulator)", { skip: !hasEmulator }, () => {
   const db = hasEmulator ? testDb() : (null as unknown as FirebaseFirestore.Firestore);
 
   before(async () => {
@@ -99,55 +271,60 @@ describe("notifyEnquiryEvent (emulator)", { skip: !hasEmulator }, () => {
   beforeEach(async () => {
     await clearEmulator();
     await seedUsers(db);
-    const now = Timestamp.now();
-    await db.collection("enquiries").doc("mine").set({ ...enquiry, assignedTo: "staff1", updatedAt: now, statusUpdatedAt: now, createdAt: now });
-    await db.collection("enquiries").doc("theirs").set({ ...enquiry, assignedTo: "staff2", updatedAt: now, createdAt: now });
   });
 
-  it("staff cannot announce someone else's enquiry", async () => {
-    await assert.rejects(
-      handleNotifyEnquiryEvent(db, "staff1", { enquiryId: "theirs", event: "updated" }),
-      /Not allowed/,
-    );
+  it("notifyEnquiryEvent callable is a no-op returning skipped: server", async () => {
+    const res = await handleNotifyEnquiryEvent(db, "staff1", { enquiryId: "mine", event: "updated" });
+    assert.deepEqual(res, { queued: 0, skipped: "server" });
     assert.equal((await inbox(db, "admin1")).length, 0);
   });
 
-  it("staff cannot announce a new enquiry or an assignment", async () => {
-    await assert.rejects(handleNotifyEnquiryEvent(db, "staff1", { enquiryId: "mine", event: "created" }), /Not allowed/);
-    await assert.rejects(handleNotifyEnquiryEvent(db, "staff1", { enquiryId: "mine", event: "assigned" }), /Not allowed/);
+  it("creates notifications with expireAt and dedupes retried trigger events by eventId", async () => {
+    const beforeDoc = { ...enquiry, statusValue: "new" };
+    const afterDoc = { ...enquiry, statusValue: "in_talks", statusUpdatedBy: "admin1" };
+
+    const first = await handleEnquiryWrittenNotify(db, "e1", "evt-123", beforeDoc, afterDoc, NOW);
+    const second = await handleEnquiryWrittenNotify(db, "e1", "evt-123", beforeDoc, afterDoc, NOW);
+
+    assert.equal(first, 2);
+    assert.equal(second, 0);
+    const staffItems = await inbox(db, "staff1");
+    const admin2Items = await inbox(db, "admin2");
+    assert.equal(staffItems.length, 1);
+    assert.equal(admin2Items.length, 1);
+    assert.equal(staffItems[0].id, "ev_e1_status_changed_evt-123");
+    assert.ok(staffItems[0].expireAt, "expireAt should be set");
+    assert.equal((await inbox(db, "admin1")).length, 0, "actor excluded");
+    assert.equal((await inbox(db, "adminOff")).length, 0, "inactive admin excluded");
   });
 
-  it("inactive or unknown callers are rejected", async () => {
-    await assert.rejects(handleNotifyEnquiryEvent(db, "staffOff", { enquiryId: "mine", event: "updated" }), /Active account/);
-    await assert.rejects(handleNotifyEnquiryEvent(db, "nobody", { enquiryId: "mine", event: "updated" }), /Active account/);
-    await assert.rejects(handleNotifyEnquiryEvent(db, undefined, { enquiryId: "mine", event: "updated" }), /signed in/);
+  it("assignedTo + status_changed to an admin sends at most one push per uid", async () => {
+    const beforeDoc = { ...enquiry, statusValue: "new", assignedTo: "staff1" };
+    const afterDoc = { ...enquiry, statusValue: "in_talks", assignedTo: "admin2", statusUpdatedBy: "admin1", updatedBy: "admin1" };
+
+    const queued = await handleEnquiryWrittenNotify(db, "e2", "evt-456", beforeDoc, afterDoc, NOW);
+    assert.equal(queued, 1);
+    const admin2Items = await inbox(db, "admin2");
+    assert.equal(admin2Items.length, 1);
+    assert.equal(admin2Items[0].type, "enquiry_assigned");
   });
 
-  it("extra client fields (title/body) are ignored; server text is used", async () => {
-    const res = await handleNotifyEnquiryEvent(db, "staff1", {
-      enquiryId: "mine", event: "updated", title: "Fake", body: "Fake body",
-    } as any);
-    assert.equal(res.queued, 2);
-    const items = await inbox(db, "admin1");
-    assert.equal(items.length, 1);
-    assert.equal(items[0].title, "Enquiry Updated");
-    assert.equal(items[0].createdBy, "staff1");
-    assert.equal((await inbox(db, "adminOff")).length, 0, "inactive admins are skipped");
-    assert.equal((await inbox(db, "staff1")).length, 0, "no push to the actor");
-  });
+  it("system actor sends to all recipients without excluding anyone", async () => {
+    const beforeDoc = { ...enquiry, statusValue: "approved", assignedTo: "staff1" };
+    const afterDoc = { ...enquiry, statusValue: "completed", statusUpdatedBy: "system" };
 
-  it("a retried call within the dedupe window does not duplicate", async () => {
-    await handleNotifyEnquiryEvent(db, "admin1", { enquiryId: "mine", event: "status_changed", oldStatus: "new" });
-    await handleNotifyEnquiryEvent(db, "admin1", { enquiryId: "mine", event: "status_changed", oldStatus: "new" });
-    assert.equal((await inbox(db, "staff1")).length, 1);
+    const queued = await handleEnquiryWrittenNotify(db, "e3", "evt-789", beforeDoc, afterDoc, NOW);
+    assert.equal(queued, 3);
+    assert.equal((await inbox(db, "admin1")).length, 1);
     assert.equal((await inbox(db, "admin2")).length, 1);
+    assert.equal((await inbox(db, "staff1")).length, 1);
   });
 
-  it("a stale event (no recent write) queues nothing", async () => {
-    const old = Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000));
-    await db.collection("enquiries").doc("mine").update({ updatedAt: old, statusUpdatedAt: old });
-    const res = await handleNotifyEnquiryEvent(db, "staff1", { enquiryId: "mine", event: "updated" });
-    assert.equal(res.queued, 0);
-    assert.equal(res.skipped, "stale");
+  it("server-only write queues nothing", async () => {
+    const beforeDoc = { ...enquiry, followUpSeq: 1 };
+    const afterDoc = { ...enquiry, followUpSeq: 2, updatedAt: Timestamp.fromDate(NOW) };
+
+    const queued = await handleEnquiryWrittenNotify(db, "e4", "evt-000", beforeDoc, afterDoc, NOW);
+    assert.equal(queued, 0);
   });
 });

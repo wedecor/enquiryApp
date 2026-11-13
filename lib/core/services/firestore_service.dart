@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/enquiries/domain/event_functions.dart';
@@ -50,8 +51,22 @@ enum EnquiryScope {
 /// final enquiriesStream = firestoreService.watchEnquiriesForRole(isAdmin: true);
 /// ```
 class FirestoreService {
+  FirestoreService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth;
+
   /// The underlying Firebase Firestore instance.
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore;
+  final FirebaseAuth? _auth;
+
+  String? get _currentUid {
+    if (_auth != null) return _auth.currentUser?.uid;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Shared client for specialized repositories. Prefer typed helpers when available.
   FirebaseFirestore get firestore => _firestore;
@@ -63,6 +78,10 @@ class FirestoreService {
   /// Reference to the enquiries collection in Firestore.
   CollectionReference get _enquiriesCollection =>
       _firestore.collection(FirestoreCollections.enquiries);
+
+  /// Reference to the soft-deleted enquiries trash collection in Firestore.
+  CollectionReference<Map<String, dynamic>> get _enquiriesTrashCollection =>
+      _firestore.collection('enquiries_trash');
 
   /// Enquiries collection for feature repositories (single Firestore access path).
   CollectionReference<Map<String, dynamic>> get enquiriesCollection =>
@@ -124,60 +143,6 @@ class FirestoreService {
         eventTypes: eventTypes,
       ),
     };
-  }
-
-  /// Creates a new user document in Firestore.
-  ///
-  /// This method creates a user record with the provided information
-  /// and stores it in the users collection. The document ID is set to
-  /// the user's UID for easy retrieval and updates.
-  ///
-  /// Parameters:
-  /// - [uid]: Unique identifier for the user (typically from Firebase Auth)
-  /// - [name]: User's full name
-  /// - [email]: User's email address
-  /// - [phone]: User's phone number
-  /// - [role]: User's role in the system (admin/staff)
-  ///
-  /// Returns a [Future<void>] that completes when the user document is created.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.createUser(
-  ///   uid: 'user123',
-  ///   name: 'John Doe',
-  ///   email: 'john@example.com',
-  ///   phone: '+1234567890',
-  ///   role: 'admin',
-  /// );
-  /// ```
-  Future<void> createUser({
-    required String uid,
-    required String name,
-    required String email,
-    required String phone,
-    required String role,
-  }) async {
-    // Public profile: name / role / isActive. Phone and email go to the private
-    // profile (owner + admins only), same as the inviteUser function.
-    final userRef = _usersCollection.doc(uid);
-    final batch = firestore.batch()
-      ..set(userRef, {
-        'name': name,
-        'role': role,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'isActive': true, // Standardized field name
-      })
-      ..set(userRef.collection('private').doc('profile'), {
-        'email': email,
-        'phone': phone,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    await batch.commit();
   }
 
   /// Retrieves a user document by UID.
@@ -244,32 +209,6 @@ class FirestoreService {
 
   Future<void> deleteFcmToken(String uid, String token) async {
     await fcmTokensCollection(uid).doc(token).delete();
-  }
-
-  /// Updates an existing user document.
-  ///
-  /// This method updates the specified user document with new data.
-  /// The `updatedAt` timestamp is automatically set to the current time.
-  ///
-  /// Parameters:
-  /// - [uid]: The unique identifier of the user to update
-  /// - [data]: Map containing the fields to update
-  ///
-  /// Returns a [Future<void>] that completes when the update is finished.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails or user doesn't exist
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.updateUser('user123', {
-  ///   'name': 'Jane Doe',
-  ///   'phone': '+0987654321',
-  /// });
-  /// ```
-  Future<void> updateUser(String uid, Map<String, dynamic> data) async {
-    data['updatedAt'] = FieldValue.serverTimestamp();
-    await _usersCollection.doc(uid).update(data);
   }
 
   /// Creates a new enquiry document in Firestore.
@@ -349,6 +288,8 @@ class FirestoreService {
     String? locationArea,
     String? locationCity,
     List<EventFunction>? functions,
+    String? enquiryId,
+    Map<String, dynamic>? extraFinancialFields,
   }) async {
     final placeId = locationPlaceId?.trim() ?? '';
     // Multi-function booking (or one function with a time / notes): write the
@@ -416,16 +357,22 @@ class FirestoreService {
         eventTypes: typeLabels,
       ),
       ...functionFields,
+      if (extraFinancialFields != null) ...extraFinancialFields,
     };
 
-    return _createWithFinancials(enquiryData);
+    return _createWithFinancials(enquiryData, enquiryId: enquiryId);
   }
+
+  /// Generates a new Firestore document ID under `enquiries`.
+  String newEnquiryId() => _enquiriesCollection.doc().id;
 
   /// Writes a new enquiry (without money) and its admin-only financial summary in
   /// one batch. See [EnquiryFinancials].
-  Future<String> _createWithFinancials(Map<String, dynamic> data) async {
+  Future<String> _createWithFinancials(Map<String, dynamic> data, {String? enquiryId}) async {
     final parts = EnquiryFinancials.split(data);
-    final docRef = _enquiriesCollection.doc();
+    final docRef = enquiryId != null
+        ? _enquiriesCollection.doc(enquiryId)
+        : _enquiriesCollection.doc();
     final batch = firestore.batch()..set(docRef, parts.parent);
     if (parts.money.isNotEmpty) {
       batch.set(
@@ -837,6 +784,10 @@ class FirestoreService {
   /// ```
   Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
+    final uid = _currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      data['updatedBy'] = uid;
+    }
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
 
@@ -859,10 +810,12 @@ class FirestoreService {
   Future<void> updateEnquiryWithFinancials(String enquiryId, Map<String, dynamic> data) async {
     final parts = EnquiryFinancials.split(data);
     if (parts.money.isEmpty) return updateEnquiry(enquiryId, parts.parent);
+    final uid = _currentUid;
     final batch = firestore.batch()
       ..update(_enquiriesCollection.doc(enquiryId), {
         ...parts.parent,
         'updatedAt': FieldValue.serverTimestamp(),
+        if (uid != null && uid.isNotEmpty) 'updatedBy': uid,
       })
       ..set(
         EnquiryFinancials.ref(firestore, enquiryId),
@@ -872,29 +825,68 @@ class FirestoreService {
     await batch.commit();
   }
 
-  /// Deletes an enquiry document from Firestore.
-  ///
-  /// This method permanently removes the specified enquiry from the database.
-  /// Use with caution as this operation cannot be undone.
-  ///
-  /// Parameters:
-  /// - [enquiryId]: The unique identifier of the enquiry to delete
-  ///
-  /// Returns a [Future<void>] that completes when the deletion is finished.
-  ///
-  /// Throws:
-  /// - [FirebaseException] if the operation fails
-  ///
-  /// Example:
-  /// ```dart
-  /// await firestoreService.deleteEnquiry('enquiry123');
-  /// ```
-  Future<void> deleteEnquiry(String enquiryId) async {
-    // Subcollections are not deleted with the parent: drop the money doc too (admin only).
+  /// Soft-deletes an enquiry by moving its data and financial summary to
+  /// `enquiries_trash/{enquiryId}` in one atomic batch, leaving `history`,
+  /// `contacts`, `quotations`, and Storage files intact for recovery.
+  Future<void> deleteEnquiry(String enquiryId, {String? deletedBy}) async {
+    final enquiryRef = _enquiriesCollection.doc(enquiryId);
+    final financialRef = EnquiryFinancials.ref(firestore, enquiryId);
+    final enquirySnap = await enquiryRef.get();
+    if (!enquirySnap.exists) {
+      throw StateError('Enquiry not found: $enquiryId');
+    }
+    final financialSnap = await financialRef.get();
+    final enquiryData = Map<String, dynamic>.from(enquirySnap.data()! as Map<String, dynamic>);
+    final financialData = financialSnap.exists ? financialSnap.data() : null;
+
     final batch = firestore.batch()
-      ..delete(_enquiriesCollection.doc(enquiryId))
-      ..delete(EnquiryFinancials.ref(firestore, enquiryId));
+      ..set(_enquiriesTrashCollection.doc(enquiryId), {
+        'enquiry': enquiryData,
+        'financial': financialData,
+        'deletedAt': FieldValue.serverTimestamp(),
+        'deletedBy': deletedBy,
+      })
+      ..delete(enquiryRef)
+      ..delete(financialRef);
     await batch.commit();
+  }
+
+  /// Restores a soft-deleted enquiry from `enquiries_trash/{enquiryId}` in one
+  /// atomic batch. Refuses if `enquiries/{enquiryId}` already exists.
+  Future<void> restoreEnquiry(String enquiryId) async {
+    final trashRef = _enquiriesTrashCollection.doc(enquiryId);
+    final enquiryRef = _enquiriesCollection.doc(enquiryId);
+    final trashSnap = await trashRef.get();
+    if (!trashSnap.exists) {
+      throw StateError('Deleted enquiry not found: $enquiryId');
+    }
+    final existingSnap = await enquiryRef.get();
+    if (existingSnap.exists) {
+      throw StateError('Enquiry $enquiryId already exists');
+    }
+
+    final trashData = trashSnap.data()!;
+    final rawEnquiry = Map<String, dynamic>.from(trashData['enquiry'] as Map);
+    final split = EnquiryFinancials.split(rawEnquiry);
+    final rawFinancial = trashData['financial'];
+    final Map<String, dynamic>? financialToWrite = rawFinancial is Map
+        ? Map<String, dynamic>.from(rawFinancial)
+        : (split.money.isNotEmpty ? EnquiryFinancials.summaryWrite(split.money) : null);
+
+    final batch = firestore.batch()..set(enquiryRef, split.parent);
+    if (financialToWrite != null) {
+      batch.set(EnquiryFinancials.ref(firestore, enquiryId), financialToWrite);
+    }
+    batch.delete(trashRef);
+    await batch.commit();
+  }
+
+  /// Stream of recently deleted enquiries from `enquiries_trash`, newest first.
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchRecentlyDeletedEnquiries({int limit = 50}) {
+    return _enquiriesTrashCollection
+        .orderBy('deletedAt', descending: true)
+        .limit(limit)
+        .snapshots();
   }
 
   /// Retrieves a real-time stream of all active users.

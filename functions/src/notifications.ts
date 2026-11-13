@@ -1,7 +1,11 @@
 import { logger } from "firebase-functions/v2";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { canonicalStatus, statusLabel } from "./statusVocabulary";
+import { notificationExpireAt } from "./notificationTtl";
+import { isActiveUserData } from "./auth";
+import { WEBSITE_LEAD_CREATED_BY } from "./websiteLeads";
 
 /**
  * Trusted enquiry notifications (create / assign / status change / edit).
@@ -230,10 +234,6 @@ export function eventNotificationId(
   return `ev_${enquiryId}_${event}_${detail}_${actorUid}_${bucket}`.slice(0, 1400);
 }
 
-function isActiveUserData(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  return (data?.isActive ?? data?.active ?? true) !== false;
-}
-
 function toActiveUser(snap: FirebaseFirestore.DocumentSnapshot): ActiveUser | null {
   if (!snap.exists) return null;
   const data = snap.data();
@@ -253,49 +253,149 @@ function boolOr(raw: unknown, fallback: boolean): boolean {
 
 export type NotifyEnquiryEventResult = { queued: number; skipped?: string };
 
-/** Callable core, exported for tests. */
-export async function handleNotifyEnquiryEvent(
-  db: FirebaseFirestore.Firestore,
-  callerUid: string | undefined,
-  input: NotifyEnquiryEventRequest,
+const USER_FACING_FIELDS = [
+  "customerName",
+  "customerPhone",
+  "customerEmail",
+  "eventDate",
+  "eventStartDate",
+  "eventType",
+  "eventTypeValue",
+  "eventTypeLabel",
+  "eventLocation",
+  "locationArea",
+  "locationAddress",
+  "locationPlaceId",
+  "functions",
+  "functionCount",
+  "guestCount",
+  "notes",
+  "description",
+  "budgetRange",
+  "priority",
+  "priorityValue",
+  "priorityLabel",
+] as const;
+
+function normalizeCompareValue(v: unknown): unknown {
+  if (v === undefined || v === null) return null;
+  if (v instanceof Date) return v.getTime();
+  if (typeof (v as { toMillis?: unknown }).toMillis === "function") {
+    return (v as { toMillis: () => number }).toMillis();
+  }
+  if (Array.isArray(v)) return v.map(normalizeCompareValue);
+  if (typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const k of Object.keys(obj).sort()) {
+      sorted[k] = normalizeCompareValue(obj[k]);
+    }
+    return sorted;
+  }
+  return v;
+}
+
+function valuesEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(normalizeCompareValue(a)) === JSON.stringify(normalizeCompareValue(b));
+}
+
+function triggerActorUid(data: FirebaseFirestore.DocumentData, event: EnquiryEventKind): string {
+  const raw =
+    event === "status_changed"
+      ? str(data.statusUpdatedBy) ?? str(data.updatedBy) ?? str(data.createdBy)
+      : event === "created"
+        ? str(data.createdBy)
+        : str(data.updatedBy) ?? str(data.createdBy);
+  if (!raw || raw === "system" || raw.startsWith("system:")) return "";
+  return raw;
+}
+
+export type DerivedEnquiryEvent = {
+  event: EnquiryEventKind;
+  actorUid: string;
+  oldStatus?: string | null;
+  notifyAdmins: boolean;
+  notifyAssignee: boolean;
+};
+
+/**
+ * Pure before/after → notification event mapping for `enquiries/{id}` writes.
+ * Emits `assigned` to the new assignee and at most one of `status_changed` /
+ * `updated` to everyone else. Server-only field writes produce nothing.
+ */
+export function deriveEnquiryNotificationEvents(
+  before: FirebaseFirestore.DocumentData | undefined,
+  after: FirebaseFirestore.DocumentData | undefined,
   now: Date = new Date(),
-): Promise<NotifyEnquiryEventResult> {
-  if (!callerUid) {
-    throw new HttpsError("unauthenticated", "Must be signed in");
-  }
-  const enquiryId = str(input.enquiryId);
-  if (!enquiryId || enquiryId.length > 200 || enquiryId.includes("/")) {
-    throw new HttpsError("invalid-argument", "enquiryId is required");
-  }
-  if (typeof input.event !== "string" || !EVENT_KINDS.has(input.event)) {
-    throw new HttpsError("invalid-argument", "event must be created, assigned, status_changed or updated");
-  }
-  const event = input.event as EnquiryEventKind;
-  if (input.oldStatus !== undefined && input.oldStatus !== null && typeof input.oldStatus !== "string") {
-    throw new HttpsError("invalid-argument", "oldStatus must be a string");
+): DerivedEnquiryEvent[] {
+  if (!after) return [];
+
+  if (!before) {
+    if (str(after.createdBy) === WEBSITE_LEAD_CREATED_BY) return [];
+    if (!isRecentEvent("created", after, now)) return [];
+    const actorUid = triggerActorUid(after, "created");
+    const out: DerivedEnquiryEvent[] = [
+      { event: "created", actorUid, notifyAdmins: true, notifyAssignee: false },
+    ];
+    if (str(after.assignedTo)) {
+      out.push({ event: "assigned", actorUid, notifyAdmins: false, notifyAssignee: true });
+    }
+    return out;
   }
 
-  const [callerSnap, enquirySnap] = await Promise.all([
-    db.collection("users").doc(callerUid).get(),
-    db.collection("enquiries").doc(enquiryId).get(),
-  ]);
-  const actor = toActiveUser(callerSnap);
-  if (!actor) {
-    throw new HttpsError("permission-denied", "Active account required");
-  }
-  if (!enquirySnap.exists) {
-    throw new HttpsError("not-found", "Enquiry not found");
-  }
-  const enquiry = enquirySnap.data() ?? {};
-  if (!canAnnounce(event, actor, enquiry)) {
-    throw new HttpsError("permission-denied", "Not allowed to announce this enquiry");
-  }
-  if (!isRecentEvent(event, enquiry, now)) {
-    logger.info("notifyEnquiryEvent: stale event ignored", { enquiryId, event, by: callerUid });
-    return { queued: 0, skipped: "stale" };
+  const beforeAssignee = str(before.assignedTo);
+  const afterAssignee = str(after.assignedTo);
+  const assignedChanged = afterAssignee !== null && afterAssignee !== beforeAssignee;
+
+  const beforeStatus = canonicalStatus(before.statusValue);
+  const afterStatus = canonicalStatus(after.statusValue);
+  const statusChanged = afterStatus !== null && beforeStatus !== afterStatus;
+
+  const userChanged = !statusChanged && USER_FACING_FIELDS.some((f) => !valuesEqual(before[f], after[f]));
+
+  if (!assignedChanged && !statusChanged && !userChanged) return [];
+
+  const actorForOther = triggerActorUid(after, "updated");
+  if (assignedChanged && !statusChanged && !userChanged) {
+    return [{ event: "assigned", actorUid: actorForOther, notifyAdmins: true, notifyAssignee: true }];
   }
 
-  const assigneeUid = str(enquiry.assignedTo);
+  const out: DerivedEnquiryEvent[] = [];
+  if (assignedChanged) {
+    out.push({ event: "assigned", actorUid: actorForOther, notifyAdmins: false, notifyAssignee: true });
+  }
+  if (statusChanged) {
+    out.push({
+      event: "status_changed",
+      actorUid: triggerActorUid(after, "status_changed"),
+      oldStatus: typeof before.statusValue === "string" ? before.statusValue : null,
+      notifyAdmins: true,
+      notifyAssignee: !assignedChanged,
+    });
+  } else if (userChanged) {
+    out.push({
+      event: "updated",
+      actorUid: actorForOther,
+      notifyAdmins: true,
+      notifyAssignee: !assignedChanged,
+    });
+  }
+  return out;
+}
+
+/** Trigger core, exported for emulator tests. */
+export async function handleEnquiryWrittenNotify(
+  db: FirebaseFirestore.Firestore,
+  enquiryId: string,
+  eventId: string,
+  before: FirebaseFirestore.DocumentData | undefined,
+  after: FirebaseFirestore.DocumentData | undefined,
+  now: Date = new Date(),
+): Promise<number> {
+  const derived = deriveEnquiryNotificationEvents(before, after, now);
+  if (derived.length === 0 || !after) return 0;
+
+  const assigneeUid = str(after.assignedTo);
   const [adminSnap, assigneeSnap] = await Promise.all([
     db.collection("users").where("role", "==", "admin").get(),
     assigneeUid ? db.collection("users").doc(assigneeUid).get() : Promise.resolve(null),
@@ -303,23 +403,34 @@ export async function handleNotifyEnquiryEvent(
   const admins = adminSnap.docs.map(toActiveUser).filter((u): u is ActiveUser => u !== null && u.role === "admin");
   const assignee = assigneeSnap ? toActiveUser(assigneeSnap) : null;
 
-  const planned = planEnquiryNotifications({
-    event,
-    actorUid: callerUid,
-    enquiryId,
-    enquiry,
-    admins,
-    assignee,
-    oldStatus: typeof input.oldStatus === "string" ? input.oldStatus : null,
-    notifyAdmins: boolOr(input.notifyAdmins, true),
-    notifyAssignee: boolOr(input.notifyAssignee, true),
-  });
-  if (planned.length === 0) return { queued: 0 };
+  const seenUids = new Set<string>();
+  const toSend: Array<PlannedNotification & { event: EnquiryEventKind; actorUid: string }> = [];
 
-  const notificationId = eventNotificationId(event, enquiryId, callerUid, enquiry, now);
+  for (const d of derived) {
+    const planned = planEnquiryNotifications({
+      event: d.event,
+      actorUid: d.actorUid,
+      enquiryId,
+      enquiry: after,
+      admins,
+      assignee,
+      oldStatus: d.oldStatus ?? null,
+      notifyAdmins: d.notifyAdmins,
+      notifyAssignee: d.notifyAssignee,
+    });
+    for (const item of planned) {
+      if (seenUids.has(item.uid)) continue;
+      seenUids.add(item.uid);
+      toSend.push({ ...item, event: d.event, actorUid: d.actorUid });
+    }
+  }
+
+  if (toSend.length === 0) return 0;
+
   let queued = 0;
   await Promise.all(
-    planned.map(async (n) => {
+    toSend.map(async (n) => {
+      const notificationId = `ev_${enquiryId}_${n.event}_${eventId}`.slice(0, 1400);
       try {
         await db.collection("users").doc(n.uid).collection("notifications").doc(notificationId).create({
           title: n.title,
@@ -328,21 +439,45 @@ export async function handleNotifyEnquiryEvent(
           enquiryId,
           data: n.data,
           read: false,
-          createdBy: callerUid,
+          createdBy: n.actorUid || "system",
           createdAt: FieldValue.serverTimestamp(),
+          expireAt: notificationExpireAt(now),
         });
         queued += 1;
       } catch (error: any) {
-        // gRPC 6 = ALREADY_EXISTS: same event already announced (client retry).
         if (error?.code !== 6) throw error;
       }
     }),
   );
-  logger.info("notifyEnquiryEvent", { enquiryId, event, by: callerUid, queued });
-  return { queued };
+
+  logger.info("onEnquiryWrittenNotify", { enquiryId, eventId, queued });
+  return queued;
+}
+
+export const onEnquiryWrittenNotify = onDocumentWritten(
+  { document: "enquiries/{id}", region: "asia-south1" },
+  async (event) => {
+    const enquiryId = event.params.id;
+    const before = event.data?.before.exists ? event.data.before.data() : undefined;
+    const after = event.data?.after.exists ? event.data.after.data() : undefined;
+    await handleEnquiryWrittenNotify(getFirestore(), enquiryId, event.id, before, after);
+  },
+);
+
+/**
+ * Legacy callable retained for old app builds; notifications now come from
+ * `onEnquiryWrittenNotify` so nothing is written here.
+ */
+export async function handleNotifyEnquiryEvent(
+  _db: FirebaseFirestore.Firestore,
+  _callerUid: string | undefined,
+  _input: NotifyEnquiryEventRequest,
+  _now: Date = new Date(),
+): Promise<NotifyEnquiryEventResult> {
+  return { queued: 0, skipped: "server" };
 }
 
 export const notifyEnquiryEvent = onCall<NotifyEnquiryEventRequest, Promise<NotifyEnquiryEventResult>>(
   { cors: true, region: "asia-south1", enforceAppCheck: false },
-  async (request) => handleNotifyEnquiryEvent(getFirestore(), request.auth?.uid, request.data ?? {}),
+  async () => ({ queued: 0, skipped: "server" }),
 );

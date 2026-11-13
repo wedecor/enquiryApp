@@ -20,6 +20,27 @@ class CsvExport {
   static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
   static final DateFormat _fileNameDateFormat = DateFormat('yyyyMMdd_HHmmss');
 
+  /// Prefixes `'` on cells starting with formula triggers (`=`, `+`, `-`, `@`, `\t`, `\r`)
+  /// so spreadsheet apps do not evaluate exported user strings as formulas.
+  @visibleForTesting
+  static String safeCell(String value) {
+    if (value.isEmpty) return value;
+    final first = value.codeUnitAt(0);
+    if (first == 0x3D || // =
+        first == 0x2B || // +
+        first == 0x2D || // -
+        first == 0x40 || // @
+        first == 0x09 || // \t
+        first == 0x0D) {
+      // \r
+      return "'$value";
+    }
+    return value;
+  }
+
+  static List<List<String>> _sanitizeRows(List<List<String>> rows) =>
+      rows.map((r) => r.map(safeCell).toList()).toList();
+
   /// CSV header row for the enquiry export. Staff never get money, customer email
   /// or budget columns.
   static List<String> enquiryHeaders({required bool isAdminUser}) => isAdminUser
@@ -92,7 +113,7 @@ class CsvExport {
         _formatTimestamp(enquiry['createdAt']),
         enquiry['createdBy']?.toString() ?? '',
         _formatTimestamp(enquiry['updatedAt']),
-      ];
+      ].map(safeCell).toList();
     }
     return [
       enquiry['id']?.toString() ?? '',
@@ -108,7 +129,7 @@ class CsvExport {
       _labelOrValue(enquiry, 'priorityLabel', 'priorityValue', 'priority'),
       _labelOrValue(enquiry, 'sourceLabel', 'sourceValue', 'source'),
       _formatTimestamp(enquiry['createdAt']),
-    ];
+    ].map(safeCell).toList();
   }
 
   /// Builds the CSV text page by page as [pages] arrive (no row cap). Returns the
@@ -170,57 +191,6 @@ class CsvExport {
       throw Exception('No data to export');
     }
     await exportEnquiryPages(Stream.value(enquiries), ref);
-  }
-
-  /// Export recent enquiries from analytics
-  static Future<void> exportRecentEnquiries(List<RecentEnquiry> enquiries) async {
-    if (enquiries.isEmpty) {
-      throw Exception('No data to export');
-    }
-
-    // Define CSV headers
-    final headers = [
-      'ID',
-      'Date',
-      'Customer Name',
-      'Event Type',
-      'Status',
-      'Source',
-      'Priority',
-      'Total Cost',
-    ];
-
-    // Convert enquiries to CSV rows
-    final rows = <List<String>>[headers];
-
-    for (final enquiry in enquiries) {
-      rows.add([
-        enquiry.id,
-        _dateFormat.format(enquiry.date),
-        enquiry.customerName,
-        enquiry.eventType,
-        DropdownLookup.statusLabelOf(null, enquiry.status),
-        enquiry.source,
-        enquiry.priority,
-        amountText(enquiry.totalCost),
-      ]);
-    }
-
-    // Generate CSV content
-    final csvContent = const ListToCsvConverter().convert(rows);
-    final bytes = Uint8List.fromList(utf8.encode(csvContent));
-
-    // Generate filename with timestamp
-    final timestamp = _fileNameDateFormat.format(DateTime.now());
-    final filename = 'recent_enquiries_$timestamp.csv';
-
-    // Save file
-    await FileSaver.instance.saveFile(
-      name: filename,
-      bytes: bytes,
-      ext: 'csv',
-      mimeType: MimeType.csv,
-    );
   }
 
   /// Export analytics summary data
@@ -317,7 +287,7 @@ class CsvExport {
     }
 
     // Generate CSV content
-    final csvContent = const ListToCsvConverter().convert(rows);
+    final csvContent = const ListToCsvConverter().convert(_sanitizeRows(rows));
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
 
     // Generate filename with timestamp
@@ -370,7 +340,7 @@ class CsvExport {
     }
 
     // Generate CSV content
-    final csvContent = const ListToCsvConverter().convert(rows);
+    final csvContent = const ListToCsvConverter().convert(_sanitizeRows(rows));
     final bytes = Uint8List.fromList(utf8.encode(csvContent));
 
     // Generate filename with timestamp

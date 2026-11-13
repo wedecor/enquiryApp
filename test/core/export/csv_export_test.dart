@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:we_decor_enquiries/core/export/csv_export.dart';
 
 void main() {
   group('CsvExport', () {
@@ -32,6 +33,36 @@ void main() {
         expect(enquiry['id'], isNotNull);
         expect(enquiry['customerName'], isNotNull);
         expect(enquiry['eventDate'], isA<Timestamp>());
+      });
+    });
+
+    group('safeCell formula-injection guard', () {
+      test('prefixes single quote on cells starting with =, +, -, @, tab, or CR', () {
+        expect(CsvExport.safeCell('=CMD("calc")'), "'=CMD(\"calc\")");
+        expect(CsvExport.safeCell('+919876543210'), "'+919876543210");
+        expect(CsvExport.safeCell('-1+1'), "'-1+1");
+        expect(CsvExport.safeCell('@SUM(A1:A2)'), "'@SUM(A1:A2)");
+        expect(CsvExport.safeCell('\tcmd'), "'\tcmd");
+        expect(CsvExport.safeCell('\rcmd'), "'\rcmd");
+      });
+
+      test('leaves normal strings and empty strings unchanged', () {
+        expect(CsvExport.safeCell(''), '');
+        expect(CsvExport.safeCell('Priya Sharma'), 'Priya Sharma');
+        expect(CsvExport.safeCell('a=b+c'), 'a=b+c');
+      });
+
+      test('enquiryRow sanitizes all cells', () {
+        final row = CsvExport.enquiryRow({
+          'id': 'e1',
+          'customerName': '=1+1',
+          'customerPhone': '+919876543210',
+          'notes': '@evil',
+        }, isAdminUser: false);
+        expect(row[0], 'e1');
+        expect(row[1], "'=1+1");
+        expect(row[2], "'+919876543210");
+        expect(row[8], "'@evil");
       });
     });
   });
