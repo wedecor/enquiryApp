@@ -180,11 +180,30 @@ describe("deriveEnquiryNotificationEvents (pure)", () => {
     );
   });
 
-  it("user-facing field changed → updated", () => {
+  it("user-facing field changed (including functions) → updated", () => {
     assert.deepEqual(
       deriveEnquiryNotificationEvents(
         { customerName: "A", statusValue: "new", notes: "old" },
         { customerName: "A", statusValue: "new", notes: "new", updatedBy: "staff1" },
+      ),
+      [{ event: "updated", actorUid: "staff1", notifyAdmins: true, notifyAssignee: true }],
+    );
+    assert.deepEqual(
+      deriveEnquiryNotificationEvents(
+        {
+          customerName: "A",
+          statusValue: "new",
+          functions: [{ id: "f1", eventType: "haldi", date: "2026-12-01" }],
+        },
+        {
+          customerName: "A",
+          statusValue: "new",
+          functions: [
+            { id: "f1", eventType: "haldi", date: "2026-12-01" },
+            { id: "f2", eventType: "wedding", date: "2026-12-02" },
+          ],
+          updatedBy: "staff1",
+        },
       ),
       [{ event: "updated", actorUid: "staff1", notifyAdmins: true, notifyAssignee: true }],
     );
