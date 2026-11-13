@@ -1,10 +1,10 @@
 {
   "version": "2.0.29",
   "buildNumber": 60,
-  "releaseDate": "2026-11-14",
+  "releaseDate": "2026-11-13",
   "releaseNotes": "Security fix: quotation amounts no longer appear in change history",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "",
+  "sha256": "fe292a525c394bc9857163fc86ec5b4a263334bc2b3d447d599c6fd18f55efe8",
   "forceUpdate": true,
   "minSupportedBuildNumber": 60,
   "features": [
