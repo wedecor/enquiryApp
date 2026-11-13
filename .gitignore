@@ -202,6 +202,7 @@ public/internal/rc3/*.apk
 # Android release artifacts
 public/android/*.apk
 public/android/*.apk.sha256.txt
+public/web/
 
 # Local Cursor prompts / audit docs (not product code)
 *_PROMPT.md
