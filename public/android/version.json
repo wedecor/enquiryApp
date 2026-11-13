@@ -1,12 +1,12 @@
 {
   "version": "2.0.31",
   "buildNumber": 62,
-  "releaseDate": "2026-11-13",
+  "releaseDate": "2026-11-14",
   "releaseNotes": "Yearly wishes now cover everyone who enquired, with gentler wording.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "5ce2d1a1e2c419c4cbc6ee0b2da59ec29072cfc6cd66ace947ced76757de2ce1",
-  "forceUpdate": true,
-  "minSupportedBuildNumber": 62,
+  "forceUpdate": false,
+  "minSupportedBuildNumber": 61,
   "features": [
     "Yearly wishes for all past-event enquiries, not only completed"
   ],
