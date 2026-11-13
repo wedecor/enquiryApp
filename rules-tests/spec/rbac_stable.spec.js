@@ -1700,8 +1700,24 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
 
     test('✅ Staff can save status change, follow-up complete, and follow-up reschedule payloads', async () => {
       const { serverTimestamp, increment } = require('firebase/firestore');
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('enquiry-allowlist-flow').set({
+          customerName: 'Flow User',
+          customerEmail: 'flow@example.com',
+          customerPhone: '+1234567890',
+          eventType: 'Wedding',
+          eventDate: new Date('2024-12-01'),
+          eventLocation: 'Grand Hotel',
+          statusValue: 'new',
+          assignedTo: STAFF_UID,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: ADMIN_UID,
+        });
+      });
+
       const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
-      const ref = staffDb.collection('enquiries').doc('enquiry-assigned-to-staff');
+      const ref = staffDb.collection('enquiries').doc('enquiry-allowlist-flow');
 
       await assertSucceeds(
         ref.update({
