@@ -223,7 +223,7 @@ class EnquiryRepository {
       }
       bookingAmountAuditChanges(oldMoneyData, extras).forEach((field, change) {
         transaction.set(
-          _auditService.newHistoryRef(id),
+          _auditService.historyRefForField(id, field),
           _auditService.buildHistoryEntry(
             fieldChanged: field,
             oldValue: change['old_value'],

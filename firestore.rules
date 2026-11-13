@@ -341,18 +341,49 @@ service cloud.firestore {
           || v is bool;
       }
 
-      match /history/{historyId} {
-        allow read: if isAdmin()
-          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
-        allow create: if (isAdmin()
-            || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid))
-          && request.resource.data.keys().hasOnly(['field_changed', 'old_value', 'new_value', 'user_id', 'timestamp', 'user_email'])
+      function isMoneyHistoryField(field) {
+        return field in [
+          'totalCost',
+          'advancePaid',
+          'quotedAmount',
+          'quotedAt',
+          'paymentStatus',
+          'paymentStatusValue',
+          'paymentStatusLabel',
+          'totalcost',
+          'advancepaid',
+          'quotedamount',
+          'quotedat',
+          'paymentstatus',
+          'paymentstatusvalue',
+          'paymentstatuslabel'
+        ];
+      }
+
+      function isValidHistoryEntry() {
+        return request.resource.data.keys().hasOnly(['field_changed', 'old_value', 'new_value', 'user_id', 'timestamp', 'user_email'])
           && request.resource.data.user_id == request.auth.uid
           && request.resource.data.field_changed is string
           && request.resource.data.field_changed.size() > 0
           && request.resource.data.field_changed.size() <= 60
           && isValidHistoryValue(request.resource.data.get('old_value', null))
           && isValidHistoryValue(request.resource.data.get('new_value', null));
+      }
+
+      match /history/{historyId} {
+        allow read: if isAdmin()
+          || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
+        allow create: if (isAdmin()
+            || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid))
+          && isValidHistoryEntry()
+          && !isMoneyHistoryField(request.resource.data.field_changed);
+        allow update, delete: if false;
+      }
+
+      // Money & payment change history: admin-only. Staff can neither read nor write.
+      match /financial_history/{historyId} {
+        allow read: if isAdmin();
+        allow create: if isAdmin() && isValidHistoryEntry();
         allow update, delete: if false;
       }
 

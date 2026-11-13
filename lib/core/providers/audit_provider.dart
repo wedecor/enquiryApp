@@ -1,19 +1,22 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/audit_service.dart';
 import '../services/firestore_service.dart';
+import 'role_provider.dart';
 
 /// Provider for AuditService
 final auditServiceProvider = Provider<AuditService>((ref) {
   return AuditService(ref.watch(firestoreServiceProvider));
 });
 
-/// Provider for enquiry history stream
+/// Provider for enquiry history stream (admins see merged history + financial_history;
+/// staff see history only and never attempt to read financial_history).
 final enquiryHistoryProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((
   ref,
   enquiryId,
 ) {
   final auditService = ref.read(auditServiceProvider);
-  return auditService.getEnquiryHistoryStream(enquiryId);
+  final isAdmin = ref.watch(isAdminProvider);
+  return auditService.getMergedEnquiryHistoryStream(enquiryId, includeFinancial: isAdmin);
 });
 
 /// Provider for field history stream

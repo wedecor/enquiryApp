@@ -1848,6 +1848,110 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(adminHist.delete());
     });
   });
+
+  describe('Financial History Rules (Money History Isolation)', () => {
+    it('❌ Staff cannot read or create financial_history', async () => {
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        await ctx
+          .firestore()
+          .collection('enquiries')
+          .doc('enquiry-assigned-to-staff')
+          .collection('financial_history')
+          .doc('fh-1')
+          .set({
+            field_changed: 'totalCost',
+            old_value: 1000,
+            new_value: 2000,
+            user_id: ADMIN_UID,
+            user_email: 'admin@test.com',
+          });
+      });
+
+      const staffDb = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' }).firestore();
+      const fhCol = staffDb
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('financial_history');
+
+      await assertFails(fhCol.doc('fh-1').get());
+      await assertFails(fhCol.get());
+      await assertFails(
+        fhCol.doc('fh-2').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: STAFF_UID,
+          user_email: 'staff@test.com',
+        }),
+      );
+    });
+
+    it('❌ Neither staff nor admin can create a history doc with money field_changed (totalCost / totalcost)', async () => {
+      const staffHist = testEnv
+        .authenticatedContext(STAFF_UID, { role: 'staff' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history');
+      const adminHist = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('history');
+
+      await assertFails(
+        staffHist.doc('bad-1').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: STAFF_UID,
+          user_email: 'staff@test.com',
+        }),
+      );
+      await assertFails(
+        adminHist.doc('bad-2').set({
+          field_changed: 'totalCost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+      await assertFails(
+        adminHist.doc('bad-3').set({
+          field_changed: 'totalcost',
+          old_value: 1000,
+          new_value: 2000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+    });
+
+    it('✅ Admin can create and read financial_history, but cannot update or delete', async () => {
+      const adminFh = testEnv
+        .authenticatedContext(ADMIN_UID, { role: 'admin' })
+        .firestore()
+        .collection('enquiries')
+        .doc('enquiry-assigned-to-staff')
+        .collection('financial_history')
+        .doc('fh-admin-1');
+
+      await assertSucceeds(
+        adminFh.set({
+          field_changed: 'totalCost',
+          old_value: 10000,
+          new_value: 15000,
+          user_id: ADMIN_UID,
+          user_email: 'admin@test.com',
+        }),
+      );
+      await assertSucceeds(adminFh.get());
+      await assertFails(adminFh.update({ new_value: 20000 }));
+      await assertFails(adminFh.delete());
+    });
+  });
 });
 
 // Add test completion logging
