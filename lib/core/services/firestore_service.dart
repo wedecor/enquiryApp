@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/enquiries/domain/event_functions.dart';
@@ -50,11 +51,22 @@ enum EnquiryScope {
 /// final enquiriesStream = firestoreService.watchEnquiriesForRole(isAdmin: true);
 /// ```
 class FirestoreService {
-  FirestoreService({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth;
 
   /// The underlying Firebase Firestore instance.
   final FirebaseFirestore _firestore;
+  final FirebaseAuth? _auth;
+
+  String? get _currentUid {
+    if (_auth != null) return _auth.currentUser?.uid;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Shared client for specialized repositories. Prefer typed helpers when available.
   FirebaseFirestore get firestore => _firestore;
@@ -772,6 +784,10 @@ class FirestoreService {
   /// ```
   Future<void> updateEnquiry(String enquiryId, Map<String, dynamic> data) async {
     data['updatedAt'] = FieldValue.serverTimestamp();
+    final uid = _currentUid;
+    if (uid != null && uid.isNotEmpty) {
+      data['updatedBy'] = uid;
+    }
     await _enquiriesCollection.doc(enquiryId).update(data);
   }
 
@@ -794,10 +810,12 @@ class FirestoreService {
   Future<void> updateEnquiryWithFinancials(String enquiryId, Map<String, dynamic> data) async {
     final parts = EnquiryFinancials.split(data);
     if (parts.money.isEmpty) return updateEnquiry(enquiryId, parts.parent);
+    final uid = _currentUid;
     final batch = firestore.batch()
       ..update(_enquiriesCollection.doc(enquiryId), {
         ...parts.parent,
         'updatedAt': FieldValue.serverTimestamp(),
+        if (uid != null && uid.isNotEmpty) 'updatedBy': uid,
       })
       ..set(
         EnquiryFinancials.ref(firestore, enquiryId),

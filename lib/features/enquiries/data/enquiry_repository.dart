@@ -180,6 +180,7 @@ class EnquiryRepository {
         'statusUpdatedAt': FieldValue.serverTimestamp(),
         'statusUpdatedBy': userId,
         'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': userId,
         'eventStatus': FieldValue.delete(),
         'status': FieldValue.delete(),
         'status_slug': FieldValue.delete(),

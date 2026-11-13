@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:we_decor_enquiries/core/services/enquiry_financials.dart';
@@ -192,6 +193,31 @@ void main() {
           expect(fin.data()!['quotedAmount'], 125000);
         },
       );
+
+      test('updateEnquiry sets updatedBy to the signed-in uid alongside updatedAt', () async {
+        final fakeDb = FakeFirebaseFirestore();
+        final mockAuth = _MockFirebaseAuth();
+        final mockUser = _MockUser();
+        when(() => mockUser.uid).thenReturn('staff-42');
+        when(() => mockAuth.currentUser).thenReturn(mockUser);
+
+        await fakeDb.collection('enquiries').doc('enq-upd').set({
+          'customerName': 'Priya',
+          'notes': 'Old',
+        });
+
+        final service = FirestoreService(firestore: fakeDb, auth: mockAuth);
+        await service.updateEnquiry('enq-upd', {'notes': 'New'});
+
+        final doc = await fakeDb.collection('enquiries').doc('enq-upd').get();
+        expect(doc.data()!['notes'], 'New');
+        expect(doc.data()!['updatedBy'], 'staff-42');
+        expect(doc.data()!['updatedAt'], isNotNull);
+      });
     });
   });
 }
+
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
+class _MockUser extends Mock implements User {}
