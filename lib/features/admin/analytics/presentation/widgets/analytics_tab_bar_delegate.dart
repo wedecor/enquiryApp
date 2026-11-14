@@ -72,7 +72,7 @@ TabBar buildAnalyticsTabBar({required BuildContext context, required TabControll
 
   return TabBar(
     controller: controller,
-    // Seven tabs: scroll sideways on phones instead of squeezing labels.
+    // Eight tabs: scroll sideways on phones instead of squeezing labels.
     isScrollable: true,
     tabAlignment: TabAlignment.start,
     dividerColor: Colors.transparent,
@@ -94,6 +94,7 @@ TabBar buildAnalyticsTabBar({required BuildContext context, required TabControll
       tab('Team'),
       tab('Money'),
       tab('Trends'),
+      tab('Timing'),
       tab('Breakdown'),
       tab('Tables'),
     ],
