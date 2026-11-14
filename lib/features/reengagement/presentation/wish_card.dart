@@ -7,11 +7,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../domain/occasion_kind.dart';
 import '../domain/reengagement_templates.dart';
 
-/// What a yearly wish card says. Pure — see [WishCardContent.forOccasion].
+/// What a yearly wish / thank-you card says. Pure — see [WishCardContent.forOccasion]
+/// and [WishCardContent.thankYou].
 ///
-/// Two layouts:
+/// Layouts:
 /// - **named** (birthday with a person): eyebrow, cream title, the name in gold.
-/// - **greeting**: eyebrow, "Dear Neha,", two gold lines.
+/// - **greeting**: eyebrow, "Dear Neha,", two gold lines (or one centred line for thank-you).
 class WishCardContent {
   const WishCardContent({
     required this.eyebrow,
@@ -21,19 +22,32 @@ class WishCardContent {
     required this.named,
   });
 
-  /// Small letter-spaced caps at the top ("WISHING YOU").
+  /// Small letter-spaced caps at the top ("WISHING YOU" / "WITH GRATITUDE").
   final String eyebrow;
 
-  /// "Birthday Wishes" (named) or "Dear Neha," (greeting).
+  /// "Birthday Wishes" (named) or "Dear Neha," (greeting / thank-you).
   final String creamLine;
 
-  /// The name (named, one line) or the wish (greeting, two lines).
+  /// The name (named, one line) or the wish (greeting, usually two lines).
+  /// Thank-you uses a single gold line ("Thank You"), centred in the two-line space.
   final List<String> goldLines;
 
   /// One quiet sentence under the divider.
   final String line;
 
   final bool named;
+
+  /// Thank-you after a completed booking (same canvas as yearly wishes).
+  static WishCardContent thankYou({required String customerName}) {
+    final first = ReengagementTemplates.firstName(customerName);
+    return WishCardContent(
+      eyebrow: 'WITH GRATITUDE',
+      creamLine: 'Dear $first,',
+      goldLines: const ['Thank You'],
+      line: 'It was a joy to be part of your celebration.',
+      named: false,
+    );
+  }
 
   /// Card text for an occasion. Timing-neutral (no date, no "Happy …", which reads as
   /// "today"): wishes go out a few days early and our stored date can be a haldi or a
@@ -182,10 +196,16 @@ class WishCardRenderer {
     } else {
       _centered(canvas, content.eyebrow, eyebrow.copyWith(color: _slate), 195);
       _centered(canvas, content.creamLine, _fit(serifLight, 78, content.creamLine, _cream), 260);
-      var y = 360.0;
-      for (final goldLine in content.goldLines.take(2)) {
-        _centered(canvas, goldLine, _fit(serifMedium, 116, goldLine, _gold), y);
-        y += 110;
+      final gold = content.goldLines.take(2).toList();
+      if (gold.length == 1) {
+        // Centre the single line in the space two gold lines normally use (360 + 470).
+        _centered(canvas, gold.first, _fit(serifMedium, 116, gold.first, _gold), 415);
+      } else {
+        var y = 360.0;
+        for (final goldLine in gold) {
+          _centered(canvas, goldLine, _fit(serifMedium, 116, goldLine, _gold), y);
+          y += 110;
+        }
       }
       dividerY = 645;
     }
