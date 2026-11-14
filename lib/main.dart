@@ -15,6 +15,7 @@ import 'core/logging/logger.dart';
 import 'core/notifications/fcm_bootstrap.dart';
 import 'core/notifications/notification_router.dart';
 import 'core/services/update_service.dart';
+import 'core/usage/usage_tracker.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
@@ -120,7 +121,11 @@ void main() {
   runZonedGuarded(
     () async {
       await _bootstrap();
-      runApp(const ProviderScope(child: FcmBootstrap(child: MyApp())));
+      runApp(
+        const ProviderScope(
+          child: FcmBootstrap(child: UsageTrackerHost(child: MyApp())),
+        ),
+      );
     },
     (error, stack) {
       // Catch any errors not handled by Flutter framework
