@@ -54,11 +54,13 @@ class MonthlySummaryScreen extends ConsumerWidget {
                       ),
                     ),
                     async.maybeWhen(
-                      data: (summary) => TextButton.icon(
-                        onPressed: summary.isEmpty ? null : () => _sharePdf(context, ref, summary),
-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
-                        label: const Text('Share as PDF'),
-                      ),
+                      data: (summary) => summary.isEmpty
+                          ? const SizedBox.shrink()
+                          : TextButton.icon(
+                              onPressed: () => _sharePdf(context, ref, summary),
+                              icon: const Icon(Icons.ios_share_rounded, size: 18),
+                              label: const Text('Share as PDF'),
+                            ),
                       orElse: () => const SizedBox.shrink(),
                     ),
                   ],

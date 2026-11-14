@@ -98,6 +98,7 @@ class MonthlySummaryPdf {
       ),
     );
 
+    // Second page only for Team and/or The month ahead (never a third page).
     final hasPage2 = summary.team.isNotEmpty || summary.monthAhead != null;
 
     pdf.addPage(
