@@ -1,12 +1,12 @@
 {
   "version": "2.0.36",
   "buildNumber": 67,
-  "releaseDate": "2026-11-14",
+  "releaseDate": "2026-11-15",
   "releaseNotes": "Analytics: monthly summary you can share as a PDF.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "ce0fb797a0bf6518a5ad2d391c45bdbaf85d1b033bfff22f9dae819e5d5d960b",
-  "forceUpdate": true,
-  "minSupportedBuildNumber": 67,
+  "forceUpdate": false,
+  "minSupportedBuildNumber": 63,
   "features": [
     "Analytics monthly summary: shareable PDF of the month’s enquiries, bookings, lost reasons, events, timing, team and wishes"
   ],
