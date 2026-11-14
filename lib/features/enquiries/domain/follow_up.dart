@@ -4,9 +4,10 @@ import '../../../core/constants/status_vocabulary.dart';
 
 /// Automatic follow-up state stored on an enquiry document.
 ///
-/// Scheduled, reminded and cancelled by Cloud Functions
-/// (`functions/src/followUps*.ts`); the app shows it and lets admins or the
-/// assignee complete or reschedule it (`FollowUpService`). Fields and rules:
+/// Scheduled follow-up system is switched off (Nov 2026: Follow Up tab uses the
+/// 10-day rule in `shouldShowReminder` instead). Kept for existing fields / tests.
+///
+/// Formerly: Cloud Functions (`functions/src/followUps*.ts`) + `FollowUpService`.
 /// docs/IMPLEMENTATION_PLAN_2026-11.md.
 enum FollowUpState {
   /// No open follow-up (terminal / booked enquiry, or not scheduled yet).

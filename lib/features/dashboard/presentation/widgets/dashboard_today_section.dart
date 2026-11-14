@@ -120,7 +120,7 @@ class DashboardTodaySection extends ConsumerWidget {
         bucket: 'reminders',
         label: 'Follow-ups',
         value: pendingReminders,
-        note: pendingReminders > 0 ? 'Event within 21d' : null,
+        note: pendingReminders > 0 ? 'Event in 10 days' : null,
       ),
       onTap: onBucketTap,
     );

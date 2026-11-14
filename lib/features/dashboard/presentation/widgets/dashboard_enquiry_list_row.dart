@@ -117,6 +117,7 @@ class DashboardEnquiryListRow extends ConsumerWidget {
       ageLabel: formatAgeLabel(createdAt),
       assigneeLabel: assigneeLabel?.trim(),
       showStatusChip: showStatus,
+      done: isReminderTab && isFollowUpContactedToday(data, now),
       locationPending: isApprovedLocationPending(
         statusIsApproved: EnquiryStatus.isApproved(statusValue),
         data: data,

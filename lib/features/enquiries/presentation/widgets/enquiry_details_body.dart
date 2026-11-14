@@ -21,7 +21,6 @@ import 'enquiry_display_labels.dart';
 import 'enquiry_images_section.dart';
 import 'event_details_section.dart';
 import 'event_functions_section.dart';
-import 'follow_up_section.dart';
 import 'payment_section.dart';
 import 'quotation_section.dart';
 
@@ -82,13 +81,6 @@ class EnquiryDetailsBody extends StatelessWidget {
         priorityLabel: labels.priorityLabel,
         sourceLabel: labels.sourceLabel,
       ),
-      if (FollowUpSection.shouldShow(enquiryData))
-        FollowUpSection(
-          enquiryId: enquiryId,
-          enquiryData: enquiryData,
-          // Same people who may edit functions: admins and the assignee.
-          canAct: canEditFunctions,
-        ),
       EventFunctionsSection(
         enquiryId: enquiryId,
         enquiryData: enquiryData,
