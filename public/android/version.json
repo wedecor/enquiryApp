@@ -1,14 +1,14 @@
 {
-  "version": "2.0.34",
-  "buildNumber": 65,
-  "releaseDate": "2026-11-14",
-  "releaseNotes": "Admins can see when each team member last used the app.",
+  "version": "2.0.35",
+  "buildNumber": 66,
+  "releaseDate": "2026-11-15",
+  "releaseNotes": "Analytics: new Timing tab — busiest enquiry days, event days, peak dates and seasons.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "5d0c37110c42301b54fcb5467e5ea864515c5595ef89a68faafd2df0a4bcae03",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Admin Analytics Team tab shows per-user app usage for the selected period"
+    "Analytics Timing tab: weekday and hour patterns, busiest event dates, season YoY"
   ],
   "bugFixes": []
 }

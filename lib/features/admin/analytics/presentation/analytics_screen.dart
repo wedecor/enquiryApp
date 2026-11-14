@@ -12,12 +12,14 @@ import '../../../../ui/primitives/primitives.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_controller.dart';
 import 'pipeline_controller.dart';
+import 'timing_controller.dart';
 import 'widgets/analytics_filters_panel.dart';
 import 'widgets/analytics_header.dart';
 import 'widgets/analytics_kpi_grid.dart';
 import 'widgets/analytics_state_views.dart';
 import 'widgets/analytics_tab_bar_delegate.dart';
 import 'widgets/analytics_tabs.dart';
+import 'widgets/timing_sections.dart';
 
 /// Analytics screen with admin-only access.
 ///
@@ -39,7 +41,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    _tabController = TabController(length: 8, vsync: this);
   }
 
   @override
@@ -109,6 +111,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
             const AnalyticsTeamTab(),
             const AnalyticsMoneyTab(),
             AnalyticsTrendsTab(onRetry: _refreshData),
+            const AnalyticsTimingTab(),
             AnalyticsBreakdownTab(onRetry: _refreshData),
             AnalyticsTablesTab(onRetry: _refreshData),
           ],
@@ -122,6 +125,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     // Pipeline tabs re-run when the controller reloads; invalidate in case the
     // filters did not change (pure refresh).
     ref.invalidate(pipelineReportProvider);
+    ref.invalidate(timingReportProvider);
   }
 
   Future<void> _showCustomDateRangePicker(DateRange currentRange) async {

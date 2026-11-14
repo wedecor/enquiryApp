@@ -243,13 +243,8 @@ class AnalyticsMoneyTab extends StatelessWidget {
 List<Widget> _demandSections(PipelineReport r) => [
   SourcePerformanceSection(report: r),
   AreaBreakdownSection(report: r),
-  _Responsive(
-    narrow: [
-      LeadTimeSection(report: r),
-      UpcomingDemandSection(report: r),
-    ],
-    wide: _pair(LeadTimeSection(report: r), UpcomingDemandSection(report: r)),
-  ),
+  // Lead-time ("How far ahead people enquire") lives on the Timing tab.
+  UpcomingDemandSection(report: r),
 ];
 
 /// Embeds pipeline-report sections inside a tab driven by the main controller.
