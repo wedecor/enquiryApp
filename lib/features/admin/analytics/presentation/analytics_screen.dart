@@ -11,6 +11,7 @@ import '../../../../shared/models/user_model.dart';
 import '../../../../ui/primitives/primitives.dart';
 import '../domain/analytics_models.dart';
 import 'analytics_controller.dart';
+import 'monthly_summary_screen.dart';
 import 'pipeline_controller.dart';
 import 'timing_controller.dart';
 import 'widgets/analytics_filters_panel.dart';
@@ -94,6 +95,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 AnalyticsHeader(
                   onExport: _exportAnalytics,
                   onRefresh: _refreshData,
+                  onMonthlySummary: _openMonthlySummary,
                   onBack: _onBack,
                 ),
                 const AnalyticsKpiGrid(),
@@ -126,6 +128,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     // filters did not change (pure refresh).
     ref.invalidate(pipelineReportProvider);
     ref.invalidate(timingReportProvider);
+  }
+
+  void _openMonthlySummary() {
+    Navigator.of(
+      context,
+    ).push<void>(MaterialPageRoute<void>(builder: (_) => const MonthlySummaryScreen()));
   }
 
   Future<void> _showCustomDateRangePicker(DateRange currentRange) async {
