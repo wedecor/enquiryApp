@@ -5,8 +5,8 @@
   "releaseNotes": "Analytics: new Timing tab — busiest enquiry days, event days, peak dates and seasons.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "059cea96bfb92389576d79bc5fd4f0f3f3b26a471ecc477009a0610f59e90e29",
-  "forceUpdate": true,
-  "minSupportedBuildNumber": 66,
+  "forceUpdate": false,
+  "minSupportedBuildNumber": 63,
   "features": [
     "Analytics Timing tab: weekday and hour patterns, busiest event dates, season YoY"
   ],
