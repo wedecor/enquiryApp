@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/tokens.dart';
 import '../../../../ui/primitives/primitives.dart';
+import '../../../settings/domain/app_config.dart';
+import '../../../settings/providers/settings_providers.dart';
+import '../data/monthly_summary_pdf.dart';
 import '../domain/monthly_summary.dart';
 import 'monthly_summary_controller.dart';
 import 'widgets/analytics_section_card.dart';
@@ -124,10 +127,15 @@ class MonthlySummaryScreen extends ConsumerWidget {
     );
   }
 
-  /// Wired in Task 3 to [MonthlySummaryPdf].
   Future<void> _sharePdf(BuildContext context, WidgetRef ref, MonthlySummary summary) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('PDF share will be available in the next update.')),
-    );
+    final company = ref.read(appGeneralConfigProvider).valueOrNull ?? const AppGeneralConfig();
+    try {
+      await MonthlySummaryPdf.buildAndShare(summary: summary, company: company);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not share PDF: $e')));
+    }
   }
 }
