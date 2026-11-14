@@ -474,10 +474,10 @@ service cloud.firestore {
           && request.resource.data.platform in ['android', 'web'];
       }
       allow read: if isAdmin();
+      // firstOpenAt is the IST day start (deterministic) so merge writes need not read.
       allow create: if isSignedIn() && request.auth.uid == uid && isActiveUser()
         && usageShapeOk()
-        && request.resource.data.activeSeconds <= 330
-        && request.resource.data.firstOpenAt == request.time;
+        && request.resource.data.activeSeconds <= 330;
       allow update: if isSignedIn() && request.auth.uid == uid && isActiveUser()
         && usageShapeOk()
         && request.resource.data.activeSeconds >= resource.data.activeSeconds

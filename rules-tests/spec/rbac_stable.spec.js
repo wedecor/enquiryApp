@@ -1357,7 +1357,9 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     require('firebase/compat/firestore');
     const FV = () => firebase.firestore.FieldValue;
     const DAY = '2026-11-15';
-    const expireAt = new Date('2027-05-14T00:00:00.000Z');
+    // 00:00 IST on 2026-11-15 = 2026-11-14T18:30:00.000Z
+    const dayStart = new Date('2026-11-14T18:30:00.000Z');
+    const expireAt = new Date('2027-05-14T18:30:00.000Z');
 
     const usageRef = (uid, role) =>
       testEnv
@@ -1372,7 +1374,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       day: DAY,
       activeSeconds: 60,
       opens: 1,
-      firstOpenAt: FV().serverTimestamp(),
+      firstOpenAt: dayStart,
       lastSeenAt: FV().serverTimestamp(),
       platform: 'android',
       appVersion: '2.0.34+65',
@@ -1396,7 +1398,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
             day: DAY,
             activeSeconds: 100,
             opens: 1,
-            firstOpenAt: new Date('2026-11-15T04:00:00.000Z'),
+            firstOpenAt: dayStart,
             lastSeenAt: new Date('2026-11-15T04:00:00.000Z'),
             platform: 'android',
             appVersion: '2.0.34+65',
@@ -1410,6 +1412,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
             day: DAY,
             activeSeconds: FV().increment(200),
             opens: FV().increment(1),
+            firstOpenAt: dayStart,
             lastSeenAt: FV().serverTimestamp(),
             platform: 'android',
             appVersion: '2.0.34+65',
@@ -1432,7 +1435,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
             day: DAY,
             activeSeconds: 400,
             opens: 2,
-            firstOpenAt: new Date('2026-11-15T04:00:00.000Z'),
+            firstOpenAt: dayStart,
             lastSeenAt: new Date('2026-11-15T04:00:00.000Z'),
             platform: 'android',
             appVersion: '2.0.34+65',
@@ -1446,6 +1449,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
             day: DAY,
             activeSeconds: 300,
             opens: 2,
+            firstOpenAt: dayStart,
             lastSeenAt: FV().serverTimestamp(),
             platform: 'android',
             appVersion: '2.0.34+65',
@@ -1460,7 +1464,8 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
           {
             day: DAY,
             activeSeconds: FV().increment(400),
-            opens: FV().increment(0),
+            opens: 2,
+            firstOpenAt: dayStart,
             lastSeenAt: FV().serverTimestamp(),
             platform: 'android',
             appVersion: '2.0.34+65',

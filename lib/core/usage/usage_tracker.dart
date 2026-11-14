@@ -21,11 +21,7 @@ class UsageDelta {
 
 /// Sink for fire-and-forget usage flushes. Wired to Firestore in Task 3.
 abstract class UsageFlushSink {
-  Future<void> flush({
-    required String uid,
-    required int activeSeconds,
-    required int opens,
-  });
+  Future<void> flush({required String uid, required int activeSeconds, required int opens});
 }
 
 /// Optional sink — null until [usageFlushSinkProvider] is wired to a repository.

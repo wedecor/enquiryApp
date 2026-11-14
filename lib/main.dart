@@ -15,9 +15,10 @@ import 'core/logging/logger.dart';
 import 'core/notifications/fcm_bootstrap.dart';
 import 'core/notifications/notification_router.dart';
 import 'core/services/update_service.dart';
-import 'core/usage/usage_tracker.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_controller.dart';
+import 'core/usage/usage_tracker.dart';
+import 'features/admin/analytics/data/usage_repository.dart';
 import 'features/auth/presentation/widgets/auth_gate.dart';
 import 'firebase_options.dart';
 
@@ -122,8 +123,13 @@ void main() {
     () async {
       await _bootstrap();
       runApp(
-        const ProviderScope(
-          child: FcmBootstrap(child: UsageTrackerHost(child: MyApp())),
+        ProviderScope(
+          overrides: [
+            usageFlushSinkProvider.overrideWith(
+              (ref) => FirestoreUsageFlushSink(ref.watch(usageRepositoryProvider)),
+            ),
+          ],
+          child: const FcmBootstrap(child: UsageTrackerHost(child: MyApp())),
         ),
       );
     },
