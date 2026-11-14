@@ -102,17 +102,13 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       final googleReviewLink = appConfig.googleReviewLink.isNotEmpty
           ? appConfig.googleReviewLink
           : null;
-      final instagramHandle = appConfig.instagramHandle.isNotEmpty
-          ? appConfig.instagramHandle
-          : null;
-      final websiteUrl = appConfig.websiteUrl.isNotEmpty ? appConfig.websiteUrl : null;
+      final businessName = appConfig.companyName.isNotEmpty ? appConfig.companyName : null;
 
       final status = await reviewService.sendReviewRequest(
         customerPhone: phone,
         customerName: customerName,
         googleReviewLink: googleReviewLink,
-        instagramHandle: instagramHandle,
-        websiteUrl: websiteUrl,
+        businessName: businessName,
         enquiryId: enquiryId,
       );
 

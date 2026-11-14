@@ -13,12 +13,14 @@ class ReviewRequestButton extends ConsumerWidget {
     super.key,
     required this.customerPhone,
     required this.customerName,
+    this.eventTypeLabel,
     this.enquiryId,
     this.enabled = true,
   });
 
   final String? customerPhone;
   final String customerName;
+  final String? eventTypeLabel;
   final String? enquiryId;
   final bool enabled;
 
@@ -33,26 +35,18 @@ class ReviewRequestButton extends ConsumerWidget {
 
     return configAsync.when(
       data: (config) {
-        // Use config values or defaults
         final googleReviewLink = config.googleReviewLink.isNotEmpty
             ? config.googleReviewLink
             : null;
-        final instagramHandle = config.instagramHandle.isNotEmpty ? config.instagramHandle : null;
-        final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
+        final businessName = config.companyName.isNotEmpty ? config.companyName : null;
 
         return EnquiryRoundAction(
           icon: Icons.star_rate_rounded,
           label: 'Request Review',
           color: AppSurfaces.of(context).accent,
           enabled: enabled,
-          onTap: () => _handleReviewRequest(
-            context,
-            ref,
-            reviewService,
-            googleReviewLink,
-            instagramHandle,
-            websiteUrl,
-          ),
+          onTap: () =>
+              _handleReviewRequest(context, ref, reviewService, googleReviewLink, businessName),
           semanticLabel: 'Request Review from $customerName',
           semanticHint: 'Sends a review request on WhatsApp',
         );
@@ -67,8 +61,7 @@ class ReviewRequestButton extends ConsumerWidget {
     WidgetRef ref,
     ReviewRequestService reviewService,
     String? googleReviewLink,
-    String? instagramHandle,
-    String? websiteUrl,
+    String? businessName,
   ) async {
     if (customerPhone == null || customerPhone!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,9 +77,9 @@ class ReviewRequestButton extends ConsumerWidget {
       final status = await reviewService.sendReviewRequest(
         customerPhone: customerPhone!,
         customerName: customerName,
+        eventTypeLabel: eventTypeLabel,
         googleReviewLink: googleReviewLink,
-        instagramHandle: instagramHandle,
-        websiteUrl: websiteUrl,
+        businessName: businessName,
         enquiryId: enquiryId,
       );
 
