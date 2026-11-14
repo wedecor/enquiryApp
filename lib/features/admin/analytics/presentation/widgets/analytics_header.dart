@@ -11,10 +11,17 @@ import 'analytics_format.dart';
 /// and round glass Export / Refresh actions. [onBack] adds a back button and
 /// the page title for the standalone (non-shell) route.
 class AnalyticsHeader extends ConsumerWidget {
-  const AnalyticsHeader({super.key, required this.onExport, required this.onRefresh, this.onBack});
+  const AnalyticsHeader({
+    super.key,
+    required this.onExport,
+    required this.onRefresh,
+    this.onMonthlySummary,
+    this.onBack,
+  });
 
   final VoidCallback onExport;
   final VoidCallback onRefresh;
+  final VoidCallback? onMonthlySummary;
   final VoidCallback? onBack;
 
   @override
@@ -62,6 +69,17 @@ class AnalyticsHeader extends ConsumerWidget {
           final actions = Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (onMonthlySummary != null) ...[
+                if (narrow)
+                  _RoundAction(
+                    icon: Icons.calendar_month_outlined,
+                    tooltip: 'Monthly summary',
+                    onTap: onMonthlySummary!,
+                  )
+                else
+                  _MonthlySummaryPill(onTap: onMonthlySummary!),
+                const SizedBox(width: AppTokens.space2),
+              ],
               if (narrow)
                 _RoundAction(icon: Icons.download_rounded, tooltip: 'Export', onTap: onExport)
               else
@@ -114,11 +132,51 @@ class _ExportPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _HeaderPill(
+      onTap: onTap,
+      tooltip: 'Export',
+      icon: Icons.download_rounded,
+      label: 'Export',
+    );
+  }
+}
+
+class _MonthlySummaryPill extends StatelessWidget {
+  const _MonthlySummaryPill({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return _HeaderPill(
+      onTap: onTap,
+      tooltip: 'Monthly summary',
+      icon: Icons.calendar_month_outlined,
+      label: 'Monthly summary',
+    );
+  }
+}
+
+class _HeaderPill extends StatelessWidget {
+  const _HeaderPill({
+    required this.onTap,
+    required this.tooltip,
+    required this.icon,
+    required this.label,
+  });
+
+  final VoidCallback onTap;
+  final String tooltip;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
     final s = AppSurfaces.of(context);
     final cs = Theme.of(context).colorScheme;
 
     return Tooltip(
-      message: 'Export',
+      message: tooltip,
       child: Pressable(
         onTap: onTap,
         borderRadius: AppRadius.full,
@@ -136,10 +194,10 @@ class _ExportPill extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.download_rounded, size: AppTokens.iconSmall, color: cs.onSurface),
+                  Icon(icon, size: AppTokens.iconSmall, color: cs.onSurface),
                   const SizedBox(width: AppTokens.space2),
                   Text(
-                    'Export',
+                    label,
                     style: Theme.of(
                       context,
                     ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
