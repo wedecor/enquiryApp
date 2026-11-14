@@ -1,12 +1,12 @@
 {
   "version": "2.0.34",
   "buildNumber": 65,
-  "releaseDate": "2026-11-15",
+  "releaseDate": "2026-11-14",
   "releaseNotes": "Admins can see when each team member last used the app.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "442e17b73cd1f0490cb03cfb487a4a97c3f079b95d6aa2eb57db56381764b6d6",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 63,
+  "sha256": "5d0c37110c42301b54fcb5467e5ea864515c5595ef89a68faafd2df0a4bcae03",
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 65,
   "features": [
     "Admin Analytics Team tab shows per-user app usage for the selected period"
   ],
