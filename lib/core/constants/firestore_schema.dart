@@ -107,6 +107,8 @@ class EnquiryFields {
   static const String createdBy = 'createdBy'; // uid or `system:website`
   static const String priorityValue = 'priorityValue';
   static const String sourceValue = 'sourceValue'; // `google_website` for the site
+  /// Source value written by the website lead Cloud Function (`SOURCE_VALUE`).
+  static const String websiteLeadSourceValue = 'google_website';
   static const String websiteLeadId = 'websiteLeadId'; // doc id `web_{externalId}`
 
   // Search
