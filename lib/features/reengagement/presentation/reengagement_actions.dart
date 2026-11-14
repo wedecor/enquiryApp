@@ -75,6 +75,31 @@ class ReengagementActions {
     );
   }
 
+  /// Digits in a normalized E.164-like phone (ignores `+` and formatting).
+  static int _digitCount(String normalized) => normalized.replaceAll(RegExp(r'\D'), '').length;
+
+  /// True when [raw] normalizes to at least 10 digits.
+  static bool isUsablePhone(ContactLauncher launcher, String? raw) {
+    if (raw == null || raw.trim().isEmpty) return false;
+    return _digitCount(launcher.normalize(raw)) >= 10;
+  }
+
+  /// Prefer [customerPhone]; if blank or too short after normalize, use
+  /// [phoneNormalized]. Null only when both are unusable.
+  static String? resolveWishPhone(
+    ContactLauncher launcher, {
+    required String? customerPhone,
+    required String phoneNormalized,
+  }) {
+    if (isUsablePhone(launcher, customerPhone)) {
+      return customerPhone!.trim();
+    }
+    if (isUsablePhone(launcher, phoneNormalized)) {
+      return phoneNormalized.trim();
+    }
+    return null;
+  }
+
   /// Shares the wish card + wish text through the share sheet (pick WhatsApp, then
   /// the customer's chat). Falls back to opening the chat with the text only when
   /// sharing an image isn't possible (e.g. a desktop browser). Logged on the
@@ -92,6 +117,8 @@ class ReengagementActions {
       nth: reminder.nth,
       person: reminder.person,
       phone: reminder.customerPhone,
+      phoneNormalized: reminder.phoneNormalized,
+      enquired: !reminder.pastCustomer,
       enquiryId: reminder.enquiryId.isEmpty ? null : reminder.enquiryId,
       text: messageFor(ref, reminder),
     );
@@ -114,6 +141,8 @@ class ReengagementActions {
       nth: row.nth,
       person: row.source.person,
       phone: row.source.customerPhone,
+      phoneNormalized: row.source.phoneNormalized,
+      enquired: false,
       enquiryId: row.source.enquiryId,
       text: messageForPast(ref, row),
     );
@@ -157,14 +186,21 @@ class ReengagementActions {
     required int nth,
     required String? person,
     required String? phone,
+    required String phoneNormalized,
+    required bool enquired,
     required String? enquiryId,
     required String text,
   }) async {
-    if (phone == null || phone.trim().isEmpty) {
+    final launcher = ref.read(contactLauncherProvider);
+    final resolved = resolveWishPhone(
+      launcher,
+      customerPhone: phone,
+      phoneNormalized: phoneNormalized,
+    );
+    if (resolved == null) {
       _snack(context, 'No phone number for this customer');
       return false;
     }
-    final launcher = ref.read(contactLauncherProvider);
     // Image sharing works in the Android app and phone browsers; a desktop browser
     // gets the text-only WhatsApp chat.
     final canShareImage =
@@ -179,12 +215,13 @@ class ReengagementActions {
             kind: kind,
             customerName: customerName,
             nth: nth,
+            enquired: enquired,
             person: person,
           ),
         );
         // Android app: straight into this customer's WhatsApp chat, card + text attached.
         if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-          final opened = await _shareToChat(png, launcher.normalize(phone), text);
+          final opened = await _shareToChat(png, launcher.normalize(resolved), text);
           if (opened) {
             launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
             return true;
@@ -204,14 +241,17 @@ class ReengagementActions {
         // sheet was shown and the user didn't back out, so count it as sent.
         launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
         return true;
-      } catch (e) {
-        Log.w('Wish card share failed; opening WhatsApp with text', data: {'error': e.toString()});
+      } catch (e, st) {
+        Log.e('Wish card share failed; opening WhatsApp with text', error: e, stackTrace: st);
+        if (context.mounted) {
+          _snack(context, "Couldn't attach the wish card — sending text only");
+        }
       }
     }
 
     if (!context.mounted) return false;
     final status = await launcher.openWhatsAppWithAudit(
-      phone,
+      resolved,
       prefillText: text,
       enquiryId: enquiryId,
       contactType: ContactType.reengagement,

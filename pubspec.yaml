@@ -12,7 +12,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Android, build-name is used as versionName while build-number used as versionCode.
 # Read more about Android versioning at https://developer.android.com/studio/publish/versioning
 # Keep public/android/version.json (version + buildNumber) in sync on every release.
-version: 2.0.32+63
+version: 2.0.33+64
 
 environment:
   sdk: ^3.8.1
@@ -94,6 +94,8 @@ flutter:
     - assets/brand/lockup_horizontal_ink.png
     - assets/brand/lockup_horizontal_gold.png
     - assets/fonts/NotoSans-Regular.ttf
+    # Wish-card faces (google_fonts resolves these before any network fetch).
+    - google_fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

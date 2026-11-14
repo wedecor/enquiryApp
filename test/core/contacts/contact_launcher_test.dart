@@ -10,15 +10,37 @@ void main() {
     });
 
     group('Phone Number Normalization', () {
-      test('adds default country code when missing', () {
+      test('normal 10-digit local number gets default country code', () {
         expect(contactLauncher.normalize('9876543210'), '+919876543210');
         expect(contactLauncher.normalize('1234567890'), '+911234567890');
       });
 
-      test('preserves existing country code', () {
+      test('keeps numbers already in +91 form', () {
+        expect(contactLauncher.normalize('+919876543210'), '+919876543210');
+        expect(contactLauncher.normalize('+91 98765 43210'), '+919876543210');
+      });
+
+      test('keeps foreign numbers that already start with +', () {
         expect(contactLauncher.normalize('+442071838750'), '+442071838750');
         expect(contactLauncher.normalize('+12345678901'), '+12345678901');
-        expect(contactLauncher.normalize('+919876543210'), '+919876543210');
+        expect(contactLauncher.normalize('+86 138 1234 5678'), '+8613812345678');
+      });
+
+      test('12-digit numbers starting with 91 get a leading +', () {
+        expect(contactLauncher.normalize('919876543210'), '+919876543210');
+      });
+
+      test('00 international prefix becomes +', () {
+        expect(contactLauncher.normalize('00919876543210'), '+919876543210');
+        expect(contactLauncher.normalize('00442071838750'), '+442071838750');
+      });
+
+      test('trunk-zero local numbers strip the leading 0 then get country code', () {
+        expect(contactLauncher.normalize('09876543210'), '+919876543210');
+      });
+
+      test('spaced 91-prefixed numbers become +91…', () {
+        expect(contactLauncher.normalize('91 98765 43210'), '+919876543210');
       });
 
       test('removes formatting characters', () {
@@ -54,7 +76,6 @@ void main() {
 
     group('URL Generation Logic', () {
       test('generates correct tel URLs', () {
-        // This tests the URL format that would be used
         final normalized = contactLauncher.normalize('9876543210');
         final expectedTelUrl = 'tel:$normalized';
         expect(expectedTelUrl, 'tel:+919876543210');
@@ -62,7 +83,7 @@ void main() {
 
       test('generates correct WhatsApp native URLs', () {
         final normalized = contactLauncher.normalize('+919876543210');
-        final whatsappPhone = normalized.substring(1); // Remove '+' for WhatsApp
+        final whatsappPhone = normalized.substring(1);
         final expectedUrl = 'whatsapp://send?phone=$whatsappPhone';
         expect(expectedUrl, 'whatsapp://send?phone=919876543210');
       });
@@ -101,7 +122,7 @@ void main() {
         expect(contactLauncher.normalize(''), '');
         expect(contactLauncher.normalize('   '), '');
         expect(contactLauncher.normalize('abc'), '+91');
-        expect(contactLauncher.normalize('123'), '+91123'); // Too short but normalized
+        expect(contactLauncher.normalize('123'), '+91123');
       });
 
       test('handles special characters safely', () {
@@ -130,9 +151,9 @@ void main() {
     });
 
     group('Country Code Handling', () {
-      test('uses provided default country code', () {
+      test('uses provided default country code for 10-digit locals', () {
         final customLauncher = ContactLauncher(defaultCountryCode: '+86');
-        expect(customLauncher.normalize('13812345678'), '+8613812345678');
+        expect(customLauncher.normalize('3812345678'), '+863812345678');
       });
 
       test('handles country codes without plus sign', () {
@@ -150,7 +171,7 @@ void main() {
       test('handles Indian phone numbers', () {
         expect(contactLauncher.normalize('98765 43210'), '+919876543210');
         expect(contactLauncher.normalize('+91 98765 43210'), '+919876543210');
-        expect(contactLauncher.normalize('09876543210'), '+9109876543210');
+        expect(contactLauncher.normalize('09876543210'), '+919876543210');
       });
 
       test('handles US phone numbers', () {
@@ -164,7 +185,8 @@ void main() {
         final ukLauncher = ContactLauncher(defaultCountryCode: '+44');
         expect(ukLauncher.normalize('2071838750'), '+442071838750');
         expect(ukLauncher.normalize('+44 20 7183 8750'), '+442071838750');
-        expect(ukLauncher.normalize('(020) 7183-8750'), '+4402071838750');
+        // Trunk 0 stripped before applying the default country code.
+        expect(ukLauncher.normalize('(020) 7183-8750'), '+442071838750');
       });
 
       test('handles international mobile numbers', () {
@@ -195,7 +217,7 @@ void main() {
             'This is a very long message that might exceed normal limits but should still be handled gracefully by the URL encoding mechanism.';
         final encoded = Uri.encodeComponent(longText);
         expect(encoded.length, greaterThan(longText.length));
-        expect(encoded, isNot(contains(' '))); // Spaces should be encoded
+        expect(encoded, isNot(contains(' ')));
       });
     });
   });

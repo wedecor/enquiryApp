@@ -3,15 +3,16 @@ import 'package:we_decor_enquiries/features/reengagement/domain/occasion_kind.da
 import 'package:we_decor_enquiries/features/reengagement/presentation/wish_card.dart';
 
 void main() {
-  WishCardContent card(OccasionKind kind, {String? person, int nth = 5}) =>
+  WishCardContent card(OccasionKind kind, {String? person, int nth = 5, bool enquired = false}) =>
       WishCardContent.forOccasion(
         kind: kind,
         customerName: 'Neha Sharma',
         nth: nth,
+        enquired: enquired,
         person: person,
       );
 
-  group('WishCardContent', () {
+  group('WishCardContent past customer', () {
     test('birthday with a person puts the name in gold, no age', () {
       final c = card(OccasionKind.birthday, person: 'Aarav');
       expect(c.named, isTrue);
@@ -66,6 +67,35 @@ void main() {
         expect(all, isNot(contains('decor')), reason: kind.value);
         expect(c.goldLines, isNotEmpty, reason: kind.value);
       }
+    });
+  });
+
+  group('WishCardContent enquired only', () {
+    test('every non-corporate kind uses the gentle THINKING OF YOU card', () {
+      for (final kind in OccasionKind.values.where((k) => k != OccasionKind.corporate)) {
+        final c = card(kind, enquired: true, nth: 5, person: 'Aarav');
+        expect(c.eyebrow, 'THINKING OF YOU', reason: kind.value);
+        expect(c.creamLine, 'Dear Aarav,', reason: kind.value);
+        expect(c.goldLines, ['Warm', 'Wishes'], reason: kind.value);
+        expect(c.line, 'Wishing you a happy year ahead.', reason: kind.value);
+        expect(c.named, isFalse, reason: kind.value);
+        final all = [c.eyebrow, c.creamLine, ...c.goldLines, c.line].join(' ');
+        expect(all, isNot(contains(RegExp(r'\d'))), reason: kind.value);
+        expect(all.toLowerCase(), isNot(contains('anniversary')), reason: kind.value);
+      }
+    });
+
+    test('enquired cream line falls back to customer first name', () {
+      final c = card(OccasionKind.home, enquired: true);
+      expect(c.creamLine, 'Dear Neha,');
+    });
+
+    test('corporate enquired keeps the past-customer corporate wording', () {
+      final c = card(OccasionKind.corporate, enquired: true, person: 'Aarav');
+      expect(c.eyebrow, 'THINKING OF YOU');
+      expect(c.creamLine, 'Dear Aarav,');
+      expect(c.goldLines, ['Warm', 'Wishes']);
+      expect(c.line, 'Hope this time of year is a lovely one.');
     });
   });
 }

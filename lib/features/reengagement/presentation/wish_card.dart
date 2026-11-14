@@ -37,19 +37,33 @@ class WishCardContent {
 
   /// Card text for an occasion. Timing-neutral (no date, no "Happy …", which reads as
   /// "today"): wishes go out a few days early and our stored date can be a haldi or a
-  /// weekend party, not the exact day. Numbers appear only where we know them: the
-  /// wedding anniversary and the home anniversary (counted from the event we
-  /// decorated or quoted). Birthdays never show an age.
+  /// weekend party, not the exact day. Numbers appear only for past customers where we
+  /// know them: wedding anniversary and home year. Birthdays never show an age.
+  ///
+  /// When [enquired] is true (never booked), the card must not claim the event happened
+  /// or name an anniversary number — every kind except corporate uses a gentle
+  /// "THINKING OF YOU" greeting instead.
   static WishCardContent forOccasion({
     required OccasionKind kind,
     required String customerName,
     required int nth,
+    required bool enquired,
     String? person,
   }) {
     final who = person?.trim() ?? '';
     final first = ReengagementTemplates.firstName(customerName);
     final dear = 'Dear ${who.isNotEmpty ? who : first},';
     final ordinal = OccasionKind.ordinal(nth < 1 ? 1 : nth);
+
+    if (enquired && kind != OccasionKind.corporate) {
+      return WishCardContent(
+        eyebrow: 'THINKING OF YOU',
+        creamLine: dear,
+        goldLines: const ['Warm', 'Wishes'],
+        line: 'Wishing you a happy year ahead.',
+        named: false,
+      );
+    }
 
     switch (kind) {
       case OccasionKind.birthday:
@@ -140,7 +154,7 @@ class WishCardRenderer {
     final serifMedium = GoogleFonts.cormorantGaramond(fontWeight: FontWeight.w500);
     final body = GoogleFonts.jost(fontSize: 34, fontWeight: FontWeight.w300);
     final brand = GoogleFonts.jost(fontWeight: FontWeight.w400);
-    // Fonts download on first use; wait so the card never draws in a fallback face.
+    // Bundled under google_fonts/; wait so the card never draws in a fallback face.
     await GoogleFonts.pendingFonts();
 
     final recorder = ui.PictureRecorder();

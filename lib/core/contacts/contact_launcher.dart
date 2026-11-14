@@ -30,30 +30,44 @@ class ContactLauncher {
   /// Persists successful contacts against an enquiry (speed-to-lead analytics).
   final ContactLogService? contactLog;
 
-  /// Normalizes raw phone number to E.164-like format
+  /// Normalizes raw phone number to E.164-like format.
   ///
-  /// Rules:
-  /// - Removes spaces, dashes, parentheses, dots
-  /// - Keeps leading '+' if present
-  /// - Adds defaultCountryCode if no '+' prefix
-  ///
-  /// Examples:
-  /// - "9876543210" + "+91" → "+919876543210"
-  /// - "(987) 654-3210" + "+1" → "+19876543210"
-  /// - "+442071838750" → "+442071838750" (unchanged)
+  /// - Strips everything except digits and a leading `+`.
+  /// - Leading `+` is kept as-is.
+  /// - Leading `00` becomes `+` (international prefix).
+  /// - Otherwise leading zeros are stripped, then:
+  ///   - 10 digits → [defaultCountryCode] + digits
+  ///   - 12 digits starting with `91` → `+` + digits
+  ///   - longer than 10 → `+` + digits
+  ///   - otherwise → [defaultCountryCode] + digits
   String normalize(String raw) {
-    if (raw.trim().isEmpty) return '';
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '';
 
-    // Remove all formatting characters except '+'
-    final String cleaned = raw.replaceAll(RegExp(r'[^\d+]'), '');
+    final hadLeadingPlus = trimmed.startsWith('+');
+    var digits = trimmed.replaceAll(RegExp(r'\D'), '');
 
-    // If already has country code, return as-is
-    if (cleaned.startsWith('+')) {
-      return cleaned;
+    if (hadLeadingPlus) {
+      return '+$digits';
     }
 
-    // Add default country code
-    return '$defaultCountryCode$cleaned';
+    if (digits.startsWith('00')) {
+      return '+${digits.substring(2)}';
+    }
+
+    digits = digits.replaceFirst(RegExp(r'^0+'), '');
+    if (digits.isEmpty) return defaultCountryCode;
+
+    if (digits.length == 10) {
+      return '$defaultCountryCode$digits';
+    }
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return '+$digits';
+    }
+    if (digits.length > 10) {
+      return '+$digits';
+    }
+    return '$defaultCountryCode$digits';
   }
 
   /// Launch phone dialer with the given number

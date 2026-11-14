@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../ui/components/tinted_icon_badge.dart';
@@ -62,7 +63,13 @@ class PastCustomerRowTile extends ConsumerWidget {
             IconButton(
               tooltip: 'Send wish on WhatsApp',
               icon: const Icon(Icons.chat_bubble_outline, color: AppColorScheme.whatsApp),
-              onPressed: source.customerPhone == null
+              onPressed:
+                  ReengagementActions.resolveWishPhone(
+                        ref.read(contactLauncherProvider),
+                        customerPhone: source.customerPhone,
+                        phoneNormalized: source.phoneNormalized,
+                      ) ==
+                      null
                   ? null
                   : () => ReengagementActions.sendPastWhatsApp(context, ref, row),
             ),
