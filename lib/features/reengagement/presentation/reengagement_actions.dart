@@ -1,11 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/contacts/contact_launcher.dart';
 import '../../../core/logging/logger.dart';
@@ -20,6 +15,7 @@ import '../domain/occasion_reminder.dart';
 import '../domain/past_customer_occasion.dart';
 import '../domain/reengagement_config.dart';
 import '../domain/reengagement_templates.dart';
+import 'occasion_card_share.dart';
 import 'reengagement_providers.dart';
 import 'wish_card.dart';
 
@@ -156,27 +152,6 @@ class ReengagementActions {
     }
   }
 
-  static const MethodChannel _whatsAppChannel = MethodChannel('wedecor/whatsapp');
-
-  /// Android only: opens [phone]'s WhatsApp chat (WhatsApp Business first) with the
-  /// card attached and [text] as the caption (MainActivity.shareImageToChat).
-  /// False when WhatsApp isn't installed or the hand-off failed.
-  static Future<bool> _shareToChat(Uint8List png, String phone, String text) async {
-    try {
-      final opened = await _whatsAppChannel.invokeMethod<bool>('shareImageToChat', {
-        'png': png,
-        'phone': phone,
-        'text': text,
-      });
-      return opened ?? false;
-    } on PlatformException catch (e) {
-      Log.w('WhatsApp direct share failed', data: {'error': e.message});
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
-  }
-
   /// True when the wish went out (card shared, or WhatsApp opened with the text).
   static Future<bool> _sendWish(
     BuildContext context,
@@ -190,78 +165,26 @@ class ReengagementActions {
     required bool enquired,
     required String? enquiryId,
     required String text,
-  }) async {
-    final launcher = ref.read(contactLauncherProvider);
-    final resolved = resolveWishPhone(
-      launcher,
+  }) {
+    return OccasionCardShare.share(
+      context: context,
+      launcher: ref.read(contactLauncherProvider),
+      content: WishCardContent.forOccasion(
+        kind: kind,
+        customerName: customerName,
+        nth: nth,
+        enquired: enquired,
+        person: person,
+      ),
+      text: text,
       customerPhone: phone,
       phoneNormalized: phoneNormalized,
-    );
-    if (resolved == null) {
-      _snack(context, 'No phone number for this customer');
-      return false;
-    }
-    // Image sharing works in the Android app and phone browsers; a desktop browser
-    // gets the text-only WhatsApp chat.
-    final canShareImage =
-        !kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
-
-    if (canShareImage) {
-      try {
-        final png = await WishCardRenderer.renderPng(
-          WishCardContent.forOccasion(
-            kind: kind,
-            customerName: customerName,
-            nth: nth,
-            enquired: enquired,
-            person: person,
-          ),
-        );
-        // Android app: straight into this customer's WhatsApp chat, card + text attached.
-        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-          final opened = await _shareToChat(png, launcher.normalize(resolved), text);
-          if (opened) {
-            launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
-            return true;
-          }
-        }
-        if (context.mounted) {
-          _snack(
-            context,
-            'Pick WhatsApp, then ${ReengagementTemplates.firstName(customerName)}\'s chat',
-          );
-        }
-        final result = await Share.shareXFiles([
-          XFile.fromData(png, mimeType: 'image/png', name: 'we-decor-wish.png'),
-        ], text: text);
-        if (result.status == ShareResultStatus.dismissed) return false;
-        // success, or `unavailable` (the platform can't report the outcome): the share
-        // sheet was shown and the user didn't back out, so count it as sent.
-        launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
-        return true;
-      } catch (e, st) {
-        Log.e('Wish card share failed; opening WhatsApp with text', error: e, stackTrace: st);
-        if (context.mounted) {
-          _snack(context, "Couldn't attach the wish card — sending text only");
-        }
-      }
-    }
-
-    if (!context.mounted) return false;
-    final status = await launcher.openWhatsAppWithAudit(
-      resolved,
-      prefillText: text,
+      customerName: customerName,
       enquiryId: enquiryId,
       contactType: ContactType.reengagement,
+      imageFileName: 'we-decor-wish.png',
+      cardAttachFailedMessage: "Couldn't attach the wish card — sending text only",
     );
-    if (!context.mounted) return false;
-    if (status != ContactLaunchStatus.opened) {
-      _snack(context, 'Could not open WhatsApp');
-      return false;
-    }
-    return true;
   }
 
   /// Admin "Check now": runs the daily reminder job immediately

@@ -1,60 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/services/contact_log_service.dart';
 import '../../../../core/services/review_request_service.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
+import '../../../reengagement/presentation/occasion_card_share.dart';
+import '../../../reengagement/presentation/wish_card.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'enquiry_round_action.dart';
 
-/// Button widget for requesting reviews from customers for completed enquiries
+/// Button for thanking a completed booking and asking for a Google review.
 class ReviewRequestButton extends ConsumerWidget {
   const ReviewRequestButton({
     super.key,
     required this.customerPhone,
     required this.customerName,
+    this.phoneNormalized = '',
+    this.eventTypeLabel,
     this.enquiryId,
     this.enabled = true,
   });
 
   final String? customerPhone;
   final String customerName;
+  final String phoneNormalized;
+  final String? eventTypeLabel;
   final String? enquiryId;
   final bool enabled;
 
+  static const label = 'Thank & ask for review';
+
+  static String thankedOnLabel(DateTime at) => 'Thanked on ${DateFormat('d MMM yyyy').format(at)}';
+
+  static String alreadySentMessage(DateTime at) =>
+      'Already sent on ${DateFormat('d MMM yyyy').format(at)}. Send again?';
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final reviewService = ref.read(reviewRequestServiceProvider);
     final configAsync = ref.watch(appGeneralConfigProvider);
-
-    if (customerPhone == null || customerPhone!.trim().isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final thankedAt = enquiryId == null || enquiryId!.isEmpty
+        ? null
+        : ref.watch(lastReviewRequestAtProvider(enquiryId!)).valueOrNull;
+    final hasPhone =
+        (customerPhone != null && customerPhone!.trim().isNotEmpty) ||
+        phoneNormalized.trim().isNotEmpty;
+    if (!hasPhone) return const SizedBox.shrink();
 
     return configAsync.when(
       data: (config) {
-        // Use config values or defaults
         final googleReviewLink = config.googleReviewLink.isNotEmpty
             ? config.googleReviewLink
             : null;
-        final instagramHandle = config.instagramHandle.isNotEmpty ? config.instagramHandle : null;
-        final websiteUrl = config.websiteUrl.isNotEmpty ? config.websiteUrl : null;
+        final businessName = config.companyName.isNotEmpty ? config.companyName : null;
 
-        return EnquiryRoundAction(
-          icon: Icons.star_rate_rounded,
-          label: 'Request Review',
-          color: AppSurfaces.of(context).accent,
-          enabled: enabled,
-          onTap: () => _handleReviewRequest(
-            context,
-            ref,
-            reviewService,
-            googleReviewLink,
-            instagramHandle,
-            websiteUrl,
-          ),
-          semanticLabel: 'Request Review from $customerName',
-          semanticHint: 'Sends a review request on WhatsApp',
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EnquiryRoundAction(
+              icon: Icons.star_rate_rounded,
+              label: label,
+              color: AppSurfaces.of(context).accent,
+              enabled: enabled,
+              onTap: () => _handleThankYou(
+                context,
+                ref,
+                googleReviewLink: googleReviewLink,
+                businessName: businessName,
+                previouslySentAt: thankedAt,
+              ),
+              semanticLabel: '$label for $customerName',
+              semanticHint: thankedAt == null
+                  ? 'Sends a thank-you card and review request on WhatsApp'
+                  : 'Already ${thankedOnLabel(thankedAt).toLowerCase()}; tap to send again',
+            ),
+            if (thankedAt != null) ...[
+              const SizedBox(height: AppTokens.space1),
+              Text(
+                thankedOnLabel(thankedAt),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
         );
       },
       loading: () => const SizedBox.shrink(),
@@ -62,82 +96,53 @@ class ReviewRequestButton extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleReviewRequest(
+  Future<void> _handleThankYou(
     BuildContext context,
-    WidgetRef ref,
-    ReviewRequestService reviewService,
-    String? googleReviewLink,
-    String? instagramHandle,
-    String? websiteUrl,
-  ) async {
-    if (customerPhone == null || customerPhone!.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No phone number available for review request'),
-          backgroundColor: AppColorScheme.snackError,
-        ),
+    WidgetRef ref, {
+    required String? googleReviewLink,
+    required String? businessName,
+    DateTime? previouslySentAt,
+  }) async {
+    if (previouslySentAt != null) {
+      final confirmed = await ConfirmationDialog.show(
+        context: context,
+        title: 'Send again?',
+        message: alreadySentMessage(previouslySentAt),
+        confirmText: 'Send again',
+        icon: Icons.star_rate_rounded,
       );
-      return;
+      if (!confirmed || !context.mounted) return;
     }
 
-    try {
-      final status = await reviewService.sendReviewRequest(
-        customerPhone: customerPhone!,
-        customerName: customerName,
-        googleReviewLink: googleReviewLink,
-        instagramHandle: instagramHandle,
-        websiteUrl: websiteUrl,
-        enquiryId: enquiryId,
-      );
+    final reviewService = ref.read(reviewRequestServiceProvider);
+    final launcher = ref.read(contactLauncherProvider);
+    final text = reviewService.generateReviewMessage(
+      customerName: customerName,
+      eventTypeLabel: eventTypeLabel,
+      googleReviewLink: googleReviewLink,
+      businessName: businessName,
+    );
 
-      if (!context.mounted) return;
+    final sent = await OccasionCardShare.share(
+      context: context,
+      launcher: launcher,
+      content: WishCardContent.thankYou(customerName: customerName),
+      text: text,
+      customerPhone: customerPhone,
+      phoneNormalized: phoneNormalized,
+      customerName: customerName,
+      enquiryId: enquiryId,
+      contactType: ContactType.reviewRequest,
+      imageFileName: 'we-decor-thank-you.png',
+      cardAttachFailedMessage: "Couldn't attach the thank-you card — sending text only",
+    );
 
-      switch (status) {
-        case ContactLaunchStatus.opened:
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Review request sent to $customerName'),
-              backgroundColor: AppColorScheme.snackSuccess,
-            ),
-          );
-          break;
-
-        case ContactLaunchStatus.invalidNumber:
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid phone number format'),
-              backgroundColor: AppColorScheme.snackError,
-            ),
-          );
-          break;
-
-        case ContactLaunchStatus.notInstalled:
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('WhatsApp not installed. Opened in browser instead.'),
-              backgroundColor: AppColorScheme.snackWarning,
-            ),
-          );
-          break;
-
-        case ContactLaunchStatus.failed:
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open WhatsApp'),
-              backgroundColor: AppColorScheme.snackError,
-            ),
-          );
-          break;
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error sending review request: $e'),
-            backgroundColor: AppColorScheme.snackError,
-          ),
-        );
-      }
-    }
+    if (!context.mounted || !sent) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Thank-you sent to $customerName'),
+        backgroundColor: AppColorScheme.snackSuccess,
+      ),
+    );
   }
 }

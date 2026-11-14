@@ -91,6 +91,9 @@ service cloud.firestore {
         'firstContactEstimated',
         'occasionPerson',
         'occasionReminders',
+        'reviewAskedAt',
+        'reviewReceivedAt',
+        'reviewReceivedBy',
         'customerNameLower',
         'phoneNormalized',
         'textIndex',
@@ -266,6 +269,22 @@ service cloud.firestore {
         ));
     }
 
+    // Google review received toggle (thank-you flow). Set = caller + server time;
+    // clear = both fields removed. Forged reviewReceivedBy is rejected.
+    function isValidReviewReceivedChange() {
+      let d = request.resource.data;
+      let changed = d.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['reviewReceivedAt', 'reviewReceivedBy'])
+        || (
+          d.get('reviewReceivedAt', null) == null
+          && d.get('reviewReceivedBy', null) == null
+        )
+        || (
+          d.get('reviewReceivedBy', '') == request.auth.uid
+          && d.get('reviewReceivedAt', null) == request.time
+        );
+    }
+
     // Public-ish profile (NO tokens here)
     // D6: active users may read colleague profiles (name/email/phone) — accepted 2026-07.
     // The owner can always read their own doc so the app can show "Access disabled".
@@ -315,8 +334,10 @@ service cloud.firestore {
       
       // Update: Admin can update anything, Staff can only update non-financial fields
       // Both roles: moving into Approved needs a known location (hasLocationIfApproving);
-      // follow-up fields change only as a valid complete / reschedule (isValidFollowUpChange).
+      // follow-up fields change only as a valid complete / reschedule (isValidFollowUpChange);
+      // reviewReceived* only as self-attributed set or clear (isValidReviewReceivedChange).
       allow update: if hasLocationIfApproving() && isValidFollowUpChange()
+        && isValidReviewReceivedChange()
         && isNotWritingParentMoney() && (isAdmin()
         || (
           // Staff can update if:

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/services/contact_log_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../ui/primitives/primitives.dart';
@@ -11,7 +13,9 @@ import 'review_request_button.dart';
 
 /// Expanding sheet header for enquiry details: event eyebrow, customer name,
 /// enquiry reference, live status and round contact actions.
-class EnquiryDetailsHeader extends StatelessWidget {
+///
+/// Thank-you / review is shown only when [statusValue] is `completed`.
+class EnquiryDetailsHeader extends ConsumerWidget {
   const EnquiryDetailsHeader({
     super.key,
     required this.enquiryId,
@@ -22,6 +26,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     required this.eventDate,
     required this.statusValue,
     required this.statusLabel,
+    this.phoneNormalized = '',
     this.actions = const [],
     this.repeatCustomer = false,
     this.locationPending = false,
@@ -36,6 +41,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
   final DateTime? eventDate;
   final String statusValue;
   final String statusLabel;
+  final String phoneNormalized;
   final List<Widget> actions;
 
   /// Shows a small "Repeat customer" badge beside the status.
@@ -49,13 +55,18 @@ class EnquiryDetailsHeader extends StatelessWidget {
   final bool amountPending;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final textScale = (MediaQuery.textScalerOf(context).scale(16) / 16).clamp(1.0, 2.0);
     final statusColor = AppColorScheme.statusColorFor(statusValue);
     final date = eventDate;
     final shortId = enquiryId.length > 8 ? enquiryId.substring(0, 8) : enquiryId;
     final place = location?.trim();
+    final showThankYou = statusValue == 'completed';
+    final thankedAt = showThankYou
+        ? ref.watch(lastReviewRequestAtProvider(enquiryId)).valueOrNull
+        : null;
+    final thankedExtra = thankedAt != null ? (AppTokens.space1 + 14 * textScale) : 0.0;
 
     return EnquirySheetHeader(
       title: customerName,
@@ -95,7 +106,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
           ],
         ],
       ),
-      footerHeight: EnquiryRoundAction.circleSize + 6 + 18 * textScale,
+      footerHeight: EnquiryRoundAction.circleSize + 6 + 18 * textScale + thankedExtra,
       footer: Wrap(
         spacing: AppTokens.space2,
         runSpacing: AppTokens.space2,
@@ -107,10 +118,12 @@ class EnquiryDetailsHeader extends StatelessWidget {
             eventType: eventTypeLabel,
             eventDate: eventDate,
           ),
-          if (statusValue == 'completed')
+          if (showThankYou)
             ReviewRequestButton(
               customerPhone: customerPhone,
               customerName: customerName,
+              phoneNormalized: phoneNormalized,
+              eventTypeLabel: eventTypeLabel,
               enquiryId: enquiryId,
             ),
         ],

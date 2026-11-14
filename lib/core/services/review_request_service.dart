@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/logging/logger.dart';
+import '../../features/reengagement/domain/reengagement_templates.dart';
 import '../contacts/contact_launcher.dart';
+import '../logging/logger.dart';
+
+/// Default Google review link when app config has none.
+const String kDefaultGoogleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA';
 
 /// Provider for ReviewRequestService
 final reviewRequestServiceProvider = Provider<ReviewRequestService>((ref) {
@@ -9,95 +13,68 @@ final reviewRequestServiceProvider = Provider<ReviewRequestService>((ref) {
   return ReviewRequestService(contactLauncher);
 });
 
-/// Service for sending review requests to customers via WhatsApp
+/// Service for sending thank-you + review requests to customers via WhatsApp.
 class ReviewRequestService {
   final ContactLauncher _contactLauncher;
 
   ReviewRequestService(this._contactLauncher);
 
-  /// Generates a review request message with Google review link, Instagram follow request, and website
+  /// Thank-you message with a Google review link.
   ///
-  /// Parameters:
-  /// - [customerName]: Name of the customer
-  /// - [googleReviewLink]: Google review URL (optional, defaults to We Decor's review link)
-  /// - [instagramHandle]: Instagram handle (optional, defaults to @wedecorbangalore)
-  /// - [websiteUrl]: Website URL (optional, defaults to https://www.wedecorevents.com/)
-  ///
-  /// Returns formatted message ready to send via WhatsApp
+  /// - [customerName]: full name; only the first name is used (same as wishes).
+  /// - [eventTypeLabel]: event type display label; lower-cased in the message.
+  ///   Blank / unknown → "celebration".
+  /// - [googleReviewLink]: from app config; falls back to [kDefaultGoogleReviewLink].
+  /// - [businessName]: company name from app config.
   String generateReviewMessage({
     required String customerName,
+    String? eventTypeLabel,
     String? googleReviewLink,
-    String? instagramHandle,
-    String? websiteUrl,
+    String? businessName,
   }) {
-    // Default values if not provided
-    const defaultGoogleReviewLink = 'https://share.google/qba1n2A4MKJiUy3PA';
-    const defaultInstagramHandle = '@wedecorbangalore';
-    const defaultWebsiteUrl = 'https://www.wedecorevents.com/';
+    final name = ReengagementTemplates.firstName(customerName);
+    final rawEvent = eventTypeLabel?.trim() ?? '';
+    final event = rawEvent.isEmpty ? 'celebration' : rawEvent.toLowerCase();
+    final link = (googleReviewLink != null && googleReviewLink.trim().isNotEmpty)
+        ? googleReviewLink.trim()
+        : kDefaultGoogleReviewLink;
+    final business = (businessName != null && businessName.trim().isNotEmpty)
+        ? businessName.trim()
+        : 'We Decor';
 
-    final reviewLink = googleReviewLink?.isNotEmpty == true
-        ? googleReviewLink!
-        : defaultGoogleReviewLink;
-
-    final instagram = instagramHandle?.isNotEmpty == true
-        ? (instagramHandle!.startsWith('@') ? instagramHandle : '@$instagramHandle')
-        : defaultInstagramHandle;
-
-    final website = websiteUrl?.isNotEmpty == true ? websiteUrl! : defaultWebsiteUrl;
-
-    final buffer = StringBuffer();
-
-    buffer.writeln('Hi $customerName! 👋');
-    buffer.writeln('');
-    buffer.writeln(
-      'Thank you for choosing We Decor for your event! We hope you had a wonderful experience. 🙏',
-    );
-    buffer.writeln('');
-    buffer.writeln('We would be grateful if you could:');
-    buffer.writeln('');
-    buffer.writeln('⭐ Leave us a Google review:');
-    buffer.writeln(reviewLink);
-    buffer.writeln('');
-    buffer.writeln('📸 Follow us on Instagram: $instagram');
-    buffer.writeln('https://www.instagram.com/wedecorbangalore/');
-    buffer.writeln('');
-    buffer.writeln('🌐 Visit our website:');
-    buffer.writeln(website);
-    buffer.writeln('');
-    buffer.writeln('Your feedback helps us serve you better! 😊');
-    buffer.writeln('');
-    buffer.writeln('Thank you!');
-    buffer.writeln('We Decor Team');
-
-    return buffer.toString();
+    return 'Hi $name, thank you for having us at your $event. '
+        'It was a joy to be part of it, and we hope everything looked the way you imagined. '
+        'If you have a minute, a short Google review would mean a lot to our small team: $link\n'
+        '\n'
+        'Warm wishes from $business.';
   }
 
-  /// Sends review request via WhatsApp
+  /// Sends thank-you / review request via WhatsApp (text-only path).
   ///
-  /// Returns the status of the WhatsApp launch
+  /// Card sharing goes through the shared helper in Task 3; this remains for
+  /// callers that only need the WhatsApp text launch.
   Future<ContactLaunchStatus> sendReviewRequest({
     required String customerPhone,
     required String customerName,
+    String? eventTypeLabel,
     String? googleReviewLink,
-    String? instagramHandle,
-    String? websiteUrl,
+    String? businessName,
     String? enquiryId,
   }) async {
     try {
       final message = generateReviewMessage(
         customerName: customerName,
+        eventTypeLabel: eventTypeLabel,
         googleReviewLink: googleReviewLink,
-        instagramHandle: instagramHandle,
-        websiteUrl: websiteUrl,
+        businessName: businessName,
       );
 
       Log.i(
-        'Sending review request',
+        'Sending thank-you review request',
         data: {
           'customerName': customerName,
           'hasGoogleLink': googleReviewLink != null,
-          'hasInstagram': instagramHandle != null,
-          'hasWebsite': websiteUrl != null,
+          'event': eventTypeLabel,
         },
       );
 

@@ -6,14 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/services/contact_log_service.dart';
 import '../../../../core/services/firestore_service.dart';
 
 import '../../../../core/services/review_request_service.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 
 import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
+import '../../../enquiries/presentation/widgets/review_request_button.dart';
+import '../../../reengagement/presentation/occasion_card_share.dart';
+import '../../../reengagement/presentation/wish_card.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'dashboard_action_sheets.dart';
 import 'dashboard_enquiry_tab_actions.dart';
@@ -88,9 +93,17 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     }
   }
 
-  Future<void> handleReviewRequest(String phone, String customerName, String enquiryId) async {
+  Future<void> handleReviewRequest(
+    String phone,
+    String customerName,
+    String enquiryId, {
+    String? eventTypeLabel,
+    String phoneNormalized = '',
+  }) async {
     try {
       final reviewService = ref.read(reviewRequestServiceProvider);
+      final launcher = ref.read(contactLauncherProvider);
+      final contactLog = ref.read(contactLogServiceProvider);
       final appConfigAsync = ref.read(appGeneralConfigProvider);
 
       final appConfig = appConfigAsync.valueOrNull;
@@ -99,42 +112,53 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
         return;
       }
 
+      final previouslySentAt = await contactLog.latestAt(
+        enquiryId: enquiryId,
+        type: ContactType.reviewRequest,
+      );
+      if (!mounted) return;
+      if (previouslySentAt != null) {
+        final confirmed = await ConfirmationDialog.show(
+          context: context,
+          title: 'Send again?',
+          message: ReviewRequestButton.alreadySentMessage(previouslySentAt),
+          confirmText: 'Send again',
+          icon: Icons.star_rate_rounded,
+        );
+        if (!confirmed || !mounted) return;
+      }
+
       final googleReviewLink = appConfig.googleReviewLink.isNotEmpty
           ? appConfig.googleReviewLink
           : null;
-      final instagramHandle = appConfig.instagramHandle.isNotEmpty
-          ? appConfig.instagramHandle
-          : null;
-      final websiteUrl = appConfig.websiteUrl.isNotEmpty ? appConfig.websiteUrl : null;
+      final businessName = appConfig.companyName.isNotEmpty ? appConfig.companyName : null;
 
-      final status = await reviewService.sendReviewRequest(
-        customerPhone: phone,
+      final text = reviewService.generateReviewMessage(
         customerName: customerName,
+        eventTypeLabel: eventTypeLabel,
         googleReviewLink: googleReviewLink,
-        instagramHandle: instagramHandle,
-        websiteUrl: websiteUrl,
-        enquiryId: enquiryId,
+        businessName: businessName,
       );
 
-      if (!mounted) return;
+      final sent = await OccasionCardShare.share(
+        context: context,
+        launcher: launcher,
+        content: WishCardContent.thankYou(customerName: customerName),
+        text: text,
+        customerPhone: phone,
+        phoneNormalized: phoneNormalized,
+        customerName: customerName,
+        enquiryId: enquiryId,
+        contactType: ContactType.reviewRequest,
+        imageFileName: 'we-decor-thank-you.png',
+        cardAttachFailedMessage: "Couldn't attach the thank-you card — sending text only",
+      );
 
-      switch (status) {
-        case ContactLaunchStatus.opened:
-          showSnack('Review request sent to $customerName');
-          break;
-        case ContactLaunchStatus.invalidNumber:
-          showSnack('Invalid phone number for review request');
-          break;
-        case ContactLaunchStatus.notInstalled:
-          showSnack('WhatsApp not installed. Opened in browser instead.');
-          break;
-        case ContactLaunchStatus.failed:
-          showSnack('Could not send review request');
-          break;
-      }
+      if (!mounted || !sent) return;
+      showSnack('Thank-you sent to $customerName');
     } catch (e) {
       if (mounted) {
-        showSnack('Error sending review request: $e');
+        showSnack('Error sending thank-you: $e');
       }
     }
   }

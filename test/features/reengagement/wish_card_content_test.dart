@@ -98,4 +98,18 @@ void main() {
       expect(c.line, 'Hope this time of year is a lovely one.');
     });
   });
+
+  group('WishCardContent thankYou', () {
+    test('uses gratitude eyebrow, Dear first name, single Thank You gold line', () {
+      final c = WishCardContent.thankYou(customerName: 'Neha Sharma');
+      expect(c.named, isFalse);
+      expect(c.eyebrow, 'WITH GRATITUDE');
+      expect(c.creamLine, 'Dear Neha,');
+      expect(c.goldLines, ['Thank You']);
+      expect(c.line, 'It was a joy to be part of your celebration.');
+      final all = [c.eyebrow, c.creamLine, ...c.goldLines, c.line].join(' ');
+      expect(all.toLowerCase(), isNot(contains('wedding')));
+      expect(all.toLowerCase(), isNot(contains(RegExp(r'₹|\brs\b|\d{2,}'))));
+    });
+  });
 }

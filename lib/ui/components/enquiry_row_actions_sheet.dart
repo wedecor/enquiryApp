@@ -297,7 +297,7 @@ List<EnquiryRowAction> contactEnquiryRowActions({
       callNumber.isNotEmpty) {
     actions.add(
       EnquiryRowAction(
-        label: 'Request review',
+        label: 'Thank & ask for review',
         icon: Icons.star_outline_rounded,
         onSelected: () => onRequestReview(callNumber),
       ),

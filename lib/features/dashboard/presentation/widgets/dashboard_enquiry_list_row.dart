@@ -99,7 +99,13 @@ class DashboardEnquiryListRow extends ConsumerWidget {
         if (userId == null) return;
         await actions.onMarkNotInterested(enquiryId, userId);
       },
-      onRequestReview: (p) => actions.onReviewRequest(p, customerName, enquiryId),
+      onRequestReview: (p) => actions.onReviewRequest(
+        p,
+        customerName,
+        enquiryId,
+        eventTypeLabel: eventTypeLabel,
+        phoneNormalized: (data['phoneNormalized'] as String?) ?? '',
+      ),
     );
 
     final statusLabel = DropdownLookup.statusLabelOf(dropdownLookup, statusValue);

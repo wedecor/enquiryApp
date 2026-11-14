@@ -226,6 +226,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               enquiryId: widget.enquiryId,
               customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
               customerPhone: customerPhone,
+              phoneNormalized: (enquiryData['phoneNormalized'] as String?) ?? '',
               location:
                   (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
               eventTypeLabel: labels.eventTypeLabel,
