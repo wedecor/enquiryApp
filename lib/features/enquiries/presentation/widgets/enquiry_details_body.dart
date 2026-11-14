@@ -23,6 +23,7 @@ import 'event_details_section.dart';
 import 'event_functions_section.dart';
 import 'payment_section.dart';
 import 'quotation_section.dart';
+import 'review_received_card.dart';
 
 /// Sliver list of the enquiry detail sections, cascading in on first build.
 class EnquiryDetailsBody extends StatelessWidget {
@@ -107,12 +108,15 @@ class EnquiryDetailsBody extends StatelessWidget {
           title: 'Quote & Outcome',
           children: _outcomeRows(isAdmin: userRole == UserRole.admin),
         ),
-      if (EnquiryStatus.fromValue(enquiryData['statusValue'] as String?) == EnquiryStatus.completed)
+      if (EnquiryStatus.fromValue(enquiryData['statusValue'] as String?) ==
+          EnquiryStatus.completed) ...[
+        ReviewReceivedCard(enquiryId: enquiryId, enquiryData: enquiryData),
         YearlyReminderCard(
           enquiryId: enquiryId,
           enquiryData: enquiryData,
           isAdmin: userRole == UserRole.admin,
         ),
+      ],
       _AsymmetricPair(
         major: CustomerInfoSection(
           customerPhone: enquiryData['customerPhone'] as String?,

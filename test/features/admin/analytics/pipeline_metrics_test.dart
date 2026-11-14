@@ -344,6 +344,21 @@ void main() {
       expect(r.avgContactsBeforeWin, 4);
       expect(r.avgContactsBeforeLoss, 1);
       expect(r.remindersSent, 2);
+      expect(r.reviewsAsked, 0);
+      expect(r.reviewsReceived, 0);
+    });
+
+    test('counts reviews asked and received among completed events in the period', () {
+      final rows = [
+        {...row('a', 'completed'), 'reviewAskedAt': ago(days: 1)},
+        {...row('b', 'completed'), 'reviewAskedAt': ago(days: 2), 'reviewReceivedAt': ago(days: 1)},
+        {...row('c', 'completed'), 'reviewReceivedAt': ago(days: 1)},
+        row('d', 'completed'),
+        row('e', 'approved', contactCount: 1),
+      ];
+      final r = computeFollowUp(openRows: rows, periodRows: rows, now: now);
+      expect(r.reviewsAsked, 3);
+      expect(r.reviewsReceived, 2);
     });
   });
 

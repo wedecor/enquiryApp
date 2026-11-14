@@ -68,7 +68,7 @@ class ContactLogService {
         final snap = await tx.get(enquiryRef);
         if (!snap.exists) return;
         final data = snap.data() ?? const <String, dynamic>{};
-        tx.update(enquiryRef, contactUpdateFields(data));
+        tx.update(enquiryRef, contactUpdateFields(data, type: type));
       });
     } catch (e, st) {
       Log.e('ContactLogService: failed to record contact', error: e, stackTrace: st);
@@ -123,8 +123,13 @@ class ContactLogService {
   /// Fields to write on the enquiry for one new contact. `firstContactAt` is set
   /// only when the enquiry has never been contacted, so it always holds the
   /// earliest contact (a backfilled estimate is kept, being earlier).
-  static Map<String, Object> contactUpdateFields(Map<String, dynamic> enquiryData) {
+  /// A first [ContactType.reviewRequest] also stamps `reviewAskedAt`.
+  static Map<String, Object> contactUpdateFields(
+    Map<String, dynamic> enquiryData, {
+    ContactType? type,
+  }) {
     final alreadyContacted = enquiryData['firstContactAt'] != null;
+    final askReview = type == ContactType.reviewRequest && enquiryData['reviewAskedAt'] == null;
     return {
       'lastContactAt': FieldValue.serverTimestamp(),
       'contactCount': FieldValue.increment(1),
@@ -132,6 +137,7 @@ class ContactLogService {
         'firstContactAt': FieldValue.serverTimestamp(),
         'firstContactEstimated': false,
       },
+      if (askReview) 'reviewAskedAt': FieldValue.serverTimestamp(),
     };
   }
 }

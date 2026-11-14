@@ -826,13 +826,23 @@ class FollowUpReport {
     required this.avgContactsBeforeWin,
     required this.avgContactsBeforeLoss,
     required this.remindersSent,
+    required this.reviewsAsked,
+    required this.reviewsReceived,
   });
 
   final List<StaleItem> notContacted7d;
   final double? avgContactsBeforeWin;
   final double? avgContactsBeforeLoss;
   final int remindersSent;
+
+  /// Completed events in the period that were asked for a Google review.
+  final int reviewsAsked;
+
+  /// Completed events in the period marked as review received.
+  final int reviewsReceived;
 }
+
+bool _isCompleted(Map<String, dynamic> row) => metricStatus(row) == EnquiryStatus.completed;
 
 /// [openRows]: all currently open enquiries (any period). [periodRows]: the
 /// selected period, for averages and reminder counts.
@@ -864,6 +874,16 @@ FollowUpReport computeFollowUp({
     return values.reduce((a, b) => a + b) / values.length;
   }
 
+  final completedInPeriod = periodRows.where(_isCompleted);
+  var reviewsAsked = 0;
+  var reviewsReceived = 0;
+  for (final row in completedInPeriod) {
+    final asked = row['reviewAskedAt'] != null || row['reviewReceivedAt'] != null;
+    final received = row['reviewReceivedAt'] != null;
+    if (asked) reviewsAsked++;
+    if (received) reviewsReceived++;
+  }
+
   return FollowUpReport(
     notContacted7d: stale,
     avgContactsBeforeWin: avgContacts(periodRows.where(isWon)),
@@ -872,6 +892,8 @@ FollowUpReport computeFollowUp({
       0,
       (total, r) => total + (metricNum(r['reminderClickCount'])?.toInt() ?? 0),
     ),
+    reviewsAsked: reviewsAsked,
+    reviewsReceived: reviewsReceived,
   );
 }
 

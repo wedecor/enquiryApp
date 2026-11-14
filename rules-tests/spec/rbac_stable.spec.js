@@ -986,6 +986,66 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('⭐ Review received toggle', () => {
+    const FV = () => require('firebase/compat/app').default.firestore.FieldValue;
+
+    const seed = async (overrides = {}) => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context.firestore().collection('enquiries').doc('rev').set({
+          customerName: 'Priya Sharma',
+          statusValue: 'completed',
+          assignedTo: STAFF_UID,
+          createdBy: ADMIN_UID,
+          createdAt: new Date(),
+          ...overrides,
+        });
+      });
+    };
+    const doc = (uid, role) =>
+      testEnv.authenticatedContext(uid, { role }).firestore().collection('enquiries').doc('rev');
+    const mark = (uid) => ({
+      reviewReceivedAt: FV().serverTimestamp(),
+      reviewReceivedBy: uid,
+      updatedAt: FV().serverTimestamp(),
+      updatedBy: uid,
+    });
+    const clear = (uid) => ({
+      reviewReceivedAt: FV().delete(),
+      reviewReceivedBy: FV().delete(),
+      updatedAt: FV().serverTimestamp(),
+      updatedBy: uid,
+    });
+
+    test('✅ Assigned staff can mark review received', async () => {
+      await seed();
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(mark(STAFF_UID)));
+    });
+
+    test('✅ Assigned staff can clear review received', async () => {
+      await seed({
+        reviewReceivedAt: new Date(),
+        reviewReceivedBy: STAFF_UID,
+      });
+      await assertSucceeds(doc(STAFF_UID, 'staff').update(clear(STAFF_UID)));
+    });
+
+    test('❌ Cannot set reviewReceivedBy to another uid', async () => {
+      await seed();
+      await assertFails(doc(STAFF_UID, 'staff').update(mark(OTHER_STAFF_UID)));
+    });
+
+    test('❌ Staff cannot mark review on an unassigned enquiry', async () => {
+      await seed({ assignedTo: OTHER_STAFF_UID });
+      await assertFails(doc(STAFF_UID, 'staff').update(mark(STAFF_UID)));
+    });
+
+    test('✅ Admin can mark and clear review received', async () => {
+      await seed();
+      await assertSucceeds(doc(ADMIN_UID, 'admin').update(mark(ADMIN_UID)));
+      await assertSucceeds(doc(ADMIN_UID, 'admin').update(clear(ADMIN_UID)));
+    });
+  });
+
   describe('💰 Financial summary (money is admin-only)', () => {
     const seed = async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

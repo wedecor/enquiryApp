@@ -123,6 +123,13 @@ class EnquiryFields {
   static const String followUpLastCompletedAt = 'followUpLastCompletedAt';
   static const String pastEventReviewAt = 'pastEventReviewAt';
 
+  /// First thank-you / Google review ask (set when a `review_request` contact is logged).
+  static const String reviewAskedAt = 'reviewAskedAt';
+
+  /// When a Google review was marked received (toggle on completed enquiries).
+  static const String reviewReceivedAt = 'reviewReceivedAt';
+  static const String reviewReceivedBy = 'reviewReceivedBy';
+
   // Yearly re-engagement stamp (admin + server)
   static const String occasionKind = 'occasionKind';
   static const String occasionDate = 'occasionDate';

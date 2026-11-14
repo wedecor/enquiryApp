@@ -636,6 +636,7 @@ class FollowUpSection extends ConsumerWidget {
               MiniStat(label: 'Contacts per win', value: avg(fu.avgContactsBeforeWin)),
               MiniStat(label: 'Contacts per loss', value: avg(fu.avgContactsBeforeLoss)),
               MiniStat(label: 'Reminders sent', value: '${fu.remindersSent}'),
+              MiniStat(label: 'Reviews', value: '${fu.reviewsReceived} of ${fu.reviewsAsked}'),
             ],
           ),
           if (items.isNotEmpty) ...[
