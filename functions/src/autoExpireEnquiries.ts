@@ -70,10 +70,9 @@ function toDate(raw: unknown): Date | null {
 /**
  * Open (New / In Talks) enquiries whose every event day has passed: no status change.
  * Each is flagged once with `pastEventReviewAt`, a history entry and one notification
- * to active admins (deterministic id `pastevent_{enquiryId}`). The follow-up trigger
- * (onEnquiryWrittenFollowUp) sees the past event and makes the follow-up due now, so
- * the assignee is reminded by followUpReminders and the enquiry stays in Follow Up.
- * Idempotent: a flagged enquiry is skipped inside a transaction.
+ * to active admins (deterministic id `pastevent_{enquiryId}`). With scheduled
+ * follow-ups off (default), this does not create follow-up due/overdue pushes;
+ * `pastEventReviewAt` + admin notification still fire. Idempotent per enquiry.
  */
 export async function flagPastEventOpenEnquiries(
   db: FirebaseFirestore.Firestore,

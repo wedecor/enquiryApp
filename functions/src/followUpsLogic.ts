@@ -22,6 +22,16 @@ import { CanonicalStatus, canonicalStatus } from "./statusVocabulary";
 export const SYSTEM_FOLLOW_UPS = "system:followups";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Calendar days from today (IST) to the first upcoming function for the daily
+ * follow-up push / Follow Up tab. Must match `kFollowUpLeadDays` in Dart
+ * (`dashboard_enquiry_utils.dart`).
+ */
+export const FOLLOW_UP_LEAD_DAYS = 10;
+
+/** Query window for top-level `eventDate` (last function day on multi-function). */
+export const FOLLOW_UP_EVENT_QUERY_DAYS = 41;
+
 export type FollowUpReason = "auto" | "callback" | "manual" | "past_event";
 export type ReminderStage = "due" | "overdue";
 
@@ -48,7 +58,7 @@ export type FollowUpConfig = {
  * one overdue reminder 24 h after the due time.
  */
 export const DEFAULT_FOLLOW_UP_CONFIG: FollowUpConfig = {
-  enabled: true,
+  enabled: false,
   cadenceDays: 3,
   dueHourIst: 10,
   overdueHours: 24,
@@ -70,7 +80,8 @@ export function parseFollowUpConfig(data: Record<string, unknown> | undefined): 
         .filter((s): s is CanonicalStatus => s === "new" || s === "in_talks" || s === "approved")
     : [];
   return {
-    enabled: d.followUpsEnabled !== false,
+    // Opt-in only: scheduled due/overdue follow-ups stay off unless explicitly enabled.
+    enabled: d.followUpsEnabled === true,
     cadenceDays: intIn(d.reminderDaysDefault, 1, 30, DEFAULT_FOLLOW_UP_CONFIG.cadenceDays),
     dueHourIst: intIn(d.followUpDueHourIst, 0, 23, DEFAULT_FOLLOW_UP_CONFIG.dueHourIst),
     overdueHours: intIn(d.followUpOverdueHours, 1, 24 * 14, DEFAULT_FOLLOW_UP_CONFIG.overdueHours),
@@ -348,5 +359,45 @@ export function reminderContent(
     body: truncate(parts.join(" · "), 500),
     type,
     data: { type, enquiryId, customerName: customer, stage },
+  };
+}
+
+/** True when In Talks (aliases) and first upcoming function is exactly +FOLLOW_UP_LEAD_DAYS IST. */
+export function isTenDayFollowUpMatch(data: Record<string, unknown>, now: Date): boolean {
+  if (data.mergedInto) return false;
+  if (canonicalStatus(data.statusValue) !== "in_talks") return false;
+  const upcoming = earliestUpcomingFunctionDate(data, now);
+  if (!upcoming) return false;
+  const days = Math.round((istDayStart(upcoming).getTime() - istDayStart(now).getTime()) / DAY_MS);
+  return days === FOLLOW_UP_LEAD_DAYS;
+}
+
+/** `fu10_{enquiryId}_{yyyy-mm-dd}` in IST. */
+export function tenDayNotificationId(enquiryId: string, now: Date): string {
+  const ist = new Date(now.getTime() + IST_OFFSET_MS);
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(ist.getUTCDate()).padStart(2, "0");
+  return `fu10_${enquiryId}_${y}-${m}-${d}`;
+}
+
+export function tenDayNotificationContent(
+  enquiryId: string,
+  data: Record<string, unknown>,
+  eventDate: Date,
+): { title: string; body: string; type: string; data: Record<string, string> } {
+  const customer = str(data.customerName) ?? "Customer";
+  const typeLabel = eventTypeLabelOf(data);
+  const dateLabel = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(eventDate);
+  return {
+    title: "Event in 10 days",
+    body: truncate(`${customer} · ${typeLabel} · ${dateLabel}`, 500),
+    type: "follow_up_due",
+    data: { type: "follow_up_due", enquiryId },
   };
 }
