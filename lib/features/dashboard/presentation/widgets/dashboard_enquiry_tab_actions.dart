@@ -29,6 +29,13 @@ class DashboardEnquiryTabActions {
   final Future<void> Function(Enquiry enquiry) onUpdateStatus;
   final Future<void> Function(Enquiry enquiry) onShare;
   final Future<void> Function(Enquiry enquiry) onAddNote;
-  final Future<void> Function(String phone, String customerName, String enquiryId) onReviewRequest;
+  final Future<void> Function(
+    String phone,
+    String customerName,
+    String enquiryId, {
+    String? eventTypeLabel,
+    String phoneNormalized,
+  })
+  onReviewRequest;
   final Future<void> Function(String enquiryId, String userId) onMarkNotInterested;
 }

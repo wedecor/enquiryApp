@@ -22,6 +22,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
     required this.eventDate,
     required this.statusValue,
     required this.statusLabel,
+    this.phoneNormalized = '',
     this.actions = const [],
     this.repeatCustomer = false,
     this.locationPending = false,
@@ -36,6 +37,7 @@ class EnquiryDetailsHeader extends StatelessWidget {
   final DateTime? eventDate;
   final String statusValue;
   final String statusLabel;
+  final String phoneNormalized;
   final List<Widget> actions;
 
   /// Shows a small "Repeat customer" badge beside the status.
@@ -111,6 +113,8 @@ class EnquiryDetailsHeader extends StatelessWidget {
             ReviewRequestButton(
               customerPhone: customerPhone,
               customerName: customerName,
+              phoneNormalized: phoneNormalized,
+              eventTypeLabel: eventTypeLabel,
               enquiryId: enquiryId,
             ),
         ],
