@@ -4,7 +4,7 @@
   "releaseDate": "2026-11-14",
   "releaseNotes": "Follow-ups now show In Talks events that are exactly 10 days away.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "5ce2d1a1e2c419c4cbc6ee0b2da59ec29072cfc6cd66ace947ced76757de2ce1",
+  "sha256": "6b1b1c4db4ea602e51aa3dbd55d43feddea6e8860276e99551696d2b6255c701",
   "forceUpdate": true,
   "minSupportedBuildNumber": 63,
   "features": [
