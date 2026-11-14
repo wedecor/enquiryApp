@@ -76,8 +76,7 @@ class ReengagementActions {
   }
 
   /// Digits in a normalized E.164-like phone (ignores `+` and formatting).
-  static int _digitCount(String normalized) =>
-      normalized.replaceAll(RegExp(r'\D'), '').length;
+  static int _digitCount(String normalized) => normalized.replaceAll(RegExp(r'\D'), '').length;
 
   /// True when [raw] normalizes to at least 10 digits.
   static bool isUsablePhone(ContactLauncher launcher, String? raw) {
@@ -238,8 +237,11 @@ class ReengagementActions {
         // sheet was shown and the user didn't back out, so count it as sent.
         launcher.recordContact(enquiryId: enquiryId, type: ContactType.reengagement);
         return true;
-      } catch (e) {
-        Log.w('Wish card share failed; opening WhatsApp with text', data: {'error': e.toString()});
+      } catch (e, st) {
+        Log.e('Wish card share failed; opening WhatsApp with text', error: e, stackTrace: st);
+        if (context.mounted) {
+          _snack(context, "Couldn't attach the wish card — sending text only");
+        }
       }
     }
 

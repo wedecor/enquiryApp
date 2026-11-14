@@ -94,6 +94,8 @@ flutter:
     - assets/brand/lockup_horizontal_ink.png
     - assets/brand/lockup_horizontal_gold.png
     - assets/fonts/NotoSans-Regular.ttf
+    # Wish-card faces (google_fonts resolves these before any network fetch).
+    - google_fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

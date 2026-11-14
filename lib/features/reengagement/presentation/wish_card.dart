@@ -140,7 +140,7 @@ class WishCardRenderer {
     final serifMedium = GoogleFonts.cormorantGaramond(fontWeight: FontWeight.w500);
     final body = GoogleFonts.jost(fontSize: 34, fontWeight: FontWeight.w300);
     final brand = GoogleFonts.jost(fontWeight: FontWeight.w400);
-    // Fonts download on first use; wait so the card never draws in a fallback face.
+    // Bundled under google_fonts/; wait so the card never draws in a fallback face.
     await GoogleFonts.pendingFonts();
 
     final recorder = ui.PictureRecorder();
