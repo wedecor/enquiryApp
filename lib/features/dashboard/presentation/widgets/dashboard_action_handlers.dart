@@ -6,14 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/audit_provider.dart';
+import '../../../../core/services/contact_log_service.dart';
 import '../../../../core/services/firestore_service.dart';
 
 import '../../../../core/services/review_request_service.dart';
+import '../../../../shared/widgets/confirmation_dialog.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
 import '../../../enquiries/domain/enquiry.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
 
 import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
+import '../../../enquiries/presentation/widgets/review_request_button.dart';
 import '../../../reengagement/presentation/occasion_card_share.dart';
 import '../../../reengagement/presentation/wish_card.dart';
 import '../../../settings/providers/settings_providers.dart';
@@ -100,12 +103,29 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     try {
       final reviewService = ref.read(reviewRequestServiceProvider);
       final launcher = ref.read(contactLauncherProvider);
+      final contactLog = ref.read(contactLogServiceProvider);
       final appConfigAsync = ref.read(appGeneralConfigProvider);
 
       final appConfig = appConfigAsync.valueOrNull;
       if (appConfig == null) {
         showSnack('Error loading app configuration');
         return;
+      }
+
+      final previouslySentAt = await contactLog.latestAt(
+        enquiryId: enquiryId,
+        type: ContactType.reviewRequest,
+      );
+      if (!mounted) return;
+      if (previouslySentAt != null) {
+        final confirmed = await ConfirmationDialog.show(
+          context: context,
+          title: 'Send again?',
+          message: ReviewRequestButton.alreadySentMessage(previouslySentAt),
+          confirmText: 'Send again',
+          icon: Icons.star_rate_rounded,
+        );
+        if (!confirmed || !mounted) return;
       }
 
       final googleReviewLink = appConfig.googleReviewLink.isNotEmpty

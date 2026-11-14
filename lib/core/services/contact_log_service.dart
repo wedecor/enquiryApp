@@ -27,6 +27,16 @@ final contactLogServiceProvider = Provider<ContactLogService>((ref) {
   return ContactLogService(firestore, () => FirebaseAuth.instance.currentUser?.uid);
 });
 
+/// Latest thank-you / review request send time for an enquiry, or null if never sent.
+final lastReviewRequestAtProvider = StreamProvider.autoDispose.family<DateTime?, String>((
+  ref,
+  enquiryId,
+) {
+  return ref
+      .watch(contactLogServiceProvider)
+      .watchLatestAt(enquiryId: enquiryId, type: ContactType.reviewRequest);
+});
+
 /// Persists every successful call / WhatsApp launched from the app so analytics
 /// can measure speed-to-lead and follow-up discipline.
 ///
@@ -62,6 +72,51 @@ class ContactLogService {
       });
     } catch (e, st) {
       Log.e('ContactLogService: failed to record contact', error: e, stackTrace: st);
+    }
+  }
+
+  /// Latest `at` for contacts of [type] on this enquiry (client-side max; no composite index).
+  Stream<DateTime?> watchLatestAt({required String enquiryId, required ContactType type}) {
+    if (enquiryId.trim().isEmpty) return Stream.value(null);
+    return _firestore
+        .collection('enquiries')
+        .doc(enquiryId)
+        .collection('contacts')
+        .where('type', isEqualTo: type.value)
+        .snapshots()
+        .map((snap) {
+          DateTime? latest;
+          for (final doc in snap.docs) {
+            final raw = doc.data()['at'];
+            final at = raw is Timestamp ? raw.toDate() : null;
+            if (at == null) continue;
+            if (latest == null || at.isAfter(latest)) latest = at;
+          }
+          return latest;
+        });
+  }
+
+  /// One-shot latest `at` for [type] (e.g. before a re-send confirm).
+  Future<DateTime?> latestAt({required String enquiryId, required ContactType type}) async {
+    if (enquiryId.trim().isEmpty) return null;
+    try {
+      final snap = await _firestore
+          .collection('enquiries')
+          .doc(enquiryId)
+          .collection('contacts')
+          .where('type', isEqualTo: type.value)
+          .get();
+      DateTime? latest;
+      for (final doc in snap.docs) {
+        final raw = doc.data()['at'];
+        final at = raw is Timestamp ? raw.toDate() : null;
+        if (at == null) continue;
+        if (latest == null || at.isAfter(latest)) latest = at;
+      }
+      return latest;
+    } catch (e, st) {
+      Log.e('ContactLogService: failed to read latest contact', error: e, stackTrace: st);
+      return null;
     }
   }
 
