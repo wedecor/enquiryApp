@@ -6,14 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/audit_provider.dart';
-import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/firestore_service.dart';
+
 import '../../../../core/services/review_request_service.dart';
 import '../../../enquiries/data/enquiry_repository.dart';
-import '../../../enquiries/data/follow_up_service.dart';
 import '../../../enquiries/domain/enquiry.dart';
-import '../../../enquiries/domain/follow_up.dart';
 import '../../../enquiries/presentation/screens/enquiry_details_screen.dart';
+
 import '../../../enquiries/presentation/widgets/lost_reason_sheet.dart';
 import '../../../settings/providers/settings_providers.dart';
 import 'dashboard_action_sheets.dart';
@@ -267,9 +266,8 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Follow-up WhatsApp from the Follow Up tab. Once WhatsApp opens, the enquiry is
-  /// marked as followed up (`lastReminderSentAt`) and leaves the Follow Up list;
-  /// the snackbar's Undo puts it back.
+  /// Follow-up WhatsApp from the Follow Up tab. Logs contact; the row stays on
+  /// the list for the day and shows as done via [isFollowUpContactedToday].
   Future<void> handleReminderWhatsApp(
     String phone,
     String customerName,
@@ -294,58 +292,18 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
 
     if (status == ContactLaunchStatus.opened) {
       final firestore = ref.read(firestoreServiceProvider);
-      final followUps = ref.read(followUpServiceProvider);
-      final userId = ref.read(currentUserWithFirestoreProvider).valueOrNull?.uid;
-      // Automatic follow-up open on this enquiry: the WhatsApp counts as done.
-      FollowUpInfo? completed;
       try {
         await firestore.updateEnquiry(enquiryId, {
           'reminderClickCount': FieldValue.increment(1),
           'lastReminderSentAt': FieldValue.serverTimestamp(),
         });
-        final snap = await firestore.enquiriesCollection.doc(enquiryId).get();
-        final info = FollowUpInfo.fromData(snap.data() ?? const {});
-        if (userId != null && info.tracked && info.dueAt != null) {
-          await followUps.complete(enquiryId: enquiryId, userId: userId, previousDueAt: info.dueAt);
-          completed = info;
-        }
       } catch (e) {
-        Log.e('Failed to mark follow-up as sent', error: e);
+        Log.e('Failed to stamp follow-up WhatsApp', error: e);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Follow-up sent to $customerName'),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () async {
-                try {
-                  await firestore.updateEnquiry(enquiryId, {
-                    'reminderClickCount': FieldValue.increment(-1),
-                    'lastReminderSentAt': FieldValue.delete(),
-                  });
-                  // Put the follow-up back (a completion can't be un-recorded; it is
-                  // re-opened as a manual reschedule, kept in the history).
-                  final previous = completed?.dueAt;
-                  if (userId != null && previous != null) {
-                    final soon = DateTime.now().add(const Duration(minutes: 1));
-                    await followUps.reschedule(
-                      enquiryId: enquiryId,
-                      userId: userId,
-                      dueAt: previous.isAfter(soon) ? previous : soon,
-                      note: completed?.note,
-                      reason: 'manual',
-                    );
-                  }
-                } catch (e) {
-                  Log.e('Failed to undo follow-up', error: e);
-                }
-              },
-            ),
-          ),
-        );
+        ..showSnackBar(SnackBar(content: Text('Follow-up sent to $customerName')));
       return;
     }
 

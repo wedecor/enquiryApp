@@ -1,42 +1,44 @@
 import { logger } from "firebase-functions/v2";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { notificationExpireAt } from "./notificationTtl";
 import { isActiveUserData } from "./auth";
 import {
   DEFAULT_FOLLOW_UP_CONFIG,
+  FOLLOW_UP_EVENT_QUERY_DAYS,
+  FOLLOW_UP_LEAD_DAYS,
   FollowUpConfig,
   FollowUpUpdate,
-  ReminderStage,
   SYSTEM_FOLLOW_UPS,
+  earliestUpcomingFunctionDate,
   isFollowUpEligible,
+  isTenDayFollowUpMatch,
   nextAutoDueAt,
   nextIstSlot,
   parseFollowUpConfig,
   planFollowUpOnWrite,
-  reminderContent,
-  reminderNotificationId,
   reminderRecipients,
-  reminderStageDue,
   scheduleUpdate,
+  tenDayNotificationContent,
+  tenDayNotificationId,
 } from "./followUpsLogic";
-import { IST_TIME_ZONE } from "./istTime";
+import { IST_TIME_ZONE, istDayStart } from "./istTime";
 import { rawStatusValuesFor } from "./statusVocabulary";
 
 /**
- * Automatic follow-ups (Nov 2026). Logic: followUpsLogic.ts.
- * - onEnquiryWrittenFollowUp: schedules / cancels / adjusts the open follow-up
- *   whenever an enquiry is written (create, status change, completion, reassignment).
- * - followUpReminders (every 15 min, IST): sends the due reminder once and the overdue
- *   reminder once per follow-up, and runs a one-time backfill for legacy open enquiries.
- * Reminders are in-app + FCM only (via sendNotificationToUser). Never WhatsApp.
+ * Follow-ups (Nov 2026).
+ * - Old scheduled due/overdue pipeline: opt-in via app_config/notifications.followUpsEnabled === true
+ *   (default OFF). When off, onEnquiryWrittenFollowUp schedules nothing and backfill is skipped.
+ * - Daily job `followUpReminders` at 10:00 IST: In Talks enquiries whose first upcoming
+ *   function is exactly FOLLOW_UP_LEAD_DAYS after today → one in-app notification.
  */
 
 const CONFIG_TTL_MS = 5 * 60 * 1000;
 const QUERY_LIMIT = 500;
 const BACKFILL_PAGE = 300;
 const STATE_DOC = "followups_state";
+const MAX_INDIVIDUAL = 5;
 
 let cachedConfig: { value: FollowUpConfig; at: number } | null = null;
 
@@ -54,7 +56,6 @@ export async function loadFollowUpConfig(db: FirebaseFirestore.Firestore, fresh 
 }
 
 function historyDoc(entry: { oldValue: string; newValue: string }) {
-  // Same shape as AuditService.recordChange (lib/core/services/audit_service.dart).
   return {
     field_changed: "followUp",
     old_value: entry.oldValue,
@@ -107,19 +108,20 @@ export const onEnquiryWrittenFollowUp = onDocumentWritten("enquiries/{id}", asyn
     }
   } catch (error: any) {
     logger.error("followUps: trigger failed", { enquiryId: event.params.id, error: error?.message });
-    throw error; // let Functions retry the event
+    throw error;
   }
 });
 
 /**
- * One-time schedule for open enquiries written before follow-ups existed. Due times
- * start at the next due-hour slot, so nothing is "due" the moment it is backfilled.
+ * One-time schedule for open enquiries written before follow-ups existed.
+ * Only runs when the old scheduled pipeline is explicitly enabled.
  */
 export async function backfillFollowUps(
   db: FirebaseFirestore.Firestore,
   config: FollowUpConfig,
   now: Date,
 ): Promise<number> {
+  if (!config.enabled) return 0;
   const stateRef = db.collection("app_config").doc(STATE_DOC);
   const state = await stateRef.get();
   if (state.get("backfilledAt")) return 0;
@@ -151,24 +153,23 @@ export async function backfillFollowUps(
 }
 
 export type ReminderRunStats = {
-  backfilled: number;
   candidates: number;
+  matched: number;
   sent: number;
   summarised: number;
   skipped: number;
 };
 
-/** Scheduler core, exported for tests. Safe to run repeatedly (and concurrently). */
+/**
+ * Daily 10:00 IST job: notify for In Talks enquiries whose first upcoming function
+ * is exactly FOLLOW_UP_LEAD_DAYS after today. Idempotent via fu10_* notification ids.
+ */
 export async function runFollowUpReminders(
   db: FirebaseFirestore.Firestore,
   now: Date = new Date(),
-  configOverride?: FollowUpConfig,
+  _configOverride?: FollowUpConfig,
 ): Promise<ReminderRunStats> {
-  const config = configOverride ?? (await loadFollowUpConfig(db, true));
-  const stats: ReminderRunStats = { backfilled: 0, candidates: 0, sent: 0, summarised: 0, skipped: 0 };
-  if (!config.enabled) return stats;
-
-  stats.backfilled = await backfillFollowUps(db, config, now);
+  const stats: ReminderRunStats = { candidates: 0, matched: 0, sent: 0, summarised: 0, skipped: 0 };
 
   const usersSnap = await db.collection("users").get();
   const activeIds = new Set(usersSnap.docs.filter((d) => isActiveUserData(d.data())).map((d) => d.id));
@@ -176,98 +177,102 @@ export async function runFollowUpReminders(
     .filter((d) => d.get("role") === "admin" && activeIds.has(d.id))
     .map((d) => d.id);
 
-  const overdueCutoff = new Date(now.getTime() - config.overdueHours * 60 * 60 * 1000);
-  const [dueSnap, overdueSnap] = await Promise.all([
-    db.collection("enquiries")
-      .where("followUpNotifiedStage", "==", null)
-      .where("followUpDueAt", "<=", now)
-      .orderBy("followUpDueAt", "asc")
-      .limit(QUERY_LIMIT)
-      .get(),
-    db.collection("enquiries")
-      .where("followUpNotifiedStage", "==", "due")
-      .where("followUpDueAt", "<=", overdueCutoff)
-      .orderBy("followUpDueAt", "asc")
-      .limit(QUERY_LIMIT)
-      .get(),
-  ]);
-  const refs = new Map<string, FirebaseFirestore.DocumentReference>();
-  for (const d of [...dueSnap.docs, ...overdueSnap.docs]) refs.set(d.id, d.ref);
-  stats.candidates = refs.size;
+  const todayStart = istDayStart(now);
+  const windowEnd = new Date(todayStart.getTime() + FOLLOW_UP_EVENT_QUERY_DAYS * 24 * 60 * 60 * 1000);
+  const rawValues = rawStatusValuesFor("in_talks");
 
-  const pushes = new Map<string, number>();
-  const summaries = new Map<string, { stage: ReminderStage; names: string[] }[]>();
+  const matches: { id: string; data: Record<string, unknown>; eventDate: Date }[] = [];
+  let last: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (true) {
+    let query = db
+      .collection("enquiries")
+      .where("statusValue", "in", rawValues)
+      .where("eventDate", ">=", Timestamp.fromDate(todayStart))
+      .where("eventDate", "<=", Timestamp.fromDate(windowEnd))
+      .orderBy("eventDate", "asc")
+      .limit(QUERY_LIMIT);
+    if (last) query = query.startAfter(last);
+    const page = await query.get();
+    stats.candidates += page.size;
+    for (const doc of page.docs) {
+      const data = doc.data() as Record<string, unknown>;
+      if (!isTenDayFollowUpMatch(data, now)) continue;
+      const eventDate = earliestUpcomingFunctionDate(data, now);
+      if (!eventDate) continue;
+      matches.push({ id: doc.id, data, eventDate });
+    }
+    if (page.size < QUERY_LIMIT) break;
+    last = page.docs[page.docs.length - 1];
+  }
+  stats.matched = matches.length;
 
-  for (const [enquiryId, ref] of refs) {
-    const result = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      const data = snap.data() ?? {};
-      const stage = reminderStageDue(data, config, now);
-      if (!snap.exists || !stage) return null;
-      const recipients = reminderRecipients(data, activeIds, adminIds);
-      const individual = recipients.filter((uid) => (pushes.get(uid) ?? 0) < config.maxPushesPerRecipient);
-      const summarised = recipients.filter((uid) => !individual.includes(uid));
-      const id = reminderNotificationId(enquiryId, data, stage);
-      const notifRefs = individual.map((uid) => db.collection("users").doc(uid).collection("notifications").doc(id));
-      const existing = notifRefs.length > 0 ? await tx.getAll(...notifRefs) : [];
-      tx.update(ref, { followUpNotifiedStage: stage, followUpLastNotifiedAt: now });
-      const content = reminderContent(enquiryId, data, stage);
-      notifRefs.forEach((nref, i) => {
-        if (existing[i]?.exists) return; // already delivered by an earlier (retried) run
-        tx.create(nref, {
-          ...content,
-          enquiryId,
+  const byRecipient = new Map<string, typeof matches>();
+  for (const m of matches) {
+    for (const uid of reminderRecipients(m.data, activeIds, adminIds)) {
+      const list = byRecipient.get(uid) ?? [];
+      list.push(m);
+      byRecipient.set(uid, list);
+    }
+  }
+
+  for (const [uid, list] of byRecipient) {
+    const individual = list.slice(0, MAX_INDIVIDUAL);
+    const overflow = list.length - individual.length;
+    for (const m of individual) {
+      const id = tenDayNotificationId(m.id, now);
+      const content = tenDayNotificationContent(m.id, m.data, m.eventDate);
+      try {
+        await db.collection("users").doc(uid).collection("notifications").doc(id).create({
+          title: content.title,
+          body: content.body,
+          type: content.type,
+          data: content.data,
+          enquiryId: m.id,
           read: false,
           createdBy: SYSTEM_FOLLOW_UPS,
           createdAt: FieldValue.serverTimestamp(),
           expireAt: notificationExpireAt(now),
         });
-      });
-      return { stage, individual, summarised, name: content.data.customerName };
-    });
-    if (!result) {
-      stats.skipped += 1;
-      continue;
+        stats.sent += 1;
+      } catch (error: any) {
+        if (error?.code === 6) {
+          stats.skipped += 1; // already exists
+        } else {
+          logger.warn("followUps: ten-day notify failed", { uid, enquiryId: m.id, error: error?.message });
+          stats.skipped += 1;
+        }
+      }
     }
-    for (const uid of result.individual) pushes.set(uid, (pushes.get(uid) ?? 0) + 1);
-    stats.sent += result.individual.length;
-    for (const uid of result.summarised) {
-      const list = summaries.get(uid) ?? [];
-      list.push({ stage: result.stage, names: [result.name] });
-      summaries.set(uid, list);
-      stats.summarised += 1;
+    if (overflow > 0) {
+      const sumId = `fu10sum_${tenDayNotificationId("x", now).slice(5)}_${uid.slice(0, 8)}`;
+      try {
+        await db.collection("users").doc(uid).collection("notifications").doc(sumId).create({
+          title: `${overflow} more events in 10 days`,
+          body: `${overflow} more In Talks events are ${FOLLOW_UP_LEAD_DAYS} days away`,
+          type: "follow_up_due",
+          data: { type: "follow_up_due", count: String(overflow) },
+          read: false,
+          createdBy: SYSTEM_FOLLOW_UPS,
+          createdAt: FieldValue.serverTimestamp(),
+          expireAt: notificationExpireAt(now),
+        });
+        stats.summarised += 1;
+      } catch (error: any) {
+        if (error?.code !== 6) {
+          logger.warn("followUps: ten-day summary failed", { uid, error: error?.message });
+        }
+      }
     }
   }
 
-  // One "N more" notification per recipient over the per-run push limit.
-  const runKey = new Date(Math.floor(now.getTime() / (15 * 60 * 1000)) * 15 * 60 * 1000).toISOString().slice(0, 16);
-  for (const [uid, items] of summaries) {
-    const names = items.flatMap((i) => i.names);
-    const overdue = items.filter((i) => i.stage === "overdue").length;
-    const title = `${items.length} more follow-up${items.length === 1 ? "" : "s"} due`;
-    const body = `${names.slice(0, 5).join(", ")}${names.length > 5 ? ` +${names.length - 5}` : ""}${overdue ? ` · ${overdue} overdue` : ""}`;
-    try {
-      await db.collection("users").doc(uid).collection("notifications").doc(`fusum_${runKey.replace(/[:]/g, "")}`).create({
-        title,
-        body: body.slice(0, 500),
-        type: "follow_up_summary",
-        data: { type: "follow_up_summary", count: String(items.length) },
-        read: false,
-        createdBy: SYSTEM_FOLLOW_UPS,
-        createdAt: FieldValue.serverTimestamp(),
-        expireAt: notificationExpireAt(now),
-      });
-    } catch (error: any) {
-      if (error?.code !== 6) logger.warn("followUps: summary failed", { uid, error: error?.message });
-    }
-  }
   return stats;
 }
 
+/** Daily at 10:00 Asia/Kolkata — replaces the former every-15-minutes schedule. */
 export const followUpReminders = onSchedule(
-  { schedule: "*/15 * * * *", timeZone: IST_TIME_ZONE, retryCount: 1, timeoutSeconds: 300 },
+  { schedule: "0 10 * * *", timeZone: IST_TIME_ZONE, retryCount: 1, timeoutSeconds: 300 },
   async () => {
     const stats = await runFollowUpReminders(getFirestore());
-    logger.info("Follow-up reminders run", stats);
+    logger.info("Follow-up 10-day reminders run", stats);
   },
 );

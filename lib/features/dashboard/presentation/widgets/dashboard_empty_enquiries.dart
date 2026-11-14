@@ -23,7 +23,7 @@ class DashboardEmptyEnquiries extends StatelessWidget {
 
     final message = switch (status) {
       'All' => 'No enquiries found',
-      'reminders' => 'No follow-ups due. Done follow-ups leave this list.',
+      'reminders' => 'No In Talks events exactly 10 days away.',
       'closed' => 'No closed enquiries yet',
       'approved' => 'No approved enquiries',
       _ => 'No $status enquiries',

@@ -47,6 +47,7 @@ class EnquiryListRow extends StatelessWidget {
     this.showChevron = true,
     this.bordered = false,
     this.margin,
+    this.done = false,
   });
 
   final String customerName;
@@ -87,6 +88,9 @@ class EnquiryListRow extends StatelessWidget {
 
   /// Outer spacing; defaults depend on [bordered].
   final EdgeInsetsGeometry? margin;
+
+  /// Muted + tick: follow-up already contacted today (row still listed).
+  final bool done;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +139,10 @@ class EnquiryListRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    if (done) ...[
+                      Icon(Icons.check_circle_rounded, size: 18, color: cs.primary),
+                      const SizedBox(width: AppTokens.space1),
+                    ],
                     Expanded(
                       child: Text(
                         customerName,
@@ -143,12 +151,17 @@ class EnquiryListRow extends StatelessWidget {
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
+                          color: done ? cs.onSurfaceVariant : null,
                         ),
                       ),
                     ),
                     if (showStatusChip) ...[
                       const SizedBox(width: AppTokens.space2),
-                      _StatusLabel(label: label, color: dotColor, pulse: isNew),
+                      _StatusLabel(
+                        label: done ? 'Done' : label,
+                        color: dotColor,
+                        pulse: isNew && !done,
+                      ),
                     ],
                   ],
                 ),
@@ -201,7 +214,7 @@ class EnquiryListRow extends StatelessWidget {
       ),
     );
 
-    return Padding(
+    final tile = Padding(
       padding:
           margin ??
           (bordered
@@ -219,6 +232,7 @@ class EnquiryListRow extends StatelessWidget {
         ),
       ),
     );
+    return done ? Opacity(opacity: 0.55, child: tile) : tile;
   }
 
   static String _formatStatusLabel(String value) {

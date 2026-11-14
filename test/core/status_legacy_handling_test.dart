@@ -112,7 +112,7 @@ void main() {
   group('shouldShowReminder with legacy statuses', () {
     final now = DateTime(2026, 10, 1, 10);
 
-    test('quote_sent with an event in 10 days is a follow-up', () {
+    test('quote_sent with an event in exactly 10 days is a follow-up', () {
       final data = {
         'statusValue': 'quote_sent',
         'eventDate': Timestamp.fromDate(DateTime(2026, 10, 11)),
@@ -120,29 +120,29 @@ void main() {
       expect(shouldShowReminder(data, now), isTrue);
     });
 
-    test('contacted with an event today is a follow-up', () {
+    test('contacted with an event today is not a follow-up', () {
       final data = {
         'statusValue': 'contacted',
         'eventDate': Timestamp.fromDate(DateTime(2026, 10, 1)),
       };
-      expect(shouldShowReminder(data, now), isTrue);
+      expect(shouldShowReminder(data, now), isFalse);
     });
 
     test('confirmed (approved) is not a follow-up', () {
       final data = {
         'statusValue': 'confirmed',
-        'eventDate': Timestamp.fromDate(DateTime(2026, 10, 5)),
+        'eventDate': Timestamp.fromDate(DateTime(2026, 10, 11)),
       };
       expect(shouldShowReminder(data, now), isFalse);
     });
 
-    test('a follow-up already sent leaves the list', () {
+    test('a follow-up already sent today still stays on the list', () {
       final data = {
         'statusValue': 'in_talks',
         'eventDate': Timestamp.fromDate(DateTime(2026, 10, 11)),
-        'lastReminderSentAt': Timestamp.fromDate(DateTime(2026, 9, 30)),
+        'lastReminderSentAt': Timestamp.fromDate(now),
       };
-      expect(shouldShowReminder(data, now), isFalse);
+      expect(shouldShowReminder(data, now), isTrue);
     });
   });
 

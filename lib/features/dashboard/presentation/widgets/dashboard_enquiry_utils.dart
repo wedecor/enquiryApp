@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/utils/color_parsing.dart';
 import '../../../enquiries/domain/event_functions.dart';
-import '../../../enquiries/domain/follow_up.dart';
+import '../../../reengagement/domain/occasion_reminder.dart';
+
+/// Calendar days from today (IST) to the first upcoming function for follow-up.
+/// Must match `FOLLOW_UP_LEAD_DAYS` in `functions/src/followUpsLogic.ts`.
+const int kFollowUpLeadDays = 10;
 
 DateTime? parseEnquiryDateTime(dynamic value) {
   if (value == null) return null;
@@ -174,52 +178,50 @@ bool matchesEnquirySearchQuery(Map<String, dynamic> data, String searchQuery) {
       matchesDigits(data['phoneNormalized'] as String?);
 }
 
-/// Follow Up tab / "Follow-ups" counter.
-///
-/// Enquiries managed by automatic follow-ups (`followUpSeq` present) show while
-/// their follow-up is due or overdue (New / In Talks); "Mark done" or a reschedule
-/// removes them. Older documents keep the legacy rule (In Talks, event within
-/// 21 days, no follow-up WhatsApp sent) until the server backfills them.
-bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
-  final followUp = FollowUpInfo.fromData(enquiryData);
-  if (followUp.tracked) {
-    return FollowUpInfo.isEligibleStatus(enquiryData['statusValue'] as String?) &&
-        followUp.isActionableAt(now);
-  }
-  return _legacyShouldShowReminder(enquiryData, now);
+/// IST calendar day as a UTC date at midnight (year/month/day = IST Y/M/D).
+DateTime _istCalendarDay(DateTime instant) {
+  final ist = IstDate.calendar(instant);
+  return DateTime.utc(ist.year, ist.month, ist.day);
 }
 
-bool _legacyShouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
+/// First function dated today or later (IST), else null. Multi-function bookings
+/// use the earliest upcoming function; single-event uses `eventDate` via [functionsOf].
+DateTime? earliestUpcomingFollowUpDay(Map<String, dynamic> enquiryData, DateTime now) {
+  final today = _istCalendarDay(now);
+  DateTime? best;
+  for (final f in functionsOf(enquiryData)) {
+    final day = _istCalendarDay(f.day);
+    if (day.isBefore(today)) continue;
+    if (best == null || day.isBefore(best)) best = day;
+  }
+  return best;
+}
+
+/// Follow Up tab / "Follow-ups" counter: In Talks whose first upcoming function
+/// is exactly [kFollowUpLeadDays] calendar days after today (IST).
+bool shouldShowReminder(Map<String, dynamic> enquiryData, DateTime now) {
   if (!EnquiryStatus.isInTalks(enquiryData['statusValue'] as String?)) {
     return false;
   }
-
-  // Follow-up already sent from the Follow Up tab — don't show it again.
-  if (enquiryData['lastReminderSentAt'] != null) {
-    return false;
-  }
-
-  final eventDate = parseEnquiryDateTime(enquiryData['eventDate']);
-  if (eventDate == null) {
-    return false;
-  }
-
-  final todayStart = DateTime(now.year, now.month, now.day);
-  final eventDateStart = DateTime(eventDate.year, eventDate.month, eventDate.day);
-
-  if (eventDateStart.isBefore(todayStart)) {
-    return false;
-  }
-
-  final daysUntilEvent = eventDateStart.difference(todayStart).inDays;
-  return daysUntilEvent >= 0 && daysUntilEvent < 21;
+  final upcoming = earliestUpcomingFollowUpDay(enquiryData, now);
+  if (upcoming == null) return false;
+  return upcoming.difference(_istCalendarDay(now)).inDays == kFollowUpLeadDays;
 }
 
-/// Calendar days from [now]'s day to [eventDate]'s day (0 = today, negative = past).
+/// True when a call / WhatsApp / follow-up WhatsApp was logged on this enquiry today (IST).
+bool isFollowUpContactedToday(Map<String, dynamic> enquiryData, DateTime now) {
+  final at =
+      parseEnquiryDateTime(enquiryData['lastContactAt']) ??
+      parseEnquiryDateTime(enquiryData['lastReminderSentAt']);
+  if (at == null) return false;
+  final a = _istCalendarDay(at);
+  final n = _istCalendarDay(now);
+  return a.year == n.year && a.month == n.month && a.day == n.day;
+}
+
+/// Calendar days from [now]'s IST day to [eventDate]'s IST day (0 = today, negative = past).
 int eventDayOffset(DateTime eventDate, DateTime now) {
-  final eventDay = DateTime.utc(eventDate.year, eventDate.month, eventDate.day);
-  final today = DateTime.utc(now.year, now.month, now.day);
-  return eventDay.difference(today).inDays;
+  return _istCalendarDay(eventDate).difference(_istCalendarDay(now)).inDays;
 }
 
 /// Past-dated enquiries stay visible: they are flagged for follow-up, never auto-closed.
@@ -294,15 +296,16 @@ String buildReminderMessage(
   final now = DateTime.now();
   final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
 
-  String urgencyMessage;
-  if (daysUntilEvent != null && daysUntilEvent >= 0 && daysUntilEvent < 21) {
-    if (daysUntilEvent == 0) {
-      urgencyMessage = 'Your $eventType is TODAY!';
-    } else if (daysUntilEvent == 1) {
-      urgencyMessage = 'Your $eventType is TOMORROW!';
-    } else {
-      urgencyMessage = 'Your $eventType is in $daysUntilEvent days';
-    }
+  // Follow Up tab only opens this at exactly [kFollowUpLeadDays] out.
+  final String urgencyMessage;
+  if (daysUntilEvent == kFollowUpLeadDays) {
+    urgencyMessage = 'Your $eventType is in $kFollowUpLeadDays days';
+  } else if (daysUntilEvent == 0) {
+    urgencyMessage = 'Your $eventType is TODAY!';
+  } else if (daysUntilEvent == 1) {
+    urgencyMessage = 'Your $eventType is TOMORROW!';
+  } else if (daysUntilEvent != null && daysUntilEvent > 1) {
+    urgencyMessage = 'Your $eventType is in $daysUntilEvent days';
   } else {
     urgencyMessage = 'Your upcoming $eventType needs attention';
   }

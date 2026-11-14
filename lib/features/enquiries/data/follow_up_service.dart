@@ -12,10 +12,11 @@ final followUpServiceProvider = Provider<FollowUpService>((ref) {
 
 /// Staff/admin actions on an enquiry's automatic follow-up.
 ///
+/// Scheduled follow-up system is switched off — unused by the UI (Nov 2026).
+/// Kept so existing docs / rules / history remain valid if re-enabled.
+///
 /// Each action bumps `followUpSeq` and clears `followUpNotifiedStage` in the same
-/// write (required by firestore.rules), so a reminder for the old schedule can
-/// never fire. After a completion the `onEnquiryWrittenFollowUp` function
-/// schedules the next follow-up while the enquiry is still open.
+/// write (required by firestore.rules).
 class FollowUpService {
   FollowUpService(this._firestoreService, this._auditService);
 

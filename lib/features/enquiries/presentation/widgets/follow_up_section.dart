@@ -11,7 +11,8 @@ import '../../domain/follow_up.dart';
 import 'enquiry_detail_section.dart';
 
 /// Automatic follow-up for an open (New / In Talks) enquiry: when it is due, and
-/// "Mark done" / "Reschedule" for admins and the assignee.
+/// Scheduled follow-up card (due / Mark done / reschedule / callback).
+/// Switched off in the UI (Nov 2026) — Follow Up tab uses the 10-day rule instead.
 class FollowUpSection extends ConsumerStatefulWidget {
   const FollowUpSection({
     super.key,
