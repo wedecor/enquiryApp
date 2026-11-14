@@ -3,18 +3,14 @@ import 'package:we_decor_enquiries/features/reengagement/domain/occasion_kind.da
 import 'package:we_decor_enquiries/features/reengagement/presentation/wish_card.dart';
 
 void main() {
-  WishCardContent card(
-    OccasionKind kind, {
-    String? person,
-    int nth = 5,
-    bool enquired = false,
-  }) => WishCardContent.forOccasion(
-    kind: kind,
-    customerName: 'Neha Sharma',
-    nth: nth,
-    enquired: enquired,
-    person: person,
-  );
+  WishCardContent card(OccasionKind kind, {String? person, int nth = 5, bool enquired = false}) =>
+      WishCardContent.forOccasion(
+        kind: kind,
+        customerName: 'Neha Sharma',
+        nth: nth,
+        enquired: enquired,
+        person: person,
+      );
 
   group('WishCardContent past customer', () {
     test('birthday with a person puts the name in gold, no age', () {

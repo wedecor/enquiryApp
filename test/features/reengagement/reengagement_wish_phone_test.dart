@@ -53,19 +53,11 @@ void main() {
 
     test('returns null only when both are unusable', () {
       expect(
-        ReengagementActions.resolveWishPhone(
-          launcher,
-          customerPhone: null,
-          phoneNormalized: '',
-        ),
+        ReengagementActions.resolveWishPhone(launcher, customerPhone: null, phoneNormalized: ''),
         isNull,
       );
       expect(
-        ReengagementActions.resolveWishPhone(
-          launcher,
-          customerPhone: '12',
-          phoneNormalized: '34',
-        ),
+        ReengagementActions.resolveWishPhone(launcher, customerPhone: '12', phoneNormalized: '34'),
         isNull,
       );
     });
