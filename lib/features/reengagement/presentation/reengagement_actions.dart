@@ -118,6 +118,7 @@ class ReengagementActions {
       person: reminder.person,
       phone: reminder.customerPhone,
       phoneNormalized: reminder.phoneNormalized,
+      enquired: !reminder.pastCustomer,
       enquiryId: reminder.enquiryId.isEmpty ? null : reminder.enquiryId,
       text: messageFor(ref, reminder),
     );
@@ -141,6 +142,7 @@ class ReengagementActions {
       person: row.source.person,
       phone: row.source.customerPhone,
       phoneNormalized: row.source.phoneNormalized,
+      enquired: false,
       enquiryId: row.source.enquiryId,
       text: messageForPast(ref, row),
     );
@@ -185,6 +187,7 @@ class ReengagementActions {
     required String? person,
     required String? phone,
     required String phoneNormalized,
+    required bool enquired,
     required String? enquiryId,
     required String text,
   }) async {
@@ -212,6 +215,7 @@ class ReengagementActions {
             kind: kind,
             customerName: customerName,
             nth: nth,
+            enquired: enquired,
             person: person,
           ),
         );

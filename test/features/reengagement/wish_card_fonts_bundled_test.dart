@@ -16,6 +16,7 @@ void main() {
         kind: OccasionKind.birthday,
         customerName: 'Ayesha Khan',
         nth: 1,
+        enquired: false,
       ),
     );
     expect(png, isNotEmpty);
