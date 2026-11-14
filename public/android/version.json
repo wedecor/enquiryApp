@@ -1,12 +1,12 @@
 {
   "version": "2.0.33",
   "buildNumber": 64,
-  "releaseDate": "2026-11-15",
+  "releaseDate": "2026-11-14",
   "releaseNotes": "Wishes open the right WhatsApp chat for older customers; wish card always attaches.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "6b1b1c4db4ea602e51aa3dbd55d43feddea6e8860276e99551696d2b6255c701",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 63,
+  "sha256": "442e17b73cd1f0490cb03cfb487a4a97c3f079b95d6aa2eb57db56381764b6d6",
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 64,
   "features": [
     "Wish WhatsApp uses stored phoneNormalized when needed"
   ],
