@@ -92,20 +92,30 @@ describe("autoExpireEnquiries (emulator)", { skip: !hasEmulator }, () => {
     assert.equal(res.changed, 0);
   });
 
-  it("a flagged enquiry becomes due for the assignee through the follow-up workflow", async () => {
+  it("a flagged enquiry gets pastEventReviewAt; default (follow-ups off) schedules nothing", async () => {
     await ref("e1").set(base({ statusValue: "in_talks", createdAt: Timestamp.fromDate(ist("2026-11-05T09:00")) }));
-    // The regular automatic follow-up, scheduled when the enquiry came in (due next morning, 11-06 10:00).
     await applyFollowUpOnWrite(db, "e1", null, DEFAULT_FOLLOW_UP_CONFIG, ist("2026-11-05T09:00"));
-    assert.equal((await ref("e1").get()).get("followUpReason"), "auto");
-    const before = (await ref("e1").get()).data()!;
+    assert.equal((await ref("e1").get()).get("followUpDueAt"), undefined);
     await runAutoExpire(db, NOW);
-    await applyFollowUpOnWrite(db, "e1", before, DEFAULT_FOLLOW_UP_CONFIG, NOW);
     const doc = (await ref("e1").get()).data()!;
+    assert.ok(doc.pastEventReviewAt);
+    // Past dates never match the daily +10 job.
+    const stats = await runFollowUpReminders(db, NOW);
+    assert.equal(stats.matched, 0);
+    const items = (await inbox(db, "staff1")).filter((n) => n.type === "follow_up_due");
+    assert.equal(items.length, 0);
+  });
+
+  it("when scheduled follow-ups are enabled, a past event becomes a past_event due", async () => {
+    const enabled = { ...DEFAULT_FOLLOW_UP_CONFIG, enabled: true };
+    await ref("e2").set(base({ statusValue: "in_talks", createdAt: Timestamp.fromDate(ist("2026-11-05T09:00")) }));
+    await applyFollowUpOnWrite(db, "e2", null, enabled, ist("2026-11-05T09:00"));
+    assert.equal((await ref("e2").get()).get("followUpReason"), "auto");
+    const before = (await ref("e2").get()).data()!;
+    await runAutoExpire(db, NOW);
+    await applyFollowUpOnWrite(db, "e2", before, enabled, NOW);
+    const doc = (await ref("e2").get()).data()!;
     assert.equal(doc.followUpReason, "past_event");
     assert.ok(doc.followUpDueAt.toDate().getTime() <= NOW.getTime() + 1000);
-    await runFollowUpReminders(db, new Date(NOW.getTime() + 60_000), DEFAULT_FOLLOW_UP_CONFIG);
-    const items = (await inbox(db, "staff1")).filter((n) => n.type === "follow_up_due");
-    assert.equal(items.length, 1);
-    assert.equal(items[0].title, "Event date passed — needs review");
   });
 });

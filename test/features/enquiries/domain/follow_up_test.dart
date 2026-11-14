@@ -6,19 +6,36 @@ import 'package:we_decor_enquiries/features/enquiries/domain/follow_up.dart';
 
 void main() {
   final now = DateTime(2026, 11, 7, 12);
-  Map<String, dynamic> tracked({
+
+  Map<String, dynamic> inTalks({
+    required DateTime eventDate,
     String status = 'in_talks',
-    DateTime? dueAt,
-    String reason = 'auto',
-    int seq = 2,
+    List<Map<String, dynamic>>? functions,
   }) => {
     'statusValue': status,
-    'followUpSeq': seq,
-    'followUpDueAt': dueAt == null ? null : Timestamp.fromDate(dueAt),
-    'followUpReason': reason,
+    'eventDate': Timestamp.fromDate(eventDate),
+    if (functions != null) 'functions': functions,
   };
 
+  group('kFollowUpLeadDays', () {
+    test('matches the TypeScript FOLLOW_UP_LEAD_DAYS constant (10)', () {
+      expect(kFollowUpLeadDays, 10);
+    });
+  });
+
   group('FollowUpInfo.stateAt', () {
+    Map<String, dynamic> tracked({
+      String status = 'in_talks',
+      DateTime? dueAt,
+      String reason = 'auto',
+      int seq = 2,
+    }) => {
+      'statusValue': status,
+      'followUpSeq': seq,
+      'followUpDueAt': dueAt == null ? null : Timestamp.fromDate(dueAt),
+      'followUpReason': reason,
+    };
+
     test('scheduled → due → overdue after 24 h', () {
       final due = DateTime(2026, 11, 7, 10);
       final info = FollowUpInfo.fromData(tracked(dueAt: due));
@@ -32,39 +49,26 @@ void main() {
       expect(FollowUpInfo.fromData(tracked()).stateAt(now), FollowUpState.none);
       expect(FollowUpInfo.fromData({'statusValue': 'in_talks'}).tracked, isFalse);
     });
-
-    test('past-event and callback flags', () {
-      expect(FollowUpInfo.fromData(tracked(reason: 'past_event')).isPastEvent, isTrue);
-      expect(FollowUpInfo.fromData({'pastEventReviewAt': Timestamp.now()}).isPastEvent, isTrue);
-      expect(FollowUpInfo.fromData(tracked(reason: 'callback')).isCallback, isTrue);
-    });
   });
 
-  group('followUpDueLabel', () {
-    test('relative labels', () {
-      String label(DateTime due) =>
-          followUpDueLabel(FollowUpInfo.fromData(tracked(dueAt: due)), now);
-      expect(label(DateTime(2026, 11, 8, 10)), 'Due tomorrow');
-      expect(label(DateTime(2026, 11, 10, 10)), 'Due in 3 days');
-      expect(label(DateTime(2026, 11, 7, 15)), 'Due in 3 hours');
-      expect(label(DateTime(2026, 11, 7, 11)), 'Due now');
-      expect(label(DateTime(2026, 11, 4, 10)), 'Overdue by 3 days');
-    });
-  });
-
-  group('Follow Up tab (shouldShowReminder)', () {
-    test('tracked enquiries show only while the follow-up is due or overdue', () {
-      expect(shouldShowReminder(tracked(dueAt: DateTime(2026, 11, 7, 10)), now), isTrue);
-      expect(shouldShowReminder(tracked(dueAt: DateTime(2026, 11, 1, 10)), now), isTrue);
-      expect(shouldShowReminder(tracked(dueAt: DateTime(2026, 11, 9, 10)), now), isFalse);
-      // Completed: no open follow-up until the next one is due.
-      expect(shouldShowReminder(tracked(), now), isFalse);
+  group('Follow Up tab (shouldShowReminder) — exactly +10 days', () {
+    test('In Talks at exactly +10 days → true', () {
+      expect(shouldShowReminder(inTalks(eventDate: DateTime(2026, 11, 17)), now), isTrue);
     });
 
-    test('New enquiries are included; booked / terminal ones never', () {
-      final due = DateTime(2026, 11, 7, 10);
-      expect(shouldShowReminder(tracked(status: 'new', dueAt: due), now), isTrue);
+    test('+9 and +11 → false', () {
+      expect(shouldShowReminder(inTalks(eventDate: DateTime(2026, 11, 16)), now), isFalse);
+      expect(shouldShowReminder(inTalks(eventDate: DateTime(2026, 11, 18)), now), isFalse);
+    });
+
+    test('past event → false', () {
+      expect(shouldShowReminder(inTalks(eventDate: DateTime(2026, 11, 1)), now), isFalse);
+    });
+
+    test('New / Approved / lost → false even at +10', () {
+      final day = DateTime(2026, 11, 17);
       for (final status in [
+        'new',
         'approved',
         'completed',
         'not_interested',
@@ -72,28 +76,61 @@ void main() {
         'cancelled',
       ]) {
         expect(
-          shouldShowReminder(tracked(status: status, dueAt: due), now),
+          shouldShowReminder(inTalks(eventDate: day, status: status), now),
           isFalse,
           reason: status,
         );
       }
     });
 
-    test('a past event date does not hide a due follow-up (needs review)', () {
-      final data = {
-        ...tracked(dueAt: DateTime(2026, 11, 6, 10), reason: 'past_event'),
-        'eventDate': Timestamp.fromDate(DateTime(2026, 11, 1)),
-      };
+    test('multi-function uses the first upcoming function', () {
+      final data = inTalks(
+        eventDate: DateTime(2026, 11, 30), // last function
+        functions: [
+          {
+            'id': 'a',
+            'eventType': 'haldi',
+            'eventTypeLabel': 'Haldi',
+            'date': Timestamp.fromDate(DateTime(2026, 11, 17)),
+          },
+          {
+            'id': 'b',
+            'eventType': 'wedding',
+            'eventTypeLabel': 'Wedding',
+            'date': Timestamp.fromDate(DateTime(2026, 11, 30)),
+          },
+        ],
+      );
       expect(shouldShowReminder(data, now), isTrue);
+      final nine = inTalks(
+        eventDate: DateTime(2026, 11, 30),
+        functions: [
+          {'id': 'a', 'eventType': 'haldi', 'date': Timestamp.fromDate(DateTime(2026, 11, 16))},
+          {'id': 'b', 'eventType': 'wedding', 'date': Timestamp.fromDate(DateTime(2026, 11, 30))},
+        ],
+      );
+      expect(shouldShowReminder(nine, now), isFalse);
     });
 
-    test('legacy docs keep the old rule', () {
-      final legacy = {
-        'statusValue': 'in_talks',
-        'eventDate': Timestamp.fromDate(DateTime(2026, 11, 20)),
+    test('legacy In Talks aliases count', () {
+      final day = DateTime(2026, 11, 17);
+      for (final status in ['quote_sent', 'contacted', 'quoted', 'in_progress']) {
+        expect(
+          shouldShowReminder(inTalks(eventDate: day, status: status), now),
+          isTrue,
+          reason: status,
+        );
+      }
+    });
+
+    test('contacted today does not remove from the list', () {
+      final data = {
+        ...inTalks(eventDate: DateTime(2026, 11, 17)),
+        'lastContactAt': Timestamp.fromDate(now),
+        'lastReminderSentAt': Timestamp.fromDate(now),
       };
-      expect(shouldShowReminder(legacy, now), isTrue);
-      expect(shouldShowReminder({...legacy, 'lastReminderSentAt': Timestamp.now()}, now), isFalse);
+      expect(shouldShowReminder(data, now), isTrue);
+      expect(isFollowUpContactedToday(data, now), isTrue);
     });
   });
 
