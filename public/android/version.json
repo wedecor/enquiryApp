@@ -1,16 +1,16 @@
 {
-  "version": "2.0.31",
-  "buildNumber": 62,
+  "version": "2.0.32",
+  "buildNumber": 63,
   "releaseDate": "2026-11-14",
-  "releaseNotes": "Yearly wishes now cover everyone who enquired, with gentler wording.",
+  "releaseNotes": "Follow-ups now show In Talks events that are exactly 10 days away.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "5ce2d1a1e2c419c4cbc6ee0b2da59ec29072cfc6cd66ace947ced76757de2ce1",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 61,
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 63,
   "features": [
-    "Yearly wishes for all past-event enquiries, not only completed"
+    "Follow-ups for In Talks events exactly 10 days away"
   ],
   "bugFixes": [
-    "Cancelled events excluded from yearly wishes"
+    "Old due/overdue and 21-day follow-up lists replaced"
   ]
 }
