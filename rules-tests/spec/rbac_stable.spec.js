@@ -1352,6 +1352,199 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
     });
   });
 
+  describe('📱 App usage tracking', () => {
+    const firebase = require('firebase/compat/app').default;
+    require('firebase/compat/firestore');
+    const FV = () => firebase.firestore.FieldValue;
+    const DAY = '2026-11-15';
+    // 00:00 IST on 2026-11-15 = 2026-11-14T18:30:00.000Z
+    const dayStart = new Date('2026-11-14T18:30:00.000Z');
+    const expireAt = new Date('2027-05-14T18:30:00.000Z');
+
+    const usageRef = (uid, role) =>
+      testEnv
+        .authenticatedContext(uid, { role })
+        .firestore()
+        .collection('users')
+        .doc(uid)
+        .collection('usage')
+        .doc(DAY);
+
+    const createPayload = (overrides = {}) => ({
+      day: DAY,
+      activeSeconds: 60,
+      opens: 1,
+      firstOpenAt: dayStart,
+      lastSeenAt: FV().serverTimestamp(),
+      platform: 'android',
+      appVersion: '2.0.34+65',
+      expireAt,
+      ...overrides,
+    });
+
+    test('✅ Owner can create a day doc within limits', async () => {
+      await assertSucceeds(usageRef(STAFF_UID, 'staff').set(createPayload()));
+    });
+
+    test('✅ Owner can increment activeSeconds and opens within 330', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('users')
+          .doc(STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .set({
+            day: DAY,
+            activeSeconds: 100,
+            opens: 1,
+            firstOpenAt: dayStart,
+            lastSeenAt: new Date('2026-11-15T04:00:00.000Z'),
+            platform: 'android',
+            appVersion: '2.0.34+65',
+            expireAt,
+          });
+      });
+
+      await assertSucceeds(
+        usageRef(STAFF_UID, 'staff').set(
+          {
+            day: DAY,
+            activeSeconds: FV().increment(200),
+            opens: FV().increment(1),
+            firstOpenAt: dayStart,
+            lastSeenAt: FV().serverTimestamp(),
+            platform: 'android',
+            appVersion: '2.0.34+65',
+            expireAt,
+          },
+          { merge: true },
+        ),
+      );
+    });
+
+    test('❌ Owner cannot decrease counters or jump more than 330 seconds', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('users')
+          .doc(STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .set({
+            day: DAY,
+            activeSeconds: 400,
+            opens: 2,
+            firstOpenAt: dayStart,
+            lastSeenAt: new Date('2026-11-15T04:00:00.000Z'),
+            platform: 'android',
+            appVersion: '2.0.34+65',
+            expireAt,
+          });
+      });
+
+      await assertFails(
+        usageRef(STAFF_UID, 'staff').set(
+          {
+            day: DAY,
+            activeSeconds: 300,
+            opens: 2,
+            firstOpenAt: dayStart,
+            lastSeenAt: FV().serverTimestamp(),
+            platform: 'android',
+            appVersion: '2.0.34+65',
+            expireAt,
+          },
+          { merge: true },
+        ),
+      );
+
+      await assertFails(
+        usageRef(STAFF_UID, 'staff').set(
+          {
+            day: DAY,
+            activeSeconds: FV().increment(400),
+            opens: 2,
+            firstOpenAt: dayStart,
+            lastSeenAt: FV().serverTimestamp(),
+            platform: 'android',
+            appVersion: '2.0.34+65',
+            expireAt,
+          },
+          { merge: true },
+        ),
+      );
+    });
+
+    test('❌ Owner cannot write another user usage doc or read any usage', async () => {
+      await assertFails(
+        testEnv
+          .authenticatedContext(STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('users')
+          .doc(OTHER_STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .set(createPayload()),
+      );
+
+      await assertFails(usageRef(STAFF_UID, 'staff').get());
+      await assertFails(
+        testEnv
+          .authenticatedContext(STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('users')
+          .doc(OTHER_STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .get(),
+      );
+    });
+
+    test('✅ Admin can read all usage; deactivated user cannot write', async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        await context
+          .firestore()
+          .collection('users')
+          .doc(STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .set({
+            day: DAY,
+            activeSeconds: 10,
+            opens: 1,
+            firstOpenAt: new Date(),
+            lastSeenAt: new Date(),
+            platform: 'web',
+            appVersion: '2.0.34+65',
+            expireAt,
+          });
+      });
+
+      await assertSucceeds(
+        testEnv
+          .authenticatedContext(ADMIN_UID, { role: 'admin' })
+          .firestore()
+          .collection('users')
+          .doc(STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .get(),
+      );
+
+      await assertFails(
+        testEnv
+          .authenticatedContext(INACTIVE_STAFF_UID, { role: 'staff' })
+          .firestore()
+          .collection('users')
+          .doc(INACTIVE_STAFF_UID)
+          .collection('usage')
+          .doc(DAY)
+          .set(createPayload()),
+      );
+    });
+  });
+
   describe('📊 Settings & Configuration', () => {
     test('✅ Users can manage their own settings', async () => {
       const staffContext = testEnv.authenticatedContext(STAFF_UID, { role: 'staff' });

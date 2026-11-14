@@ -10,6 +10,7 @@ import '../analytics_controller.dart';
 import '../pipeline_controller.dart';
 import 'analytics_format.dart';
 import 'analytics_state_views.dart';
+import 'app_usage_section.dart';
 import 'breakdown_charts.dart';
 import 'line_trend_chart.dart';
 import 'pipeline_sections.dart';
@@ -216,6 +217,7 @@ class AnalyticsTeamTab extends StatelessWidget {
     return PipelineTabBody(
       sections: (r) => [
         TeamSection(report: r),
+        const AppUsageSection(),
         FollowUpSection(report: r),
         const ReengagementAnalyticsCard(),
       ],

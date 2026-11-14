@@ -448,6 +448,45 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && (isOwner(uid) || isAdmin());
     }
 
+    // Per-user daily app usage (IST day id). Owner writes increments; only admins read.
+    // Clients never read their own docs. firstOpenAt is set on create and must not change.
+    match /users/{uid}/usage/{day} {
+      function usageKeysOk() {
+        return request.resource.data.keys().hasOnly([
+          'day', 'activeSeconds', 'opens', 'firstOpenAt', 'lastSeenAt',
+          'platform', 'appVersion', 'expireAt'
+        ]);
+      }
+      function usageShapeOk() {
+        return day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.day == day
+          && usageKeysOk()
+          && request.resource.data.activeSeconds is int
+          && request.resource.data.activeSeconds >= 0
+          && request.resource.data.activeSeconds <= 86400
+          && request.resource.data.opens is int
+          && request.resource.data.opens >= 0
+          && request.resource.data.opens <= 2000
+          && request.resource.data.lastSeenAt == request.time
+          && request.resource.data.firstOpenAt is timestamp
+          && request.resource.data.expireAt is timestamp
+          && request.resource.data.appVersion is string
+          && request.resource.data.platform in ['android', 'web'];
+      }
+      allow read: if isAdmin();
+      // firstOpenAt is the IST day start (deterministic) so merge writes need not read.
+      allow create: if isSignedIn() && request.auth.uid == uid && isActiveUser()
+        && usageShapeOk()
+        && request.resource.data.activeSeconds <= 330;
+      allow update: if isSignedIn() && request.auth.uid == uid && isActiveUser()
+        && usageShapeOk()
+        && request.resource.data.activeSeconds >= resource.data.activeSeconds
+        && request.resource.data.opens >= resource.data.opens
+        && request.resource.data.activeSeconds - resource.data.activeSeconds <= 330
+        && request.resource.data.firstOpenAt == resource.data.firstOpenAt;
+      allow delete: if false;
+    }
+
     // App Config - read for active users, write for admins only
     match /app_config/{docId} {
       allow read: if isActiveUser();

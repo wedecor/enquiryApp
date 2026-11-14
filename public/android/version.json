@@ -1,16 +1,14 @@
 {
-  "version": "2.0.33",
-  "buildNumber": 64,
+  "version": "2.0.34",
+  "buildNumber": 65,
   "releaseDate": "2026-11-15",
-  "releaseNotes": "Wishes open the right WhatsApp chat for older customers; wish card always attaches.",
+  "releaseNotes": "Admins can see when each team member last used the app.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "442e17b73cd1f0490cb03cfb487a4a97c3f079b95d6aa2eb57db56381764b6d6",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Wish WhatsApp uses stored phoneNormalized when needed"
+    "Admin Analytics Team tab shows per-user app usage for the selected period"
   ],
-  "bugFixes": [
-    "Wish card fonts bundled so the card always attaches"
-  ]
+  "bugFixes": []
 }

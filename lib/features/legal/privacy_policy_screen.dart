@@ -21,7 +21,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         LegalSection(
           title: 'How We Use Information',
           content:
-              'We use the information we collect to provide, maintain, and improve our services, process transactions, and communicate with you.',
+              'We use the information we collect to provide, maintain, and improve our services, process transactions, and communicate with you. The app records when it is used and for how long; that usage information is visible to administrators.',
         ),
         LegalSection(
           title: 'Information Sharing',

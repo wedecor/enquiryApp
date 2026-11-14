@@ -165,6 +165,7 @@ class MetricTable extends StatelessWidget {
     this.onHeaderTap,
     this.sortColumn,
     this.sortAscending = false,
+    this.mutedRowIndexes = const {},
   });
 
   final List<MetricColumn> columns;
@@ -174,17 +175,26 @@ class MetricTable extends StatelessWidget {
   final int? sortColumn;
   final bool sortAscending;
 
+  /// Rows rendered in [ColorScheme.onSurfaceVariant] (e.g. "No activity").
+  final Set<int> mutedRowIndexes;
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
     final s = AppSurfaces.of(context);
 
-    Widget cell(String text, MetricColumn col, {bool header = false, bool first = false}) {
+    Widget cell(
+      String text,
+      MetricColumn col, {
+      bool header = false,
+      bool first = false,
+      bool muted = false,
+    }) {
       final style = header
           ? null
           : t.bodySmall?.copyWith(
-              color: cs.onSurface,
+              color: muted ? cs.onSurfaceVariant : cs.onSurface,
               fontWeight: first ? FontWeight.w600 : FontWeight.w400,
               fontFeatures: const [FontFeature.tabularFigures()],
             );
@@ -251,7 +261,12 @@ class MetricTable extends StatelessWidget {
                 child: Row(
                   children: [
                     for (var c = 0; c < columns.length; c++)
-                      cell(rows[r][c], columns[c], first: c == 0),
+                      cell(
+                        rows[r][c],
+                        columns[c],
+                        first: c == 0,
+                        muted: mutedRowIndexes.contains(r),
+                      ),
                   ],
                 ),
               ),

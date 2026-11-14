@@ -21,7 +21,7 @@ class TermsOfServiceScreen extends StatelessWidget {
         LegalSection(
           title: 'Use License',
           content:
-              'Permission is granted to temporarily use this application for personal, non-commercial transitory viewing only.',
+              'Permission is granted to temporarily use this application for personal, non-commercial transitory viewing only. The app records when it is used and for how long; that usage information is visible to administrators.',
         ),
         LegalSection(
           title: 'Disclaimer',
