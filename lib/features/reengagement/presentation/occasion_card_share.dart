@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/contacts/contact_launcher.dart';
@@ -90,9 +93,18 @@ class OccasionCardShare {
         }
 
         if (!context.mounted) return OccasionShareResult.cancelled;
-        final result = await Share.shareXFiles([
-          XFile.fromData(png, mimeType: 'image/png', name: imageFileName),
-        ], text: text);
+        // Prefer a real temp file — XFile.fromData often fails to hand the image
+        // to WhatsApp on Android (empty attachment / share aborted).
+        final files = kIsWeb
+            ? [XFile.fromData(png, mimeType: 'image/png', name: imageFileName)]
+            : [
+                XFile(
+                  (await _writeTempPng(png, imageFileName)).path,
+                  mimeType: 'image/png',
+                  name: imageFileName,
+                ),
+              ];
+        final result = await Share.shareXFiles(files, text: text);
         if (result.status == ShareResultStatus.dismissed) {
           // Offer text-only fallback instead of abandoning.
           if (!context.mounted) return OccasionShareResult.cancelled;
@@ -178,6 +190,14 @@ class OccasionCardShare {
     } on MissingPluginException {
       return false;
     }
+  }
+
+  static Future<File> _writeTempPng(Uint8List png, String fileName) async {
+    final dir = await getTemporaryDirectory();
+    final safe = fileName.trim().isEmpty ? 'we-decor-card.png' : fileName.trim();
+    final file = File('${dir.path}/$safe');
+    await file.writeAsBytes(png, flush: true);
+    return file;
   }
 
   static void _snack(BuildContext context, String message) {
