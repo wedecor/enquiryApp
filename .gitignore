@@ -207,3 +207,4 @@ public/web/
 # Local Cursor prompts / audit docs (not product code)
 *_PROMPT.md
 WeDecor_App_Audit_Report.docx
+releases/
