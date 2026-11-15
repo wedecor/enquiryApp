@@ -4,9 +4,9 @@
   "releaseDate": "2026-11-15",
   "releaseNotes": "Thank customers with a card and ask for a review in one tap; track reviews received.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "ce0fb797a0bf6518a5ad2d391c45bdbaf85d1b033bfff22f9dae819e5d5d960b",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 63,
+  "sha256": "8f3ea23619950e05208bbb54840863167bdc973aef905c7baaeff4ee152d8ee0",
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 68,
   "features": [
     "Thank-you card with Google review ask on completed enquiries",
     "Review received toggle and Analytics Reviews figure"
