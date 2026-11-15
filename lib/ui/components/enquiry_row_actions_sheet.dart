@@ -291,15 +291,18 @@ List<EnquiryRowAction> contactEnquiryRowActions({
     );
   }
 
+  // Use the WhatsApp number (same as the WhatsApp action), not the call number —
+  // otherwise Android opens WhatsApp without a chat jid match and asks which
+  // contact/number to send to.
   if (onRequestReview != null &&
       status == EnquiryStatus.completed &&
-      callNumber != null &&
-      callNumber.isNotEmpty) {
+      waNumber != null &&
+      waNumber.isNotEmpty) {
     actions.add(
       EnquiryRowAction(
         label: 'Thank & ask for review',
         icon: Icons.star_outline_rounded,
-        onSelected: () => onRequestReview(callNumber),
+        onSelected: () => onRequestReview(waNumber),
       ),
     );
   }

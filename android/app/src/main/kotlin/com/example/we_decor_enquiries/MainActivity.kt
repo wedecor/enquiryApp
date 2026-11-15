@@ -52,7 +52,11 @@ class MainActivity : FlutterActivity() {
             val file = File(dir, "we-decor-wish.png")
             file.writeBytes(png)
             val uri = FileProvider.getUriForFile(this, "$packageName.wishprovider", file)
+            // Full international digits (e.g. 9198…), never a bare 10-digit local number —
+            // WhatsApp's jid ignores the chat when the country code is missing.
             val digits = phone.filter { it.isDigit() }
+            if (digits.length < 10) return false
+            grantUriPermission(target, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 setPackage(target)
@@ -60,6 +64,7 @@ class MainActivity : FlutterActivity() {
                 putExtra(Intent.EXTRA_TEXT, text)
                 putExtra("jid", "$digits@s.whatsapp.net")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             startActivity(intent)
             true

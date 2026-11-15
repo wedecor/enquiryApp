@@ -193,6 +193,10 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
     required List<Widget> actions,
   }) {
     final customerPhone = enquiryData['customerPhone'] as String?;
+    final rawWhatsapp = (enquiryData['whatsappNumber'] as String?)?.trim();
+    final whatsappNumber = (rawWhatsapp != null && rawWhatsapp.isNotEmpty)
+        ? rawWhatsapp
+        : customerPhone;
     final eventDateTs = enquiryData['eventDate'];
     final functions = functionsOf(enquiryData);
     // Multi-function booking: the header shows the next upcoming function's day.
@@ -225,7 +229,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             EnquiryDetailsHeader(
               enquiryId: widget.enquiryId,
               customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-              customerPhone: customerPhone,
+              customerPhone: whatsappNumber ?? customerPhone,
               phoneNormalized: (enquiryData['phoneNormalized'] as String?) ?? '',
               location:
                   (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
