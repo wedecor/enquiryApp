@@ -5,8 +5,8 @@
   "releaseNotes": "Fix thank-you / review send so WhatsApp opens the customer's chat instead of asking which number.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "1a740ca813e747df58b20f139272e03da0893d7f138bb34602b17769591ac893",
-  "forceUpdate": true,
-  "minSupportedBuildNumber": 69,
+  "forceUpdate": false,
+  "minSupportedBuildNumber": 63,
   "features": [
     "Thank-you card with Google review ask on completed enquiries",
     "Review received toggle and Analytics Reviews figure"
