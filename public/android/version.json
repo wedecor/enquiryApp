@@ -1,17 +1,19 @@
 {
-  "version": "2.0.38",
-  "buildNumber": 69,
+  "version": "2.0.39",
+  "buildNumber": 70,
   "releaseDate": "2026-11-15",
-  "releaseNotes": "Fix thank-you / review send so WhatsApp opens the customer's chat instead of asking which number.",
+  "releaseNotes": "Thank-you send now asks you to confirm before it counts as sent, uses the right Call vs WhatsApp numbers, and fixes review analytics.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "1a740ca813e747df58b20f139272e03da0893d7f138bb34602b17769591ac893",
+  "sha256": "575dd0a22ba13b7b59d1ba8339cc3ea4fcc0dbe886e6782ee671789fdcab2b98",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Thank-you card with Google review ask on completed enquiries",
-    "Review received toggle and Analytics Reviews figure"
+    "Mark as sent confirm before logging thank-you / wish shares",
+    "Call and WhatsApp use separate numbers on enquiry details"
   ],
   "bugFixes": [
-    "Thank-you from the list now uses the WhatsApp number so the chat opens directly"
+    "No more false thank-you sent when WhatsApp opens the wrong chat",
+    "Footer WhatsApp uses the WhatsApp number",
+    "Reviews figure counts by ask/received date, not booking date"
   ]
 }
