@@ -1,19 +1,17 @@
 {
-  "version": "2.0.39",
-  "buildNumber": 70,
+  "version": "2.0.40",
+  "buildNumber": 71,
   "releaseDate": "2026-11-15",
-  "releaseNotes": "Thank-you send now asks you to confirm before it counts as sent, uses the right Call vs WhatsApp numbers, and fixes review analytics.",
+  "releaseNotes": "When both WhatsApp apps are installed you can choose which one to use, and thank-you cards are less likely to send without the image.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "575dd0a22ba13b7b59d1ba8339cc3ea4fcc0dbe886e6782ee671789fdcab2b98",
+  "sha256": "26a997e1116be4a312c5b2cd204d5bbf574e4d0e3a0cad6687b71142e0fa4f81",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Mark as sent confirm before logging thank-you / wish shares",
-    "Call and WhatsApp use separate numbers on enquiry details"
+    "Choose WhatsApp or WhatsApp Business when both are installed"
   ],
   "bugFixes": [
-    "No more false thank-you sent when WhatsApp opens the wrong chat",
-    "Footer WhatsApp uses the WhatsApp number",
-    "Reviews figure counts by ask/received date, not booking date"
+    "No longer always opens personal WhatsApp when Business is also installed",
+    "Thank-you / wish card image attaches more reliably"
   ]
 }
