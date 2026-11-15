@@ -1,8 +1,8 @@
 {
-  "version": "2.0.37",
-  "buildNumber": 68,
+  "version": "2.0.38",
+  "buildNumber": 69,
   "releaseDate": "2026-11-15",
-  "releaseNotes": "Thank customers with a card and ask for a review in one tap; track reviews received.",
+  "releaseNotes": "Fix thank-you / review send so WhatsApp opens the customer's chat instead of asking which number.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "8f3ea23619950e05208bbb54840863167bdc973aef905c7baaeff4ee152d8ee0",
   "forceUpdate": false,
@@ -11,5 +11,7 @@
     "Thank-you card with Google review ask on completed enquiries",
     "Review received toggle and Analytics Reviews figure"
   ],
-  "bugFixes": []
+  "bugFixes": [
+    "Thank-you from the list now uses the WhatsApp number so the chat opens directly"
+  ]
 }
