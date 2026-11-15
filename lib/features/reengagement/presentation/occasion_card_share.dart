@@ -5,22 +5,37 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/contacts/contact_launcher.dart';
 import '../../../core/logging/logger.dart';
+import '../../../shared/widgets/confirmation_dialog.dart';
 import '../domain/reengagement_templates.dart';
 import 'reengagement_actions.dart';
 import 'wish_card.dart';
 
+/// Outcome of [OccasionCardShare.share].
+enum OccasionShareResult {
+  /// Contact logged (or text WhatsApp opened with audit).
+  sent,
+
+  /// User cancelled share sheet or declined "Mark as sent?".
+  cancelled,
+
+  /// No usable phone / WhatsApp could not open.
+  failed,
+}
+
 /// Shared card + caption share used by yearly wishes and thank-you / review.
 ///
-/// Android app: direct into the customer's WhatsApp chat when possible.
-/// Otherwise: share sheet (pick WhatsApp → chat). Desktop web: text-only.
-/// Phone falls back to [phoneNormalized] via [ReengagementActions.resolveWishPhone].
+/// Android: tries direct chat via MethodChannel; because WhatsApp's `jid` extra is
+/// unofficial, delivery is confirmed with "Mark as sent?" before logging.
+/// Share sheet: same confirm (avoids counting Drive/Messages as sent).
+/// Text-only WhatsApp URL: logged immediately (chat is addressed in the URL).
 class OccasionCardShare {
   OccasionCardShare._();
 
   static const MethodChannel _whatsAppChannel = MethodChannel('wedecor/whatsapp');
 
-  /// True when the card/text went out (contact logged with [contactType]).
-  static Future<bool> share({
+  /// Shares the card + [text]. Returns [OccasionShareResult.sent] only when the
+  /// contact was logged (or text WhatsApp opened successfully).
+  static Future<OccasionShareResult> share({
     required BuildContext context,
     required ContactLauncher launcher,
     required WishCardContent content,
@@ -32,6 +47,8 @@ class OccasionCardShare {
     required ContactType contactType,
     String imageFileName = 'we-decor-card.png',
     String cardAttachFailedMessage = "Couldn't attach the card — sending text only",
+    String markSentTitle = 'Mark as sent?',
+    String? markSentMessage,
   }) async {
     final resolved = ReengagementActions.resolveWishPhone(
       launcher,
@@ -40,8 +57,12 @@ class OccasionCardShare {
     );
     if (resolved == null) {
       _snack(context, 'No phone number for this customer');
-      return false;
+      return OccasionShareResult.failed;
     }
+
+    final first = ReengagementTemplates.firstName(customerName);
+    final confirmMessage =
+        markSentMessage ?? 'Did the message go to $first\'s WhatsApp chat? Only tap Yes if it did.';
 
     final canShareImage =
         !kIsWeb ||
@@ -54,22 +75,47 @@ class OccasionCardShare {
         if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
           final opened = await _shareToChat(png, launcher.normalize(resolved), text);
           if (opened) {
-            launcher.recordContact(enquiryId: enquiryId, type: contactType);
-            return true;
+            await Clipboard.setData(ClipboardData(text: text));
+            if (!context.mounted) return OccasionShareResult.cancelled;
+            _snack(context, 'Card opened in WhatsApp — caption copied if you need to paste it');
+            return _confirmAndLog(
+              context: context,
+              launcher: launcher,
+              enquiryId: enquiryId,
+              contactType: contactType,
+              title: markSentTitle,
+              message: confirmMessage,
+            );
           }
         }
-        if (context.mounted) {
-          _snack(
-            context,
-            'Pick WhatsApp, then ${ReengagementTemplates.firstName(customerName)}\'s chat',
-          );
-        }
+
+        if (!context.mounted) return OccasionShareResult.cancelled;
         final result = await Share.shareXFiles([
           XFile.fromData(png, mimeType: 'image/png', name: imageFileName),
         ], text: text);
-        if (result.status == ShareResultStatus.dismissed) return false;
-        launcher.recordContact(enquiryId: enquiryId, type: contactType);
-        return true;
+        if (result.status == ShareResultStatus.dismissed) {
+          // Offer text-only fallback instead of abandoning.
+          if (!context.mounted) return OccasionShareResult.cancelled;
+          final useText = await ConfirmationDialog.show(
+            context: context,
+            title: 'Send text only?',
+            message: 'Image share was cancelled. Open WhatsApp with the message text?',
+            confirmText: 'Open WhatsApp',
+            icon: Icons.chat_bubble_outline,
+          );
+          if (!useText || !context.mounted) return OccasionShareResult.cancelled;
+        } else {
+          await Clipboard.setData(ClipboardData(text: text));
+          if (!context.mounted) return OccasionShareResult.cancelled;
+          return _confirmAndLog(
+            context: context,
+            launcher: launcher,
+            enquiryId: enquiryId,
+            contactType: contactType,
+            title: markSentTitle,
+            message: confirmMessage,
+          );
+        }
       } catch (e, st) {
         Log.e('Occasion card share failed; opening WhatsApp with text', error: e, stackTrace: st);
         if (context.mounted) {
@@ -78,19 +124,44 @@ class OccasionCardShare {
       }
     }
 
-    if (!context.mounted) return false;
+    if (!context.mounted) return OccasionShareResult.cancelled;
     final status = await launcher.openWhatsAppWithAudit(
       resolved,
       prefillText: text,
       enquiryId: enquiryId,
       contactType: contactType,
     );
-    if (!context.mounted) return false;
+    if (!context.mounted) return OccasionShareResult.failed;
     if (status != ContactLaunchStatus.opened) {
       _snack(context, 'Could not open WhatsApp');
-      return false;
+      return OccasionShareResult.failed;
     }
-    return true;
+    return OccasionShareResult.sent;
+  }
+
+  static Future<OccasionShareResult> _confirmAndLog({
+    required BuildContext context,
+    required ContactLauncher launcher,
+    required String? enquiryId,
+    required ContactType contactType,
+    required String title,
+    required String message,
+  }) async {
+    final confirmed = await ConfirmationDialog.show(
+      context: context,
+      title: title,
+      message: message,
+      confirmText: 'Yes, mark sent',
+      cancelText: 'Not yet',
+      icon: Icons.mark_chat_read_outlined,
+    );
+    if (!confirmed) return OccasionShareResult.cancelled;
+    final ok = await launcher.recordContactAwait(enquiryId: enquiryId, type: contactType);
+    if (!ok && context.mounted) {
+      _snack(context, 'Opened WhatsApp, but could not save the contact log');
+      return OccasionShareResult.failed;
+    }
+    return OccasionShareResult.sent;
   }
 
   static Future<bool> _shareToChat(Uint8List png, String phone, String text) async {

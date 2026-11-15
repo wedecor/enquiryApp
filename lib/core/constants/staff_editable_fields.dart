@@ -59,6 +59,7 @@ const List<String> staffEditableFields = [
   'occasionPerson',
   'occasionReminders',
   'reviewAskedAt',
+  'lastReviewRequestedAt',
   'reviewReceivedAt',
   'reviewReceivedBy',
   'customerNameLower',

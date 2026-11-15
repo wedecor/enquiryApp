@@ -229,7 +229,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
             EnquiryDetailsHeader(
               enquiryId: widget.enquiryId,
               customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-              customerPhone: whatsappNumber ?? customerPhone,
+              customerPhone: customerPhone,
+              whatsappPhone: whatsappNumber,
               phoneNormalized: (enquiryData['phoneNormalized'] as String?) ?? '',
               location:
                   (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
@@ -277,7 +278,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               statusLabel: labels.statusLabel,
               customerPhone: customerPhone,
               customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
-              onCall: customerPhone == null
+              onCall: (customerPhone == null || customerPhone.trim().isEmpty)
                   ? null
                   : () async {
                       final launcher = ref.read(contactLauncherProvider);
@@ -286,12 +287,12 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         enquiryId: widget.enquiryId,
                       );
                     },
-              onWhatsApp: customerPhone == null
+              onWhatsApp: (whatsappNumber == null || whatsappNumber.trim().isEmpty)
                   ? null
                   : () async {
                       final launcher = ref.read(contactLauncherProvider);
                       await launcher.openWhatsAppWithAudit(
-                        customerPhone,
+                        whatsappNumber,
                         enquiryId: widget.enquiryId,
                         prefillText:
                             'Hi ${enquiryData['customerName'] ?? 'there'}, this is from We Decor.',

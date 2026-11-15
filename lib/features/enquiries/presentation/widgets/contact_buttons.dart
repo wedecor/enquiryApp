@@ -16,27 +16,42 @@ class ContactButtons extends ConsumerWidget {
     super.key,
     required this.customerPhone,
     required this.customerName,
+    this.whatsappPhone,
     this.enquiryId,
     this.enabled = true,
     this.eventType,
     this.eventDate,
   });
 
+  /// Voice / dialer number.
   final String? customerPhone;
+
+  /// WhatsApp chat number; falls back to [customerPhone] when null/empty.
+  final String? whatsappPhone;
   final String customerName;
   final String? enquiryId;
   final bool enabled;
   final String? eventType;
   final DateTime? eventDate;
 
+  String? get _waPhone {
+    final wa = whatsappPhone?.trim();
+    if (wa != null && wa.isNotEmpty) return wa;
+    final call = customerPhone?.trim();
+    return (call != null && call.isNotEmpty) ? call : null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final s = AppSurfaces.of(context);
     final contactLauncher = ref.read(contactLauncherProvider);
+    final callPhone = customerPhone?.trim();
+    final hasCall = callPhone != null && callPhone.isNotEmpty;
+    final hasWa = _waPhone != null;
 
     // Don't show buttons if no phone number — show a subtle hint instead
-    if (customerPhone == null || customerPhone!.trim().isEmpty) {
+    if (!hasCall && !hasWa) {
       return DecoratedBox(
         decoration: BoxDecoration(
           color: s.glassFill,
@@ -77,25 +92,27 @@ class ContactButtons extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        EnquiryRoundAction(
-          icon: Icons.call_outlined,
-          label: 'Call',
-          color: AppColorScheme.phoneCall,
-          enabled: enabled,
-          onTap: () => _handleCall(context, ref, contactLauncher),
-          semanticLabel: 'Call $customerName',
-          semanticHint: 'Opens phone dialer with customer number',
-        ),
-        const SizedBox(width: AppTokens.space2),
-        EnquiryRoundAction(
-          icon: Icons.chat,
-          label: 'WhatsApp',
-          color: AppColorScheme.whatsApp,
-          enabled: enabled,
-          onTap: () => _handleWhatsApp(context, ref, contactLauncher),
-          semanticLabel: 'Message $customerName on WhatsApp',
-          semanticHint: 'Opens WhatsApp chat with customer',
-        ),
+        if (hasCall)
+          EnquiryRoundAction(
+            icon: Icons.call_outlined,
+            label: 'Call',
+            color: AppColorScheme.phoneCall,
+            enabled: enabled,
+            onTap: () => _handleCall(context, ref, contactLauncher, callPhone),
+            semanticLabel: 'Call $customerName',
+            semanticHint: 'Opens phone dialer with customer number',
+          ),
+        if (hasCall && hasWa) const SizedBox(width: AppTokens.space2),
+        if (hasWa)
+          EnquiryRoundAction(
+            icon: Icons.chat,
+            label: 'WhatsApp',
+            color: AppColorScheme.whatsApp,
+            enabled: enabled,
+            onTap: () => _handleWhatsApp(context, ref, contactLauncher, _waPhone!),
+            semanticLabel: 'Message $customerName on WhatsApp',
+            semanticHint: 'Opens WhatsApp chat with customer',
+          ),
       ],
     );
   }
@@ -105,12 +122,10 @@ class ContactButtons extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ContactLauncher contactLauncher,
+    String phone,
   ) async {
     try {
-      final status = await contactLauncher.callNumberWithAudit(
-        customerPhone!,
-        enquiryId: enquiryId,
-      );
+      final status = await contactLauncher.callNumberWithAudit(phone, enquiryId: enquiryId);
 
       if (!context.mounted) return;
 
@@ -124,7 +139,7 @@ class ContactButtons extends ConsumerWidget {
             context,
             'Invalid phone number format',
             action: 'Copy Number',
-            onAction: () => _copyToClipboard(context, customerPhone!),
+            onAction: () => _copyToClipboard(context, phone),
           );
           break;
 
@@ -133,7 +148,7 @@ class ContactButtons extends ConsumerWidget {
             context,
             'Phone dialer not available on this device',
             action: 'Copy Number',
-            onAction: () => _copyToClipboard(context, customerPhone!),
+            onAction: () => _copyToClipboard(context, phone),
           );
           break;
 
@@ -142,7 +157,7 @@ class ContactButtons extends ConsumerWidget {
             context,
             'Could not open phone dialer',
             action: 'Copy Number',
-            onAction: () => _copyToClipboard(context, customerPhone!),
+            onAction: () => _copyToClipboard(context, phone),
           );
           break;
       }
@@ -152,7 +167,7 @@ class ContactButtons extends ConsumerWidget {
           context,
           'Error launching phone dialer',
           action: 'Copy Number',
-          onAction: () => _copyToClipboard(context, customerPhone!),
+          onAction: () => _copyToClipboard(context, phone),
         );
       }
     }
@@ -187,6 +202,7 @@ class ContactButtons extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     ContactLauncher contactLauncher,
+    String phone,
   ) async {
     try {
       // Build message with event type and date if available
@@ -204,7 +220,7 @@ class ContactButtons extends ConsumerWidget {
       }
 
       final status = await contactLauncher.openWhatsAppWithAudit(
-        customerPhone!,
+        phone,
         prefillText: prefillText,
         enquiryId: enquiryId,
       );
@@ -221,7 +237,7 @@ class ContactButtons extends ConsumerWidget {
             context,
             'Invalid phone number format',
             action: 'Copy Number',
-            onAction: () => _copyToClipboard(context, customerPhone!),
+            onAction: () => _copyToClipboard(context, phone),
           );
           break;
 
@@ -238,7 +254,7 @@ class ContactButtons extends ConsumerWidget {
             context,
             'Could not open WhatsApp',
             action: 'Copy Number',
-            onAction: () => _copyToClipboard(context, customerPhone!),
+            onAction: () => _copyToClipboard(context, phone),
           );
           break;
       }
@@ -248,7 +264,7 @@ class ContactButtons extends ConsumerWidget {
           context,
           'Error launching WhatsApp',
           action: 'Copy Number',
-          onAction: () => _copyToClipboard(context, customerPhone!),
+          onAction: () => _copyToClipboard(context, phone),
         );
       }
     }

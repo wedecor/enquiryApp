@@ -38,13 +38,19 @@ class WishCardContent {
   final bool named;
 
   /// Thank-you after a completed booking (same canvas as yearly wishes).
-  static WishCardContent thankYou({required String customerName}) {
+  ///
+  /// [eventTypeLabel] drives the quiet line ("wedding" / "celebration"); blank
+  /// names get a generic "Hello," greeting instead of "Dear there,".
+  static WishCardContent thankYou({required String customerName, String? eventTypeLabel}) {
     final first = ReengagementTemplates.firstName(customerName);
+    final dear = first == 'there' ? 'Hello,' : 'Dear $first,';
+    final rawEvent = eventTypeLabel?.trim() ?? '';
+    final event = rawEvent.isEmpty ? 'celebration' : rawEvent.toLowerCase();
     return WishCardContent(
       eyebrow: 'WITH GRATITUDE',
-      creamLine: 'Dear $first,',
+      creamLine: dear,
       goldLines: const ['Thank You'],
-      line: 'It was a joy to be part of your celebration.',
+      line: 'It was a joy to be part of your $event.',
       named: false,
     );
   }

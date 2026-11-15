@@ -348,7 +348,7 @@ void main() {
       expect(r.reviewsReceived, 0);
     });
 
-    test('counts reviews asked and received among completed events in the period', () {
+    test('counts reviews by ask/received stamps; asked excludes received-only', () {
       final rows = [
         {...row('a', 'completed'), 'reviewAskedAt': ago(days: 1)},
         {...row('b', 'completed'), 'reviewAskedAt': ago(days: 2), 'reviewReceivedAt': ago(days: 1)},
@@ -357,8 +357,41 @@ void main() {
         row('e', 'approved', contactCount: 1),
       ];
       final r = computeFollowUp(openRows: rows, periodRows: rows, now: now);
-      expect(r.reviewsAsked, 3);
+      expect(r.reviewsAsked, 2);
       expect(r.reviewsReceived, 2);
+    });
+
+    test('attributes reviews by stamp window, not enquiry period rows', () {
+      final start = DateTime(2026, 11, 1);
+      final end = DateTime(2026, 12, 1);
+      final all = [
+        {
+          ...row('old', 'completed', created: DateTime(2025, 1, 1)),
+          'reviewAskedAt': DateTime(2026, 11, 10),
+          'reviewReceivedAt': DateTime(2026, 11, 12),
+        },
+        {
+          ...row('new', 'completed', created: DateTime(2026, 11, 5)),
+          'reviewAskedAt': DateTime(2026, 10, 1),
+        },
+      ];
+      final period = rowsInPeriod(
+        all,
+        start: start,
+        end: end,
+        attribution: AnalyticsAttribution.enquiryDate,
+      );
+      final r = computeFollowUp(
+        openRows: all,
+        periodRows: period,
+        now: now,
+        allRows: all,
+        periodStart: start,
+        periodEnd: end,
+      );
+      expect(period.map((e) => e['id']), ['new']);
+      expect(r.reviewsAsked, 1); // old booking asked in Nov
+      expect(r.reviewsReceived, 1);
     });
   });
 

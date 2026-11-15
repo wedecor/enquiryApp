@@ -293,16 +293,14 @@ List<EnquiryRowAction> contactEnquiryRowActions({
 
   // Use the WhatsApp number (same as the WhatsApp action), not the call number —
   // otherwise Android opens WhatsApp without a chat jid match and asks which
-  // contact/number to send to.
-  if (onRequestReview != null &&
-      status == EnquiryStatus.completed &&
-      waNumber != null &&
-      waNumber.isNotEmpty) {
+  // contact/number to send to. Require ≥10 digits so junk numbers never appear.
+  final waDigits = waNumber?.replaceAll(RegExp(r'\D'), '') ?? '';
+  if (onRequestReview != null && status == EnquiryStatus.completed && waDigits.length >= 10) {
     actions.add(
       EnquiryRowAction(
         label: 'Thank & ask for review',
         icon: Icons.star_outline_rounded,
-        onSelected: () => onRequestReview(waNumber),
+        onSelected: () => onRequestReview(waNumber!),
       ),
     );
   }

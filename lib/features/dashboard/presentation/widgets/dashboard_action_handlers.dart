@@ -93,6 +93,8 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     }
   }
 
+  bool _reviewRequestBusy = false;
+
   Future<void> handleReviewRequest(
     String phone,
     String customerName,
@@ -100,17 +102,21 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
     String? eventTypeLabel,
     String phoneNormalized = '',
   }) async {
+    if (_reviewRequestBusy) return;
+    _reviewRequestBusy = true;
     try {
       final reviewService = ref.read(reviewRequestServiceProvider);
       final launcher = ref.read(contactLauncherProvider);
       final contactLog = ref.read(contactLogServiceProvider);
-      final appConfigAsync = ref.read(appGeneralConfigProvider);
 
-      final appConfig = appConfigAsync.valueOrNull;
-      if (appConfig == null) {
-        showSnack('Error loading app configuration');
-        return;
-      }
+      // Prefer loaded config; fall back to service defaults while config streams in.
+      final appConfig = ref.read(appGeneralConfigProvider).valueOrNull;
+      final googleReviewLink = (appConfig != null && appConfig.googleReviewLink.isNotEmpty)
+          ? appConfig.googleReviewLink
+          : null;
+      final businessName = (appConfig != null && appConfig.companyName.isNotEmpty)
+          ? appConfig.companyName
+          : null;
 
       final previouslySentAt = await contactLog.latestAt(
         enquiryId: enquiryId,
@@ -128,11 +134,6 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
         if (!confirmed || !mounted) return;
       }
 
-      final googleReviewLink = appConfig.googleReviewLink.isNotEmpty
-          ? appConfig.googleReviewLink
-          : null;
-      final businessName = appConfig.companyName.isNotEmpty ? appConfig.companyName : null;
-
       final text = reviewService.generateReviewMessage(
         customerName: customerName,
         eventTypeLabel: eventTypeLabel,
@@ -140,10 +141,13 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
         businessName: businessName,
       );
 
-      final sent = await OccasionCardShare.share(
+      final result = await OccasionCardShare.share(
         context: context,
         launcher: launcher,
-        content: WishCardContent.thankYou(customerName: customerName),
+        content: WishCardContent.thankYou(
+          customerName: customerName,
+          eventTypeLabel: eventTypeLabel,
+        ),
         text: text,
         customerPhone: phone,
         phoneNormalized: phoneNormalized,
@@ -154,12 +158,14 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
         cardAttachFailedMessage: "Couldn't attach the thank-you card — sending text only",
       );
 
-      if (!mounted || !sent) return;
-      showSnack('Thank-you sent to $customerName');
+      if (!mounted || result != OccasionShareResult.sent) return;
+      showSnack('Thank-you marked sent to $customerName');
     } catch (e) {
       if (mounted) {
         showSnack('Error sending thank-you: $e');
       }
+    } finally {
+      _reviewRequestBusy = false;
     }
   }
 

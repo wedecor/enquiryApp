@@ -50,8 +50,10 @@ if ask "Build the release APK and update public/android/version.json?"; then
     const fs=require("fs"); const p="public/android/version.json";
     const j=JSON.parse(fs.readFileSync(p,"utf8"));
     const [name,build,sha]=process.argv.slice(1);
-    j.version=name; j.buildNumber=Number(build); j.minSupportedBuildNumber=Number(build);
-    j.forceUpdate=true; j.sha256=sha; j.releaseDate=new Date().toISOString().slice(0,10);
+    j.version=name; j.buildNumber=Number(build);
+    // Keep floor at existing minSupported (do not force-update every ship).
+    if (j.minSupportedBuildNumber == null) j.minSupportedBuildNumber = Number(build);
+    j.forceUpdate = false; j.sha256 = sha; j.releaseDate = new Date().toISOString().slice(0,10);
     fs.writeFileSync(p, JSON.stringify(j,null,2)+"\n");
   ' "$NAME" "$BUILD" "$SHA"
   echo "version.json -> $NAME+$BUILD (forced), sha256 $SHA" | tee -a "$LOG/summary.txt"

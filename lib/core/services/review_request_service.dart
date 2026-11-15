@@ -49,10 +49,8 @@ class ReviewRequestService {
         'Warm wishes from $business.';
   }
 
-  /// Sends thank-you / review request via WhatsApp (text-only path).
-  ///
-  /// Card sharing goes through the shared helper in Task 3; this remains for
-  /// callers that only need the WhatsApp text launch.
+  /// Text-only WhatsApp launch (no thank-you card). Prefer [OccasionCardShare].
+  @Deprecated('Use OccasionCardShare.share with WishCardContent.thankYou instead')
   Future<ContactLaunchStatus> sendReviewRequest({
     required String customerPhone,
     required String customerName,

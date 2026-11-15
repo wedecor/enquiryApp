@@ -165,8 +165,8 @@ class ReengagementActions {
     required bool enquired,
     required String? enquiryId,
     required String text,
-  }) {
-    return OccasionCardShare.share(
+  }) async {
+    final result = await OccasionCardShare.share(
       context: context,
       launcher: ref.read(contactLauncherProvider),
       content: WishCardContent.forOccasion(
@@ -185,6 +185,7 @@ class ReengagementActions {
       imageFileName: 'we-decor-wish.png',
       cardAttachFailedMessage: "Couldn't attach the wish card — sending text only",
     );
+    return result == OccasionShareResult.sent;
   }
 
   /// Admin "Check now": runs the daily reminder job immediately

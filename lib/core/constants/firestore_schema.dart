@@ -126,6 +126,9 @@ class EnquiryFields {
   /// First thank-you / Google review ask (set when a `review_request` contact is logged).
   static const String reviewAskedAt = 'reviewAskedAt';
 
+  /// Most recent thank-you / review ask (updated on every `review_request` contact).
+  static const String lastReviewRequestedAt = 'lastReviewRequestedAt';
+
   /// When a Google review was marked received (toggle on completed enquiries).
   static const String reviewReceivedAt = 'reviewReceivedAt';
   static const String reviewReceivedBy = 'reviewReceivedBy';

@@ -835,21 +835,32 @@ class FollowUpReport {
   final double? avgContactsBeforeLoss;
   final int remindersSent;
 
-  /// Completed events in the period that were asked for a Google review.
+  /// Thank-you / review asks whose `reviewAskedAt` falls in the selected period.
   final int reviewsAsked;
 
-  /// Completed events in the period marked as review received.
+  /// Reviews marked received whose `reviewReceivedAt` falls in the period.
   final int reviewsReceived;
 }
 
 bool _isCompleted(Map<String, dynamic> row) => metricStatus(row) == EnquiryStatus.completed;
 
+bool _stampInPeriod(dynamic raw, DateTime start, DateTime end) {
+  final d = metricDate(raw);
+  return d != null && !d.isBefore(start) && d.isBefore(end);
+}
+
 /// [openRows]: all currently open enquiries (any period). [periodRows]: the
 /// selected period, for averages and reminder counts.
+///
+/// Reviews are counted from [allRows] by `reviewAskedAt` / `reviewReceivedAt`
+/// inside [periodStart], [periodEnd) — not by enquiry/event date attribution.
 FollowUpReport computeFollowUp({
   required List<Map<String, dynamic>> openRows,
   required List<Map<String, dynamic>> periodRows,
   required DateTime now,
+  List<Map<String, dynamic>>? allRows,
+  DateTime? periodStart,
+  DateTime? periodEnd,
 }) {
   final stale = <StaleItem>[];
   for (final row in openRows.where(isOpen)) {
@@ -874,14 +885,21 @@ FollowUpReport computeFollowUp({
     return values.reduce((a, b) => a + b) / values.length;
   }
 
-  final completedInPeriod = periodRows.where(_isCompleted);
+  final reviewSource = allRows ?? periodRows;
+  final start = periodStart;
+  final end = periodEnd;
   var reviewsAsked = 0;
   var reviewsReceived = 0;
-  for (final row in completedInPeriod) {
-    final asked = row['reviewAskedAt'] != null || row['reviewReceivedAt'] != null;
-    final received = row['reviewReceivedAt'] != null;
-    if (asked) reviewsAsked++;
-    if (received) reviewsReceived++;
+  for (final row in reviewSource) {
+    if (!_isCompleted(row)) continue;
+    if (start != null && end != null) {
+      if (_stampInPeriod(row['reviewAskedAt'], start, end)) reviewsAsked++;
+      if (_stampInPeriod(row['reviewReceivedAt'], start, end)) reviewsReceived++;
+    } else {
+      // Tests / callers without an explicit window: count current stamps.
+      if (row['reviewAskedAt'] != null) reviewsAsked++;
+      if (row['reviewReceivedAt'] != null) reviewsReceived++;
+    }
   }
 
   return FollowUpReport(
@@ -1101,7 +1119,14 @@ PipelineReport buildPipelineReport({
     forecast: computeForecast(allRows, now),
     leadTime: computeLeadTime(period, functions: periodFunctions),
     upcomingDemand: computeUpcomingDemand(allRows, now),
-    followUp: computeFollowUp(openRows: allRows, periodRows: period, now: now),
+    followUp: computeFollowUp(
+      openRows: allRows,
+      periodRows: period,
+      now: now,
+      allRows: allRows,
+      periodStart: start,
+      periodEnd: end,
+    ),
     bookedValueInPeriod: period
         .where(isWon)
         .fold<double>(0, (total, r) => total + (metricNum(r['totalCost']) ?? 0)),

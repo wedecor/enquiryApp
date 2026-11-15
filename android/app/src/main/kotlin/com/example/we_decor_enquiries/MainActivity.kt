@@ -42,14 +42,17 @@ class MainActivity : FlutterActivity() {
      * Opens [phone]'s WhatsApp chat with the wish card attached and [text] as its
      * caption. Uses WhatsApp's `jid` extra (widely used, not an official API): when a
      * WhatsApp build ignores it, WhatsApp shows its own contact picker instead.
-     * Prefers WhatsApp Business (the business number), then WhatsApp.
+     * Prefers personal WhatsApp (chat history / jid match), then WhatsApp Business.
      * Returns false when neither app is installed, so Dart can fall back.
+     *
+     * Callers must confirm delivery before logging — [startActivity] success only
+     * means an app opened, not that the right chat received the message.
      */
     private fun shareImageToChat(png: ByteArray, phone: String, text: String): Boolean {
         val target = WHATSAPP_PACKAGES.firstOrNull { isInstalled(it) } ?: return false
         return try {
             val dir = File(cacheDir, "wishes").apply { mkdirs() }
-            val file = File(dir, "we-decor-wish.png")
+            val file = File(dir, "we-decor-${System.currentTimeMillis()}.png")
             file.writeBytes(png)
             val uri = FileProvider.getUriForFile(this, "$packageName.wishprovider", file)
             // Full international digits (e.g. 9198…), never a bare 10-digit local number —
@@ -103,6 +106,7 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
-        private val WHATSAPP_PACKAGES = listOf("com.whatsapp.w4b", "com.whatsapp")
+        // Personal first: jid / chat history usually live there; W4B often opens empty.
+        private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
     }
 }

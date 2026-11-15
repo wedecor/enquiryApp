@@ -92,6 +92,7 @@ service cloud.firestore {
         'occasionPerson',
         'occasionReminders',
         'reviewAskedAt',
+        'lastReviewRequestedAt',
         'reviewReceivedAt',
         'reviewReceivedBy',
         'customerNameLower',
@@ -269,8 +270,8 @@ service cloud.firestore {
         ));
     }
 
-    // Google review received toggle (thank-you flow). Set = caller + server time;
-    // clear = both fields removed. Forged reviewReceivedBy is rejected.
+    // Google review received toggle (thank-you flow). Set only on completed
+    // enquiries, attributed to caller + server time; clear removes both fields.
     function isValidReviewReceivedChange() {
       let d = request.resource.data;
       let changed = d.diff(resource.data).affectedKeys();
@@ -280,9 +281,32 @@ service cloud.firestore {
           && d.get('reviewReceivedBy', null) == null
         )
         || (
-          d.get('reviewReceivedBy', '') == request.auth.uid
+          resource.data.get('statusValue', '') == 'completed'
+          && d.get('reviewReceivedBy', '') == request.auth.uid
           && d.get('reviewReceivedAt', null) == request.time
         );
+    }
+
+    // reviewAskedAt / lastReviewRequestedAt: set only with a contact-log bump
+    // (lastContactAt), never cleared by the client, askedAt set-once.
+    function isValidReviewAskedChange() {
+      let d = request.resource.data;
+      let changed = d.diff(resource.data).affectedKeys();
+      let touchingAsk = changed.hasAny(['reviewAskedAt', 'lastReviewRequestedAt']);
+      return !touchingAsk || (
+        changed.hasAny(['lastContactAt', 'contactCount'])
+        && (
+          !changed.hasAny(['reviewAskedAt'])
+          || (
+            resource.data.get('reviewAskedAt', null) == null
+            && d.get('reviewAskedAt', null) == request.time
+          )
+        )
+        && (
+          !changed.hasAny(['lastReviewRequestedAt'])
+          || d.get('lastReviewRequestedAt', null) == request.time
+        )
+      );
     }
 
     // Public-ish profile (NO tokens here)
@@ -335,9 +359,11 @@ service cloud.firestore {
       // Update: Admin can update anything, Staff can only update non-financial fields
       // Both roles: moving into Approved needs a known location (hasLocationIfApproving);
       // follow-up fields change only as a valid complete / reschedule (isValidFollowUpChange);
-      // reviewReceived* only as self-attributed set or clear (isValidReviewReceivedChange).
+      // reviewReceived* / reviewAsked* validated (isValidReviewReceivedChange /
+      // isValidReviewAskedChange).
       allow update: if hasLocationIfApproving() && isValidFollowUpChange()
         && isValidReviewReceivedChange()
+        && isValidReviewAskedChange()
         && isNotWritingParentMoney() && (isAdmin()
         || (
           // Staff can update if:
@@ -419,7 +445,9 @@ service cloud.firestore {
           || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid);
         allow create: if (isAdmin()
             || (isStaff() && get(/databases/$(database)/documents/enquiries/$(id)).data.assignedTo == request.auth.uid))
+          && request.resource.data.keys().hasOnly(['type', 'at', 'by'])
           && request.resource.data.by == request.auth.uid
+          && request.resource.data.at == request.time
           && request.resource.data.type in ['call', 'whatsapp', 'reminder', 'review_request', 'reengagement'];
         allow update, delete: if false;
       }

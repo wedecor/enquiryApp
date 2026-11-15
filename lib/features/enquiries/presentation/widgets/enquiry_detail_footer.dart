@@ -42,23 +42,21 @@ class EnquiryDetailFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final s = AppSurfaces.of(context);
-    final phone = customerPhone?.trim();
-    final hasPhone = phone != null && phone.isNotEmpty;
     final isAdmin = userRole == UserRole.admin;
     final isAssignee = (enquiryData['assignedTo'] as String?) == currentUserId;
     final canUpdateStatus = isAdmin || isAssignee;
 
     return Row(
       children: [
-        if (hasPhone && onCall != null)
+        if (onCall != null)
           EnquiryRoundButton(
             icon: Icons.call_outlined,
             tooltip: 'Call',
             iconColor: AppColorScheme.phoneCall,
             onTap: () => onCall!(),
           ),
-        if (hasPhone && onWhatsApp != null) ...[
-          const SizedBox(width: AppTokens.space2),
+        if (onWhatsApp != null) ...[
+          if (onCall != null) const SizedBox(width: AppTokens.space2),
           EnquiryRoundButton(
             icon: Icons.chat_bubble_outline,
             tooltip: 'WhatsApp',

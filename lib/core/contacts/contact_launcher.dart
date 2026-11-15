@@ -180,6 +180,14 @@ class ContactLauncher {
     _recordContact(enquiryId, type, ContactLaunchStatus.opened);
   }
 
+  /// Awaits the contact log write. False when skipped (no enquiry / no uid) or failed.
+  Future<bool> recordContactAwait({required String? enquiryId, required ContactType type}) async {
+    if (enquiryId == null || enquiryId.isEmpty) return false;
+    final log = contactLog;
+    if (log == null) return false;
+    return log.record(enquiryId: enquiryId, type: type);
+  }
+
   /// Launch phone call with audit logging
   Future<ContactLaunchStatus> callNumberWithAudit(String rawPhone, {String? enquiryId}) async {
     final status = await callNumber(rawPhone);

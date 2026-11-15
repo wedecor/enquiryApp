@@ -1044,6 +1044,49 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertSucceeds(doc(ADMIN_UID, 'admin').update(mark(ADMIN_UID)));
       await assertSucceeds(doc(ADMIN_UID, 'admin').update(clear(ADMIN_UID)));
     });
+
+    test('❌ Cannot mark review received unless enquiry is completed', async () => {
+      await seed({ statusValue: 'in_talks' });
+      await assertFails(doc(STAFF_UID, 'staff').update(mark(STAFF_UID)));
+    });
+
+    test('❌ Cannot set reviewAskedAt without a contact-log bump', async () => {
+      await seed();
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({
+          reviewAskedAt: FV().serverTimestamp(),
+          updatedAt: FV().serverTimestamp(),
+          updatedBy: STAFF_UID,
+        })
+      );
+    });
+
+    test('✅ Can set reviewAskedAt with lastContactAt / contactCount', async () => {
+      await seed();
+      await assertSucceeds(
+        doc(STAFF_UID, 'staff').update({
+          reviewAskedAt: FV().serverTimestamp(),
+          lastReviewRequestedAt: FV().serverTimestamp(),
+          lastContactAt: FV().serverTimestamp(),
+          contactCount: FV().increment(1),
+          updatedAt: FV().serverTimestamp(),
+          updatedBy: STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Cannot clear reviewAskedAt once set', async () => {
+      await seed({ reviewAskedAt: new Date() });
+      await assertFails(
+        doc(STAFF_UID, 'staff').update({
+          reviewAskedAt: FV().delete(),
+          lastContactAt: FV().serverTimestamp(),
+          contactCount: FV().increment(1),
+          updatedAt: FV().serverTimestamp(),
+          updatedBy: STAFF_UID,
+        })
+      );
+    });
   });
 
   describe('💰 Financial summary (money is admin-only)', () => {
@@ -1267,6 +1310,7 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
   });
 
   describe('📞 Contact log & quote fields', () => {
+    const FV = () => require('firebase/compat/app').default.firestore.FieldValue;
     const contacts = (uid, role, enquiryId) =>
       testEnv
         .authenticatedContext(uid, { role })
@@ -1274,24 +1318,29 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
         .collection('enquiries')
         .doc(enquiryId)
         .collection('contacts');
+    const contactDoc = (uid, type = 'call') => ({
+      type,
+      at: FV().serverTimestamp(),
+      by: uid,
+    });
 
     test('✅ Assigned staff can log a contact as themselves', async () => {
       await assertSucceeds(
-        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
-          type: 'call',
-          at: new Date(),
-          by: STAFF_UID,
-        })
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add(contactDoc(STAFF_UID))
+      );
+    });
+
+    test('✅ Assigned staff can log a review_request contact', async () => {
+      await assertSucceeds(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add(
+          contactDoc(STAFF_UID, 'review_request')
+        )
       );
     });
 
     test('❌ Staff cannot log a contact on someone else\'s enquiry', async () => {
       await assertFails(
-        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-other').add({
-          type: 'call',
-          at: new Date(),
-          by: STAFF_UID,
-        })
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-other').add(contactDoc(STAFF_UID))
       );
     });
 
@@ -1299,19 +1348,35 @@ describe('RBAC Firestore Security Rules - Stabilized Tests', () => {
       await assertFails(
         contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
           type: 'call',
-          at: new Date(),
+          at: FV().serverTimestamp(),
           by: OTHER_STAFF_UID,
+        })
+      );
+    });
+
+    test('❌ Contact create requires server timestamp at and only type/at/by', async () => {
+      await assertFails(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
+          type: 'call',
+          at: new Date(),
+          by: STAFF_UID,
+        })
+      );
+      await assertFails(
+        contacts(STAFF_UID, 'staff', 'enquiry-assigned-to-staff').add({
+          type: 'call',
+          at: FV().serverTimestamp(),
+          by: STAFF_UID,
+          extra: true,
         })
       );
     });
 
     test('❌ Unknown contact type is rejected', async () => {
       await assertFails(
-        contacts(ADMIN_UID, 'admin', 'enquiry-assigned-to-staff').add({
-          type: 'email',
-          at: new Date(),
-          by: ADMIN_UID,
-        })
+        contacts(ADMIN_UID, 'admin', 'enquiry-assigned-to-staff').add(
+          contactDoc(ADMIN_UID, 'email')
+        )
       );
     });
 

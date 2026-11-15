@@ -107,9 +107,17 @@ void main() {
       expect(c.creamLine, 'Dear Neha,');
       expect(c.goldLines, ['Thank You']);
       expect(c.line, 'It was a joy to be part of your celebration.');
-      final all = [c.eyebrow, c.creamLine, ...c.goldLines, c.line].join(' ');
-      expect(all.toLowerCase(), isNot(contains('wedding')));
-      expect(all.toLowerCase(), isNot(contains(RegExp(r'₹|\brs\b|\d{2,}'))));
+      expect(c.line.toLowerCase(), isNot(contains(RegExp(r'₹|\brs\b|\d{2,}'))));
+    });
+
+    test('uses event type in the quiet line and Hello when name is blank', () {
+      final wedding = WishCardContent.thankYou(
+        customerName: 'Ayesha Khan',
+        eventTypeLabel: 'Wedding',
+      );
+      expect(wedding.line, 'It was a joy to be part of your wedding.');
+      final anon = WishCardContent.thankYou(customerName: '  ');
+      expect(anon.creamLine, 'Hello,');
     });
   });
 }

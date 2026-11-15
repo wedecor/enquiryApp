@@ -26,6 +26,7 @@ class EnquiryDetailsHeader extends ConsumerWidget {
     required this.eventDate,
     required this.statusValue,
     required this.statusLabel,
+    this.whatsappPhone,
     this.phoneNormalized = '',
     this.actions = const [],
     this.repeatCustomer = false,
@@ -35,7 +36,12 @@ class EnquiryDetailsHeader extends ConsumerWidget {
 
   final String enquiryId;
   final String customerName;
+
+  /// Voice / dialer number.
   final String? customerPhone;
+
+  /// WhatsApp number when different from [customerPhone].
+  final String? whatsappPhone;
   final String? location;
   final String eventTypeLabel;
   final DateTime? eventDate;
@@ -113,6 +119,7 @@ class EnquiryDetailsHeader extends ConsumerWidget {
         children: [
           ContactButtons(
             customerPhone: customerPhone,
+            whatsappPhone: whatsappPhone ?? customerPhone,
             customerName: customerName,
             enquiryId: enquiryId,
             eventType: eventTypeLabel,
@@ -120,7 +127,7 @@ class EnquiryDetailsHeader extends ConsumerWidget {
           ),
           if (showThankYou)
             ReviewRequestButton(
-              customerPhone: customerPhone,
+              customerPhone: whatsappPhone ?? customerPhone,
               customerName: customerName,
               phoneNormalized: phoneNormalized,
               eventTypeLabel: eventTypeLabel,
