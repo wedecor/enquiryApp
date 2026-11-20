@@ -27,10 +27,10 @@ enum OccasionShareResult {
 
 /// Shared card + caption share used by yearly wishes and thank-you / review.
 ///
-/// Android: tries direct chat via MethodChannel; because WhatsApp's `jid` extra is
-/// unofficial, delivery is confirmed with "Mark as sent?" before logging.
-/// Share sheet: same confirm (avoids counting Drive/Messages as sent).
-/// Text-only WhatsApp URL: logged immediately (chat is addressed in the URL).
+/// Android: opens the customer's chat via phone-in-URL deep link, then shares the
+/// card image to the same WhatsApp app (no unofficial `jid` targeting). Delivery
+/// is confirmed with "Mark as sent?" before logging.
+/// Share sheet / text-only fallbacks when the channel path cannot run.
 class OccasionCardShare {
   OccasionCardShare._();
 
@@ -78,9 +78,11 @@ class OccasionCardShare {
         if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
           final opened = await _shareToChat(png, launcher.normalize(resolved), text);
           if (opened) {
-            await Clipboard.setData(ClipboardData(text: text));
             if (!context.mounted) return OccasionShareResult.cancelled;
-            _snack(context, 'Card opened in WhatsApp — caption copied if you need to paste it');
+            _snack(
+              context,
+              'Opened $first\'s chat with the message — send the card if WhatsApp shows it',
+            );
             return _confirmAndLog(
               context: context,
               launcher: launcher,
@@ -106,7 +108,6 @@ class OccasionCardShare {
               ];
         final result = await Share.shareXFiles(files, text: text);
         if (result.status == ShareResultStatus.dismissed) {
-          // Offer text-only fallback instead of abandoning.
           if (!context.mounted) return OccasionShareResult.cancelled;
           final useText = await ConfirmationDialog.show(
             context: context,
@@ -136,6 +137,7 @@ class OccasionCardShare {
       }
     }
 
+    // Text-only URL path — embeds the phone (reliable chat targeting).
     if (!context.mounted) return OccasionShareResult.cancelled;
     final status = await launcher.openWhatsAppWithAudit(
       resolved,

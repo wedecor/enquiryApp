@@ -1,5 +1,6 @@
 package com.example.we_decor_enquiries
 
+import android.app.AlertDialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
@@ -8,6 +9,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -31,8 +34,15 @@ class MainActivity : FlutterActivity() {
                         val text = call.argument<String>("text") ?: ""
                         if (bytes == null || phone.isNullOrBlank()) {
                             result.success(false)
-                        } else {
-                            result.success(shareImageToChat(bytes, phone, text))
+                            return@setMethodCallHandler
+                        }
+                        // Package pick may show a dialog — reply after the two-step share starts.
+                        pickWhatsAppPackage { pkg ->
+                            if (pkg == null) {
+                                result.success(false)
+                            } else {
+                                result.success(shareImageToChat(bytes, phone, text, pkg))
+                            }
                         }
                     }
                     else -> result.notImplemented()
@@ -41,71 +51,104 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Opens [phone]'s WhatsApp chat with the wish card attached and [text] as its
-     * caption. Uses WhatsApp's `jid` extra (widely used, not an official API): when a
-     * WhatsApp build ignores it, WhatsApp shows its own contact picker instead.
+     * Two-step share that does **not** rely on WhatsApp's unofficial `jid` extra
+     * (many builds ignore it and show a contact picker even when the number is known).
      *
-     * When both personal WhatsApp and WhatsApp Business are installed, shows the
-     * system chooser so staff can pick which app to use. With only one installed,
-     * opens that app directly.
+     * 1. [ACTION_VIEW] `api.whatsapp.com/send?phone=…&text=…` with [setPackage] —
+     *    same phone-in-URL targeting as the normal WhatsApp button.
+     * 2. Shortly after, [ACTION_SEND] the card image to the **same** package
+     *    (ClipData + FileProvider). Chat selection already happened in step 1.
      *
-     * Returns false when neither app is installed, so Dart can fall back.
-     *
-     * Callers must confirm delivery before logging — [startActivity] success only
-     * means an app opened, not that the right chat received the message.
+     * When both personal WhatsApp and Business are installed, staff pick which app.
+     * Returns false when neither is installed or step 1 cannot start (Dart falls back).
      */
-    private fun shareImageToChat(png: ByteArray, phone: String, text: String): Boolean {
-        val installed = WHATSAPP_PACKAGES.filter { isInstalled(it) }
-        if (installed.isEmpty()) return false
+    private fun shareImageToChat(png: ByteArray, phone: String, text: String, pkg: String): Boolean {
         return try {
+            val digits = phone.filter { it.isDigit() }
+            if (digits.length < 10) return false
+
             val dir = File(cacheDir, "wishes").apply { mkdirs() }
             val file = File(dir, "we-decor-${System.currentTimeMillis()}.png")
             file.writeBytes(png)
             val uri = FileProvider.getUriForFile(this, "$packageName.wishprovider", file)
-            // Full international digits (e.g. 9198…), never a bare 10-digit local number —
-            // WhatsApp's jid ignores the chat when the country code is missing.
-            val digits = phone.filter { it.isDigit() }
-            if (digits.length < 10) return false
+            grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-            // Grant every installed WhatsApp — the chooser may open either one.
-            for (pkg in installed) {
-                grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Step A — open the correct chat with the caption (phone in the URL).
+            val sendUrl = Uri.parse(
+                "https://api.whatsapp.com/send?phone=$digits&text=${Uri.encode(text)}",
+            )
+            val viewIntent = Intent(Intent.ACTION_VIEW, sendUrl).apply {
+                setPackage(pkg)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+            startActivity(viewIntent)
 
-            val intents = installed.map { pkg -> sendIntent(pkg, uri, text, digits) }
-            if (intents.size == 1) {
-                startActivity(intents[0])
-            } else {
-                // Primary + EXTRA_INITIAL_INTENTS → chooser lists only WA / W4B.
-                val chooser = Intent.createChooser(intents[0], "Send with").apply {
-                    putExtra(Intent.EXTRA_INITIAL_INTENTS, intents.drop(1).toTypedArray())
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            // Step B — attach the card to the same app after the chat has a moment to open.
+            // No `jid` extra: that is what triggered "whom to send" on many devices.
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    startActivity(imageSendIntent(pkg, uri))
+                } catch (_: Exception) {
+                    // Chat + caption already opened; Dart still prompts Mark as sent.
                 }
-                startActivity(chooser)
-            }
+            }, IMAGE_SHARE_DELAY_MS)
+
             true
         } catch (e: Exception) {
             false
         }
     }
 
-    /**
-     * ACTION_SEND for one WhatsApp package. Sets [ClipData] as well as EXTRA_STREAM —
-     * without ClipData, Android 7+ often hands WhatsApp an unreadable URI so the
-     * image silently drops and only the caption (or an empty composer) appears.
-     */
-    private fun sendIntent(pkg: String, uri: Uri, text: String, digits: String): Intent {
+    /** Image-only ACTION_SEND for [pkg]. Caption already went out in step A. */
+    private fun imageSendIntent(pkg: String, uri: Uri): Intent {
         return Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             setPackage(pkg)
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, text)
-            putExtra("jid", "$digits@s.whatsapp.net")
             clipData = ClipData.newUri(contentResolver, "we-decor-card", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
+    }
+
+    /**
+     * One installed app → use it. Both → dialog (WhatsApp / WhatsApp Business),
+     * remembering the last choice as the default selected item.
+     */
+    private fun pickWhatsAppPackage(onPicked: (String?) -> Unit) {
+        val installed = WHATSAPP_PACKAGES.filter { isInstalled(it) }
+        when {
+            installed.isEmpty() -> onPicked(null)
+            installed.size == 1 -> onPicked(installed[0])
+            else -> runOnUiThread {
+                if (isFinishing || isDestroyed) {
+                    onPicked(null)
+                    return@runOnUiThread
+                }
+                val prefs = getSharedPreferences(PREFS_WHATSAPP, MODE_PRIVATE)
+                val last = prefs.getString(PREF_LAST_PKG, null)
+                val labels = installed.map { pkgLabel(it) }.toTypedArray()
+                val checked = installed.indexOf(last).coerceAtLeast(0)
+                AlertDialog.Builder(this)
+                    .setTitle("Send with")
+                    .setSingleChoiceItems(labels, checked, null)
+                    .setPositiveButton("Continue") { dialog, _ ->
+                        val list = (dialog as AlertDialog).listView
+                        val idx = list.checkedItemPosition.coerceIn(0, installed.lastIndex)
+                        val pkg = installed[idx]
+                        prefs.edit().putString(PREF_LAST_PKG, pkg).apply()
+                        onPicked(pkg)
+                    }
+                    .setNegativeButton("Cancel") { _, _ -> onPicked(null) }
+                    .setOnCancelListener { onPicked(null) }
+                    .show()
+            }
+        }
+    }
+
+    private fun pkgLabel(pkg: String): String = when (pkg) {
+        "com.whatsapp.w4b" -> "WhatsApp Business"
+        else -> "WhatsApp"
     }
 
     private fun isInstalled(pkg: String): Boolean = try {
@@ -138,6 +181,9 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
+        private const val PREFS_WHATSAPP = "whatsapp_share"
+        private const val PREF_LAST_PKG = "last_pkg"
+        private const val IMAGE_SHARE_DELAY_MS = 900L
         private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
     }
 }
