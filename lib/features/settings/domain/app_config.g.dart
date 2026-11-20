@@ -8,7 +8,7 @@ part of 'app_config.dart';
 
 _$AppGeneralConfigImpl _$$AppGeneralConfigImplFromJson(Map<String, dynamic> json) =>
     _$AppGeneralConfigImpl(
-      companyName: json['companyName'] as String? ?? 'WeDecor Events',
+      companyName: json['companyName'] as String? ?? 'We Decor',
       logoUrl: json['logoUrl'] as String?,
       currency: json['currency'] as String? ?? 'INR',
       timezone: json['timezone'] as String? ?? 'Asia/Kolkata',

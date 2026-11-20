@@ -7,7 +7,7 @@ part 'app_config.g.dart';
 @freezed
 class AppGeneralConfig with _$AppGeneralConfig {
   const factory AppGeneralConfig({
-    @Default('WeDecor Events') String companyName,
+    @Default('We Decor') String companyName,
     String? logoUrl,
     @Default('INR') String currency,
     @Default('Asia/Kolkata') String timezone,

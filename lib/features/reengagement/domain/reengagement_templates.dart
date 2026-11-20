@@ -12,7 +12,7 @@ import 'occasion_reminder.dart';
 class ReengagementTemplates {
   ReengagementTemplates._();
 
-  static const String fallbackBusiness = 'We Decor Events';
+  static const String fallbackBusiness = 'We Decor';
 
   static const List<String> placeholders = [
     '{name}',

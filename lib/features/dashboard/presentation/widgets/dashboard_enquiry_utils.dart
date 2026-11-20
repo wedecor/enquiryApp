@@ -295,27 +295,30 @@ String buildReminderMessage(
 ) {
   final now = DateTime.now();
   final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
+  final first = customerName.trim().isEmpty ? '' : customerName.trim().split(RegExp(r'\s+')).first;
+  final hello = first.isEmpty ? 'Hi' : 'Hi $first';
+  final event = eventType.trim().isEmpty ? 'celebration' : eventType.trim().toLowerCase();
 
   // Follow Up tab only opens this at exactly [kFollowUpLeadDays] out.
   final String urgencyMessage;
   if (daysUntilEvent == kFollowUpLeadDays) {
-    urgencyMessage = 'Your $eventType is in $kFollowUpLeadDays days';
+    urgencyMessage = 'Your $event is in $kFollowUpLeadDays days';
   } else if (daysUntilEvent == 0) {
-    urgencyMessage = 'Your $eventType is TODAY!';
+    urgencyMessage = 'Your $event is TODAY!';
   } else if (daysUntilEvent == 1) {
-    urgencyMessage = 'Your $eventType is TOMORROW!';
+    urgencyMessage = 'Your $event is TOMORROW!';
   } else if (daysUntilEvent != null && daysUntilEvent > 1) {
-    urgencyMessage = 'Your $eventType is in $daysUntilEvent days';
+    urgencyMessage = 'Your $event is in $daysUntilEvent days';
   } else {
-    urgencyMessage = 'Your upcoming $eventType needs attention';
+    urgencyMessage = 'Your upcoming $event needs attention';
   }
 
   final formattedDate = eventDate != null ? formatDateForMessage(eventDate) : '';
   final dateText = formattedDate.isNotEmpty ? ' on $formattedDate' : '';
 
-  return 'Hi $customerName, greetings from We Decor.\n\n'
+  return '$hello, greetings from We Decor.\n\n'
       '$urgencyMessage.\n\n'
-      'We\'re excited to be part of your $eventType$dateText and happy to help make it special.\n\n'
+      'We\'re excited to be part of your $event$dateText and happy to help make it special.\n\n'
       'If you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\n'
       'Otherwise reply anytime — we\'re here for any questions.\n\n'
       'Team We Decor';
