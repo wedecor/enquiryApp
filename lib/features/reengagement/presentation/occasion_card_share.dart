@@ -27,10 +27,9 @@ enum OccasionShareResult {
 
 /// Shared card + caption share used by yearly wishes and thank-you / review.
 ///
-/// Android: opens the customer's chat via phone-in-URL deep link, then shares the
-/// card image to the same WhatsApp app (no unofficial `jid` targeting). Delivery
-/// is confirmed with "Mark as sent?" before logging.
-/// Share sheet / text-only fallbacks when the channel path cannot run.
+/// Chat targeting always uses a phone-in-URL open (`whatsapp://` / `wa.me` /
+/// Android two-step channel). Untargeted share sheets alone are never used to
+/// open WhatsApp — that caused "whom to send?" contact pickers.
 class OccasionCardShare {
   OccasionCardShare._();
 
@@ -67,90 +66,71 @@ class OccasionCardShare {
     final confirmMessage =
         markSentMessage ?? 'Did the message go to $first\'s WhatsApp chat? Only tap Yes if it did.';
 
-    final canShareImage =
-        !kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
+    Uint8List? png;
+    try {
+      png = await WishCardRenderer.renderPng(content);
+    } catch (e, st) {
+      Log.e('Occasion card render failed', error: e, stackTrace: st);
+      if (context.mounted) _snack(context, cardAttachFailedMessage);
+    }
 
-    if (canShareImage) {
-      try {
-        final png = await WishCardRenderer.renderPng(content);
-        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-          final opened = await _shareToChat(png, launcher.normalize(resolved), text);
-          if (opened) {
-            if (!context.mounted) return OccasionShareResult.cancelled;
-            _snack(
-              context,
-              'Opened $first\'s chat with the message — send the card if WhatsApp shows it',
-            );
-            return _confirmAndLog(
-              context: context,
-              launcher: launcher,
-              enquiryId: enquiryId,
-              contactType: contactType,
-              title: markSentTitle,
-              message: confirmMessage,
-            );
-          }
-        }
-
+    // Android: phone-URL chat + card via MethodChannel (no unofficial jid).
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && png != null) {
+      final opened = await _shareToChat(png, launcher.normalize(resolved), text);
+      if (opened) {
         if (!context.mounted) return OccasionShareResult.cancelled;
-        // Prefer a real temp file — XFile.fromData often fails to hand the image
-        // to WhatsApp on Android (empty attachment / share aborted).
-        final files = kIsWeb
-            ? [XFile.fromData(png, mimeType: 'image/png', name: imageFileName)]
-            : [
-                XFile(
-                  (await _writeTempPng(png, imageFileName)).path,
-                  mimeType: 'image/png',
-                  name: imageFileName,
-                ),
-              ];
-        final result = await Share.shareXFiles(files, text: text);
-        if (result.status == ShareResultStatus.dismissed) {
-          if (!context.mounted) return OccasionShareResult.cancelled;
-          final useText = await ConfirmationDialog.show(
-            context: context,
-            title: 'Send text only?',
-            message: 'Image share was cancelled. Open WhatsApp with the message text?',
-            confirmText: 'Open WhatsApp',
-            icon: Icons.chat_bubble_outline,
-          );
-          if (!useText || !context.mounted) return OccasionShareResult.cancelled;
-        } else {
-          await Clipboard.setData(ClipboardData(text: text));
-          if (!context.mounted) return OccasionShareResult.cancelled;
-          return _confirmAndLog(
-            context: context,
-            launcher: launcher,
-            enquiryId: enquiryId,
-            contactType: contactType,
-            title: markSentTitle,
-            message: confirmMessage,
-          );
-        }
-      } catch (e, st) {
-        Log.e('Occasion card share failed; opening WhatsApp with text', error: e, stackTrace: st);
-        if (context.mounted) {
-          _snack(context, cardAttachFailedMessage);
-        }
+        _snack(
+          context,
+          'Opened $first\'s chat with the message — send the card if WhatsApp shows it',
+        );
+        return _confirmAndLog(
+          context: context,
+          launcher: launcher,
+          enquiryId: enquiryId,
+          contactType: contactType,
+          title: markSentTitle,
+          message: confirmMessage,
+        );
       }
     }
 
-    // Text-only URL path — embeds the phone (reliable chat targeting).
+    // All platforms / Android channel failed: open the correct chat via phone URL
+    // first (same as the normal WhatsApp button). Never open an untargeted share
+    // sheet as the way into WhatsApp.
     if (!context.mounted) return OccasionShareResult.cancelled;
-    final status = await launcher.openWhatsAppWithAudit(
-      resolved,
-      prefillText: text,
-      enquiryId: enquiryId,
-      contactType: contactType,
-    );
+    final status = await launcher.openWhatsApp(resolved, prefillText: text);
     if (!context.mounted) return OccasionShareResult.failed;
     if (status != ContactLaunchStatus.opened) {
       _snack(context, 'Could not open WhatsApp');
       return OccasionShareResult.failed;
     }
-    return OccasionShareResult.sent;
+
+    // Best-effort card attach after the chat is open (may still need the user to
+    // pick WhatsApp in the sheet, but the chat with the number is already open).
+    if (png != null && !kIsWeb) {
+      try {
+        final file = await _writeTempPng(png, imageFileName);
+        await Share.shareXFiles([XFile(file.path, mimeType: 'image/png', name: imageFileName)]);
+      } catch (e, st) {
+        Log.w(
+          'Occasion card share-after-chat failed',
+          data: {'error': e.toString(), 'stack': st.toString()},
+        );
+        if (context.mounted) _snack(context, cardAttachFailedMessage);
+      }
+    } else if (png == null && context.mounted) {
+      // render already snacked
+    }
+
+    if (!context.mounted) return OccasionShareResult.cancelled;
+    return _confirmAndLog(
+      context: context,
+      launcher: launcher,
+      enquiryId: enquiryId,
+      contactType: contactType,
+      title: markSentTitle,
+      message: confirmMessage,
+    );
   }
 
   static Future<OccasionShareResult> _confirmAndLog({

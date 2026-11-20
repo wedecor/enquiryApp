@@ -1,0 +1,20 @@
+---
+description: Never deploy, push release hosting, or ship APKs until the user explicitly confirms
+alwaysApply: true
+---
+
+# No deploy without confirmation
+
+Do **not** run production deploys or release publishing unless the user explicitly asks in that turn (e.g. "deploy", "ship", "release hosting").
+
+Forbidden without explicit confirmation:
+- `firebase deploy` (any targets: hosting, rules, functions, storage, …)
+- Updating `public/android/version.json` + hosting as a release
+- `git push` of release commits when the goal is to publish a build (push of ordinary code fixes is OK only if the user asked to push)
+
+Allowed without a deploy ask:
+- Local builds (`flutter build apk`) for verification
+- Commits when the user asked to commit
+- Code fixes and analysis
+
+If a task says "ship" or "deploy" in an old plan but the user later said not to deploy until they confirm, **follow the later instruction**.
