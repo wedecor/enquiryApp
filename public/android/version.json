@@ -1,17 +1,18 @@
 {
-  "version": "2.0.46",
-  "buildNumber": 77,
+  "version": "2.0.47",
+  "buildNumber": 78,
   "releaseDate": "2026-11-20",
-  "releaseNotes": "WhatsApp card attaches again: send message first, then Send card when you return.",
+  "releaseNotes": "One tap sends the card straight to the customer's WhatsApp chat. New numbers are saved to this phone's contacts first (device-only), then the card opens in one go.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "c307916a6788bb24e5760c87196ef23c41f31a65bfef81801682314becba0921",
+  "sha256": "103a117f31f14666c75ea3a467204c249f9777b794863141b56cc4b25b058fbb",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Glass WhatsApp / Business picker matching the app UI"
+    "One-button card send opens the chat with image + caption",
+    "Automatic device-only contact save when the number is new",
+    "Settings switch: Save customers to contacts"
   ],
   "bugFixes": [
-    "Card share launches from a foreground tap (no delayed background intent)",
-    "New numbers: message via click-to-chat, then Send card sheet after return"
+    "Known chats and numbers already in contacts skip the save wait"
   ]
 }
