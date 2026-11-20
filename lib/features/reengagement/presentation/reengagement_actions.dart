@@ -169,7 +169,7 @@ class ReengagementActions {
     final result = await OccasionCardShare.share(
       context: context,
       launcher: ref.read(contactLauncherProvider),
-      content: WishCardContent.forOccasion(
+      content: CustomerCardContent.forOccasion(
         kind: kind,
         customerName: customerName,
         nth: nth,

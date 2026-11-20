@@ -10,8 +10,8 @@ import '../../../core/contacts/contact_launcher.dart';
 import '../../../core/logging/logger.dart';
 import '../../../shared/widgets/confirmation_dialog.dart';
 import '../domain/reengagement_templates.dart';
+import 'customer_card.dart';
 import 'reengagement_actions.dart';
-import 'wish_card.dart';
 
 /// Outcome of [OccasionCardShare.share].
 enum OccasionShareResult {
@@ -40,7 +40,7 @@ class OccasionCardShare {
   static Future<OccasionShareResult> share({
     required BuildContext context,
     required ContactLauncher launcher,
-    required WishCardContent content,
+    required CustomerCardContent content,
     required String text,
     required String? customerPhone,
     required String phoneNormalized,
@@ -68,7 +68,7 @@ class OccasionCardShare {
 
     Uint8List? png;
     try {
-      png = await WishCardRenderer.renderPng(content);
+      png = await CustomerCardRenderer.renderPng(content);
     } catch (e, st) {
       Log.e('Occasion card render failed', error: e, stackTrace: st);
       if (context.mounted) _snack(context, cardAttachFailedMessage);

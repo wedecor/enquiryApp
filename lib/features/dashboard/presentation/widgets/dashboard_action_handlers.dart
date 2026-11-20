@@ -165,7 +165,7 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       final result = await OccasionCardShare.share(
         context: context,
         launcher: launcher,
-        content: WishCardContent.thankYou(
+        content: CustomerCardContent.thankYou(
           customerName: customerName,
           eventTypeLabel: eventTypeLabel,
         ),
