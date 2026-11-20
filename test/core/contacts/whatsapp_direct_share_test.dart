@@ -121,22 +121,14 @@ void main() {
     );
 
     expect(result, WhatsAppDirectShareResult.textOnly);
-    expect(methods(), [
-      'listInstalledPackages',
-      'isInContacts',
-      'saveContact',
-      'openChat',
-    ]);
+    expect(methods(), ['listInstalledPackages', 'isInContacts', 'saveContact', 'openChat']);
     final save = calls.firstWhere((c) => c.method == 'saveContact');
     expect(save.args?['name'], 'Sahana Gowda – We Decor · 12 Jan 2026');
     expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
   });
 
   test('contactDisplayName omits date when missing', () {
-    expect(
-      WhatsAppDirectShare.contactDisplayName('Priya Sharma'),
-      'Priya Sharma – We Decor',
-    );
+    expect(WhatsAppDirectShare.contactDisplayName('Priya Sharma'), 'Priya Sharma – We Decor');
     expect(
       WhatsAppDirectShare.contactDisplayName('Priya Sharma', eventDate: DateTime(2026, 3, 5)),
       'Priya Sharma – We Decor · 5 Mar 2026',
