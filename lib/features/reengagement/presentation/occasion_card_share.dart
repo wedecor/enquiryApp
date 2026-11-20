@@ -81,7 +81,7 @@ class OccasionCardShare {
         phone: resolved,
         text: text,
         context: context,
-        customerFirstName: first,
+        customerFullName: customerName,
       );
       if (direct == WhatsAppDirectShareResult.opened ||
           direct == WhatsAppDirectShareResult.textOnly) {
@@ -90,7 +90,7 @@ class OccasionCardShare {
           context,
           direct == WhatsAppDirectShareResult.opened
               ? 'Opened $first\'s WhatsApp with the card — tap Send if it looks right'
-              : 'Card not sent — the message went on its own',
+              : 'Opened $first\'s chat with the message — card not attached',
         );
         return _confirmAndLog(
           context: context,

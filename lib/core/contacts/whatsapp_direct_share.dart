@@ -1,13 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../logging/logger.dart';
+import '../theme/app_theme.dart';
+import '../theme/tokens.dart';
+import '../../ui/primitives/primitives.dart';
 import 'contact_launcher.dart';
-import 'whatsapp_card_step_sheet.dart';
+import 'whatsapp_contacts.dart';
 import 'whatsapp_package_sheet.dart';
 
 /// Result of an Android card share to a customer's WhatsApp chat.
@@ -15,8 +16,8 @@ enum WhatsAppDirectShareResult {
   /// The customer's chat opened with the card attached (staff tap Send in WhatsApp).
   opened,
 
-  /// The customer's chat opened with the message, but the card was not sent
-  /// (staff skipped the card step or did not come back to the app).
+  /// Chat opened with the message only (no card) — permission refused, save failed,
+  /// or contacts feature off.
   textOnly,
 
   /// User dismissed the WhatsApp / Business sheet — do not fall back.
@@ -28,68 +29,64 @@ enum WhatsAppDirectShareResult {
 
 typedef WhatsAppChannelInvoker =
     Future<Object?> Function(String method, Map<String, Object?>? args);
-typedef WhatsAppReturnWaiter = Future<bool> Function();
-typedef WhatsAppCardStepConfirm = Future<bool> Function(BuildContext? context, String? firstName);
+typedef WhatsAppPermissionGate = Future<bool> Function(BuildContext? context);
 
-/// Android: send a customer card + message to the right WhatsApp chat.
+/// Android: one-tap card + caption to the right WhatsApp chat.
 ///
-/// Every WhatsApp launch happens from a tap while our app is in the foreground.
-/// (Android 10+ silently blocks activity starts from an app in the background,
-/// which is why the old "open chat, then share the card 1.1 s later" never
-/// attached the card.)
-///
-/// * Chat already known on this device for this WhatsApp app → one intent:
-///   card + caption straight into the chat (`jid`).
-/// * Otherwise → two steps:
-///   1. Click-to-Chat opens the customer's chat with the message typed in
-///      (works for any number; no "send to…" picker). Staff send it.
-///   2. When staff come back to the app, a sheet offers "Send card"; one tap
-///      opens the same chat with the card attached. The chat now exists, so
-///      WhatsApp honours `jid`. The number is then remembered as known.
+/// * Known chat (this device already sent a card to this number/app) → card.
+/// * Else, with contacts permission:
+///   - Number already in phone contacts → card.
+///   - Else save a device-only contact, wait [contactPrepareDelay], then card.
+/// * Permission refused / feature off / save failed → Click-to-Chat message only
+///   (same as today when the card cannot go out in one step).
 class WhatsAppDirectShare {
   WhatsAppDirectShare._();
 
   static const MethodChannel _channel = MethodChannel('wedecor/whatsapp');
   static const _prefLastPkg = 'whatsapp_share.last_pkg';
 
+  /// How long to wait after saving a contact before launching WhatsApp.
+  static const Duration contactPrepareDelay = Duration(seconds: 5);
+
   /// `package|digits` of chats this device has sent a card to.
   @visibleForTesting
   static const prefKnownChats = 'whatsapp_share.known_chats_v1';
   static const int _maxKnownChats = 2000;
 
-  /// How long to wait for staff to come back from WhatsApp after step 1.
-  static const Duration returnTimeout = Duration(minutes: 20);
-
   @visibleForTesting
   static WhatsAppChannelInvoker? debugInvoker;
   @visibleForTesting
-  static WhatsAppReturnWaiter? debugReturnWaiter;
-  @visibleForTesting
-  static WhatsAppCardStepConfirm? debugConfirmCardStep;
-  @visibleForTesting
   static bool? debugIsAndroid;
+  @visibleForTesting
+  static Duration? debugPrepareDelay;
+  @visibleForTesting
+  static WhatsAppPermissionGate? debugEnsurePermission;
 
   @visibleForTesting
   static void debugReset() {
     debugInvoker = null;
-    debugReturnWaiter = null;
-    debugConfirmCardStep = null;
     debugIsAndroid = null;
+    debugPrepareDelay = null;
+    debugEnsurePermission = null;
   }
 
   static bool get _isAndroid =>
       debugIsAndroid ?? (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
 
+  static Duration get _prepareDelay => debugPrepareDelay ?? contactPrepareDelay;
+
   /// Shares [png] + [text] to [phone]'s chat on Android. See class docs.
   ///
-  /// [customerFirstName] is only used in the "Send the card" sheet.
+  /// [customerFullName] is used when saving a device contact
+  /// (`"{name} – We Decor"`).
   static Future<WhatsAppDirectShareResult> shareImageToChat({
     required ContactLauncher launcher,
     required Uint8List png,
     required String phone,
     required String text,
     BuildContext? context,
-    String? customerFirstName,
+    String? customerFullName,
+    @Deprecated('Use customerFullName') String? customerFirstName,
   }) async {
     if (!_isAndroid) return WhatsAppDirectShareResult.unavailable;
 
@@ -104,46 +101,119 @@ class WhatsAppDirectShare {
     final pkg = pick.package;
     if (pkg == null) return WhatsAppDirectShareResult.unavailable;
 
-    // Known chat: card + caption in one go.
+    // Known chat: card + caption in one go (skip contact checks).
     if (await isKnownChat(pkg, digits)) {
-      final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
-      if (sent) {
-        await _rememberChat(pkg, digits);
-        return WhatsAppDirectShareResult.opened;
-      }
-      Log.w('WhatsAppDirectShare: card intent failed for known chat');
-      return WhatsAppDirectShareResult.unavailable;
+      return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
     }
 
-    // Step 1: open the customer's chat with the message typed in.
+    final canUseContacts = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
+      (context != null && context.mounted) ? context : null,
+    );
+
+    if (canUseContacts) {
+      final already = await WhatsAppContacts.isInContacts(digits);
+      if (already) {
+        return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
+      }
+
+      final displayName = _contactDisplayName(customerFullName);
+      final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
+      if (saved) {
+        await _showPreparingAndWait(context);
+        return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
+      }
+      Log.w('WhatsAppDirectShare: saveContact failed; message only');
+    }
+
+    // Permission refused / feature off / save failed → message only.
     final chatOpened = await _openChat(digits: digits, text: text, pkg: pkg);
     if (!chatOpened) {
       Log.w('WhatsAppDirectShare: click-to-chat failed');
       return WhatsAppDirectShareResult.unavailable;
     }
+    return WhatsAppDirectShareResult.textOnly;
+  }
 
-    // Step 2 only once staff are back in the app (foreground launch).
-    final returned = await (debugReturnWaiter ?? _waitForReturn)();
-    if (!returned) {
-      Log.w('WhatsAppDirectShare: staff did not return; card not sent');
-      return WhatsAppDirectShareResult.textOnly;
-    }
+  static String _contactDisplayName(String? fullName) {
+    final n = (fullName ?? '').trim();
+    if (n.isEmpty) return 'We Decor customer';
+    return '$n – We Decor';
+  }
 
-    final sheetContext = (context != null && context.mounted) ? context : null;
-    final wantsCard = await (debugConfirmCardStep ?? _confirmCardStep)(
-      sheetContext,
-      customerFirstName,
-    );
-    if (!wantsCard) return WhatsAppDirectShareResult.textOnly;
-
-    // Caption already went with step 1; send the card on its own.
-    final sent = await _sendCard(png: png, digits: digits, text: '', pkg: pkg);
+  static Future<WhatsAppDirectShareResult> _sendCardOrUnavailable({
+    required Uint8List png,
+    required String digits,
+    required String text,
+    required String pkg,
+  }) async {
+    final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
     if (!sent) {
-      Log.w('WhatsAppDirectShare: card intent failed after chat opened');
-      return WhatsAppDirectShareResult.textOnly;
+      Log.w('WhatsAppDirectShare: card intent failed');
+      return WhatsAppDirectShareResult.unavailable;
     }
     await _rememberChat(pkg, digits);
     return WhatsAppDirectShareResult.opened;
+  }
+
+  static Future<void> _showPreparingAndWait(BuildContext? context) async {
+    if (context == null || !context.mounted) {
+      await Future<void>.delayed(_prepareDelay);
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        const tint = AppColorScheme.whatsApp;
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6),
+                child: GlassPanel(
+                  blur: true,
+                  strong: true,
+                  shadow: true,
+                  borderRadius: AppRadius.xLarge,
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTokens.space6,
+                    AppTokens.space5,
+                    AppTokens.space6,
+                    AppTokens.space5,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: tint),
+                      ),
+                      const SizedBox(width: AppTokens.space4),
+                      Flexible(
+                        child: Text(
+                          'Preparing WhatsApp…',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    await Future<void>.delayed(_prepareDelay);
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   @visibleForTesting
@@ -215,25 +285,6 @@ class WhatsAppDirectShare {
     return _channel.invokeMethod<Object?>(method, args);
   }
 
-  static Future<bool> _confirmCardStep(BuildContext? context, String? firstName) async {
-    if (context == null || !context.mounted) return false;
-    return showWhatsAppCardStepSheet(context, firstName: firstName);
-  }
-
-  /// Completes true when the app goes to the background (WhatsApp opened) and
-  /// then comes back; false after [returnTimeout].
-  static Future<bool> _waitForReturn() {
-    final binding = WidgetsBinding.instance;
-    final completer = Completer<bool>();
-    final observer = _ReturnObserver(() {
-      if (!completer.isCompleted) completer.complete(true);
-    });
-    binding.addObserver(observer);
-    return completer.future
-        .timeout(returnTimeout, onTimeout: () => false)
-        .whenComplete(() => binding.removeObserver(observer));
-  }
-
   static Future<_PackagePick> _resolvePackage(BuildContext? context) async {
     List<String> installed;
     try {
@@ -287,23 +338,6 @@ class WhatsAppDirectShare {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefLastPkg, pkg);
     } catch (_) {}
-  }
-}
-
-/// Fires [onReturn] on the first resume after the app was paused/hidden.
-class _ReturnObserver with WidgetsBindingObserver {
-  _ReturnObserver(this.onReturn);
-
-  final VoidCallback onReturn;
-  bool _left = false;
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
-      _left = true;
-    } else if (state == AppLifecycleState.resumed && _left) {
-      onReturn();
-    }
   }
 }
 

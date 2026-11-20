@@ -163,9 +163,9 @@ class EnquiryWhatsApp {
         phone: phone,
         text: text,
         context: sheetContext,
-        customerFirstName: ReengagementTemplates.firstName(customerName),
+        customerFullName: customerName,
       );
-      // textOnly: the chat opened with the message; staff skipped the card.
+      // textOnly: message went without the card (contacts unavailable / save failed).
       if (direct == WhatsAppDirectShareResult.opened ||
           direct == WhatsAppDirectShareResult.textOnly) {
         launcher.recordContact(enquiryId: enquiryId, type: contactType);
