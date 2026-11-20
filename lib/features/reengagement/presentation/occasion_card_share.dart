@@ -27,7 +27,7 @@ enum OccasionShareResult {
 
 /// Shared card + caption share used by yearly wishes and thank-you / review.
 ///
-/// Android uses MethodChannel image+caption share (jid + ClipData). Other
+/// Android uses WhatsAppDirectShare (message + card to the right chat). Other
 /// platforms open the phone-URL chat first, then attach the card. Untargeted
 /// share sheets alone are never used to open WhatsApp.
 class OccasionCardShare {
@@ -72,7 +72,7 @@ class OccasionCardShare {
       if (context.mounted) _snack(context, cardAttachFailedMessage);
     }
 
-    // Android: image + caption to the customer's chat via MethodChannel (jid).
+    // Android: message + card to the customer's chat (see WhatsAppDirectShare).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && png != null) {
       if (!context.mounted) return OccasionShareResult.cancelled;
       final direct = await WhatsAppDirectShare.shareImageToChat(
@@ -81,10 +81,17 @@ class OccasionCardShare {
         phone: resolved,
         text: text,
         context: context,
+        customerFirstName: first,
       );
-      if (direct == WhatsAppDirectShareResult.opened) {
+      if (direct == WhatsAppDirectShareResult.opened ||
+          direct == WhatsAppDirectShareResult.textOnly) {
         if (!context.mounted) return OccasionShareResult.cancelled;
-        _snack(context, 'Opened $first\'s WhatsApp with the card — tap Send if it looks right');
+        _snack(
+          context,
+          direct == WhatsAppDirectShareResult.opened
+              ? 'Opened $first\'s WhatsApp with the card — tap Send if it looks right'
+              : 'Card not sent — the message went on its own',
+        );
         return _confirmAndLog(
           context: context,
           launcher: launcher,

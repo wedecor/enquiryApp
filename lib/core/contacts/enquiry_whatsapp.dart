@@ -154,7 +154,7 @@ class EnquiryWhatsApp {
       }
     }
 
-    // Android: image + caption to the customer's chat (MethodChannel / jid).
+    // Android: card to the customer's chat (see WhatsAppDirectShare).
     if (png != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final sheetContext = (context != null && context.mounted) ? context : null;
       final direct = await WhatsAppDirectShare.shareImageToChat(
@@ -163,8 +163,11 @@ class EnquiryWhatsApp {
         phone: phone,
         text: text,
         context: sheetContext,
+        customerFirstName: ReengagementTemplates.firstName(customerName),
       );
-      if (direct == WhatsAppDirectShareResult.opened) {
+      // textOnly: the chat opened with the message; staff skipped the card.
+      if (direct == WhatsAppDirectShareResult.opened ||
+          direct == WhatsAppDirectShareResult.textOnly) {
         launcher.recordContact(enquiryId: enquiryId, type: contactType);
         return ContactLaunchStatus.opened;
       }

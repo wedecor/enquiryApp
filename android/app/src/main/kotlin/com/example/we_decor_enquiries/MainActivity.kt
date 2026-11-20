@@ -8,8 +8,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.util.Log
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -29,6 +28,18 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "listInstalledPackages" -> {
                         result.success(WHATSAPP_PACKAGES.filter { isInstalled(it) })
+                    }
+                    "openChat" -> {
+                        val phone = call.argument<String>("phone")
+                        val text = call.argument<String>("text") ?: ""
+                        val pkg = call.argument<String>("package")
+                        if (phone.isNullOrBlank() || pkg.isNullOrBlank() ||
+                            !WHATSAPP_PACKAGES.contains(pkg) || !isInstalled(pkg)
+                        ) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        result.success(openChat(phone, text, pkg))
                     }
                     "shareImageToChat" -> {
                         val bytes = call.argument<ByteArray>("png")
@@ -51,48 +62,56 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Card + caption to [phone]'s chat.
+     * Opens [phone]'s chat via Click-to-Chat with [text] typed in.
      *
-     * WhatsApp only honors the unofficial `jid` on [ACTION_SEND] when that
-     * number already has a local chat thread. Unknown numbers silently fall
-     * back to the contact picker — which is why some customers work and others
-     * ask "whom to send?".
+     * Click-to-Chat works for any number (saved or not, chatted before or not),
+     * so this never shows WhatsApp's "send to…" picker. It creates the chat
+     * thread once the message is sent, which is what lets a later
+     * [shareImageToChat] (with `jid`) land in that chat.
+     */
+    private fun openChat(phone: String, text: String, pkg: String): Boolean {
+        return try {
+            val digits = repairWhatsAppDigits(phone)
+            if (digits.length !in 11..15) return false
+            val builder = Uri.parse("https://api.whatsapp.com/send").buildUpon()
+                .appendQueryParameter("phone", digits)
+            if (text.isNotBlank()) builder.appendQueryParameter("text", text)
+            // Launched from our foreground activity (the user's tap): no NEW_TASK.
+            startActivity(Intent(Intent.ACTION_VIEW, builder.build()).apply { setPackage(pkg) })
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "openChat failed", e)
+            false
+        }
+    }
+
+    /**
+     * Card (+ optional caption) to [phone]'s chat in ONE intent.
      *
-     * Fix: open Click-to-Chat first (`api.whatsapp.com/send?phone=…`) so WhatsApp
-     * creates/opens the thread, then [ACTION_SEND] image+caption with `jid`.
-     * Package is chosen in Flutter (glass sheet).
+     * Must be called while our activity is in the foreground. The previous
+     * version opened Click-to-Chat and then fired this intent 1.1 s later from
+     * a delayed callback; by then our app was in the background and Android 10+
+     * background-activity-start restrictions silently dropped the launch, so
+     * the chat opened but the card never attached.
+     *
+     * WhatsApp honours the unofficial `jid` extra only when the chat thread
+     * already exists on this device; Dart decides when that is the case.
      */
     private fun shareImageToChat(png: ByteArray, phone: String, text: String, pkg: String): Boolean {
         return try {
-            val digits = repairWhatsAppDigits(phone.filter { it.isDigit() })
+            val digits = repairWhatsAppDigits(phone)
             if (digits.length !in 11..15) return false
 
             val dir = File(cacheDir, "wishes").apply { mkdirs() }
+            pruneOldCards(dir)
             val file = File(dir, "we-decor-${System.currentTimeMillis()}.png")
             file.writeBytes(png)
             val uri = FileProvider.getUriForFile(this, "$packageName.wishprovider", file)
             grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-            // Step A — create/open the chat for any number (saved or not).
-            val chatUrl = Uri.parse("https://api.whatsapp.com/send?phone=$digits")
-            startActivity(
-                Intent(Intent.ACTION_VIEW, chatUrl).apply {
-                    setPackage(pkg)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                },
-            )
-
-            // Step B — attach card + caption now that the jid can resolve.
-            Handler(Looper.getMainLooper()).postDelayed({
-                try {
-                    startActivity(sendIntent(pkg, uri, text, digits))
-                } catch (_: Exception) {
-                    // Chat already open; staff can still type / attach manually.
-                }
-            }, CHAT_WARMUP_MS)
-
+            startActivity(sendIntent(pkg, uri, text, digits))
             true
         } catch (e: Exception) {
+            Log.w(TAG, "shareImageToChat failed", e)
             false
         }
     }
@@ -100,18 +119,26 @@ class MainActivity : FlutterActivity() {
     /**
      * ACTION_SEND for one WhatsApp package. Sets [ClipData] as well as EXTRA_STREAM —
      * without ClipData, Android 7+ often hands WhatsApp an unreadable URI so the
-     * image silently drops and only the caption (or an empty composer) appears.
+     * image silently drops. No NEW_TASK: started from our foreground activity, like
+     * any normal share, so WhatsApp's share screen opens on top of us.
      */
     private fun sendIntent(pkg: String, uri: Uri, text: String, digits: String): Intent {
         return Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             setPackage(pkg)
             putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_TEXT, text)
+            if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
             putExtra("jid", "$digits@s.whatsapp.net")
             clipData = ClipData.newUri(contentResolver, "we-decor-card", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    /** Cards older than a day are no longer needed by WhatsApp. */
+    private fun pruneOldCards(dir: File) {
+        val cutoff = System.currentTimeMillis() - CARD_MAX_AGE_MS
+        dir.listFiles()?.forEach { f ->
+            if (f.isFile && f.lastModified() < cutoff) f.delete()
         }
     }
 
@@ -143,8 +170,8 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
-        /** Time for WhatsApp to open/create the chat before image share. */
-        private const val CHAT_WARMUP_MS = 1100L
+        private const val TAG = "WeDecorWhatsApp"
+        private const val CARD_MAX_AGE_MS = 24L * 60 * 60 * 1000
         private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
 
         fun repairWhatsAppDigits(raw: String): String {

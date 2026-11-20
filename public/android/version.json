@@ -1,8 +1,8 @@
 {
-  "version": "2.0.45",
-  "buildNumber": 76,
+  "version": "2.0.46",
+  "buildNumber": 77,
   "releaseDate": "2026-11-20",
-  "releaseNotes": "WhatsApp opens the customer's chat even when you have never messaged them before.",
+  "releaseNotes": "WhatsApp card attaches again: send message first, then Send card when you return.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "65d6f0caa1c3ae910d7637db8e88e3393ca292bfccc6d75b572778c1a5cb53a0",
   "forceUpdate": false,
@@ -11,7 +11,7 @@
     "Glass WhatsApp / Business picker matching the app UI"
   ],
   "bugFixes": [
-    "Open click-to-chat first so card shares work for numbers without an existing WhatsApp thread",
-    "Repair India trunk-zero and bare 10-digit phones so WhatsApp opens the right chat"
+    "Card share launches from a foreground tap (no delayed background intent)",
+    "New numbers: message via click-to-chat, then Send card sheet after return"
   ]
 }
