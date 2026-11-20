@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:we_decor_enquiries/core/contacts/contact_launcher.dart';
+import 'package:we_decor_enquiries/core/contacts/whatsapp_direct_share.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/contact_buttons.dart';
 import 'package:we_decor_enquiries/features/settings/domain/app_config.dart';
 import 'package:we_decor_enquiries/features/settings/providers/settings_providers.dart';
@@ -12,7 +13,11 @@ void main() {
 
     setUp(() {
       mockContactLauncher = ContactLauncher(defaultCountryCode: '+91');
+      // Widget tests exercise the mock launcher path, not the Android channel.
+      WhatsAppDirectShare.debugIsAndroid = false;
     });
+
+    tearDown(WhatsAppDirectShare.debugReset);
 
     Widget createTestWidget({
       String? customerPhone,
@@ -208,8 +213,7 @@ void main() {
 
         // Tap the WhatsApp button
         await tester.tap(find.text('WhatsApp'));
-        await tester.pump(); // start async open
-        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pumpAndSettle();
 
         // Verify the launcher was called with first-name greetings copy
         expect(whatsappLauncherCalled, isTrue);
