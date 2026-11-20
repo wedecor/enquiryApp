@@ -4,7 +4,7 @@
   "releaseDate": "2026-11-20",
   "releaseNotes": "More reliable WhatsApp chat targeting and a glass app picker.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "31cfbf7c50ccce3e02c2be6ace4b7f45a78bc1b85f717696c796f974d18c13f5",
+  "sha256": "89b34091949b44a37d00b129f05906722b4820da74f5a2d40216efef3636757c",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
