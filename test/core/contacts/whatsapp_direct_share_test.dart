@@ -114,12 +114,7 @@ void main() {
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.opened);
-    expect(methods(), [
-      'listInstalledPackages',
-      'isInContacts',
-      'saveContact',
-      'shareImageToChat',
-    ]);
+    expect(methods(), ['listInstalledPackages', 'isInContacts', 'saveContact', 'shareImageToChat']);
     final save = calls.firstWhere((c) => c.method == 'saveContact');
     expect(save.args?['name'], 'Sahana Gowda – We Decor');
     expect(save.args?['phone'], '919380368142');
@@ -135,12 +130,7 @@ void main() {
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.opened);
-    expect(methods(), [
-      'listInstalledPackages',
-      'isInContacts',
-      'saveContact',
-      'shareImageToChat',
-    ]);
+    expect(methods(), ['listInstalledPackages', 'isInContacts', 'saveContact', 'shareImageToChat']);
     expect(calls.any((c) => c.method == 'openChat'), isFalse);
   });
 

@@ -107,12 +107,7 @@ class WhatsAppDirectShare {
 
     // Known chat: card + caption in one go (skip contact checks).
     if (await isKnownChat(pkg, digits)) {
-      return _sendCardOrFallback(
-        png: png,
-        digits: digits,
-        text: text,
-        pkg: pkg,
-      );
+      return _sendCardOrFallback(png: png, digits: digits, text: text, pkg: pkg);
     }
 
     final canUseContacts = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
@@ -133,12 +128,7 @@ class WhatsAppDirectShare {
     }
 
     // Always try the one-intent card path (with or without contacts).
-    return _sendCardOrFallback(
-      png: png,
-      digits: digits,
-      text: text,
-      pkg: pkg,
-    );
+    return _sendCardOrFallback(png: png, digits: digits, text: text, pkg: pkg);
   }
 
   static String _contactDisplayName(String? fullName) {
