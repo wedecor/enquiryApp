@@ -118,14 +118,12 @@ class MainActivity : FlutterActivity() {
     /**
      * Card (+ optional caption) to [phone]'s chat in ONE intent.
      *
-     * Must be called while our activity is in the foreground. The previous
-     * version opened Click-to-Chat and then fired this intent 1.1 s later from
-     * a delayed callback; by then our app was in the background and Android 10+
-     * background-activity-start restrictions silently dropped the launch, so
-     * the chat opened but the card never attached.
+     * Must be called while our activity is in the foreground. Delayed launches
+     * after Click-to-Chat are blocked by Android 10+ background-activity rules.
      *
-     * WhatsApp honours the unofficial `jid` extra only when the chat thread
-     * already exists on this device; Dart decides when that is the case.
+     * WhatsApp's unofficial `jid` extra works best when the number is in the
+     * device address book and/or a chat already exists; Dart saves the contact
+     * before calling this when needed.
      */
     private fun shareImageToChat(png: ByteArray, phone: String, text: String, pkg: String): Boolean {
         return try {

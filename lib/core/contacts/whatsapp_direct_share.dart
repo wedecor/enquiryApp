@@ -18,8 +18,8 @@ enum WhatsAppDirectShareResult {
   /// The customer's chat opened with the card attached (staff tap Send in WhatsApp).
   opened,
 
-  /// Chat opened with the message only (no card) — permission refused, save failed,
-  /// or contacts feature off.
+  /// Chat opened with the message only (no card) — card intent failed after
+  /// contact prep / permission path.
   textOnly,
 
   /// User dismissed the WhatsApp / Business sheet — do not fall back.
@@ -33,27 +33,29 @@ typedef WhatsAppChannelInvoker =
     Future<Object?> Function(String method, Map<String, Object?>? args);
 typedef WhatsAppPermissionGate = Future<bool> Function(BuildContext? context);
 
-/// Android: one-tap card + caption to the right WhatsApp chat.
+/// Android: one-tap card + caption to the customer's WhatsApp chat.
 ///
-/// * Known chat (this device already sent a card to this number/app) → card.
+/// * Known chat → card + caption in one intent.
 /// * Else, with contacts permission:
-///   - Number already in phone contacts → card.
+///   - Already in phone contacts → card.
 ///   - Else save a device-only contact, wait [contactPrepareDelay], then card.
-/// * Permission refused / feature off / save failed → Click-to-Chat message only
-///   (same as today when the card cannot go out in one step).
+/// * No permission / save failed → still try card once; if that fails →
+///   Click-to-Chat message only (last resort).
 class WhatsAppDirectShare {
   WhatsAppDirectShare._();
 
   static const MethodChannel _channel = MethodChannel('wedecor/whatsapp');
   static const _prefLastPkg = 'whatsapp_share.last_pkg';
 
+  /// `package|digits` of chats this device has sent a card to.
+  /// v2 clears entries poisoned by earlier builds that remembered chats without
+  /// a successful card attach.
+  @visibleForTesting
+  static const prefKnownChats = 'whatsapp_share.known_chats_v2';
+  static const int _maxKnownChats = 2000;
+
   /// How long to wait after saving a contact before launching WhatsApp.
   static const Duration contactPrepareDelay = Duration(seconds: 5);
-
-  /// `package|digits` of chats this device has sent a card to.
-  @visibleForTesting
-  static const prefKnownChats = 'whatsapp_share.known_chats_v1';
-  static const int _maxKnownChats = 2000;
 
   @visibleForTesting
   static WhatsAppChannelInvoker? debugInvoker;
@@ -105,7 +107,12 @@ class WhatsAppDirectShare {
 
     // Known chat: card + caption in one go (skip contact checks).
     if (await isKnownChat(pkg, digits)) {
-      return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
+      return _sendCardOrFallback(
+        png: png,
+        digits: digits,
+        text: text,
+        pkg: pkg,
+      );
     }
 
     final canUseContacts = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
@@ -114,26 +121,24 @@ class WhatsAppDirectShare {
 
     if (canUseContacts) {
       final already = await WhatsAppContacts.isInContacts(digits);
-      if (already) {
-        return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
+      if (!already) {
+        final displayName = _contactDisplayName(customerFullName);
+        final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
+        if (saved) {
+          await _showPreparingAndWait(context);
+        } else {
+          Log.w('WhatsAppDirectShare: saveContact failed; still trying card');
+        }
       }
-
-      final displayName = _contactDisplayName(customerFullName);
-      final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
-      if (saved) {
-        await _showPreparingAndWait(context);
-        return _sendCardOrUnavailable(png: png, digits: digits, text: text, pkg: pkg);
-      }
-      Log.w('WhatsAppDirectShare: saveContact failed; message only');
     }
 
-    // Permission refused / feature off / save failed → message only.
-    final chatOpened = await _openChat(digits: digits, text: text, pkg: pkg);
-    if (!chatOpened) {
-      Log.w('WhatsAppDirectShare: click-to-chat failed');
-      return WhatsAppDirectShareResult.unavailable;
-    }
-    return WhatsAppDirectShareResult.textOnly;
+    // Always try the one-intent card path (with or without contacts).
+    return _sendCardOrFallback(
+      png: png,
+      digits: digits,
+      text: text,
+      pkg: pkg,
+    );
   }
 
   static String _contactDisplayName(String? fullName) {
@@ -142,19 +147,25 @@ class WhatsAppDirectShare {
     return '$n – We Decor';
   }
 
-  static Future<WhatsAppDirectShareResult> _sendCardOrUnavailable({
+  /// Card first; Click-to-Chat message only if the card intent fails.
+  static Future<WhatsAppDirectShareResult> _sendCardOrFallback({
     required Uint8List png,
     required String digits,
     required String text,
     required String pkg,
   }) async {
     final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
-    if (!sent) {
-      Log.w('WhatsAppDirectShare: card intent failed');
+    if (sent) {
+      await _rememberChat(pkg, digits);
+      return WhatsAppDirectShareResult.opened;
+    }
+    Log.w('WhatsAppDirectShare: card intent failed; message only');
+    final chatOpened = await _openChat(digits: digits, text: text, pkg: pkg);
+    if (!chatOpened) {
+      Log.w('WhatsAppDirectShare: click-to-chat failed');
       return WhatsAppDirectShareResult.unavailable;
     }
-    await _rememberChat(pkg, digits);
-    return WhatsAppDirectShareResult.opened;
+    return WhatsAppDirectShareResult.textOnly;
   }
 
   static Future<void> _showPreparingAndWait(BuildContext? context) async {

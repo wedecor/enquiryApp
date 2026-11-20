@@ -23,41 +23,9 @@ void main() {
   late List<String> installed;
   late bool openChatOk;
   late bool shareOk;
+  late bool canUseContacts;
   late bool inContacts;
   late bool saveOk;
-  late bool permissionOk;
-
-  Future<Object?> invoker(String method, Map<String, Object?>? args) async {
-    calls.add(_Call(method, args));
-    switch (method) {
-      case 'listInstalledPackages':
-        return installed;
-      case 'openChat':
-        return openChatOk;
-      case 'shareImageToChat':
-        return shareOk;
-      case 'isInContacts':
-        return inContacts;
-      case 'saveContact':
-        return saveOk;
-      case 'hasContactsPermission':
-        return permissionOk;
-      case 'requestContactsPermission':
-        return permissionOk;
-      default:
-        fail('unexpected method $method');
-    }
-  }
-
-  Future<WhatsAppDirectShareResult> share() {
-    return WhatsAppDirectShare.shareImageToChat(
-      launcher: launcher,
-      png: png,
-      phone: '9380368142',
-      text: message,
-      customerFullName: 'Sahana Gowda',
-    );
-  }
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -65,13 +33,31 @@ void main() {
     installed = ['com.whatsapp'];
     openChatOk = true;
     shareOk = true;
+    canUseContacts = false;
     inContacts = false;
     saveOk = true;
-    permissionOk = true;
 
     WhatsAppDirectShare.debugIsAndroid = true;
     WhatsAppDirectShare.debugPrepareDelay = Duration.zero;
-    WhatsAppDirectShare.debugEnsurePermission = (_) async => permissionOk;
+    WhatsAppDirectShare.debugEnsurePermission = (_) async => canUseContacts;
+
+    Future<Object?> invoker(String method, Map<String, Object?>? args) async {
+      calls.add(_Call(method, args));
+      switch (method) {
+        case 'listInstalledPackages':
+          return installed;
+        case 'openChat':
+          return openChatOk;
+        case 'shareImageToChat':
+          return shareOk;
+        case 'isInContacts':
+          return inContacts;
+        case 'saveContact':
+          return saveOk;
+      }
+      return null;
+    }
+
     WhatsAppDirectShare.debugInvoker = invoker;
     WhatsAppContacts.debugInvoker = invoker;
   });
@@ -81,47 +67,54 @@ void main() {
     WhatsAppContacts.debugReset();
   });
 
+  Future<WhatsAppDirectShareResult> share({String phone = '9380368142'}) {
+    return WhatsAppDirectShare.shareImageToChat(
+      launcher: launcher,
+      png: png,
+      phone: phone,
+      text: message,
+      customerFullName: 'Sahana Gowda',
+    );
+  }
+
+  List<String> methods() => calls.map((c) => c.method).toList();
+
   test('known chat skips contact checks and sends card', () async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(WhatsAppDirectShare.prefKnownChats, [
-      WhatsAppDirectShare.chatKey('com.whatsapp', '919380368142'),
-    ]);
+    await share();
+    calls.clear();
+    canUseContacts = true;
 
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.opened);
-    expect(calls.map((c) => c.method), ['listInstalledPackages', 'shareImageToChat']);
-    expect(calls.any((c) => c.method == 'isInContacts'), isFalse);
-    expect(calls.any((c) => c.method == 'saveContact'), isFalse);
-    expect(calls.any((c) => c.method == 'openChat'), isFalse);
+    expect(methods(), ['listInstalledPackages', 'shareImageToChat']);
+    expect(calls[1].args?['text'], message);
+    expect(calls[1].args?['png'], png);
+    expect(calls.any((c) => c.method == 'isInContacts' || c.method == 'saveContact'), isFalse);
   });
 
   test('in contacts → card + remembered', () async {
+    canUseContacts = true;
     inContacts = true;
 
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.opened);
-    expect(calls.map((c) => c.method), [
-      'listInstalledPackages',
-      'isInContacts',
-      'shareImageToChat',
-    ]);
-    final shareCall = calls.firstWhere((c) => c.method == 'shareImageToChat');
-    expect(shareCall.args?['phone'], '919380368142');
-    expect(shareCall.args?['text'], message);
-    expect(shareCall.args?['package'], 'com.whatsapp');
+    expect(methods(), ['listInstalledPackages', 'isInContacts', 'shareImageToChat']);
+    expect(calls.any((c) => c.method == 'saveContact'), isFalse);
+    expect(calls.last.args?['text'], message);
     expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isTrue);
   });
 
   test('not in contacts + saved → wait then card + remembered', () async {
+    canUseContacts = true;
     inContacts = false;
     saveOk = true;
 
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.opened);
-    expect(calls.map((c) => c.method), [
+    expect(methods(), [
       'listInstalledPackages',
       'isInContacts',
       'saveContact',
@@ -130,102 +123,78 @@ void main() {
     final save = calls.firstWhere((c) => c.method == 'saveContact');
     expect(save.args?['name'], 'Sahana Gowda – We Decor');
     expect(save.args?['phone'], '919380368142');
+    expect(calls.last.args?['text'], message);
     expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isTrue);
   });
 
-  test('save fails → message only', () async {
+  test('save fails → still tries card', () async {
+    canUseContacts = true;
     inContacts = false;
     saveOk = false;
 
     final result = await share();
 
-    expect(result, WhatsAppDirectShareResult.textOnly);
-    expect(calls.map((c) => c.method), [
+    expect(result, WhatsAppDirectShareResult.opened);
+    expect(methods(), [
       'listInstalledPackages',
       'isInContacts',
       'saveContact',
-      'openChat',
+      'shareImageToChat',
     ]);
-    expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
-    expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isFalse);
+    expect(calls.any((c) => c.method == 'openChat'), isFalse);
   });
 
-  test('permission refused → message only', () async {
-    permissionOk = false;
+  test('permission refused → still tries card (no contact calls)', () async {
+    canUseContacts = false;
 
     final result = await share();
 
-    expect(result, WhatsAppDirectShareResult.textOnly);
-    expect(calls.map((c) => c.method), ['listInstalledPackages', 'openChat']);
-    expect(calls.any((c) => c.method == 'isInContacts'), isFalse);
-    expect(calls.any((c) => c.method == 'saveContact'), isFalse);
-    expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
+    expect(result, WhatsAppDirectShareResult.opened);
+    expect(methods(), ['listInstalledPackages', 'shareImageToChat']);
+    expect(calls.any((c) => c.method == 'isInContacts' || c.method == 'saveContact'), isFalse);
   });
 
-  test('click-to-chat fails: unavailable', () async {
-    permissionOk = false;
-    openChatOk = false;
-
-    final result = await share();
-
-    expect(result, WhatsAppDirectShareResult.unavailable);
-  });
-
-  test('card intent fails for known chat: unavailable', () async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(WhatsAppDirectShare.prefKnownChats, [
-      WhatsAppDirectShare.chatKey('com.whatsapp', '919380368142'),
-    ]);
+  test('card intent fails → message only, not remembered', () async {
     shareOk = false;
 
     final result = await share();
 
-    expect(result, WhatsAppDirectShareResult.unavailable);
+    expect(result, WhatsAppDirectShareResult.textOnly);
+    expect(methods(), ['listInstalledPackages', 'shareImageToChat', 'openChat']);
+    expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isFalse);
+  });
+
+  test('card and click-to-chat both fail: unavailable', () async {
+    shareOk = false;
+    openChatOk = false;
+
+    expect(await share(), WhatsAppDirectShareResult.unavailable);
   });
 
   test('no WhatsApp installed: unavailable', () async {
     installed = [];
 
-    final result = await share();
-
-    expect(result, WhatsAppDirectShareResult.unavailable);
-    expect(calls.map((c) => c.method), ['listInstalledPackages']);
+    expect(await share(), WhatsAppDirectShareResult.unavailable);
+    expect(methods(), ['listInstalledPackages']);
   });
 
   test('weak digits are refused before any platform call', () async {
-    final result = await WhatsAppDirectShare.shareImageToChat(
-      launcher: launcher,
-      png: png,
-      phone: '123',
-      text: message,
-    );
-
-    expect(result, WhatsAppDirectShareResult.unavailable);
+    expect(await share(phone: '12345'), WhatsAppDirectShareResult.unavailable);
     expect(calls, isEmpty);
   });
 
   test('trunk-zero number is repaired for share', () async {
-    inContacts = true;
-
-    final result = await WhatsAppDirectShare.shareImageToChat(
-      launcher: launcher,
-      png: png,
-      phone: '+91 09876543210',
-      text: message,
-      customerFullName: 'Test',
-    );
-
-    expect(result, WhatsAppDirectShareResult.opened);
-    final shareCall = calls.firstWhere((c) => c.method == 'shareImageToChat');
-    expect(shareCall.args?['phone'], '919876543210');
+    await share(phone: '+91 09380368142');
+    expect(calls.last.args?['phone'], '919380368142');
   });
 
   test('not Android: unavailable', () async {
     WhatsAppDirectShare.debugIsAndroid = false;
-
-    final result = await share();
-
-    expect(result, WhatsAppDirectShareResult.unavailable);
+    expect(await share(), WhatsAppDirectShareResult.unavailable);
     expect(calls, isEmpty);
+  });
+
+  test('uses known_chats_v2 pref key', () {
+    expect(WhatsAppDirectShare.prefKnownChats, 'whatsapp_share.known_chats_v2');
   });
 }
