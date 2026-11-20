@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../ui/primitives/primitives.dart';
 import '../logging/logger.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
-import '../../ui/primitives/primitives.dart';
 import 'contact_launcher.dart';
 import 'whatsapp_contacts.dart';
 import 'whatsapp_package_sheet.dart';
@@ -161,53 +163,57 @@ class WhatsAppDirectShare {
       return;
     }
 
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        final theme = Theme.of(ctx);
-        const tint = AppColorScheme.whatsApp;
-        return PopScope(
-          canPop: false,
-          child: Center(
-            child: Material(
-              color: Colors.transparent,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6),
-                child: GlassPanel(
-                  blur: true,
-                  strong: true,
-                  shadow: true,
-                  borderRadius: AppRadius.xLarge,
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTokens.space6,
-                    AppTokens.space5,
-                    AppTokens.space6,
-                    AppTokens.space5,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: tint),
-                      ),
-                      const SizedBox(width: AppTokens.space4),
-                      Flexible(
-                        child: Text(
-                          'Preparing WhatsApp…',
-                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          final theme = Theme.of(ctx);
+          const tint = AppColorScheme.whatsApp;
+          return PopScope(
+            canPop: false,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6),
+                  child: GlassPanel(
+                    blur: true,
+                    strong: true,
+                    shadow: true,
+                    borderRadius: AppRadius.xLarge,
+                    padding: const EdgeInsets.fromLTRB(
+                      AppTokens.space6,
+                      AppTokens.space5,
+                      AppTokens.space6,
+                      AppTokens.space5,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: tint),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AppTokens.space4),
+                        Flexible(
+                          child: Text(
+                            'Preparing WhatsApp…',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
 
     await Future<void>.delayed(_prepareDelay);
