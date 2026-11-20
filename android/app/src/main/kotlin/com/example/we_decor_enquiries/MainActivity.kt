@@ -1,5 +1,6 @@
 package com.example.we_decor_enquiries
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
@@ -9,6 +10,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -16,6 +19,8 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterActivity() {
+    private var pendingContactsPermissionResult: MethodChannel.Result? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createEnquiryUpdatesChannel()
@@ -28,6 +33,12 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "listInstalledPackages" -> {
                         result.success(WHATSAPP_PACKAGES.filter { isInstalled(it) })
+                    }
+                    "hasContactsPermission" -> {
+                        result.success(hasContactsPermission())
+                    }
+                    "requestContactsPermission" -> {
+                        requestContactsPermission(result)
                     }
                     "openChat" -> {
                         val phone = call.argument<String>("phone")
@@ -154,6 +165,44 @@ class MainActivity : FlutterActivity() {
         false
     }
 
+    private fun hasContactsPermission(): Boolean {
+        val read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+        val write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS)
+        return read == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestContactsPermission(result: MethodChannel.Result) {
+        if (hasContactsPermission()) {
+            result.success(true)
+            return
+        }
+        if (pendingContactsPermissionResult != null) {
+            result.success(false)
+            return
+        }
+        pendingContactsPermissionResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS),
+            REQ_CONTACTS_PERMISSION,
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        if (requestCode != REQ_CONTACTS_PERMISSION) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            return
+        }
+        val ok = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        pendingContactsPermissionResult?.success(ok)
+        pendingContactsPermissionResult = null
+    }
+
     private fun createEnquiryUpdatesChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -172,6 +221,7 @@ class MainActivity : FlutterActivity() {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
         private const val TAG = "WeDecorWhatsApp"
         private const val CARD_MAX_AGE_MS = 24L * 60 * 60 * 1000
+        private const val REQ_CONTACTS_PERMISSION = 9911
         private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
 
         fun repairWhatsAppDigits(raw: String): String {
