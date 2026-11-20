@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -49,18 +51,20 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * Opens [phone]'s WhatsApp chat with the card attached and [text] as caption.
+     * Card + caption to [phone]'s chat.
      *
-     * Single [ACTION_SEND] with ClipData + FileProvider + WhatsApp's unofficial
-     * `jid` extra. Package is chosen in Flutter (glass sheet) so the native UI
-     * stays out of the way.
+     * WhatsApp only honors the unofficial `jid` on [ACTION_SEND] when that
+     * number already has a local chat thread. Unknown numbers silently fall
+     * back to the contact picker — which is why some customers work and others
+     * ask "whom to send?".
      *
-     * Returns false when share cannot start (Dart falls back).
+     * Fix: open Click-to-Chat first (`api.whatsapp.com/send?phone=…`) so WhatsApp
+     * creates/opens the thread, then [ACTION_SEND] image+caption with `jid`.
+     * Package is chosen in Flutter (glass sheet).
      */
     private fun shareImageToChat(png: ByteArray, phone: String, text: String, pkg: String): Boolean {
         return try {
             val digits = repairWhatsAppDigits(phone.filter { it.isDigit() })
-            // Plausible E.164 length without '+'; bare 10-digit jids open the picker.
             if (digits.length !in 11..15) return false
 
             val dir = File(cacheDir, "wishes").apply { mkdirs() }
@@ -69,7 +73,24 @@ class MainActivity : FlutterActivity() {
             val uri = FileProvider.getUriForFile(this, "$packageName.wishprovider", file)
             grantUriPermission(pkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
 
-            startActivity(sendIntent(pkg, uri, text, digits))
+            // Step A — create/open the chat for any number (saved or not).
+            val chatUrl = Uri.parse("https://api.whatsapp.com/send?phone=$digits")
+            startActivity(
+                Intent(Intent.ACTION_VIEW, chatUrl).apply {
+                    setPackage(pkg)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                },
+            )
+
+            // Step B — attach card + caption now that the jid can resolve.
+            Handler(Looper.getMainLooper()).postDelayed({
+                try {
+                    startActivity(sendIntent(pkg, uri, text, digits))
+                } catch (_: Exception) {
+                    // Chat already open; staff can still type / attach manually.
+                }
+            }, CHAT_WARMUP_MS)
+
             true
         } catch (e: Exception) {
             false
@@ -106,8 +127,6 @@ class MainActivity : FlutterActivity() {
         false
     }
 
-    // Channel used by Cloud Functions pushes (android.notification.channelId)
-    // and as the FCM default channel in AndroidManifest.xml.
     private fun createEnquiryUpdatesChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -124,9 +143,10 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
+        /** Time for WhatsApp to open/create the chat before image share. */
+        private const val CHAT_WARMUP_MS = 1100L
         private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
 
-        /** Mirror of Dart [ContactLauncher] India trunk-zero + bare-10 repair. */
         fun repairWhatsAppDigits(raw: String): String {
             var digits = raw.filter { it.isDigit() }
             if (digits.length == 13 && digits.startsWith("910")) {

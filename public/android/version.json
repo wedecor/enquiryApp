@@ -1,8 +1,8 @@
 {
-  "version": "2.0.44",
-  "buildNumber": 75,
+  "version": "2.0.45",
+  "buildNumber": 76,
   "releaseDate": "2026-11-20",
-  "releaseNotes": "More reliable WhatsApp chat targeting and a glass app picker.",
+  "releaseNotes": "WhatsApp opens the customer's chat even when you have never messaged them before.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "89b34091949b44a37d00b129f05906722b4820da74f5a2d40216efef3636757c",
   "forceUpdate": false,
@@ -11,7 +11,7 @@
     "Glass WhatsApp / Business picker matching the app UI"
   ],
   "bugFixes": [
-    "Repair India trunk-zero and bare 10-digit phones so WhatsApp opens the right chat",
-    "WhatsApp shares attach the card image again (single image+caption send)"
+    "Open click-to-chat first so card shares work for numbers without an existing WhatsApp thread",
+    "Repair India trunk-zero and bare 10-digit phones so WhatsApp opens the right chat"
   ]
 }
