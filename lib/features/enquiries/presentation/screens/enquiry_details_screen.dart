@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/role_guards.dart' show logAdminAction;
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../core/services/enquiry_financials.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -232,6 +233,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               customerPhone: customerPhone,
               whatsappPhone: whatsappNumber,
               phoneNormalized: (enquiryData['phoneNormalized'] as String?) ?? '',
+              firstContact: EnquiryWhatsApp.isFirstContactFrom(enquiryData),
               location:
                   (enquiryData['eventLocation'] as String?) ?? (enquiryData['location'] as String?),
               eventTypeLabel: labels.eventTypeLabel,
@@ -290,12 +292,14 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onWhatsApp: (whatsappNumber == null || whatsappNumber.trim().isEmpty)
                   ? null
                   : () async {
-                      final launcher = ref.read(contactLauncherProvider);
-                      await launcher.openWhatsAppWithAudit(
-                        whatsappNumber,
+                      await EnquiryWhatsApp.open(
+                        launcher: ref.read(contactLauncherProvider),
+                        phone: whatsappNumber,
+                        customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
                         enquiryId: widget.enquiryId,
-                        prefillText:
-                            'Hi ${enquiryData['customerName'] ?? 'there'}, this is from We Decor.',
+                        eventTypeLabel: labels.eventTypeLabel,
+                        eventDate: eventDate,
+                        firstContact: EnquiryWhatsApp.isFirstContactFrom(enquiryData),
                       );
                     },
               onEdit: userRole == UserRole.admin ? _openEdit : null,

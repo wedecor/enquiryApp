@@ -2,8 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/constants/status_vocabulary.dart';
+import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../services/dropdown_lookup.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
@@ -80,11 +81,14 @@ class EnquiryListItem extends ConsumerWidget {
         await launcher.callNumberWithAudit(p, enquiryId: enquiryId);
       },
       onWhatsApp: (p) async {
-        final launcher = ref.read(contactLauncherProvider);
-        await launcher.openWhatsAppWithAudit(
-          p,
-          prefillText: 'Hi $customerName, this is from We Decor.',
+        await EnquiryWhatsApp.open(
+          launcher: ref.read(contactLauncherProvider),
+          phone: p,
+          customerName: customerName,
           enquiryId: enquiryId,
+          eventTypeLabel: eventTypeLabel,
+          eventDate: eventDate,
+          firstContact: EnquiryWhatsApp.isFirstContactFrom(data),
         );
       },
       onView: openDetails,

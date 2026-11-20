@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import 'enquiry_round_action.dart';
@@ -21,6 +22,7 @@ class ContactButtons extends ConsumerWidget {
     this.enabled = true,
     this.eventType,
     this.eventDate,
+    this.firstContact = true,
   });
 
   /// Voice / dialer number.
@@ -33,6 +35,9 @@ class ContactButtons extends ConsumerWidget {
   final bool enabled;
   final String? eventType;
   final DateTime? eventDate;
+
+  /// No prior app contact → first-touch WhatsApp copy.
+  final bool firstContact;
 
   String? get _waPhone {
     final wa = whatsappPhone?.trim();
@@ -173,30 +178,6 @@ class ContactButtons extends ConsumerWidget {
     }
   }
 
-  /// Format date as DD MMM YYYY (e.g., "15 Jan 2026")
-  String _formatDate(DateTime? date) {
-    if (date == null) return '';
-    if (date.year <= 1971) return '—';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final day = date.day.toString().padLeft(2, '0');
-    final month = months[date.month - 1];
-    final year = date.year.toString();
-    return '$day $month $year';
-  }
-
   /// Handle WhatsApp button tap
   Future<void> _handleWhatsApp(
     BuildContext context,
@@ -205,31 +186,20 @@ class ContactButtons extends ConsumerWidget {
     String phone,
   ) async {
     try {
-      // Build message with event type and date if available
-      String prefillText;
-      if (eventType != null && eventDate != null) {
-        final formattedDate = _formatDate(eventDate);
-        prefillText =
-            'Hi $customerName, I\'m following up on your $eventType enquiry for $formattedDate with We Decor. We\'re excited to help make your special day memorable! How can I help you today?';
-      } else if (eventType != null) {
-        prefillText =
-            'Hi $customerName, I\'m following up on your $eventType enquiry with We Decor. We\'re excited to help make your special day memorable! How can I help you today?';
-      } else {
-        prefillText =
-            'Hi $customerName, I\'m following up on your enquiry with We Decor. How can I help you today?';
-      }
-
-      final status = await contactLauncher.openWhatsAppWithAudit(
-        phone,
-        prefillText: prefillText,
+      final status = await EnquiryWhatsApp.open(
+        launcher: contactLauncher,
+        phone: phone,
+        customerName: customerName,
         enquiryId: enquiryId,
+        eventTypeLabel: eventType,
+        eventDate: eventDate,
+        firstContact: firstContact,
       );
 
       if (!context.mounted) return;
 
       switch (status) {
         case ContactLaunchStatus.opened:
-          // Success - no UI feedback needed
           break;
 
         case ContactLaunchStatus.invalidNumber:

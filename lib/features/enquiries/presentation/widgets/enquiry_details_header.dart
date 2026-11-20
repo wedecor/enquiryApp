@@ -28,6 +28,7 @@ class EnquiryDetailsHeader extends ConsumerWidget {
     required this.statusLabel,
     this.whatsappPhone,
     this.phoneNormalized = '',
+    this.firstContact = true,
     this.actions = const [],
     this.repeatCustomer = false,
     this.locationPending = false,
@@ -48,6 +49,9 @@ class EnquiryDetailsHeader extends ConsumerWidget {
   final String statusValue;
   final String statusLabel;
   final String phoneNormalized;
+
+  /// No prior app contact → first-touch WhatsApp copy.
+  final bool firstContact;
   final List<Widget> actions;
 
   /// Shows a small "Repeat customer" badge beside the status.
@@ -124,6 +128,7 @@ class EnquiryDetailsHeader extends ConsumerWidget {
             enquiryId: enquiryId,
             eventType: eventTypeLabel,
             eventDate: eventDate,
+            firstContact: firstContact,
           ),
           if (showThankYou)
             ReviewRequestButton(

@@ -313,5 +313,10 @@ String buildReminderMessage(
   final formattedDate = eventDate != null ? formatDateForMessage(eventDate) : '';
   final dateText = formattedDate.isNotEmpty ? ' on $formattedDate' : '';
 
-  return 'Hi $customerName!\n\n$urgencyMessage 🎉\n\nWe Decor is excited to be part of your $eventType$dateText and help make it absolutely magical.\n\nIf you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\nOtherwise, feel free to reply to this message - we\'re here to answer any questions and help bring your vision to life! ✨\n\nTeam We Decor - Bringing dreams to life 💫';
+  return 'Hi $customerName, greetings from We Decor.\n\n'
+      '$urgencyMessage.\n\n'
+      'We\'re excited to be part of your $eventType$dateText and happy to help make it special.\n\n'
+      'If you\'ve already booked with another vendor, please reply "not interested" so we can update our records.\n\n'
+      'Otherwise reply anytime — we\'re here for any questions.\n\n'
+      'Team We Decor';
 }

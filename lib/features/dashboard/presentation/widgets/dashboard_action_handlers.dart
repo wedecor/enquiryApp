@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
+import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/logging/logger.dart';
 import '../../../../core/providers/audit_provider.dart';
 import '../../../../core/services/contact_log_service.dart';
@@ -69,12 +70,32 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       return;
     }
 
-    final launcher = ref.read(contactLauncherProvider);
-    final prefill = 'Hi $customerName, this is from We Decor.';
-    final status = await launcher.openWhatsAppWithAudit(
-      phone,
-      prefillText: prefill,
+    // Prefer first vs follow-up copy from the live enquiry doc when available.
+    Map<String, dynamic>? data;
+    String? eventTypeLabel;
+    DateTime? eventDate;
+    try {
+      final snap = await ref
+          .read(firestoreServiceProvider)
+          .firestore
+          .collection('enquiries')
+          .doc(enquiryId)
+          .get();
+      data = snap.data();
+      eventTypeLabel = (data?['eventTypeLabel'] as String?) ?? (data?['eventType'] as String?);
+      eventDate = parseEnquiryDateTime(data?['eventDate']);
+    } catch (_) {
+      data = null;
+    }
+
+    final status = await EnquiryWhatsApp.open(
+      launcher: ref.read(contactLauncherProvider),
+      phone: phone,
+      customerName: customerName,
       enquiryId: enquiryId,
+      eventTypeLabel: eventTypeLabel,
+      eventDate: eventDate,
+      firstContact: EnquiryWhatsApp.isFirstContactFrom(data),
     );
 
     switch (status) {
@@ -311,13 +332,16 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       return;
     }
 
-    final launcher = ref.read(contactLauncherProvider);
-    final prefill = buildReminderMessage(customerName, eventType, createdAt, eventDate);
-    final status = await launcher.openWhatsAppWithAudit(
-      phone,
-      prefillText: prefill,
+    final status = await EnquiryWhatsApp.open(
+      launcher: ref.read(contactLauncherProvider),
+      phone: phone,
+      customerName: customerName,
       enquiryId: enquiryId,
+      eventTypeLabel: eventType,
+      eventDate: eventDate,
+      firstContact: false,
       contactType: ContactType.reminder,
+      messageOverride: buildReminderMessage(customerName, eventType, createdAt, eventDate),
     );
 
     if (status == ContactLaunchStatus.opened) {
