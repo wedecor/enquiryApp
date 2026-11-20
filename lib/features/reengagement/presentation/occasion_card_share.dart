@@ -27,9 +27,9 @@ enum OccasionShareResult {
 
 /// Shared card + caption share used by yearly wishes and thank-you / review.
 ///
-/// Chat targeting always uses a phone-in-URL open (`whatsapp://` / `wa.me` /
-/// Android two-step channel). Untargeted share sheets alone are never used to
-/// open WhatsApp — that caused "whom to send?" contact pickers.
+/// Android uses MethodChannel image+caption share (jid + ClipData). Other
+/// platforms open the phone-URL chat first, then attach the card. Untargeted
+/// share sheets alone are never used to open WhatsApp.
 class OccasionCardShare {
   OccasionCardShare._();
 
@@ -74,15 +74,12 @@ class OccasionCardShare {
       if (context.mounted) _snack(context, cardAttachFailedMessage);
     }
 
-    // Android: phone-URL chat + card via MethodChannel (no unofficial jid).
+    // Android: image + caption to the customer's chat via MethodChannel (jid).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && png != null) {
       final opened = await _shareToChat(png, launcher.normalize(resolved), text);
       if (opened) {
         if (!context.mounted) return OccasionShareResult.cancelled;
-        _snack(
-          context,
-          'Opened $first\'s chat with the message — send the card if WhatsApp shows it',
-        );
+        _snack(context, 'Opened $first\'s WhatsApp with the card — tap Send if it looks right');
         return _confirmAndLog(
           context: context,
           launcher: launcher,

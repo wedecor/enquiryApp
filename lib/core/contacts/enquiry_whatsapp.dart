@@ -151,7 +151,7 @@ class EnquiryWhatsApp {
       }
     }
 
-    // Android: open the right chat with text + card in one shot when possible.
+    // Android: image + caption to the customer's chat (MethodChannel / jid).
     if (png != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final opened = await _shareToChat(png, launcher.normalize(phone), text);
       if (opened) {
