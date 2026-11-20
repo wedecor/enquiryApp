@@ -6,6 +6,7 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../settings/providers/settings_providers.dart';
 import 'enquiry_round_action.dart';
 
 /// Contact action buttons for calling and messaging customers
@@ -186,6 +187,7 @@ class ContactButtons extends ConsumerWidget {
     String phone,
   ) async {
     try {
+      final config = ref.read(appGeneralConfigProvider).valueOrNull;
       final status = await EnquiryWhatsApp.open(
         launcher: contactLauncher,
         phone: phone,
@@ -194,6 +196,8 @@ class ContactButtons extends ConsumerWidget {
         eventTypeLabel: eventType,
         eventDate: eventDate,
         firstContact: firstContact,
+        websiteUrl: config?.websiteUrl,
+        instagramHandle: config?.instagramHandle,
       );
 
       if (!context.mounted) return;

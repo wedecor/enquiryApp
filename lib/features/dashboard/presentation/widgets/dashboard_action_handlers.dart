@@ -88,6 +88,7 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       data = null;
     }
 
+    final config = ref.read(appGeneralConfigProvider).valueOrNull;
     final status = await EnquiryWhatsApp.open(
       launcher: ref.read(contactLauncherProvider),
       phone: phone,
@@ -96,6 +97,8 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       eventTypeLabel: eventTypeLabel,
       eventDate: eventDate,
       firstContact: EnquiryWhatsApp.isFirstContactFrom(data),
+      websiteUrl: config?.websiteUrl,
+      instagramHandle: config?.instagramHandle,
     );
 
     switch (status) {
@@ -332,6 +335,7 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       return;
     }
 
+    final config = ref.read(appGeneralConfigProvider).valueOrNull;
     final status = await EnquiryWhatsApp.open(
       launcher: ref.read(contactLauncherProvider),
       phone: phone,
@@ -340,7 +344,10 @@ mixin DashboardActionHandlers<T extends ConsumerStatefulWidget> on ConsumerState
       eventTypeLabel: eventType,
       eventDate: eventDate,
       firstContact: false,
+      countdownCard: true,
       contactType: ContactType.reminder,
+      websiteUrl: config?.websiteUrl,
+      instagramHandle: config?.instagramHandle,
       messageOverride: buildReminderMessage(customerName, eventType, createdAt, eventDate),
     );
 

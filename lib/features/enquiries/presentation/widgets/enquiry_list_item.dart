@@ -7,6 +7,7 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/providers/role_provider.dart';
 import '../../../../services/dropdown_lookup.dart';
+import '../../../settings/providers/settings_providers.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
 import '../../domain/booking_amounts.dart';
@@ -81,6 +82,7 @@ class EnquiryListItem extends ConsumerWidget {
         await launcher.callNumberWithAudit(p, enquiryId: enquiryId);
       },
       onWhatsApp: (p) async {
+        final config = ref.read(appGeneralConfigProvider).valueOrNull;
         await EnquiryWhatsApp.open(
           launcher: ref.read(contactLauncherProvider),
           phone: p,
@@ -89,6 +91,8 @@ class EnquiryListItem extends ConsumerWidget {
           eventTypeLabel: eventTypeLabel,
           eventDate: eventDate,
           firstContact: EnquiryWhatsApp.isFirstContactFrom(data),
+          websiteUrl: config?.websiteUrl,
+          instagramHandle: config?.instagramHandle,
         );
       },
       onView: openDetails,
