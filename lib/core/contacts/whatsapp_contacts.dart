@@ -93,6 +93,34 @@ class WhatsAppContacts {
     }
   }
 
+  /// True if [phone] is already on this device's contacts.
+  static Future<bool> isInContacts(String phone) async {
+    if (!_isAndroid) return false;
+    try {
+      final result = await _invoke('isInContacts', {'phone': phone});
+      return result == true;
+    } on PlatformException catch (e) {
+      Log.w('WhatsAppContacts: isInContacts failed', data: {'error': e.message});
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// Inserts a device-only contact. Never updates existing rows.
+  static Future<bool> saveContact({required String name, required String phone}) async {
+    if (!_isAndroid) return false;
+    try {
+      final result = await _invoke('saveContact', {'name': name, 'phone': phone});
+      return result == true;
+    } on PlatformException catch (e) {
+      Log.w('WhatsAppContacts: saveContact failed', data: {'error': e.message});
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   /// True when contacts can be used for this send (feature on + permission).
   ///
   /// Shows the explanation dialog the first time, then the system prompt.

@@ -4,11 +4,13 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
+import android.content.ContentProviderOperation
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -39,6 +41,23 @@ class MainActivity : FlutterActivity() {
                     }
                     "requestContactsPermission" -> {
                         requestContactsPermission(result)
+                    }
+                    "isInContacts" -> {
+                        val phone = call.argument<String>("phone")
+                        if (phone.isNullOrBlank() || !hasContactsPermission()) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        result.success(isInContacts(phone))
+                    }
+                    "saveContact" -> {
+                        val name = call.argument<String>("name") ?: ""
+                        val phone = call.argument<String>("phone")
+                        if (phone.isNullOrBlank() || !hasContactsPermission()) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        result.success(saveContact(name, phone))
                     }
                     "openChat" -> {
                         val phone = call.argument<String>("phone")
@@ -169,6 +188,92 @@ class MainActivity : FlutterActivity() {
         val read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
         val write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_CONTACTS)
         return read == PackageManager.PERMISSION_GRANTED && write == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * True if [phone] matches any row via [ContactsContract.PhoneLookup].
+     * Tries `+` + international digits, then the 10-digit national form.
+     */
+    private fun isInContacts(phone: String): Boolean {
+        val digits = repairWhatsAppDigits(phone)
+        if (digits.length !in 11..15) return false
+        if (lookupPhone("+$digits")) return true
+        // Also try bare national (last 10) — many Indian contacts are stored that way.
+        if (digits.length >= 10) {
+            val national = digits.takeLast(10)
+            if (lookupPhone(national)) return true
+        }
+        return false
+    }
+
+    private fun lookupPhone(query: String): Boolean {
+        return try {
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(query),
+            )
+            contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup._ID),
+                null,
+                null,
+                null,
+            )?.use { cursor -> cursor.moveToFirst() } ?: false
+        } catch (e: Exception) {
+            Log.w(TAG, "lookupPhone failed for query length=${query.length}", e)
+            false
+        }
+    }
+
+    /**
+     * Inserts a device-only contact (null account — not synced to Google).
+     * Never updates or deletes existing contacts.
+     */
+    private fun saveContact(name: String, phone: String): Boolean {
+        return try {
+            val digits = repairWhatsAppDigits(phone)
+            if (digits.length !in 11..15) return false
+            val display = name.trim().ifEmpty { "+$digits" }
+            val ops = ArrayList<ContentProviderOperation>()
+            ops.add(
+                ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
+                    .build(),
+            )
+            ops.add(
+                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                    .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                    .withValue(
+                        ContactsContract.Data.MIMETYPE,
+                        ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE,
+                    )
+                    .withValue(
+                        ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
+                        display,
+                    )
+                    .build(),
+            )
+            ops.add(
+                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                    .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                    .withValue(
+                        ContactsContract.Data.MIMETYPE,
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE,
+                    )
+                    .withValue(ContactsContract.CommonDataKinds.Phone.NUMBER, "+$digits")
+                    .withValue(
+                        ContactsContract.CommonDataKinds.Phone.TYPE,
+                        ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE,
+                    )
+                    .build(),
+            )
+            contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "saveContact failed", e)
+            false
+        }
     }
 
     private fun requestContactsPermission(result: MethodChannel.Result) {
