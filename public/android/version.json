@@ -4,7 +4,7 @@
   "releaseDate": "2026-11-20",
   "releaseNotes": "WhatsApp card attaches again: send message first, then Send card when you return.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "65d6f0caa1c3ae910d7637db8e88e3393ca292bfccc6d75b572778c1a5cb53a0",
+  "sha256": "c307916a6788bb24e5760c87196ef23c41f31a65bfef81801682314becba0921",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
