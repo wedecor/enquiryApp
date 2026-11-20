@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/contacts/contact_launcher.dart';
+import '../../../core/contacts/whatsapp_direct_share.dart';
 import '../../../core/logging/logger.dart';
 import '../../../shared/widgets/confirmation_dialog.dart';
 import '../domain/reengagement_templates.dart';
@@ -32,8 +32,6 @@ enum OccasionShareResult {
 /// share sheets alone are never used to open WhatsApp.
 class OccasionCardShare {
   OccasionCardShare._();
-
-  static const MethodChannel _whatsAppChannel = MethodChannel('wedecor/whatsapp');
 
   /// Shares the card + [text]. Returns [OccasionShareResult.sent] only when the
   /// contact was logged (or text WhatsApp opened successfully).
@@ -76,8 +74,15 @@ class OccasionCardShare {
 
     // Android: image + caption to the customer's chat via MethodChannel (jid).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android && png != null) {
-      final opened = await _shareToChat(png, launcher.normalize(resolved), text);
-      if (opened) {
+      if (!context.mounted) return OccasionShareResult.cancelled;
+      final direct = await WhatsAppDirectShare.shareImageToChat(
+        launcher: launcher,
+        png: png,
+        phone: resolved,
+        text: text,
+        context: context,
+      );
+      if (direct == WhatsAppDirectShareResult.opened) {
         if (!context.mounted) return OccasionShareResult.cancelled;
         _snack(context, 'Opened $first\'s WhatsApp with the card — tap Send if it looks right');
         return _confirmAndLog(
@@ -88,6 +93,9 @@ class OccasionCardShare {
           title: markSentTitle,
           message: confirmMessage,
         );
+      }
+      if (direct == WhatsAppDirectShareResult.cancelled) {
+        return OccasionShareResult.cancelled;
       }
     }
 
@@ -153,22 +161,6 @@ class OccasionCardShare {
       return OccasionShareResult.failed;
     }
     return OccasionShareResult.sent;
-  }
-
-  static Future<bool> _shareToChat(Uint8List png, String phone, String text) async {
-    try {
-      final opened = await _whatsAppChannel.invokeMethod<bool>('shareImageToChat', {
-        'png': png,
-        'phone': phone,
-        'text': text,
-      });
-      return opened ?? false;
-    } on PlatformException catch (e) {
-      Log.w('WhatsApp direct share failed', data: {'error': e.message});
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
   }
 
   static Future<File> _writeTempPng(Uint8List png, String fileName) async {

@@ -1,6 +1,5 @@
 package com.example.we_decor_enquiries
 
-import android.app.AlertDialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
@@ -26,22 +25,23 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WHATSAPP_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "listInstalledPackages" -> {
+                        result.success(WHATSAPP_PACKAGES.filter { isInstalled(it) })
+                    }
                     "shareImageToChat" -> {
                         val bytes = call.argument<ByteArray>("png")
                         val phone = call.argument<String>("phone")
                         val text = call.argument<String>("text") ?: ""
-                        if (bytes == null || phone.isNullOrBlank()) {
+                        val pkg = call.argument<String>("package")
+                        if (bytes == null || phone.isNullOrBlank() || pkg.isNullOrBlank()) {
                             result.success(false)
                             return@setMethodCallHandler
                         }
-                        // Package pick may show a dialog — reply after share starts.
-                        pickWhatsAppPackage { pkg ->
-                            if (pkg == null) {
-                                result.success(false)
-                            } else {
-                                result.success(shareImageToChat(bytes, phone, text, pkg))
-                            }
+                        if (!WHATSAPP_PACKAGES.contains(pkg) || !isInstalled(pkg)) {
+                            result.success(false)
+                            return@setMethodCallHandler
                         }
+                        result.success(shareImageToChat(bytes, phone, text, pkg))
                     }
                     else -> result.notImplemented()
                 }
@@ -51,21 +51,17 @@ class MainActivity : FlutterActivity() {
     /**
      * Opens [phone]'s WhatsApp chat with the card attached and [text] as caption.
      *
-     * Uses a single [ACTION_SEND] with ClipData + FileProvider + WhatsApp's
-     * unofficial `jid` extra. A prior two-step (text URL, then delayed image)
-     * opened the chat reliably but WhatsApp does not attach a follow-up
-     * [ACTION_SEND] to that open chat without `jid`, so staff only saw text.
+     * Single [ACTION_SEND] with ClipData + FileProvider + WhatsApp's unofficial
+     * `jid` extra. Package is chosen in Flutter (glass sheet) so the native UI
+     * stays out of the way.
      *
-     * When both personal WhatsApp and Business are installed, staff pick which
-     * app. Returns false when neither is installed or share cannot start
-     * (Dart falls back to phone-URL + share sheet).
+     * Returns false when share cannot start (Dart falls back).
      */
     private fun shareImageToChat(png: ByteArray, phone: String, text: String, pkg: String): Boolean {
         return try {
-            // Full international digits (e.g. 9198…), never a bare 10-digit local
-            // number — WhatsApp's jid ignores the chat when the country code is missing.
-            val digits = phone.filter { it.isDigit() }
-            if (digits.length < 10) return false
+            val digits = repairWhatsAppDigits(phone.filter { it.isDigit() })
+            // Plausible E.164 length without '+'; bare 10-digit jids open the picker.
+            if (digits.length !in 11..15) return false
 
             val dir = File(cacheDir, "wishes").apply { mkdirs() }
             val file = File(dir, "we-decor-${System.currentTimeMillis()}.png")
@@ -98,46 +94,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    /**
-     * One installed app → use it. Both → dialog (WhatsApp / WhatsApp Business),
-     * remembering the last choice as the default selected item.
-     */
-    private fun pickWhatsAppPackage(onPicked: (String?) -> Unit) {
-        val installed = WHATSAPP_PACKAGES.filter { isInstalled(it) }
-        when {
-            installed.isEmpty() -> onPicked(null)
-            installed.size == 1 -> onPicked(installed[0])
-            else -> runOnUiThread {
-                if (isFinishing || isDestroyed) {
-                    onPicked(null)
-                    return@runOnUiThread
-                }
-                val prefs = getSharedPreferences(PREFS_WHATSAPP, MODE_PRIVATE)
-                val last = prefs.getString(PREF_LAST_PKG, null)
-                val labels = installed.map { pkgLabel(it) }.toTypedArray()
-                val checked = installed.indexOf(last).coerceAtLeast(0)
-                AlertDialog.Builder(this)
-                    .setTitle("Send with")
-                    .setSingleChoiceItems(labels, checked, null)
-                    .setPositiveButton("Continue") { dialog, _ ->
-                        val list = (dialog as AlertDialog).listView
-                        val idx = list.checkedItemPosition.coerceIn(0, installed.lastIndex)
-                        val pkg = installed[idx]
-                        prefs.edit().putString(PREF_LAST_PKG, pkg).apply()
-                        onPicked(pkg)
-                    }
-                    .setNegativeButton("Cancel") { _, _ -> onPicked(null) }
-                    .setOnCancelListener { onPicked(null) }
-                    .show()
-            }
-        }
-    }
-
-    private fun pkgLabel(pkg: String): String = when (pkg) {
-        "com.whatsapp.w4b" -> "WhatsApp Business"
-        else -> "WhatsApp"
-    }
-
     private fun isInstalled(pkg: String): Boolean = try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             packageManager.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(0))
@@ -168,8 +124,18 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val WHATSAPP_CHANNEL = "wedecor/whatsapp"
-        private const val PREFS_WHATSAPP = "whatsapp_share"
-        private const val PREF_LAST_PKG = "last_pkg"
         private val WHATSAPP_PACKAGES = listOf("com.whatsapp", "com.whatsapp.w4b")
+
+        /** Mirror of Dart [ContactLauncher] India trunk-zero + bare-10 repair. */
+        fun repairWhatsAppDigits(raw: String): String {
+            var digits = raw.filter { it.isDigit() }
+            if (digits.length == 13 && digits.startsWith("910")) {
+                digits = "91" + digits.substring(3)
+            }
+            if (digits.length == 10) {
+                digits = "91$digits"
+            }
+            return digits
+        }
     }
 }

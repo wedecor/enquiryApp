@@ -39,6 +39,12 @@ void main() {
         expect(contactLauncher.normalize('09876543210'), '+919876543210');
       });
 
+      test('strips trunk 0 after 91 (+91 0XXXXXXXXXX)', () {
+        expect(contactLauncher.normalize('+91 09876543210'), '+919876543210');
+        expect(contactLauncher.normalize('91 09876543210'), '+919876543210');
+        expect(contactLauncher.normalize('0091 09876543210'), '+919876543210');
+      });
+
       test('spaced 91-prefixed numbers become +91…', () {
         expect(contactLauncher.normalize('91 98765 43210'), '+919876543210');
       });
@@ -71,6 +77,20 @@ void main() {
         expect(contactLauncher.normalize('+1-555-123-4567'), '+15551234567');
         expect(contactLauncher.normalize('+44 20 7183 8750'), '+442071838750');
         expect(contactLauncher.normalize('+33 1 42 86 83 26'), '+33142868326');
+      });
+    });
+
+    group('toWhatsAppDigits', () {
+      test('yields 12-digit India jid digits for common shapes', () {
+        expect(contactLauncher.toWhatsAppDigits('9876543210'), '919876543210');
+        expect(contactLauncher.toWhatsAppDigits('+91 98765 43210'), '919876543210');
+        expect(contactLauncher.toWhatsAppDigits('+91 09876543210'), '919876543210');
+        expect(contactLauncher.toWhatsAppDigits('91 09876543210'), '919876543210');
+        expect(contactLauncher.toWhatsAppDigits('+9876543210'), '919876543210');
+      });
+
+      test('keeps foreign E.164 digit strings', () {
+        expect(contactLauncher.toWhatsAppDigits('+442071838750'), '442071838750');
       });
     });
 

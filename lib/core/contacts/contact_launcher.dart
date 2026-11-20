@@ -33,12 +33,12 @@ class ContactLauncher {
   /// Normalizes raw phone number to E.164-like format.
   ///
   /// - Strips everything except digits and a leading `+`.
-  /// - Leading `+` is kept as-is.
+  /// - Leading `+` is kept as-is (after India trunk-zero repair).
   /// - Leading `00` becomes `+` (international prefix).
   /// - Otherwise leading zeros are stripped, then:
   ///   - 10 digits → [defaultCountryCode] + digits
   ///   - 12 digits starting with `91` → `+` + digits
-  ///   - longer than 10 → `+` + digits
+  ///   - longer than 10 → `+` + digits (with India trunk-zero repair)
   ///   - otherwise → [defaultCountryCode] + digits
   String normalize(String raw) {
     final trimmed = raw.trim();
@@ -48,11 +48,11 @@ class ContactLauncher {
     var digits = trimmed.replaceAll(RegExp(r'\D'), '');
 
     if (hadLeadingPlus) {
-      return '+$digits';
+      return '+${_repairIndiaTrunkZero(digits)}';
     }
 
     if (digits.startsWith('00')) {
-      return '+${digits.substring(2)}';
+      return '+${_repairIndiaTrunkZero(digits.substring(2))}';
     }
 
     digits = digits.replaceFirst(RegExp(r'^0+'), '');
@@ -65,9 +65,33 @@ class ContactLauncher {
       return '+$digits';
     }
     if (digits.length > 10) {
-      return '+$digits';
+      return '+${_repairIndiaTrunkZero(digits)}';
     }
     return '$defaultCountryCode$digits';
+  }
+
+  /// Digits only for WhatsApp URLs / Android `jid` (no `+`).
+  ///
+  /// Repairs common India shapes that make WhatsApp ignore `jid` and show its
+  /// contact picker: trunk `0` after `91`, bare 10-digit locals, `+` + 10 digits.
+  String toWhatsAppDigits(String raw) {
+    var digits = normalize(raw).replaceAll(RegExp(r'\D'), '');
+    digits = _repairIndiaTrunkZero(digits);
+
+    if (digits.length == 10) {
+      final cc = defaultCountryCode.replaceAll(RegExp(r'\D'), '');
+      if (cc.isNotEmpty) digits = '$cc$digits';
+    }
+
+    return digits;
+  }
+
+  /// `91` + trunk `0` + 10 national digits → drop the trunk zero.
+  static String _repairIndiaTrunkZero(String digits) {
+    if (digits.length == 13 && digits.startsWith('910')) {
+      return '91${digits.substring(3)}';
+    }
+    return digits;
   }
 
   /// Launch phone dialer with the given number
@@ -111,17 +135,12 @@ class ContactLauncher {
   /// Supports optional prefilled message text
   Future<ContactLaunchStatus> openWhatsApp(String rawPhone, {String? prefillText}) async {
     try {
-      final normalizedPhone = normalize(rawPhone);
+      final whatsappPhone = toWhatsAppDigits(rawPhone);
 
-      if (normalizedPhone.isEmpty || normalizedPhone.length < 8) {
+      if (whatsappPhone.isEmpty || whatsappPhone.length < 10) {
         Logger.error('Invalid phone number for WhatsApp', tag: 'ContactLauncher');
         return ContactLaunchStatus.invalidNumber;
       }
-
-      // Remove '+' for WhatsApp URLs (they expect just digits)
-      final whatsappPhone = normalizedPhone.startsWith('+')
-          ? normalizedPhone.substring(1)
-          : normalizedPhone;
 
       // Encode prefill text for URL
       final encodedText = prefillText != null ? Uri.encodeComponent(prefillText) : '';

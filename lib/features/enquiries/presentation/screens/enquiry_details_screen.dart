@@ -298,6 +298,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         launcher: ref.read(contactLauncherProvider),
                         phone: whatsappNumber,
                         customerName: (enquiryData['customerName'] as String?) ?? 'Customer',
+                        context: context,
                         enquiryId: widget.enquiryId,
                         eventTypeLabel: labels.eventTypeLabel,
                         eventDate: eventDate,

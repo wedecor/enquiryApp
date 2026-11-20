@@ -202,6 +202,7 @@ class ContactButtons extends ConsumerWidget {
         launcher: contactLauncher,
         phone: phone,
         customerName: customerName,
+        context: context,
         enquiryId: enquiryId,
         eventTypeLabel: eventType,
         eventDate: eventDate,

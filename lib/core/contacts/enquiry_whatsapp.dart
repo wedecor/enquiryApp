@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -9,6 +9,7 @@ import '../../features/reengagement/domain/reengagement_templates.dart';
 import '../../features/reengagement/presentation/customer_card.dart';
 import '../logging/logger.dart';
 import 'contact_launcher.dart';
+import 'whatsapp_direct_share.dart';
 
 /// Prefill copy + matching customer card for day-to-day enquiry WhatsApp.
 ///
@@ -16,8 +17,6 @@ import 'contact_launcher.dart';
 /// **Follow Up tab**: countdown card (brand when the event date is unusable).
 class EnquiryWhatsApp {
   EnquiryWhatsApp._();
-
-  static const MethodChannel _whatsAppChannel = MethodChannel('wedecor/whatsapp');
 
   /// True when this enquiry has never been contacted from the app.
   static bool isFirstContact({Object? firstContactAt, Object? contactCount}) {
@@ -103,10 +102,14 @@ class EnquiryWhatsApp {
 
   /// Opens the customer chat with the right prefill, logs contact, then shares
   /// the matching customer card (Android direct-to-chat when possible).
+  ///
+  /// Pass [context] on Android so the glass WhatsApp / Business picker can show
+  /// when both apps are installed.
   static Future<ContactLaunchStatus> open({
     required ContactLauncher launcher,
     required String phone,
     required String customerName,
+    BuildContext? context,
     String? enquiryId,
     String? eventTypeLabel,
     DateTime? eventDate,
@@ -153,10 +156,20 @@ class EnquiryWhatsApp {
 
     // Android: image + caption to the customer's chat (MethodChannel / jid).
     if (png != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final opened = await _shareToChat(png, launcher.normalize(phone), text);
-      if (opened) {
+      final sheetContext = (context != null && context.mounted) ? context : null;
+      final direct = await WhatsAppDirectShare.shareImageToChat(
+        launcher: launcher,
+        png: png,
+        phone: phone,
+        text: text,
+        context: sheetContext,
+      );
+      if (direct == WhatsAppDirectShareResult.opened) {
         launcher.recordContact(enquiryId: enquiryId, type: contactType);
         return ContactLaunchStatus.opened;
+      }
+      if (direct == WhatsAppDirectShareResult.cancelled) {
+        return ContactLaunchStatus.failed;
       }
     }
 
@@ -170,22 +183,6 @@ class EnquiryWhatsApp {
       await _sharePngAfterChat(png);
     }
     return status;
-  }
-
-  static Future<bool> _shareToChat(Uint8List png, String phone, String text) async {
-    try {
-      final opened = await _whatsAppChannel.invokeMethod<bool>('shareImageToChat', {
-        'png': png,
-        'phone': phone,
-        'text': text,
-      });
-      return opened ?? false;
-    } on PlatformException catch (e) {
-      Log.w('EnquiryWhatsApp: direct share failed', data: {'error': e.message});
-      return false;
-    } on MissingPluginException {
-      return false;
-    }
   }
 
   static Future<void> _sharePngAfterChat(Uint8List png) async {

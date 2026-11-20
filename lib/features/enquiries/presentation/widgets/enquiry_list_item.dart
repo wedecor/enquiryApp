@@ -87,6 +87,7 @@ class EnquiryListItem extends ConsumerWidget {
           launcher: ref.read(contactLauncherProvider),
           phone: p,
           customerName: customerName,
+          context: context,
           enquiryId: enquiryId,
           eventTypeLabel: eventTypeLabel,
           eventDate: eventDate,

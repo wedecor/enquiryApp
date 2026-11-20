@@ -1,17 +1,17 @@
 {
-  "version": "2.0.43",
-  "buildNumber": 74,
+  "version": "2.0.44",
+  "buildNumber": 75,
   "releaseDate": "2026-11-20",
-  "releaseNotes": "Fix: customer card image attaches again with WhatsApp messages.",
+  "releaseNotes": "More reliable WhatsApp chat targeting and a glass app picker.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
   "sha256": "31cfbf7c50ccce3e02c2be6ace4b7f45a78bc1b85f717696c796f974d18c13f5",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Ivory customer cards for first contact, follow-up, reminders, thank-you, and yearly wishes"
+    "Glass WhatsApp / Business picker matching the app UI"
   ],
   "bugFixes": [
-    "WhatsApp shares attach the card image again (single image+caption send)",
-    "Unified We Decor greeting and first-name Follow Up WhatsApp copy"
+    "Repair India trunk-zero and bare 10-digit phones so WhatsApp opens the right chat",
+    "WhatsApp shares attach the card image again (single image+caption send)"
   ]
 }

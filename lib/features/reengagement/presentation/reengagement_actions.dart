@@ -80,20 +80,34 @@ class ReengagementActions {
     return _digitCount(launcher.normalize(raw)) >= 10;
   }
 
-  /// Prefer [customerPhone]; if blank or too short after normalize, use
-  /// [phoneNormalized]. Null only when both are unusable.
+  /// Prefer a phone that yields a solid WhatsApp jid (11–15 digits).
+  /// Falls back to [phoneNormalized] (last 10) when the display number is weak.
   static String? resolveWishPhone(
     ContactLauncher launcher, {
     required String? customerPhone,
     required String phoneNormalized,
   }) {
-    if (isUsablePhone(launcher, customerPhone)) {
-      return customerPhone!.trim();
+    final primary = customerPhone?.trim();
+    final fallback = phoneNormalized.trim();
+
+    if (primary != null && primary.isNotEmpty && _jidLooksSolid(launcher, primary)) {
+      return primary;
     }
-    if (isUsablePhone(launcher, phoneNormalized)) {
-      return phoneNormalized.trim();
+    if (fallback.isNotEmpty && _jidLooksSolid(launcher, fallback)) {
+      return fallback;
+    }
+    if (primary != null && isUsablePhone(launcher, primary)) {
+      return primary;
+    }
+    if (isUsablePhone(launcher, fallback)) {
+      return fallback;
     }
     return null;
+  }
+
+  static bool _jidLooksSolid(ContactLauncher launcher, String raw) {
+    final digits = launcher.toWhatsAppDigits(raw);
+    return digits.length >= 11 && digits.length <= 15;
   }
 
   /// Shares the wish card + wish text through the share sheet (pick WhatsApp, then
