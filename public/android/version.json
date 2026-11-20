@@ -1,17 +1,16 @@
 {
-  "version": "2.0.40",
-  "buildNumber": 71,
-  "releaseDate": "2026-11-15",
-  "releaseNotes": "When both WhatsApp apps are installed you can choose which one to use, and thank-you cards are less likely to send without the image.",
+  "version": "2.0.41",
+  "buildNumber": 72,
+  "releaseDate": "2026-11-20",
+  "releaseNotes": "Thank-you now opens the customer chat by phone number first, then attaches the card — so WhatsApp should no longer ask whom to send to.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "26a997e1116be4a312c5b2cd204d5bbf574e4d0e3a0cad6687b71142e0fa4f81",
+  "sha256": "87fa5c6727c5344ebcd4dd09bceda719e161e7b3fb8297b679f5d108ff64fb3d",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Choose WhatsApp or WhatsApp Business when both are installed"
+    "Thank-you opens the correct WhatsApp chat using the number from the enquiry"
   ],
   "bugFixes": [
-    "No longer always opens personal WhatsApp when Business is also installed",
-    "Thank-you / wish card image attaches more reliably"
+    "Fixed WhatsApp asking whom to send when thanking a completed booking"
   ]
 }
