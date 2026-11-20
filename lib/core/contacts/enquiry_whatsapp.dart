@@ -34,6 +34,9 @@ class EnquiryWhatsApp {
   }
 
   /// Message body. Uses first name; never emoji-heavy.
+  ///
+  /// WhatsApp plain text cannot use colour. Event type and *We Decor* are
+  /// wrapped in `*…*` so WhatsApp shows them bold.
   static String message({
     required String customerName,
     required bool firstContact,
@@ -44,15 +47,17 @@ class EnquiryWhatsApp {
     final hello = name == 'there' ? 'Hi' : 'Hi $name';
     final rawEvent = (eventTypeLabel ?? '').trim();
     final event = rawEvent.isEmpty ? '' : rawEvent.toLowerCase();
-    final eventBit = event.isEmpty ? 'enquiry' : '$event enquiry';
+    // Bold the event type (or the word "enquiry" when type is unknown).
+    final eventBit = event.isEmpty ? '*enquiry*' : '*$event* enquiry';
     final dateBit = _dateSuffix(eventDate);
+    const brand = '*We Decor*';
 
     if (firstContact) {
-      return '$hello, greetings from We Decor.\n'
+      return '$hello, greetings from $brand.\n'
           'I\'m writing about your $eventBit$dateBit. '
           'How can we help you today?';
     }
-    return '$hello, greetings from We Decor.\n'
+    return '$hello, greetings from $brand.\n'
         'Just checking in on your $eventBit$dateBit — '
         'happy to answer any questions.';
   }
@@ -133,8 +138,10 @@ class EnquiryWhatsApp {
           eventDate: eventDate,
         );
 
+    // New queries: text only (no card / no second step). Cards are for
+    // follow-ups that already have a known WhatsApp chat on this device.
     Uint8List? png;
-    if (shareCard && !kIsWeb) {
+    if (shareCard && !firstContact && !kIsWeb) {
       try {
         final content = cardFor(
           customerName: customerName,
@@ -154,8 +161,8 @@ class EnquiryWhatsApp {
       }
     }
 
-    // Android: card to the customer's chat (see WhatsAppDirectShare).
-    if (png != null && !kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    // Android: contact prep + chat (and card when we have one / known chat).
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final sheetContext = (context != null && context.mounted) ? context : null;
       final direct = await WhatsAppDirectShare.shareImageToChat(
         launcher: launcher,
@@ -164,8 +171,8 @@ class EnquiryWhatsApp {
         text: text,
         context: sheetContext,
         customerFullName: customerName,
+        eventDate: eventDate,
       );
-      // textOnly: message went without the card (contacts unavailable / save failed).
       if (direct == WhatsAppDirectShareResult.opened ||
           direct == WhatsAppDirectShareResult.textOnly) {
         launcher.recordContact(enquiryId: enquiryId, type: contactType);

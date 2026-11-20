@@ -30,8 +30,8 @@ void main() {
         eventTypeLabel: 'Wedding',
         eventDate: DateTime(2026, 1, 12),
       );
-      expect(msg, contains('Hi Priya, greetings from We Decor.'));
-      expect(msg, contains('wedding enquiry for 12 Jan'));
+      expect(msg, contains('Hi Priya, greetings from *We Decor*.'));
+      expect(msg, contains('*wedding* enquiry for 12 Jan'));
       expect(msg, contains('How can we help you today?'));
       expect(msg.toLowerCase(), isNot(contains('following up')));
     });
@@ -42,8 +42,8 @@ void main() {
         firstContact: false,
         eventTypeLabel: 'Birthday',
       );
-      expect(msg, contains('Hi Ayesha, greetings from We Decor.'));
-      expect(msg, contains('Just checking in on your birthday enquiry'));
+      expect(msg, contains('Hi Ayesha, greetings from *We Decor*.'));
+      expect(msg, contains('Just checking in on your *birthday* enquiry'));
       expect(msg, contains('happy to answer any questions'));
     });
   });

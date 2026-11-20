@@ -45,6 +45,7 @@ class OccasionCardShare {
     required String customerName,
     required String? enquiryId,
     required ContactType contactType,
+    DateTime? eventDate,
     String imageFileName = 'we-decor-card.png',
     String cardAttachFailedMessage = "Couldn't attach the card — sending text only",
     String markSentTitle = 'Mark as sent?',
@@ -82,6 +83,7 @@ class OccasionCardShare {
         text: text,
         context: context,
         customerFullName: customerName,
+        eventDate: eventDate,
       );
       if (direct == WhatsAppDirectShareResult.opened ||
           direct == WhatsAppDirectShareResult.textOnly) {

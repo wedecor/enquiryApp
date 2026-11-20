@@ -18,8 +18,8 @@ enum WhatsAppDirectShareResult {
   /// The customer's chat opened with the card attached (staff tap Send in WhatsApp).
   opened,
 
-  /// Chat opened with the message only (no card) — card intent failed after
-  /// contact prep / permission path.
+  /// Chat opened with the message only (no card) — new / unknown numbers, or
+  /// card intent failed as a last resort.
   textOnly,
 
   /// User dismissed the WhatsApp / Business sheet — do not fall back.
@@ -33,14 +33,14 @@ typedef WhatsAppChannelInvoker =
     Future<Object?> Function(String method, Map<String, Object?>? args);
 typedef WhatsAppPermissionGate = Future<bool> Function(BuildContext? context);
 
-/// Android: one-tap card + caption to the customer's WhatsApp chat.
+/// Android WhatsApp handoff for customer cards / enquiry messages.
 ///
-/// * Known chat → card + caption in one intent.
-/// * Else, with contacts permission:
-///   - Already in phone contacts → card.
-///   - Else save a device-only contact, wait [contactPrepareDelay], then card.
-/// * No permission / save failed → still try card once; if that fails →
-///   Click-to-Chat message only (last resort).
+/// * **Known chat** (this device already sent a card to this number/app) → one
+///   intent: card + caption (`jid`).
+/// * **Otherwise** (new lead / never successfully sent a card) → one action:
+///   optional device contact save, then Click-to-Chat with the prefilled
+///   greeting. **Text only — no card, no second step.** Jid image share on an
+///   unknown chat opens an empty WhatsApp window.
 class WhatsAppDirectShare {
   WhatsAppDirectShare._();
 
@@ -48,30 +48,30 @@ class WhatsAppDirectShare {
   static const _prefLastPkg = 'whatsapp_share.last_pkg';
 
   /// `package|digits` of chats this device has sent a card to.
-  /// v2 clears entries poisoned by earlier builds that remembered chats without
-  /// a successful card attach.
+  /// v3 clears entries from 2.0.48 that marked chats "known" after an empty
+  /// jid open (no text, no image).
   @visibleForTesting
-  static const prefKnownChats = 'whatsapp_share.known_chats_v2';
+  static const prefKnownChats = 'whatsapp_share.known_chats_v3';
   static const int _maxKnownChats = 2000;
 
-  /// How long to wait after saving a contact before launching WhatsApp.
+  /// How long to wait after saving a contact before opening WhatsApp.
   static const Duration contactPrepareDelay = Duration(seconds: 5);
 
   @visibleForTesting
   static WhatsAppChannelInvoker? debugInvoker;
   @visibleForTesting
+  static WhatsAppPermissionGate? debugEnsurePermission;
+  @visibleForTesting
   static bool? debugIsAndroid;
   @visibleForTesting
   static Duration? debugPrepareDelay;
-  @visibleForTesting
-  static WhatsAppPermissionGate? debugEnsurePermission;
 
   @visibleForTesting
   static void debugReset() {
     debugInvoker = null;
+    debugEnsurePermission = null;
     debugIsAndroid = null;
     debugPrepareDelay = null;
-    debugEnsurePermission = null;
   }
 
   static bool get _isAndroid =>
@@ -81,15 +81,16 @@ class WhatsAppDirectShare {
 
   /// Shares [png] + [text] to [phone]'s chat on Android. See class docs.
   ///
-  /// [customerFullName] is used when saving a device contact
-  /// (`"{name} – We Decor"`).
+  /// [customerFullName] / [eventDate] build the device contact display name:
+  /// `{name} – We Decor · 12 Jan 2026` (date omitted when missing/unusable).
   static Future<WhatsAppDirectShareResult> shareImageToChat({
     required ContactLauncher launcher,
-    required Uint8List png,
     required String phone,
     required String text,
+    Uint8List? png,
     BuildContext? context,
     String? customerFullName,
+    DateTime? eventDate,
     @Deprecated('Use customerFullName') String? customerFirstName,
   }) async {
     if (!_isAndroid) return WhatsAppDirectShareResult.unavailable;
@@ -105,57 +106,86 @@ class WhatsAppDirectShare {
     final pkg = pick.package;
     if (pkg == null) return WhatsAppDirectShareResult.unavailable;
 
-    // Known chat: card + caption in one go (skip contact checks).
-    if (await isKnownChat(pkg, digits)) {
-      return _sendCardOrFallback(png: png, digits: digits, text: text, pkg: pkg);
+    final hasCard = png != null && png.isNotEmpty;
+
+    // Known chat + card: one intent with image + caption.
+    if (hasCard && await isKnownChat(pkg, digits)) {
+      final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
+      if (sent) {
+        await _rememberChat(pkg, digits);
+        return WhatsAppDirectShareResult.opened;
+      }
+      Log.w('WhatsAppDirectShare: card intent failed for known chat');
+      return WhatsAppDirectShareResult.unavailable;
     }
 
-    final canUseContacts = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
-      (context != null && context.mounted) ? context : null,
+    // New query / unknown / text-only: save contact if needed, then Click-to-Chat.
+    // Never jid-share first on an unknown chat — that opens empty WhatsApp.
+    await _prepareContactIfAllowed(
+      context: context,
+      digits: digits,
+      customerFullName: customerFullName,
+      eventDate: eventDate,
     );
 
-    if (canUseContacts) {
-      final already = await WhatsAppContacts.isInContacts(digits);
-      if (!already) {
-        final displayName = _contactDisplayName(customerFullName);
-        final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
-        if (saved) {
-          await _showPreparingAndWait(context);
-        } else {
-          Log.w('WhatsAppDirectShare: saveContact failed; still trying card');
-        }
-      }
-    }
-
-    // Always try the one-intent card path (with or without contacts).
-    return _sendCardOrFallback(png: png, digits: digits, text: text, pkg: pkg);
-  }
-
-  static String _contactDisplayName(String? fullName) {
-    final n = (fullName ?? '').trim();
-    if (n.isEmpty) return 'We Decor customer';
-    return '$n – We Decor';
-  }
-
-  /// Card first; Click-to-Chat message only if the card intent fails.
-  static Future<WhatsAppDirectShareResult> _sendCardOrFallback({
-    required Uint8List png,
-    required String digits,
-    required String text,
-    required String pkg,
-  }) async {
-    final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
-    if (sent) {
-      await _rememberChat(pkg, digits);
-      return WhatsAppDirectShareResult.opened;
-    }
-    Log.w('WhatsAppDirectShare: card intent failed; message only');
     final chatOpened = await _openChat(digits: digits, text: text, pkg: pkg);
     if (!chatOpened) {
       Log.w('WhatsAppDirectShare: click-to-chat failed');
       return WhatsAppDirectShareResult.unavailable;
     }
     return WhatsAppDirectShareResult.textOnly;
+  }
+
+  static Future<void> _prepareContactIfAllowed({
+    required BuildContext? context,
+    required String digits,
+    required String? customerFullName,
+    DateTime? eventDate,
+  }) async {
+    final canUse = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
+      (context != null && context.mounted) ? context : null,
+    );
+    if (!canUse) return;
+
+    final already = await WhatsAppContacts.isInContacts(digits);
+    if (already) return;
+
+    final displayName = contactDisplayName(customerFullName, eventDate: eventDate);
+    final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
+    if (!saved) {
+      Log.w('WhatsAppDirectShare: saveContact failed; continuing with click-to-chat');
+      return;
+    }
+    await _showPreparingAndWait(context);
+  }
+
+  /// Device-contact label: `{name} – We Decor` or `{name} – We Decor · 12 Jan 2026`.
+  @visibleForTesting
+  static String contactDisplayName(String? fullName, {DateTime? eventDate}) {
+    final n = (fullName ?? '').trim();
+    final base = n.isEmpty ? 'We Decor customer' : '$n – We Decor';
+    final dateBit = _contactDateSuffix(eventDate);
+    if (dateBit.isEmpty) return base;
+    return '$base · $dateBit';
+  }
+
+  static String _contactDateSuffix(DateTime? eventDate) {
+    if (eventDate == null || eventDate.year <= 1971) return '';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${eventDate.day} ${months[eventDate.month - 1]} ${eventDate.year}';
   }
 
   static Future<void> _showPreparingAndWait(BuildContext? context) async {

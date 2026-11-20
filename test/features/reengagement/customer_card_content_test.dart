@@ -190,7 +190,7 @@ void main() {
         eventTypeLabel: 'Wedding',
         eventDate: event,
       );
-      expect(msg, contains('wedding enquiry for 15 Jan'));
+      expect(msg, contains('*wedding* enquiry for 15 Jan'));
       final card = EnquiryWhatsApp.cardFor(
         customerName: 'Priya Sharma',
         eventTypeLabel: 'Wedding',
@@ -216,7 +216,7 @@ void main() {
         eventTypeLabel: 'Wedding',
         eventDate: event,
       );
-      expect(msg, contains('wedding enquiry'));
+      expect(msg, contains('*wedding* enquiry'));
     });
   });
 

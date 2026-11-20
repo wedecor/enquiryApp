@@ -215,7 +215,7 @@ void main() {
         expect(whatsappLauncherCalled, isTrue);
         expect(calledNumber, '+919876543210');
         expect(prefillText, contains('Hi Jane'));
-        expect(prefillText, contains('greetings from We Decor'));
+        expect(prefillText, contains('greetings from *We Decor*'));
       });
 
       testWidgets('disabled buttons do not trigger actions', (tester) async {
