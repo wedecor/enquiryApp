@@ -1,16 +1,16 @@
 {
-  "version": "2.0.41",
-  "buildNumber": 72,
+  "version": "2.0.42",
+  "buildNumber": 73,
   "releaseDate": "2026-11-20",
-  "releaseNotes": "Thank-you now opens the customer chat by phone number first, then attaches the card — so WhatsApp should no longer ask whom to send to.",
+  "releaseNotes": "New brighter cards for every customer message.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "87fa5c6727c5344ebcd4dd09bceda719e161e7b3fb8297b679f5d108ff64fb3d",
+  "sha256": "",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
-    "Thank-you opens the correct WhatsApp chat using the number from the enquiry"
+    "Ivory customer cards for first contact, follow-up, reminders, thank-you, and yearly wishes"
   ],
   "bugFixes": [
-    "Fixed WhatsApp asking whom to send when thanking a completed booking"
+    "Unified We Decor greeting and first-name Follow Up WhatsApp copy"
   ]
 }

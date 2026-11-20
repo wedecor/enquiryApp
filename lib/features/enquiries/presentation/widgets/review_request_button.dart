@@ -136,7 +136,7 @@ class _ReviewRequestButtonState extends ConsumerState<ReviewRequestButton> {
       final result = await OccasionCardShare.share(
         context: context,
         launcher: launcher,
-        content: WishCardContent.thankYou(
+        content: CustomerCardContent.thankYou(
           customerName: widget.customerName,
           eventTypeLabel: widget.eventTypeLabel,
         ),

@@ -6,6 +6,8 @@ import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/contacts/enquiry_whatsapp.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../../settings/domain/app_config.dart';
+import '../../../settings/providers/settings_providers.dart';
 import 'enquiry_round_action.dart';
 
 /// Contact action buttons for calling and messaging customers
@@ -23,6 +25,7 @@ class ContactButtons extends ConsumerWidget {
     this.eventType,
     this.eventDate,
     this.firstContact = true,
+    this.shareCard = true,
   });
 
   /// Voice / dialer number.
@@ -38,6 +41,9 @@ class ContactButtons extends ConsumerWidget {
 
   /// No prior app contact → first-touch WhatsApp copy.
   final bool firstContact;
+
+  /// Attach the brand/countdown card after opening chat (off in unit tests).
+  final bool shareCard;
 
   String? get _waPhone {
     final wa = whatsappPhone?.trim();
@@ -186,6 +192,12 @@ class ContactButtons extends ConsumerWidget {
     String phone,
   ) async {
     try {
+      AppGeneralConfig? config;
+      try {
+        config = ref.read(appGeneralConfigProvider).valueOrNull;
+      } catch (_) {
+        config = null;
+      }
       final status = await EnquiryWhatsApp.open(
         launcher: contactLauncher,
         phone: phone,
@@ -194,6 +206,9 @@ class ContactButtons extends ConsumerWidget {
         eventTypeLabel: eventType,
         eventDate: eventDate,
         firstContact: firstContact,
+        shareCard: shareCard,
+        websiteUrl: config?.websiteUrl,
+        instagramHandle: config?.instagramHandle,
       );
 
       if (!context.mounted) return;

@@ -23,6 +23,7 @@ import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/enquiry_prefill.dart';
 import '../../domain/event_functions.dart';
+import '../../../settings/providers/settings_providers.dart';
 import '../widgets/enquiry_access_denied.dart';
 import '../widgets/enquiry_detail_footer.dart';
 import '../widgets/enquiry_details_body.dart';
@@ -292,6 +293,7 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
               onWhatsApp: (whatsappNumber == null || whatsappNumber.trim().isEmpty)
                   ? null
                   : () async {
+                      final config = ref.read(appGeneralConfigProvider).valueOrNull;
                       await EnquiryWhatsApp.open(
                         launcher: ref.read(contactLauncherProvider),
                         phone: whatsappNumber,
@@ -300,6 +302,8 @@ class _EnquiryDetailsScreenState extends ConsumerState<EnquiryDetailsScreen> {
                         eventTypeLabel: labels.eventTypeLabel,
                         eventDate: eventDate,
                         firstContact: EnquiryWhatsApp.isFirstContactFrom(enquiryData),
+                        websiteUrl: config?.websiteUrl,
+                        instagramHandle: config?.instagramHandle,
                       );
                     },
               onEdit: userRole == UserRole.admin ? _openEdit : null,

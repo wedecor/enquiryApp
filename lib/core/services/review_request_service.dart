@@ -50,7 +50,7 @@ class ReviewRequestService {
   }
 
   /// Text-only WhatsApp launch (no thank-you card). Prefer [OccasionCardShare].
-  @Deprecated('Use OccasionCardShare.share with WishCardContent.thankYou instead')
+  @Deprecated('Use OccasionCardShare.share with CustomerCardContent.thankYou instead')
   Future<ContactLaunchStatus> sendReviewRequest({
     required String customerPhone,
     required String customerName,

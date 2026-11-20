@@ -211,7 +211,7 @@ class __$$AppGeneralConfigImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$AppGeneralConfigImpl implements _AppGeneralConfig {
   const _$AppGeneralConfigImpl({
-    this.companyName = 'WeDecor Events',
+    this.companyName = 'We Decor',
     this.logoUrl,
     this.currency = 'INR',
     this.timezone = 'Asia/Kolkata',

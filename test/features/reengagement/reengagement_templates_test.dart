@@ -16,7 +16,7 @@ void main() {
       date: dec12,
       person: person,
       eventType: event,
-      business: 'We Decor Events',
+      business: 'We Decor',
     );
   }
 
@@ -27,7 +27,7 @@ void main() {
         'Hi Ayesha, your 2nd wedding anniversary is just around the corner. It feels like '
         'only yesterday we were part of your big day. Wishing you both a wonderful '
         'celebration and many happy years ahead. If we can help make the day special in any '
-        "way, we're just a message away. Warm wishes from We Decor Events.",
+        "way, we're just a message away. Warm wishes from We Decor.",
       );
     });
 
@@ -54,7 +54,7 @@ void main() {
             date: dec12,
             person: 'Aarav',
             eventType: 'Wedding',
-            business: 'We Decor Events',
+            business: 'We Decor',
           ).toLowerCase();
           for (final word in ['₹', 'discount', 'offer', 'book', 'price', 'decorat']) {
             expect(text, isNot(contains(word)), reason: '${kind.value} enquired=$enquired');
@@ -124,7 +124,7 @@ void main() {
       expect(text, 'Wishing your loved one well');
     });
 
-    test('event type is lower-cased; business falls back to We Decor Events', () {
+    test('event type is lower-cased; business falls back to We Decor', () {
       final text = ReengagementTemplates.render(
         ReengagementTemplates.defaults[OccasionKind.celebration]!,
         customerName: '',
@@ -135,7 +135,7 @@ void main() {
       );
       expect(text, startsWith('Hi there, thinking of you as this time of year comes round again.'));
       expect(text, contains('your diwali party'));
-      expect(text, endsWith('Warm wishes from We Decor Events.'));
+      expect(text, endsWith('Warm wishes from We Decor.'));
     });
 
     test('nth below 1 is rendered as 1st', () {
@@ -149,7 +149,7 @@ void main() {
       for (final kind in OccasionKind.values) {
         final text = render(kind, person: 'Aarav');
         expect(text, isNot(contains('{')), reason: kind.value);
-        expect(text, endsWith('We Decor Events.'), reason: kind.value);
+        expect(text, endsWith('We Decor.'), reason: kind.value);
       }
     });
   });
