@@ -4,7 +4,7 @@
   "releaseDate": "2026-11-20",
   "releaseNotes": "Fix: customer card image attaches again with WhatsApp messages.",
   "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "30f0658162e4bc31355526e4987ce5cc84ec374c35d47410c8708ed242fa93e8",
+  "sha256": "31cfbf7c50ccce3e02c2be6ace4b7f45a78bc1b85f717696c796f974d18c13f5",
   "forceUpdate": false,
   "minSupportedBuildNumber": 63,
   "features": [
