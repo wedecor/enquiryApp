@@ -291,10 +291,11 @@ String buildReminderMessage(
   String customerName,
   String eventType,
   DateTime createdAt,
-  DateTime? eventDate,
-) {
-  final now = DateTime.now();
-  final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, now) : null;
+  DateTime? eventDate, {
+  DateTime? now,
+}) {
+  final clock = now ?? DateTime.now();
+  final daysUntilEvent = eventDate != null ? eventDayOffset(eventDate, clock) : null;
   final first = customerName.trim().isEmpty ? '' : customerName.trim().split(RegExp(r'\s+')).first;
   final hello = first.isEmpty ? 'Hi' : 'Hi $first';
   final event = eventType.trim().isEmpty ? 'celebration' : eventType.trim().toLowerCase();

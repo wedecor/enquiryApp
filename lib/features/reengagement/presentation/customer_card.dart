@@ -134,35 +134,23 @@ class CustomerCardContent {
     );
   }
 
-  /// Builds ["{prefix}", "to Your {Event}"] or ["{prefix}", "Your {Event}"] /
-  /// fallbacks when line 2 is too long for the min headline size.
+  /// Builds ["{prefix}", "to Your {Event}"] / ["Your {Event}"] with fallbacks
+  /// when the event label is unusually long (renderer still shrinks to fit).
   static List<String> _countdownHeadline({
     required String prefix,
     required String event,
     bool toForm = false,
   }) {
-    final candidates = toForm
-        ? <String>['to Your $event', 'to $event', 'to the Big Day']
-        : <String>['Your $event', event, 'the Big Day'];
-    for (final line2 in candidates) {
-      if (_headlineFitsAtMin(line2)) {
-        return [prefix, line2];
-      }
+    // Prefer the natural line; only drop words for very long event labels.
+    final long = event.length > 28;
+    if (toForm) {
+      if (!long) return [prefix, 'to Your $event'];
+      if (event.length <= 36) return [prefix, 'to $event'];
+      return [prefix, 'to the Big Day'];
     }
-    return [prefix, candidates.last];
-  }
-
-  static bool _headlineFitsAtMin(String text) {
-    // Approximate with Cormorant Medium metrics; renderer will shrink further.
-    final painter = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(fontSize: 72, fontFamily: 'serif', height: 1.0),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    )..layout();
-    return painter.width <= CustomerCardRenderer.maxTextWidth;
+    if (!long) return [prefix, 'Your $event'];
+    if (event.length <= 36) return [prefix, event];
+    return [prefix, 'the Big Day'];
   }
 
   // ---------------------------------------------------------------------------
