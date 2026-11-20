@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:we_decor_enquiries/core/contacts/contact_launcher.dart';
 import 'package:we_decor_enquiries/features/enquiries/presentation/widgets/contact_buttons.dart';
+import 'package:we_decor_enquiries/features/settings/domain/app_config.dart';
+import 'package:we_decor_enquiries/features/settings/providers/settings_providers.dart';
 
 void main() {
   group('ContactButtons Widget Tests', () {
@@ -185,13 +187,19 @@ void main() {
 
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [contactLauncherProvider.overrideWith((ref) => mockLauncher)],
+            overrides: [
+              contactLauncherProvider.overrideWith((ref) => mockLauncher),
+              appGeneralConfigProvider.overrideWith(
+                (ref) => Stream.value(const AppGeneralConfig()),
+              ),
+            ],
             child: const MaterialApp(
               home: Scaffold(
                 body: ContactButtons(
                   customerPhone: '+919876543210',
                   customerName: 'Jane Smith',
                   enquiryId: 'test-enquiry-456',
+                  shareCard: false,
                 ),
               ),
             ),
@@ -200,13 +208,14 @@ void main() {
 
         // Tap the WhatsApp button
         await tester.tap(find.text('WhatsApp'));
-        await tester.pumpAndSettle();
+        await tester.pump(); // start async open
+        await tester.pump(const Duration(milliseconds: 50));
 
-        // Verify the launcher was called with correct parameters
+        // Verify the launcher was called with first-name greetings copy
         expect(whatsappLauncherCalled, isTrue);
         expect(calledNumber, '+919876543210');
-        expect(prefillText, contains('Hi Jane Smith'));
-        expect(prefillText, contains('We Decor'));
+        expect(prefillText, contains('Hi Jane'));
+        expect(prefillText, contains('greetings from We Decor'));
       });
 
       testWidgets('disabled buttons do not trigger actions', (tester) async {
