@@ -456,7 +456,12 @@ class CustomerCardRenderer {
     await GoogleFonts.pendingFonts();
 
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, logicalSize, logicalSize));
+    // Cull in pixel space (after scale(2) logical 1080 → 2160). A 1080 cull
+    // clipped the lower half of every card (divider / body / sign-off).
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, pixelSize.toDouble(), pixelSize.toDouble()),
+    );
     canvas.scale(2);
 
     // Fill + frames in logical space (scale already applied).
