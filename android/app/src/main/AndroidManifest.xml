@@ -13,6 +13,11 @@
     <!-- Notification permissions (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
+    <!-- Save customer numbers as device-only contacts so WhatsApp card shares
+         can target the chat with jid (no Google sync). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
+
     <application
         android:label="We Decor"
         android:name="${applicationName}"

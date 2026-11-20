@@ -10,6 +10,7 @@ import '../../domain/user_settings.dart';
 import '../../providers/settings_providers.dart';
 import '../../../../ui/components/glass_state_message.dart';
 import '../widgets/settings_layout.dart';
+import 'widgets/save_customers_to_contacts_setting.dart';
 
 class PreferencesTab extends ConsumerStatefulWidget {
   const PreferencesTab({super.key});
@@ -59,6 +60,7 @@ class _PreferencesTabState extends ConsumerState<PreferencesTab> {
             padding: EdgeInsets.only(top: AppTokens.space4),
             child: AppearanceSetting(),
           ),
+          const SaveCustomersToContactsSetting(),
           _buildLanguageSection(context),
           _buildTimezoneSection(context),
         ],
