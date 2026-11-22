@@ -439,6 +439,12 @@ service cloud.firestore {
         allow read, write: if isAdmin();
       }
 
+      // EventOS sync bookkeeping (M5-01). Admin SDK only — clients must never
+      // read or write; writing here must not go through client rules.
+      match /private/{docId} {
+        allow read, write: if false;
+      }
+
       // Contact log (calls / WhatsApp made from the app) — append-only.
       match /contacts/{contactId} {
         allow read: if isAdmin()
