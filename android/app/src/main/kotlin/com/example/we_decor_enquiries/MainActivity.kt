@@ -1,10 +1,12 @@
 package com.example.we_decor_enquiries
 
 import android.Manifest
+import android.accounts.AccountManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ContentProviderOperation
+import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -223,20 +225,60 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private data class ContactAccount(val name: String?, val type: String?)
+
     /**
-     * Inserts a device-only contact (null account — not synced to Google).
+     * Accounts to try when inserting. Google first (shows in Google Contacts),
+     * then common OEM "Phone" buckets, then null (device-only).
      * Never updates or deletes existing contacts.
      */
+    private fun contactAccountCandidates(): List<ContactAccount> {
+        val out = ArrayList<ContactAccount>()
+        try {
+            val am = AccountManager.get(this)
+            for (type in listOf("com.google", "com.google.android.gm.exchange")) {
+                for (acc in am.getAccountsByType(type)) {
+                    out.add(ContactAccount(acc.name, acc.type))
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "AccountManager lookup failed", e)
+        }
+        // OEM local buckets — visible under Phone/Device in many Contacts apps.
+        out.add(ContactAccount("Phone", "com.android.localphone"))
+        out.add(ContactAccount("Phone", "vnd.sec.contact.phone"))
+        out.add(ContactAccount("Phone", "com.android.contacts.default"))
+        out.add(ContactAccount("Phone", "com.xiaomi"))
+        out.add(ContactAccount(null, null))
+        return out.distinctBy { "${it.type}|${it.name}" }
+    }
+
+    /**
+     * Inserts a contact that PhoneLookup can see. Tries Google / OEM / device
+     * accounts until the number is findable. Never updates existing rows.
+     */
     private fun saveContact(name: String, phone: String): Boolean {
+        val digits = repairWhatsAppDigits(phone)
+        if (digits.length !in 11..15) return false
+        if (isInContacts(digits)) return true
+        val display = name.trim().ifEmpty { "+$digits" }
+        for (account in contactAccountCandidates()) {
+            if (insertContact(display, digits, account) && isInContacts(digits)) {
+                Log.i(TAG, "saveContact ok accountType=${account.type}")
+                return true
+            }
+        }
+        Log.w(TAG, "saveContact: wrote but PhoneLookup still misses digits len=${digits.length}")
+        return false
+    }
+
+    private fun insertContact(display: String, digits: String, account: ContactAccount): Boolean {
         return try {
-            val digits = repairWhatsAppDigits(phone)
-            if (digits.length !in 11..15) return false
-            val display = name.trim().ifEmpty { "+$digits" }
             val ops = ArrayList<ContentProviderOperation>()
             ops.add(
                 ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
-                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
-                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, account.type)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, account.name)
                     .build(),
             )
             ops.add(
@@ -248,6 +290,10 @@ class MainActivity : FlutterActivity() {
                     )
                     .withValue(
                         ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME,
+                        display,
+                    )
+                    .withValue(
+                        ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME,
                         display,
                     )
                     .build(),
@@ -266,10 +312,41 @@ class MainActivity : FlutterActivity() {
                     )
                     .build(),
             )
-            contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
-            true
+            // National form helps PhoneLookup / dialer on Indian devices.
+            if (digits.length >= 10) {
+                ops.add(
+                    ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                        .withValue(
+                            ContactsContract.Data.MIMETYPE,
+                            ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE,
+                        )
+                        .withValue(
+                            ContactsContract.CommonDataKinds.Phone.NUMBER,
+                            digits.takeLast(10),
+                        )
+                        .withValue(
+                            ContactsContract.CommonDataKinds.Phone.TYPE,
+                            ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE,
+                        )
+                        .build(),
+                )
+            }
+            ops.add(
+                ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                    .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                    .withValue(
+                        ContactsContract.Data.MIMETYPE,
+                        ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE,
+                    )
+                    .withValue(ContactsContract.CommonDataKinds.Organization.COMPANY, "We Decor")
+                    .build(),
+            )
+            val results = contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
+            val uri = results.getOrNull(0)?.uri ?: return false
+            ContentUris.parseId(uri) > 0
         } catch (e: Exception) {
-            Log.w(TAG, "saveContact failed", e)
+            Log.w(TAG, "insertContact failed accountType=${account.type}", e)
             false
         }
     }
