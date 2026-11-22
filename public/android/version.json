@@ -1,18 +1,17 @@
 {
-  "version": "2.0.49",
-  "buildNumber": 80,
-  "releaseDate": "2026-11-20",
-  "releaseNotes": "New leads: one-tap WhatsApp with greeting text only (no empty chat). Bold We Decor and event type. Saves device contact as Name \u2013 We Decor \u00b7 event date when allowed.",
-  "downloadUrl": "https://wedecorenquries.web.app/android/app-release.apk",
-  "sha256": "7057bbdb35297803912fc073c0ca5af81164deebd7c33f4facd880688e501fda",
-  "forceUpdate": false,
-  "minSupportedBuildNumber": 63,
+  "version": "2.0.57",
+  "buildNumber": 88,
+  "releaseDate": "2026-11-22",
+  "releaseNotes": "First WhatsApp open on a phone: text + number only (saves contact if allowed). Image card on later opens. Use the versioned download link.",
+  "downloadUrl": "https://wedecorenquries.web.app/android/we-decor-enquiries-2.0.57-88.apk",
+  "sha256": "0124261102f28e3e90e757adb480a2dad625be7cf5e8b962828d36b92d3a1078",
+  "forceUpdate": true,
+  "minSupportedBuildNumber": 88,
   "features": [
-    "New-query WhatsApp opens with prefilled greeting in one tap",
-    "Contact saved as Name \u2013 We Decor \u00b7 date (device-only) when permitted"
+    "First WhatsApp tap: text-only with number attached",
+    "Saves contact on first WhatsApp open when permission allows"
   ],
   "bugFixes": [
-    "No more empty WhatsApp chat for brand-new numbers",
-    "Removed two-step Send card for new queries"
+    "Avoids Forward sheet with no number on first open on another staff phone"
   ]
 }

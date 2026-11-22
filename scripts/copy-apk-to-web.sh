@@ -6,39 +6,51 @@ set -e
 
 echo "📱 Copying APK to web build directory..."
 
-# Create android directory in build/web if it doesn't exist
 mkdir -p build/web/android
 
-# Copy APK from build directory
-if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-    cp build/app/outputs/flutter-apk/app-release.apk build/web/android/app-release.apk
-    echo "✅ APK copied successfully"
-    
-    # Get APK size
-    APK_SIZE=$(ls -lh build/app/outputs/flutter-apk/app-release.apk | awk '{print $5}')
-    echo "   Size: $APK_SIZE"
-else
-    # Don't build here: a predeploy build without the release keystore would
-    # ship a debug-signed APK that existing installs can't update to.
-    echo "❌ APK not found at build/app/outputs/flutter-apk/app-release.apk"
+SRC="build/app/outputs/flutter-apk/app-release.apk"
+if [ ! -f "$SRC" ]; then
+    echo "❌ APK not found at $SRC"
     echo "   Build it first: flutter build apk --release (with the release keystore)"
     exit 1
 fi
 
-# Copy version.json if it exists
-if [ -f "public/android/version.json" ]; then
-    cp public/android/version.json build/web/android/version.json
-    echo "✅ version.json copied"
+# Versioned filename from version.json (avoids Chrome reusing an old Downloads/app-release.apk)
+VERSION_JSON="public/android/version.json"
+APK_NAME="app-release.apk"
+if [ -f "$VERSION_JSON" ]; then
+  APK_NAME=$(node -e '
+    const j=require("./public/android/version.json");
+    const v=j.version||"0";
+    const b=j.buildNumber||0;
+    console.log(`we-decor-enquiries-${v}-${b}.apk`);
+  ')
 fi
 
-# Copy detailed index.html from public/android if it exists, otherwise create a simple one
+cp "$SRC" "build/web/android/$APK_NAME"
+cp "$SRC" "build/web/android/app-release.apk"
+cp "$SRC" "public/android/$APK_NAME"
+cp "$SRC" "public/android/app-release.apk"
+
+# Point downloadUrl at the versioned file
+if [ -f "$VERSION_JSON" ]; then
+  node -e '
+    const fs=require("fs");
+    const p="public/android/version.json";
+    const j=JSON.parse(fs.readFileSync(p,"utf8"));
+    const name=process.argv[1];
+    j.downloadUrl="https://wedecorenquries.web.app/android/"+name;
+    fs.writeFileSync(p, JSON.stringify(j,null,2)+"\n");
+    fs.copyFileSync(p, "build/web/android/version.json");
+  ' "$APK_NAME"
+fi
+
+APK_SIZE=$(ls -lh "$SRC" | awk '{print $5}')
+echo "✅ APK copied as $APK_NAME and app-release.apk ($APK_SIZE)"
+
 if [ -f "public/android/index.html" ]; then
     cp public/android/index.html build/web/android/index.html
     echo "✅ Detailed index.html copied from public/android/"
-    
-    # Update the download URL in index.html to point to app-release.apk
-    sed -i '' 's|href="[^"]*\.apk"|href="app-release.apk"|g' build/web/android/index.html 2>/dev/null || \
-    sed -i 's|href="[^"]*\.apk"|href="app-release.apk"|g' build/web/android/index.html
 else
     echo "📄 Creating simple index.html..."
     cat > build/web/android/index.html << 'EOF'
@@ -48,70 +60,18 @@ else
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Download We Decor Enquiries APK</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-        }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            text-align: center;
-            max-width: 500px;
-        }
-        h1 {
-            margin-top: 0;
-            color: #667eea;
-        }
-        .download-btn {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: #667eea;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .info {
-            margin-top: 1.5rem;
-            color: #666;
-            font-size: 0.9rem;
-        }
-    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📱 We Decor Enquiries</h1>
-        <p>Download the Android app</p>
-        <a href="app-release.apk" class="download-btn" download>Download APK</a>
-        <div class="info">
-            <p><strong>Version:</strong> 2.0.5 (Build 29)</p>
-            <p><strong>Size:</strong> ~59 MB</p>
-            <p style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
-                After downloading, enable "Install from unknown sources" in your Android settings to install the APK.
-            </p>
-        </div>
-    </div>
+    <h1>We Decor Enquiries</h1>
+    <p><a id="apkLink" href="app-release.apk">Download APK</a></p>
+    <script>
+      fetch('version.json').then(r=>r.json()).then(v=>{
+        document.getElementById('apkLink').href = v.downloadUrl;
+      });
+    </script>
 </body>
 </html>
 EOF
-    echo "✅ Simple index.html created"
 fi
 
 echo "✅ APK setup complete for web deployment"
-
