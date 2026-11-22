@@ -8,12 +8,7 @@ import '../logging/logger.dart';
 import 'eventos_config.dart';
 
 /// Connection state for the EventOS bridge (admin tile only).
-enum EventosConnectionState {
-  disabled,
-  connected,
-  notLinked,
-  disconnected,
-}
+enum EventosConnectionState { disabled, connected, notLinked, disconnected }
 
 class EventosUser {
   const EventosUser({
@@ -34,9 +29,7 @@ class EventosUser {
       id: (json['id'] ?? json['userId'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       role: (json['role'] ?? '').toString(),
-      permissions: permissions is List
-          ? permissions.map((e) => e.toString()).toList()
-          : const [],
+      permissions: permissions is List ? permissions.map((e) => e.toString()).toList() : const [],
     );
   }
 }
@@ -65,9 +58,7 @@ class EventosAuth {
   }) : _auth = firebaseAuth ?? FirebaseAuth.instance,
        _storage =
            secureStorage ??
-           const FlutterSecureStorage(
-             aOptions: AndroidOptions(encryptedSharedPreferences: true),
-           ),
+           const FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true)),
        _http = httpClient ?? http.Client(),
        _idTokenProvider = idTokenProvider;
 
@@ -112,7 +103,7 @@ class EventosAuth {
       _user = null;
       return null;
     } catch (e) {
-      Log.w('eventos_auth_failed', data: {'error': e.toString()}, tag: 'eventos');
+      Log.w('eventos_auth_failed', data: {'error': e.toString()});
       _state = EventosConnectionState.disconnected;
       _accessToken = null;
       return null;
@@ -131,7 +122,7 @@ class EventosAuth {
       _state = EventosConnectionState.notLinked;
       return null;
     } catch (e) {
-      Log.w('eventos_test_failed', data: {'error': e.toString()}, tag: 'eventos');
+      Log.w('eventos_test_failed', data: {'error': e.toString()});
       _state = EventosConnectionState.disconnected;
       return null;
     }
@@ -152,7 +143,7 @@ class EventosAuth {
       _state = EventosConnectionState.notLinked;
       return null;
     } catch (e) {
-      Log.w('eventos_recover_failed', data: {'error': e.toString()}, tag: 'eventos');
+      Log.w('eventos_recover_failed', data: {'error': e.toString()});
       _state = EventosConnectionState.disconnected;
       return null;
     }
@@ -260,7 +251,8 @@ class EventosAuth {
   }
 
   Future<String?> _resolveIdToken() async {
-    if (_idTokenProvider != null) return _idTokenProvider!();
+    final provider = _idTokenProvider;
+    if (provider != null) return provider();
     final firebaseUser = _auth.currentUser;
     if (firebaseUser == null) return null;
     return firebaseUser.getIdToken(true);

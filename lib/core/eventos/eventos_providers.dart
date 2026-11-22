@@ -40,8 +40,7 @@ class EventosConnectionSnapshot {
 }
 
 class EventosConnectionController extends StateNotifier<EventosConnectionSnapshot> {
-  EventosConnectionController(this._auth)
-    : super(EventosConnectionSnapshot.initial());
+  EventosConnectionController(this._auth) : super(EventosConnectionSnapshot.initial());
 
   final EventosAuth _auth;
 
@@ -71,8 +70,6 @@ class EventosConnectionController extends StateNotifier<EventosConnectionSnapsho
 }
 
 final eventosConnectionProvider =
-    StateNotifierProvider<EventosConnectionController, EventosConnectionSnapshot>((
-      ref,
-    ) {
+    StateNotifierProvider<EventosConnectionController, EventosConnectionSnapshot>((ref) {
       return EventosConnectionController(ref.watch(eventosAuthProvider));
     });

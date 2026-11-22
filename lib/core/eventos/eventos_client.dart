@@ -8,11 +8,9 @@ import 'eventos_config.dart';
 
 /// Authenticated HTTP client for EventOS. Retries once after refresh / re-exchange on 401.
 class EventosClient {
-  EventosClient({
-    required EventosAuth auth,
-    http.Client? httpClient,
-  }) : _auth = auth,
-       _http = httpClient ?? http.Client();
+  EventosClient({required EventosAuth auth, http.Client? httpClient})
+    : _auth = auth,
+      _http = httpClient ?? http.Client();
 
   final EventosAuth _auth;
   final http.Client _http;
@@ -42,7 +40,7 @@ class EventosClient {
     final res = await _raw(method, relativePath, token: token, body: body);
     if (res.statusCode != 401 || isRetry) return res;
 
-    Log.i('eventos_http_401_recover', tag: 'eventos');
+    Log.i('eventos_http_401_recover');
     final recovered = await _auth.recoverFromUnauthorized();
     if (recovered == null) return res;
     return _send(method, relativePath, body: body, isRetry: true);

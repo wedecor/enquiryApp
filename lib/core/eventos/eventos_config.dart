@@ -17,8 +17,7 @@ class EventosConfig {
   @visibleForTesting
   static String? debugApiBaseUrlOverride;
 
-  static String get apiBaseUrl =>
-      (debugApiBaseUrlOverride ?? _apiBaseUrlDefine).trim();
+  static String get apiBaseUrl => (debugApiBaseUrlOverride ?? _apiBaseUrlDefine).trim();
 
   static bool get isConfigured => apiBaseUrl.isNotEmpty;
 
