@@ -59,11 +59,7 @@ class _MemoryStorage implements FlutterSecureStorage {
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError('$invocation');
 }
 
-Map<String, dynamic> _sessionBody({
-  required String access,
-  required String refresh,
-  String? code,
-}) {
+Map<String, dynamic> _sessionBody({required String access, required String refresh, String? code}) {
   if (code != null) {
     return {
       'error': {'code': code, 'message': 'denied'},
@@ -88,8 +84,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    EventosConfig.debugApiBaseUrlOverride =
-        'https://eventos-api-staging.test';
+    EventosConfig.debugApiBaseUrlOverride = 'https://eventos-api-staging.test';
   });
   tearDown(() {
     EventosConfig.debugApiBaseUrlOverride = null;
@@ -106,9 +101,7 @@ void main() {
       expect(map['refreshToken'], isNot(contains('super-secret')));
       expect(map['authorization'], isNot(contains('Bearer abc')));
 
-      final free = formatLogData({
-        'note': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb',
-      });
+      final free = formatLogData({'note': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb'});
       expect(free, isNot(contains('eyJhbGciOi')));
     });
   });

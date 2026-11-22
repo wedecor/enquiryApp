@@ -19,15 +19,10 @@ void main() {
   });
 
   testWidgets('shows connected user after controller update', (tester) async {
-    late EventosConnectionController controller;
+    final controller = EventosConnectionController(EventosAuth());
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          eventosConnectionProvider.overrideWith((ref) {
-            controller = EventosConnectionController(EventosAuth());
-            return controller;
-          }),
-        ],
+        overrides: [eventosConnectionProvider.overrideWith((ref) => controller)],
         child: const MaterialApp(home: Scaffold(body: EventosConnectionTile())),
       ),
     );
@@ -51,15 +46,10 @@ void main() {
   });
 
   testWidgets('shows not_linked state', (tester) async {
-    late EventosConnectionController controller;
+    final controller = EventosConnectionController(EventosAuth());
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          eventosConnectionProvider.overrideWith((ref) {
-            controller = EventosConnectionController(EventosAuth());
-            return controller;
-          }),
-        ],
+        overrides: [eventosConnectionProvider.overrideWith((ref) => controller)],
         child: const MaterialApp(home: Scaffold(body: EventosConnectionTile())),
       ),
     );

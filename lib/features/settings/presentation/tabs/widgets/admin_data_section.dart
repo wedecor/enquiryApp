@@ -75,9 +75,7 @@ class DataIntegrationsTab extends ConsumerWidget {
         const SettingsGroup(
           eyebrow: 'Backend',
           title: 'EventOS',
-          children: [
-            EventosConnectionTile(),
-          ],
+          children: [EventosConnectionTile()],
         ),
         SettingsGroup(
           eyebrow: 'Messaging',

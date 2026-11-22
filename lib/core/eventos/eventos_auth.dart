@@ -55,7 +55,7 @@ class EventosAuth {
     FlutterSecureStorage? secureStorage,
     http.Client? httpClient,
     Future<String?> Function()? idTokenProvider,
-  }) : _auth = firebaseAuth ?? FirebaseAuth.instance,
+  }) : _authOverride = firebaseAuth,
        _storage =
            secureStorage ??
            const FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true)),
@@ -64,10 +64,13 @@ class EventosAuth {
 
   static const _refreshKey = 'eventos_refresh_token';
 
-  final FirebaseAuth _auth;
+  final FirebaseAuth? _authOverride;
   final FlutterSecureStorage _storage;
   final http.Client _http;
   final Future<String?> Function()? _idTokenProvider;
+
+  /// Lazily resolved so unit tests that inject [idTokenProvider] never need Firebase.
+  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
 
   String? _accessToken;
   EventosUser? _user;
