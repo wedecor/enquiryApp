@@ -32,10 +32,9 @@ void main() {
         eventDate: event,
         now: DateTime(2026, 1, 5),
       )!;
-      expect(c.eyebrow, 'COUNTING DOWN');
+      expect(c.eyebrow, 'COMING UP');
       expect(c.greeting, 'Dear Priya,');
-      expect(c.headlineLines.first, 'Ten Days');
-      expect(c.headlineLines.last, contains('Wedding'));
+      expect(c.headlineLines, ['10 days to your', 'Wedding']);
       expect(c.bodyLine, 'Thursday, 15 January 2026');
     });
 
@@ -46,8 +45,8 @@ void main() {
           eventTypeLabel: 'Wedding',
           eventDate: event,
           now: DateTime(2026, 1, 13),
-        )!.headlineLines.first,
-        'Two Days',
+        )!.headlineLines,
+        ['2 days to your', 'Wedding'],
       );
       final tomorrow = CustomerCardContent.countdown(
         customerName: name,
@@ -55,16 +54,16 @@ void main() {
         eventDate: event,
         now: DateTime(2026, 1, 14),
       )!;
-      expect(tomorrow.eyebrow, 'ALMOST TIME');
-      expect(tomorrow.headlineLines, ['Tomorrow is', 'Your Wedding']);
+      expect(tomorrow.eyebrow, 'TOMORROW');
+      expect(tomorrow.headlineLines, ['Tomorrow is your', 'Wedding']);
       final today = CustomerCardContent.countdown(
         customerName: name,
         eventTypeLabel: 'Wedding',
         eventDate: event,
         now: DateTime(2026, 1, 15),
       )!;
-      expect(today.eyebrow, 'THE DAY IS HERE');
-      expect(today.headlineLines, ['Today is', 'Your Wedding']);
+      expect(today.eyebrow, 'TODAY');
+      expect(today.headlineLines, ['Today is your', 'Wedding']);
     });
 
     test('no usable date returns null; unknown event → Celebration', () {
@@ -83,7 +82,7 @@ void main() {
         eventDate: event,
         now: DateTime(2026, 1, 5),
       )!;
-      expect(c.headlineLines, ['Ten Days', 'to Your Celebration']);
+      expect(c.headlineLines, ['10 days to your', 'Celebration']);
     });
 
     test('no name hides greeting', () {
@@ -99,15 +98,14 @@ void main() {
 
   group('tables D and E', () {
     test('past wedding / birthday person / home / corporate', () {
-      expect(
-        CustomerCardContent.forOccasion(
-          kind: OccasionKind.weddingAnniversary,
-          customerName: 'Priya',
-          nth: 10,
-          enquired: false,
-        ).headlineLines.first,
-        'Tenth Anniversary',
+      final wedding = CustomerCardContent.forOccasion(
+        kind: OccasionKind.weddingAnniversary,
+        customerName: 'Priya',
+        nth: 10,
+        enquired: false,
       );
+      expect(wedding.headlineLines.first, 'Anniversary coming up');
+      expect(wedding.bodyLine, 'Wishing you both a wonderful celebration ahead.');
       final bday = CustomerCardContent.forOccasion(
         kind: OccasionKind.birthday,
         customerName: 'Priya',
@@ -115,9 +113,9 @@ void main() {
         enquired: false,
         person: 'Aarav',
       );
-      expect(bday.greeting, 'Birthday Wishes');
-      expect(bday.headlineLines, ['Aarav']);
-      expect(bday.bodyLine, 'A wonderful year ahead.');
+      expect(bday.greeting, 'Dear Priya,');
+      expect(bday.headlineLines, ['Birthday coming up']);
+      expect(bday.bodyLine, 'Wishing Aarav a wonderful celebration ahead.');
     });
 
     test('enquired never ordinal / Anniversary+number / it was a joy', () {
@@ -146,7 +144,7 @@ void main() {
         eventTypeLabel: 'Wedding',
       );
       expect(c.greeting, startsWith('Dear Priyadarshini'));
-      expect(c.headlineLines, ['Thank You']);
+      expect(c.headlineLines, ['It was a joy']);
     });
   });
 
@@ -158,7 +156,6 @@ void main() {
         eventTypeLabel: event,
       );
       expect(card.bodyLine, contains('your wedding'));
-      // Message builder lower-cases the same label.
       expect(event.toLowerCase(), 'wedding');
     });
 
@@ -176,13 +173,12 @@ void main() {
       expect(msg.toLowerCase(), contains('wedding'));
       expect(msg, contains('Hi Priya'));
       expect(msg, contains('15 Jan 2026'));
-      expect(card.headlineLines.first, 'Ten Days');
-      // Same N the card spells out appears as digits in the message.
+      expect(card.headlineLines, ['10 days to your', 'Wedding']);
       expect(msg, contains('in ${eventDayOffset(event, now)} days'));
       expect(eventDayOffset(event, now), 10);
     });
 
-    test('enquiry first-contact date bit matches card brand (no personal date)', () {
+    test('enquiry first-contact card is personalised with name and date', () {
       final event = DateTime(2026, 1, 15);
       final msg = EnquiryWhatsApp.message(
         customerName: 'Priya Sharma',
@@ -196,7 +192,11 @@ void main() {
         eventTypeLabel: 'Wedding',
         eventDate: event,
       );
-      expect(card.layout, CustomerCardLayout.brand);
+      expect(card.layout, CustomerCardLayout.standard);
+      expect(card.eyebrow, 'WE DECOR');
+      expect(card.greeting, 'Dear Priya,');
+      expect(card.headlineLines, ['Wedding enquiry']);
+      expect(card.bodyLine, '15 January 2026');
     });
 
     test('follow-up countdown card uses same event title case as message lowercases', () {
@@ -235,8 +235,8 @@ void main() {
       // Sample near centre (inside frame): expect ivory ground #FBF7EF.
       final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
       expect(bytes, isNotNull);
-      final cx = 1080;
-      final cy = 100; // top band under frame — ground fill
+      const cx = 1080;
+      const cy = 100; // top band under frame — ground fill
       final i = (cy * image.width + cx) * 4;
       final r = bytes!.getUint8(i);
       final g = bytes.getUint8(i + 1);

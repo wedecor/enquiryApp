@@ -46,10 +46,10 @@ class CustomerCardContent {
   final String? websiteLine;
 
   // ---------------------------------------------------------------------------
-  // A — Brand
+  // A — Brand (logo lockup) + enquiry greeting
   // ---------------------------------------------------------------------------
 
-  /// Non-personalised We Decor card (flows 1–2, and flow 3 when date missing).
+  /// Logo lockup only (website / Instagram). Prefer [enquiry] for WhatsApp outreach.
   static CustomerCardContent brand({String? websiteUrl, String? instagramHandle}) {
     return CustomerCardContent(
       eyebrow: '',
@@ -58,6 +58,27 @@ class CustomerCardContent {
       bodyLine: '',
       layout: CustomerCardLayout.brand,
       websiteLine: _formatWebsiteLine(websiteUrl: websiteUrl, instagramHandle: instagramHandle),
+    );
+  }
+
+  /// Personalised enquiry / normal WhatsApp card.
+  static CustomerCardContent enquiry({
+    required String customerName,
+    String? eventTypeLabel,
+    DateTime? eventDate,
+  }) {
+    final first = ReengagementTemplates.firstName(customerName);
+    final greeting = first == 'there' ? null : 'Dear $first,';
+    final raw = (eventTypeLabel ?? '').trim();
+    final headline = raw.isEmpty ? 'Your enquiry' : '${titleCaseEvent(raw)} enquiry';
+    final body = (eventDate != null && eventDate.year > 1971)
+        ? DateFormat('d MMMM yyyy').format(eventDate)
+        : "We'd love to help plan your day.";
+    return CustomerCardContent(
+      eyebrow: 'WE DECOR',
+      greeting: greeting,
+      headlineLines: [headline],
+      bodyLine: body,
     );
   }
 
@@ -108,49 +129,32 @@ class CustomerCardContent {
 
     if (days == 0) {
       return CustomerCardContent(
-        eyebrow: 'THE DAY IS HERE',
+        eyebrow: 'TODAY',
         greeting: greeting,
-        headlineLines: _countdownHeadline(prefix: 'Today is', event: event),
+        headlineLines: _countdownHeadline(prefix: 'Today is your', event: event),
         bodyLine: dateBody,
       );
     }
     if (days == 1) {
       return CustomerCardContent(
-        eyebrow: 'ALMOST TIME',
+        eyebrow: 'TOMORROW',
         greeting: greeting,
-        headlineLines: _countdownHeadline(prefix: 'Tomorrow is', event: event),
+        headlineLines: _countdownHeadline(prefix: 'Tomorrow is your', event: event),
         bodyLine: dateBody,
       );
     }
     return CustomerCardContent(
-      eyebrow: 'COUNTING DOWN',
+      eyebrow: 'COMING UP',
       greeting: greeting,
-      headlineLines: _countdownHeadline(
-        prefix: '${cardinalWord(days)} Days',
-        event: event,
-        toForm: true,
-      ),
+      headlineLines: _countdownHeadline(prefix: '$days days to your', event: event),
       bodyLine: dateBody,
     );
   }
 
-  /// Builds ["{prefix}", "to Your {Event}"] / ["Your {Event}"] with fallbacks
-  /// when the event label is unusually long (renderer still shrinks to fit).
-  static List<String> _countdownHeadline({
-    required String prefix,
-    required String event,
-    bool toForm = false,
-  }) {
-    // Prefer the natural line; only drop words for very long event labels.
-    final long = event.length > 28;
-    if (toForm) {
-      if (!long) return [prefix, 'to Your $event'];
-      if (event.length <= 36) return [prefix, 'to $event'];
-      return [prefix, 'to the Big Day'];
-    }
-    if (!long) return [prefix, 'Your $event'];
-    if (event.length <= 36) return [prefix, event];
-    return [prefix, 'the Big Day'];
+  /// Builds ["{prefix}", "{Event}"] with a short fallback for very long labels.
+  static List<String> _countdownHeadline({required String prefix, required String event}) {
+    if (event.length > 36) return [prefix, 'celebration'];
+    return [prefix, event];
   }
 
   // ---------------------------------------------------------------------------
@@ -163,10 +167,10 @@ class CustomerCardContent {
     final rawEvent = eventTypeLabel?.trim() ?? '';
     final event = rawEvent.isEmpty ? 'celebration' : rawEvent.toLowerCase();
     return CustomerCardContent(
-      eyebrow: 'WITH GRATITUDE',
+      eyebrow: 'THANK YOU',
       greeting: greeting,
-      headlineLines: const ['Thank You'],
-      bodyLine: 'It was a joy to be part of your $event.',
+      headlineLines: const ['It was a joy'],
+      bodyLine: 'Being part of your $event.',
     );
   }
 
@@ -184,143 +188,67 @@ class CustomerCardContent {
     final who = person?.trim() ?? '';
     final first = ReengagementTemplates.firstName(customerName);
     final dear = first == 'there' ? null : 'Dear $first,';
-    final n = nth < 1 ? 1 : nth;
-    final nthWord = ordinalWord(n);
-
-    if (enquired) {
-      return _enquired(kind: kind, dear: dear, person: who);
-    }
-    return _past(kind: kind, dear: dear, who: who, nthWord: nthWord);
+    // [nth] kept for callers; card copy never shows the year number.
+    return _occasionWish(kind: kind, dear: dear, who: who);
   }
 
-  static CustomerCardContent _past({
+  static const _wishEyebrow = 'WARM WISHES';
+  static const _wishBodyDefault = 'From all of us at We Decor.';
+
+  static CustomerCardContent _wish({
+    required String? dear,
+    required List<String> headlineLines,
+    String? bodyLine,
+  }) {
+    return CustomerCardContent(
+      eyebrow: _wishEyebrow,
+      greeting: dear,
+      headlineLines: headlineLines,
+      bodyLine: bodyLine ?? _wishBodyDefault,
+    );
+  }
+
+  /// Ahead-of-day occasion wish (~10 days early) — no “Happy …” day-of tone,
+  /// no ordinal / year count. [OccasionKind.anniversary] = wedding anniversary.
+  static CustomerCardContent _occasionWish({
     required OccasionKind kind,
     required String? dear,
     required String who,
-    required String nthWord,
   }) {
     switch (kind) {
       case OccasionKind.weddingAnniversary:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU BOTH',
-          greeting: dear,
-          headlineLines: ['$nthWord Anniversary', 'Wishes'],
-          bodyLine: 'Many more happy years together.',
+      case OccasionKind.anniversary:
+        return _wish(
+          dear: dear,
+          headlineLines: const ['Anniversary coming up'],
+          bodyLine: 'Wishing you both a wonderful celebration ahead.',
         );
       case OccasionKind.birthday:
-        if (who.isNotEmpty) {
-          return CustomerCardContent(
-            eyebrow: 'WISHING YOU',
-            greeting: 'Birthday Wishes',
-            headlineLines: [who],
-            bodyLine: 'A wonderful year ahead.',
-          );
-        }
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU',
-          greeting: dear,
-          headlineLines: const ['Birthday', 'Wishes'],
-          bodyLine: 'A happy year ahead for the birthday star.',
-        );
-      case OccasionKind.anniversary:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU BOTH',
-          greeting: dear,
-          headlineLines: const ['Anniversary', 'Wishes'],
-          bodyLine: 'Many more happy years together.',
+        return _wish(
+          dear: dear,
+          headlineLines: const ['Birthday coming up'],
+          bodyLine: who.isEmpty
+              ? 'Wishing you a wonderful celebration ahead.'
+              : 'Wishing $who a wonderful celebration ahead.',
         );
       case OccasionKind.baby:
-        return CustomerCardContent(
-          eyebrow: 'WITH LOVE',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Good health and happy days to your family.',
+        return _wish(
+          dear: dear,
+          headlineLines: const ['Celebration coming up'],
+          bodyLine: 'Warm wishes for your little one.',
         );
       case OccasionKind.home:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU',
-          greeting: dear,
-          headlineLines: ['$nthWord Year', 'in Your Home'],
-          bodyLine: 'Many more happy years there.',
+        return _wish(
+          dear: dear,
+          headlineLines: const ['Home anniversary coming up'],
+          bodyLine: 'Wishing you many happy years ahead.',
         );
       case OccasionKind.corporate:
-        return CustomerCardContent(
-          eyebrow: 'WARM WISHES',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'From all of us at We Decor.',
-        );
+        return _wish(dear: dear, headlineLines: const ['Warm wishes']);
       case OccasionKind.celebration:
-        return CustomerCardContent(
-          eyebrow: 'THINKING OF YOU',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Hope this time of year is a lovely one.',
-        );
-    }
-  }
-
-  static CustomerCardContent _enquired({
-    required OccasionKind kind,
-    required String? dear,
-    required String person,
-  }) {
-    switch (kind) {
-      case OccasionKind.weddingAnniversary:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU BOTH',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Happiness and a wonderful year ahead.',
-        );
-      case OccasionKind.birthday:
-        if (person.isNotEmpty) {
-          return CustomerCardContent(
-            eyebrow: 'WISHING YOU',
-            greeting: dear,
-            headlineLines: const ['Warm', 'Wishes'],
-            bodyLine: 'A happy and healthy year ahead for $person.',
-          );
-        }
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'A happy and healthy year ahead.',
-        );
-      case OccasionKind.anniversary:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Many happy years ahead.',
-        );
-      case OccasionKind.baby:
-        return CustomerCardContent(
-          eyebrow: 'WITH LOVE',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Good health and happy days to your family.',
-        );
-      case OccasionKind.home:
-        return CustomerCardContent(
-          eyebrow: 'WISHING YOU',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'Many happy years in your home.',
-        );
-      case OccasionKind.corporate:
-        return CustomerCardContent(
-          eyebrow: 'WARM WISHES',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
-          bodyLine: 'From all of us at We Decor.',
-        );
-      case OccasionKind.celebration:
-        return CustomerCardContent(
-          eyebrow: 'THINKING OF YOU',
-          greeting: dear,
-          headlineLines: const ['Warm', 'Wishes'],
+        return _wish(
+          dear: dear,
+          headlineLines: const ['Warm wishes'],
           bodyLine: 'Wishing you a happy year ahead.',
         );
     }
@@ -354,40 +282,10 @@ class CustomerCardContent {
     'Twentieth',
   ];
 
-  static const List<String> _cardinalWords = [
-    'Zero',
-    'One',
-    'Two',
-    'Three',
-    'Four',
-    'Five',
-    'Six',
-    'Seven',
-    'Eight',
-    'Nine',
-    'Ten',
-    'Eleven',
-    'Twelve',
-    'Thirteen',
-    'Fourteen',
-    'Fifteen',
-    'Sixteen',
-    'Seventeen',
-    'Eighteen',
-    'Nineteen',
-    'Twenty',
-  ];
-
   /// Ordinals 1–20 as words; above 20 as digits (drawn with lining figures).
   static String ordinalWord(int n) {
     if (n >= 1 && n <= 20) return _ordinalWords[n];
     return OccasionKind.ordinal(n);
-  }
-
-  /// Cardinals 0–20 as words; above 20 as digits.
-  static String cardinalWord(int n) {
-    if (n >= 0 && n <= 20) return _cardinalWords[n];
-    return '$n';
   }
 
   /// Title-cases an event label; blank → "Celebration".
