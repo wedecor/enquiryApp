@@ -83,7 +83,7 @@ class EnquiryWhatsApp {
     return ' for $day $month';
   }
 
-  /// Card for flows 1–2 (brand) or flow 3 (countdown, else brand).
+  /// Card for enquiry WhatsApp (personalised) or follow-up countdown.
   static CustomerCardContent cardFor({
     required String customerName,
     String? eventTypeLabel,
@@ -102,7 +102,11 @@ class EnquiryWhatsApp {
       );
       if (c != null) return c;
     }
-    return CustomerCardContent.brand(websiteUrl: websiteUrl, instagramHandle: instagramHandle);
+    return CustomerCardContent.enquiry(
+      customerName: customerName,
+      eventTypeLabel: eventTypeLabel,
+      eventDate: eventDate,
+    );
   }
 
   /// Opens the customer chat with the right prefill, logs contact, then shares
@@ -138,10 +142,10 @@ class EnquiryWhatsApp {
           eventDate: eventDate,
         );
 
-    // New queries: text only (no card / no second step). Cards are for
-    // follow-ups that already have a known WhatsApp chat on this device.
+    // Render card when shareCard is on. On Android the first open per device is
+    // text-only (+ save contact); the card is used on later opens for that chat.
     Uint8List? png;
-    if (shareCard && !firstContact && !kIsWeb) {
+    if (shareCard && !kIsWeb) {
       try {
         final content = cardFor(
           customerName: customerName,
@@ -163,13 +167,12 @@ class EnquiryWhatsApp {
 
     // Android: contact prep + chat (and card when we have one / known chat).
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final sheetContext = (context != null && context.mounted) ? context : null;
       final direct = await WhatsAppDirectShare.shareImageToChat(
         launcher: launcher,
         png: png,
         phone: phone,
         text: text,
-        context: sheetContext,
+        context: (context != null && context.mounted) ? context : null,
         customerFullName: customerName,
         eventDate: eventDate,
       );

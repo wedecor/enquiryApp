@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/status_vocabulary.dart';
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/contacts/enquiry_whatsapp.dart';
+import '../../../../core/contacts/whatsapp_contacts.dart';
 import '../../../../core/providers/role_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../services/dropdown_lookup.dart';
-import '../../../settings/providers/settings_providers.dart';
 import '../../../../ui/components/enquiry_list_row.dart';
 import '../../../../ui/components/enquiry_row_actions_sheet.dart';
+import '../../../settings/providers/settings_providers.dart';
 import '../../domain/booking_amounts.dart';
 import '../../domain/enquiry_location.dart';
 import '../../domain/event_functions.dart';
@@ -94,6 +96,25 @@ class EnquiryListItem extends ConsumerWidget {
           firstContact: EnquiryWhatsApp.isFirstContactFrom(data),
           websiteUrl: config?.websiteUrl,
           instagramHandle: config?.instagramHandle,
+        );
+      },
+      onSaveContact: (p) async {
+        final result = await WhatsAppContacts.saveCustomerFromButton(
+          context: context,
+          customerName: customerName,
+          customerPhone: (phone ?? p).trim(),
+          whatsappPhone: (whatsapp ?? p).trim(),
+          eventDate: eventDate,
+          launcher: ref.read(contactLauncherProvider),
+        );
+        if (!context.mounted) return;
+        final ok =
+            result == StaffSaveContactResult.saved || result == StaffSaveContactResult.alreadySaved;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(WhatsAppContacts.messageFor(result)),
+            backgroundColor: ok ? AppColorScheme.snackSuccess : Theme.of(context).colorScheme.error,
+          ),
         );
       },
       onView: openDetails,

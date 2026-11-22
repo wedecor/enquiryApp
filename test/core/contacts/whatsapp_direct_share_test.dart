@@ -41,6 +41,7 @@ void main() {
     WhatsAppDirectShare.debugIsAndroid = true;
     WhatsAppDirectShare.debugPrepareDelay = Duration.zero;
     WhatsAppDirectShare.debugEnsurePermission = (_) async => canUseContacts;
+    WhatsAppContacts.debugIsAndroid = true;
 
     Future<Object?> invoker(String method, Map<String, Object?>? args) async {
       calls.add(_Call(method, args));
@@ -80,18 +81,18 @@ void main() {
 
   List<String> methods() => calls.map((c) => c.method).toList();
 
-  test('new / unknown: text-only openChat, no card intent, not remembered', () async {
+  test('first open: text-only Click-to-Chat, no image, then remembered', () async {
     final result = await share();
 
     expect(result, WhatsAppDirectShareResult.textOnly);
     expect(methods(), ['listInstalledPackages', 'openChat']);
     expect(calls[1].args!['text'], message);
+    expect(calls[1].args!['phone'], '919380368142');
     expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
-    expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isFalse);
+    expect(await WhatsAppDirectShare.isKnownChat('com.whatsapp', '919380368142'), isTrue);
   });
 
   test('known chat: one intent with card and caption', () async {
-    // Seed known via prefs (enquiry path no longer remembers from text-only).
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(WhatsAppDirectShare.prefKnownChats, [
       WhatsAppDirectShare.chatKey('com.whatsapp', '919380368142'),
@@ -106,7 +107,7 @@ void main() {
     expect(calls.any((c) => c.method == 'openChat'), isFalse);
   });
 
-  test('not in contacts: save with date in name then text-only openChat', () async {
+  test('first open not in contacts: save then text-only', () async {
     canUseContacts = true;
     inContacts = false;
     saveOk = true;
@@ -124,7 +125,6 @@ void main() {
     expect(methods(), ['listInstalledPackages', 'isInContacts', 'saveContact', 'openChat']);
     final save = calls.firstWhere((c) => c.method == 'saveContact');
     expect(save.args?['name'], 'Sahana Gowda – We Decor · 12 Jan 2026');
-    expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
   });
 
   test('contactDisplayName omits date when missing', () {
@@ -135,7 +135,7 @@ void main() {
     );
   });
 
-  test('in contacts: no save, text-only openChat', () async {
+  test('in contacts but first open: text-only, no card', () async {
     canUseContacts = true;
     inContacts = true;
 
@@ -143,9 +143,10 @@ void main() {
 
     expect(result, WhatsAppDirectShareResult.textOnly);
     expect(methods(), ['listInstalledPackages', 'isInContacts', 'openChat']);
+    expect(calls.any((c) => c.method == 'shareImageToChat'), isFalse);
   });
 
-  test('permission refused: still text-only openChat', () async {
+  test('permission refused: still text-only for first open', () async {
     canUseContacts = false;
 
     final result = await share();
@@ -154,7 +155,7 @@ void main() {
     expect(methods(), ['listInstalledPackages', 'openChat']);
   });
 
-  test('click-to-chat fails: unavailable', () async {
+  test('click-to-chat fails for first open: unavailable', () async {
     openChatOk = false;
 
     expect(await share(), WhatsAppDirectShareResult.unavailable);
@@ -187,5 +188,25 @@ void main() {
     WhatsAppDirectShare.debugIsAndroid = false;
     expect(await share(), WhatsAppDirectShareResult.unavailable);
     expect(calls, isEmpty);
+  });
+
+  test('no png: text-only openChat', () async {
+    final result = await WhatsAppDirectShare.shareImageToChat(
+      launcher: launcher,
+      png: null,
+      phone: '9380368142',
+      text: message,
+    );
+    expect(result, WhatsAppDirectShareResult.textOnly);
+    expect(methods(), ['listInstalledPackages', 'openChat']);
+  });
+
+  test('second tap after first open uses card', () async {
+    expect(await share(), WhatsAppDirectShareResult.textOnly);
+    calls.clear();
+
+    final second = await share();
+    expect(second, WhatsAppDirectShareResult.opened);
+    expect(methods(), ['listInstalledPackages', 'shareImageToChat']);
   });
 }

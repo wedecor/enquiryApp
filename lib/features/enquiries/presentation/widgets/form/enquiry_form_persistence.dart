@@ -752,6 +752,17 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
       );
     }
 
+    // Best-effort: save customer to this phone's contacts (does not block save).
+    if (mounted) {
+      await WhatsAppContacts.saveCustomerIfNeeded(
+        context: context,
+        customerName: tidyPersonName(_nameController.text),
+        customerPhone: _phoneController.text.trim(),
+        whatsappPhone: _currentWhatsapp,
+        eventDate: eventDate,
+      );
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -1148,6 +1159,17 @@ mixin _EnquiryFormPersistence on ConsumerState<EnquiryFormScreen> {
         }
       }
       _pendingRemovedImageUrls.clear();
+    }
+
+    // Best-effort: save customer to this phone's contacts (does not block save).
+    if (mounted) {
+      await WhatsAppContacts.saveCustomerIfNeeded(
+        context: context,
+        customerName: newCustomerName,
+        customerPhone: newCustomerPhone,
+        whatsappPhone: _currentWhatsapp,
+        eventDate: newEventDate,
+      );
     }
 
     if (mounted) {

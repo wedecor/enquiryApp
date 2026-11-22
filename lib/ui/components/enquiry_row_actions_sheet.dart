@@ -211,6 +211,7 @@ List<EnquiryRowAction> contactEnquiryRowActions({
   required String enquiryId,
   required Future<void> Function(String phone) onCall,
   required Future<void> Function(String phone) onWhatsApp,
+  Future<void> Function(String phone)? onSaveContact,
   VoidCallback? onView,
   VoidCallback? onUpdateStatus,
   String? statusValue,
@@ -247,6 +248,16 @@ List<EnquiryRowAction> contactEnquiryRowActions({
   }
 
   final waNumber = (whatsapp ?? phone)?.trim();
+  if (onSaveContact != null && waNumber != null && waNumber.isNotEmpty) {
+    actions.add(
+      EnquiryRowAction(
+        label: 'Save contact',
+        icon: Icons.person_add_alt_1_outlined,
+        tint: AppColorScheme.info,
+        onSelected: () => onSaveContact(waNumber),
+      ),
+    );
+  }
   if (waNumber != null && waNumber.isNotEmpty) {
     actions.add(
       EnquiryRowAction(

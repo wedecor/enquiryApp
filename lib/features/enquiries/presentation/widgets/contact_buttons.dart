@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/contacts/contact_launcher.dart';
 import '../../../../core/contacts/enquiry_whatsapp.dart';
+import '../../../../core/contacts/whatsapp_contacts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../settings/domain/app_config.dart';
@@ -100,6 +101,8 @@ class ContactButtons extends ConsumerWidget {
       );
     }
 
+    final savePhone = _waPhone ?? callPhone;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -113,7 +116,18 @@ class ContactButtons extends ConsumerWidget {
             semanticLabel: 'Call $customerName',
             semanticHint: 'Opens phone dialer with customer number',
           ),
-        if (hasCall && hasWa) const SizedBox(width: AppTokens.space2),
+        if (hasCall && savePhone != null) const SizedBox(width: AppTokens.space2),
+        if (savePhone != null)
+          EnquiryRoundAction(
+            icon: Icons.person_add_alt_1_outlined,
+            label: 'Save',
+            color: AppColorScheme.info,
+            enabled: enabled,
+            onTap: () => _handleSaveContact(context, ref, contactLauncher, savePhone),
+            semanticLabel: 'Save $customerName to contacts',
+            semanticHint: 'Saves the customer number on this phone',
+          ),
+        if (savePhone != null && hasWa) const SizedBox(width: AppTokens.space2),
         if (hasWa)
           EnquiryRoundAction(
             icon: Icons.chat,
@@ -126,6 +140,26 @@ class ContactButtons extends ConsumerWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _handleSaveContact(
+    BuildContext context,
+    WidgetRef ref,
+    ContactLauncher contactLauncher,
+    String phone,
+  ) async {
+    final result = await WhatsAppContacts.saveCustomerFromButton(
+      context: context,
+      customerName: customerName,
+      customerPhone: customerPhone?.trim().isNotEmpty == true ? customerPhone!.trim() : phone,
+      whatsappPhone: _waPhone,
+      eventDate: eventDate,
+      launcher: contactLauncher,
+    );
+    if (!context.mounted) return;
+    final ok =
+        result == StaffSaveContactResult.saved || result == StaffSaveContactResult.alreadySaved;
+    _showErrorSnackBar(context, WhatsAppContacts.messageFor(result), isError: !ok);
   }
 
   /// Handle call button tap

@@ -35,12 +35,10 @@ typedef WhatsAppPermissionGate = Future<bool> Function(BuildContext? context);
 
 /// Android WhatsApp handoff for customer cards / enquiry messages.
 ///
-/// * **Known chat** (this device already sent a card to this number/app) → one
-///   intent: card + caption (`jid`).
-/// * **Otherwise** (new lead / never successfully sent a card) → one action:
-///   optional device contact save, then Click-to-Chat with the prefilled
-///   greeting. **Text only — no card, no second step.** Jid image share on an
-///   unknown chat opens an empty WhatsApp window.
+/// One tap only (no share-sheet second step). Knowledge is **per device**:
+/// * **First open on this phone** (unknown) → save contact (if allowed) +
+///   Click-to-Chat **text only** (number always attached, no image).
+/// * **Later opens** (known) → card + caption (`jid`).
 class WhatsAppDirectShare {
   WhatsAppDirectShare._();
 
@@ -106,11 +104,12 @@ class WhatsAppDirectShare {
     final pkg = pick.package;
     if (pkg == null) return WhatsAppDirectShareResult.unavailable;
 
-    final hasCard = png != null && png.isNotEmpty;
+    final known = await isKnownChat(pkg, digits);
 
-    // Known chat + card: one intent with image + caption.
-    if (hasCard && await isKnownChat(pkg, digits)) {
-      final sent = await _sendCard(png: png, digits: digits, text: text, pkg: pkg);
+    // Later opens on THIS phone + card: image + caption.
+    final cardPng = png;
+    if (cardPng != null && cardPng.isNotEmpty && known) {
+      final sent = await _sendCard(png: cardPng, digits: digits, text: text, pkg: pkg);
       if (sent) {
         await _rememberChat(pkg, digits);
         return WhatsAppDirectShareResult.opened;
@@ -119,13 +118,17 @@ class WhatsAppDirectShare {
       return WhatsAppDirectShareResult.unavailable;
     }
 
-    // New query / unknown / text-only: save contact if needed, then Click-to-Chat.
-    // Never jid-share first on an unknown chat — that opens empty WhatsApp.
+    // First open on this phone: save contact + text only (no image / no forward sheet).
+    final prepContext = (context != null && context.mounted) ? context : null;
     await _prepareContactIfAllowed(
-      context: context,
+      // ignore: use_build_context_synchronously
+      context: prepContext,
       digits: digits,
       customerFullName: customerFullName,
       eventDate: eventDate,
+      // Click-to-Chat does not need WhatsApp to index the contact first.
+      waitAfterSave: false,
+      explicitPermission: true,
     );
 
     final chatOpened = await _openChat(digits: digits, text: text, pkg: pkg);
@@ -133,6 +136,8 @@ class WhatsAppDirectShare {
       Log.w('WhatsAppDirectShare: click-to-chat failed');
       return WhatsAppDirectShareResult.unavailable;
     }
+    // Next tap on this phone can attach the card.
+    await _rememberChat(pkg, digits);
     return WhatsAppDirectShareResult.textOnly;
   }
 
@@ -141,52 +146,38 @@ class WhatsAppDirectShare {
     required String digits,
     required String? customerFullName,
     DateTime? eventDate,
+    bool waitAfterSave = true,
+    bool explicitPermission = false,
   }) async {
-    final canUse = await (debugEnsurePermission ?? WhatsAppContacts.ensurePermission)(
-      (context != null && context.mounted) ? context : null,
-    );
+    final gate = debugEnsurePermission;
+    final canUse = gate != null
+        ? await gate((context != null && context.mounted) ? context : null)
+        : await WhatsAppContacts.ensurePermission(
+            (context != null && context.mounted) ? context : null,
+            explicit: explicitPermission,
+          );
     if (!canUse) return;
 
     final already = await WhatsAppContacts.isInContacts(digits);
     if (already) return;
 
-    final displayName = contactDisplayName(customerFullName, eventDate: eventDate);
+    final displayName = WhatsAppContacts.contactDisplayName(customerFullName, eventDate: eventDate);
     final saved = await WhatsAppContacts.saveContact(name: displayName, phone: digits);
     if (!saved) {
       Log.w('WhatsAppDirectShare: saveContact failed; continuing with click-to-chat');
       return;
     }
-    await _showPreparingAndWait(context);
+    if (waitAfterSave) {
+      final waitContext = (context != null && context.mounted) ? context : null;
+      // ignore: use_build_context_synchronously
+      await _showPreparingAndWait(waitContext);
+    }
   }
 
-  /// Device-contact label: `{name} – We Decor` or `{name} – We Decor · 12 Jan 2026`.
+  /// See [WhatsAppContacts.contactDisplayName].
   @visibleForTesting
-  static String contactDisplayName(String? fullName, {DateTime? eventDate}) {
-    final n = (fullName ?? '').trim();
-    final base = n.isEmpty ? 'We Decor customer' : '$n – We Decor';
-    final dateBit = _contactDateSuffix(eventDate);
-    if (dateBit.isEmpty) return base;
-    return '$base · $dateBit';
-  }
-
-  static String _contactDateSuffix(DateTime? eventDate) {
-    if (eventDate == null || eventDate.year <= 1971) return '';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${eventDate.day} ${months[eventDate.month - 1]} ${eventDate.year}';
-  }
+  static String contactDisplayName(String? fullName, {DateTime? eventDate}) =>
+      WhatsAppContacts.contactDisplayName(fullName, eventDate: eventDate);
 
   static Future<void> _showPreparingAndWait(BuildContext? context) async {
     if (context == null || !context.mounted) {
