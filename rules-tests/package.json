@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "Firestore security rules tests for We Decor Enquiries RBAC system",
   "scripts": {
-    "test": "jest spec/rbac_stable.spec.js --testEnvironment=node --runInBand",
+    "test": "jest spec/rbac_stable.spec.js spec/eventos_private.spec.js --testEnvironment=node --runInBand",
     "test:verbose": "jest --testEnvironment=node --verbose --runInBand",
     "test:watch": "jest --testEnvironment=node --watch",
     "emulators:start": "firebase emulators:start --only firestore --project demo-test",
     "ci": "npm run test:emulator",
     "test:emulator": "firebase emulators:exec --only firestore --project demo-test \"npm test\"",
-    "test:storage": "jest spec/storage.spec.js --testEnvironment=node --runInBand"
+    "test:storage": "jest spec/storage.spec.js --testEnvironment=node --runInBand",
+    "test:eventos": "jest spec/eventos_private.spec.js --testEnvironment=node --runInBand"
   },
   "dependencies": {
     "@firebase/rules-unit-testing": "3.0.3",
