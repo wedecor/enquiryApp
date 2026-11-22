@@ -31,12 +31,7 @@ void main() {
     controller.state = const EventosConnectionSnapshot(
       state: EventosConnectionState.connected,
       environment: 'staging',
-      user: EventosUser(
-        id: 'u1',
-        name: 'Ilyas',
-        role: 'owner',
-        permissions: ['bookings:read'],
-      ),
+      user: EventosUser(id: 'u1', name: 'Ilyas', role: 'owner', permissions: ['bookings:read']),
     );
     await tester.pumpAndSettle();
 
