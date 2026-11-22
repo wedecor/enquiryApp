@@ -56,6 +56,24 @@ cp functions/.env.example functions/.env   # then edit values
 firebase functions:secrets:set SMTP_PASS   # SMTP password is a Secret Manager secret
 ```
 
+### EventOS bridge (M5-01)
+
+Temporary one-way sync of approved bookings to EventOS. Contract:
+`docs/integrations/eventos-bridge-contract.md`.
+
+```bash
+# 1. Shared HMAC secret (same value as EventOS Secret Manager for that env)
+firebase functions:secrets:set EVENTOS_FEED_SECRET
+
+# 2. Non-secret feed URL in functions/.env (empty = sync off / instant rollback)
+# EVENTOS_FEED_URL=https://eventos-api-staging-….run.app/api/v1/integrations/enquiries/sync
+
+# 3. Flutter client (optional until screens use EventOS):
+# flutter run --dart-define=EVENTOS_API_URL=https://eventos-api-staging-….run.app
+```
+
+Off switch: clear `EVENTOS_FEED_URL` and redeploy functions (or leave it unset).
+
 The `env` block in `firebase.json` is not read by the Firebase CLI — don't put config there.
 
 Build / deploy functions:

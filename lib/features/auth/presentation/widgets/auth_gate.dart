@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/auth/session_state.dart';
+import '../../../../core/eventos/eventos_providers.dart';
 import '../../../../core/logging/safe_log.dart';
 import '../../../../core/navigation/app_shell.dart';
 import '../../../../core/notifications/fcm_token_manager.dart';
@@ -200,6 +201,9 @@ class AuthGate extends ConsumerWidget {
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
       await FcmTokenManager.removeCurrentToken(ref.read(firestoreServiceProvider));
+      try {
+        await ref.read(eventosAuthProvider).clearOnSignOut();
+      } catch (_) {}
       await FirebaseAuth.instance.signOut();
       safeLog('user_signed_out', {'method': 'auth_gate'});
     } catch (e) {

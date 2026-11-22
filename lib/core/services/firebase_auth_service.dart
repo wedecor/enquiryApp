@@ -125,13 +125,16 @@ class FirebaseAuthService {
   ///   print('Sign-out failed: ${e.message}');
   /// }
   /// ```
-  Future<void> signOut() async {
+  Future<void> signOut({Future<void> Function()? onBeforeFirebaseSignOut}) async {
     try {
       // Remove this device's token (doc + FCM token) before signing out, so the
       // next person on this phone doesn't get the previous user's pushes.
       // Best-effort: a token cleanup failure must never block sign-out.
       try {
         await FcmTokenManager.removeCurrentToken(FirestoreService());
+      } catch (_) {}
+      try {
+        await onBeforeFirebaseSignOut?.call();
       } catch (_) {}
 
       await _auth.signOut();

@@ -13,6 +13,7 @@ import '../../../../admin/dropdowns/presentation/dropdown_management_screen.dart
 import '../../../../admin/users/presentation/user_management_screen.dart';
 import '../../widgets/settings_layout.dart';
 import '../../widgets/settings_tiles.dart';
+import 'eventos_connection_tile.dart';
 
 class DataIntegrationsTab extends ConsumerWidget {
   const DataIntegrationsTab({super.key});
@@ -69,6 +70,13 @@ class DataIntegrationsTab extends ConsumerWidget {
                 ).push(MaterialPageRoute<void>(builder: (_) => const AnalyticsScreen()));
               },
             ),
+          ],
+        ),
+        const SettingsGroup(
+          eyebrow: 'Backend',
+          title: 'EventOS',
+          children: [
+            EventosConnectionTile(),
           ],
         ),
         SettingsGroup(
