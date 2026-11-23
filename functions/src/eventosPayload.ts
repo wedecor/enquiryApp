@@ -7,6 +7,9 @@ import { createHash } from "crypto";
 import { normalizePhone } from "./customers";
 import { eventFunctionsOf, istDayKey, type EventFunction } from "./eventFunctions";
 import { canonicalStatus, type CanonicalStatus } from "./statusVocabulary";
+import { normalizeEventOSWallClockTime } from "./eventosTime";
+
+export { normalizeEventOSWallClockTime } from "./eventosTime";
 
 export const EVENTOS_SCHEMA_VERSION = 1 as const;
 export const EVENTOS_SOURCE = "wedecor-enquiries" as const;
@@ -44,7 +47,7 @@ export type EventOSPayload = {
     eventTypeLabel: string | null;
     startDate: string;
     endDate: string;
-    guestCount: number;
+    guestCount: number | null;
     notes: string | null;
     assigneeName: string | null;
   };
@@ -61,8 +64,19 @@ export type EventosSyncBookkeeping = {
   eventosEventId?: string | null;
 };
 
+export type BuildEventOSPayloadOptions = {
+  /** Called when a non-empty time string could not be normalised (never receives the value). */
+  onTimeUnparsed?: (enquiryId: string) => void;
+};
+
 function str(raw: unknown): string | null {
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
+function optionalText(raw: unknown, max: number): string | null {
+  const s = str(raw);
+  if (!s) return null;
+  return s.length > max ? s.slice(0, max) : s;
 }
 
 function toDate(raw: unknown): Date | null {
@@ -107,23 +121,42 @@ function coordsFromMap(m: Record<string, unknown>): { lat: number | null; lng: n
   };
 }
 
+function nonEmptyEventType(raw: unknown, fallback = "others"): string {
+  return str(raw) ?? fallback;
+}
+
+function normalizeFunctionTime(
+  enquiryId: string,
+  raw: string | null,
+  onTimeUnparsed?: (enquiryId: string) => void,
+): string | null {
+  if (raw == null || !raw.trim()) return null;
+  const normalized = normalizeEventOSWallClockTime(raw);
+  if (normalized === null) {
+    onTimeUnparsed?.(enquiryId);
+  }
+  return normalized;
+}
+
 function functionPayload(
+  enquiryId: string,
   f: EventFunction,
   coords: { lat: number | null; lng: number | null },
+  onTimeUnparsed?: (enquiryId: string) => void,
 ): EventOSFunctionPayload {
   return {
-    functionId: f.id,
-    eventType: f.eventType,
-    eventTypeLabel: f.eventTypeLabel,
+    functionId: f.id.trim() || "main",
+    eventType: nonEmptyEventType(f.eventType),
+    eventTypeLabel: optionalText(f.eventTypeLabel, 200),
     date: istDayKey(f.date),
-    time: f.time,
-    location: f.location,
-    locationArea: f.locationArea,
-    locationAddress: f.locationAddress,
-    locationPlaceId: f.locationPlaceId,
+    time: normalizeFunctionTime(enquiryId, f.time, onTimeUnparsed),
+    location: optionalText(f.location, 500),
+    locationArea: optionalText(f.locationArea, 500),
+    locationAddress: optionalText(f.locationAddress, 1000),
+    locationPlaceId: optionalText(f.locationPlaceId, 256),
     lat: coords.lat,
     lng: coords.lng,
-    notes: f.notes,
+    notes: optionalText(f.notes, 4000),
   };
 }
 
@@ -157,38 +190,67 @@ function resolveSourceUpdatedAt(enquiry: Record<string, unknown>): string {
   return toIsoWithOffset(new Date());
 }
 
-function resolveGuestCount(enquiry: Record<string, unknown>): number {
+/** Non-negative integer guest count, or null when missing / not a finite number. */
+export function resolveGuestCount(enquiry: Record<string, unknown>): number | null {
   const n =
     numOrNull(enquiry.guestCount) ??
     numOrNull(enquiry.numberOfGuests) ??
     numOrNull(enquiry.guests);
-  return n !== null && n >= 0 ? Math.floor(n) : 0;
+  if (n === null || n < 0) return null;
+  const rounded = Math.round(n);
+  if (rounded < 0 || rounded > 1_000_000) return null;
+  return rounded;
 }
 
 function resolveMoney(financial: Record<string, unknown> | null): EventOSMoney | undefined {
   if (!financial) return undefined;
-  const totalCost = numOrNull(financial.totalCost) ?? 0;
-  const advancePaid = numOrNull(financial.advancePaid) ?? 0;
-  const currency = str(financial.currency) ?? "INR";
+  const totalCost = numOrNull(financial.totalCost);
+  const advancePaid = numOrNull(financial.advancePaid);
+  if (totalCost === null && advancePaid === null) return undefined;
+  const currencyRaw = str(financial.currency) ?? "INR";
+  const currency = currencyRaw.length === 3 ? currencyRaw.toUpperCase() : "INR";
   return {
-    totalCost: Math.max(0, totalCost),
-    advancePaid: Math.max(0, advancePaid),
+    totalCost: Math.max(0, totalCost ?? 0),
+    advancePaid: Math.max(0, advancePaid ?? 0),
     currency,
   };
 }
 
+/** Ensure functionId values are unique (EventOS schema refine). */
+function uniquifyFunctionIds(fns: EventOSFunctionPayload[]): EventOSFunctionPayload[] {
+  const seen = new Set<string>();
+  return fns.map((fn, index) => {
+    let id = fn.functionId;
+    if (!id || seen.has(id)) {
+      id = `${fn.functionId || "f"}_${index}`;
+      let n = 1;
+      while (seen.has(id)) {
+        id = `${fn.functionId || "f"}_${index}_${n}`;
+        n += 1;
+      }
+    }
+    seen.add(id);
+    return id === fn.functionId ? fn : { ...fn, functionId: id };
+  });
+}
+
 /**
  * Builds the schemaVersion:1 EventOS feed payload.
- * Dates are IST calendar days via `istDayKey`.
+ * Dates are IST calendar days via `istDayKey`. Times are normalised to HH:mm.
  */
 export function buildEventOSPayload(
   enquiryId: string,
   enquiry: Record<string, unknown>,
   financial: Record<string, unknown> | null = null,
+  options?: BuildEventOSPayloadOptions,
 ): EventOSPayload {
   const status = canonicalStatus(enquiry.statusValue ?? enquiry.status ?? enquiry.eventStatus) ?? "new";
   const functions = eventFunctionsOf(enquiry);
-  const functionPayloads = functions.map((f) => functionPayload(f, coordsForFunction(f, enquiry)));
+  const functionPayloads = uniquifyFunctionIds(
+    functions.map((f) =>
+      functionPayload(enquiryId, f, coordsForFunction(f, enquiry), options?.onTimeUnparsed),
+    ),
+  );
 
   let startDate: string;
   let endDate: string;
@@ -200,6 +262,11 @@ export function buildEventOSPayload(
     const fallback = toDate(enquiry.eventDate) ?? new Date();
     startDate = endDate = istDayKey(fallback);
   }
+  if (endDate < startDate) {
+    const swap = startDate;
+    startDate = endDate;
+    endDate = swap;
+  }
 
   const main = functions[0];
   const payload: EventOSPayload = {
@@ -209,19 +276,27 @@ export function buildEventOSPayload(
     sourceUpdatedAt: resolveSourceUpdatedAt(enquiry),
     status,
     customer: {
-      name: str(enquiry.customerName) ?? str(enquiry.name) ?? "Unknown",
+      name: optionalText(enquiry.customerName, 200) ?? optionalText(enquiry.name, 200) ?? "Unknown",
       phone: formatEventOSPhone(enquiry.customerPhone ?? enquiry.phone ?? enquiry.phoneNormalized),
-      email: str(enquiry.customerEmail) ?? str(enquiry.email),
+      email: optionalText(enquiry.customerEmail, 254) ?? optionalText(enquiry.email, 254),
     },
     event: {
-      eventType: main?.eventType ?? str(enquiry.eventTypeValue) ?? str(enquiry.eventType) ?? "event",
+      eventType: nonEmptyEventType(
+        main?.eventType ?? enquiry.eventTypeValue ?? enquiry.eventType,
+      ),
       eventTypeLabel:
-        main?.eventTypeLabel ?? str(enquiry.eventTypeLabel) ?? str(enquiry.eventType),
+        optionalText(main?.eventTypeLabel, 200) ??
+        optionalText(enquiry.eventTypeLabel, 200) ??
+        optionalText(enquiry.eventType, 200),
       startDate,
       endDate,
       guestCount: resolveGuestCount(enquiry),
-      notes: str(enquiry.notes) ?? str(enquiry.eventNotes) ?? str(enquiry.message),
-      assigneeName: str(enquiry.assignedToName) ?? str(enquiry.assigneeName),
+      notes:
+        optionalText(enquiry.notes, 8000) ??
+        optionalText(enquiry.eventNotes, 8000) ??
+        optionalText(enquiry.message, 8000),
+      assigneeName:
+        optionalText(enquiry.assignedToName, 200) ?? optionalText(enquiry.assigneeName, 200),
     },
     functions: functionPayloads,
   };

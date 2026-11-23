@@ -4,6 +4,7 @@ import {
   buildEventOSPayload,
   formatEventOSPhone,
   hashEventOSPayload,
+  resolveGuestCount,
   shouldSendToEventOS,
   stableStringify,
 } from "../src/eventosPayload";
@@ -109,6 +110,124 @@ describe("buildEventOSPayload", () => {
       eventType: "birthday",
     });
     assert.equal(payload.status, "approved");
+  });
+
+  it("normalises function times to HH:mm and logs unparsed via callback", () => {
+    const unparsed: string[] = [];
+    const payload = buildEventOSPayload(
+      "enq-time",
+      {
+        customerName: "A",
+        statusValue: "approved",
+        functions: [
+          {
+            id: "a",
+            eventType: "haldi",
+            date: new Date(Date.UTC(2026, 11, 11, 18, 30)),
+            time: "6:30 PM",
+          },
+          {
+            id: "b",
+            eventType: "wedding",
+            date: new Date(Date.UTC(2026, 11, 12, 18, 30)),
+            time: "18:30:00",
+          },
+          {
+            id: "c",
+            eventType: "reception",
+            date: new Date(Date.UTC(2026, 11, 13, 18, 30)),
+            time: "not-a-time",
+          },
+        ],
+      },
+      null,
+      { onTimeUnparsed: (id) => unparsed.push(id) },
+    );
+    assert.equal(payload.functions[0].time, "18:30");
+    assert.equal(payload.functions[1].time, "18:30");
+    assert.equal(payload.functions[2].time, null);
+    assert.deepEqual(unparsed, ["enq-time"]);
+  });
+
+  it("falls back eventType to others and customer name to Unknown", () => {
+    const payload = buildEventOSPayload("enq-fb", {
+      customerName: "   ",
+      statusValue: "approved",
+      eventDate: new Date(Date.UTC(2026, 11, 11, 18, 30)),
+      eventType: "",
+    });
+    assert.equal(payload.customer.name, "Unknown");
+    assert.equal(payload.event.eventType, "others");
+  });
+
+  it("turns empty optional strings into null", () => {
+    const payload = buildEventOSPayload("enq-empty", {
+      customerName: "A",
+      customerEmail: "  ",
+      statusValue: "approved",
+      eventDate: new Date(Date.UTC(2026, 11, 11, 18, 30)),
+      eventTypeValue: "wedding",
+      notes: "",
+      assignedToName: "   ",
+      eventLocation: "",
+    });
+    assert.equal(payload.customer.email, null);
+    assert.equal(payload.event.notes, null);
+    assert.equal(payload.event.assigneeName, null);
+    assert.equal(payload.functions[0].location, null);
+  });
+
+  it("ensures endDate >= startDate and unique functionIds", () => {
+    const payload = buildEventOSPayload("enq-ids", {
+      customerName: "A",
+      statusValue: "approved",
+      functions: [
+        {
+          id: "same",
+          eventType: "haldi",
+          date: new Date(Date.UTC(2026, 11, 13, 18, 30)),
+          time: "10:00",
+        },
+        {
+          id: "same",
+          eventType: "wedding",
+          date: new Date(Date.UTC(2026, 11, 11, 18, 30)),
+          time: "18:00",
+        },
+      ],
+    });
+    assert.ok(payload.event.endDate >= payload.event.startDate);
+    const ids = payload.functions.map((f) => f.functionId);
+    assert.equal(new Set(ids).size, ids.length);
+  });
+
+  it("keeps money non-negative", () => {
+    const payload = buildEventOSPayload(
+      "enq-money",
+      {
+        customerName: "A",
+        statusValue: "approved",
+        eventDate: new Date(Date.UTC(2026, 11, 11, 18, 30)),
+        eventTypeValue: "wedding",
+      },
+      { totalCost: -10, advancePaid: -5, currency: "INR" },
+    );
+    assert.deepEqual(payload.money, {
+      totalCost: 0,
+      advancePaid: 0,
+      currency: "INR",
+    });
+  });
+});
+
+describe("resolveGuestCount", () => {
+  it("rounds finite non-negative counts and nulls invalid values", () => {
+    assert.equal(resolveGuestCount({ guestCount: 10.4 }), 10);
+    assert.equal(resolveGuestCount({ guestCount: 10.6 }), 11);
+    assert.equal(resolveGuestCount({ guestCount: "42" }), 42);
+    assert.equal(resolveGuestCount({ guestCount: -1 }), null);
+    assert.equal(resolveGuestCount({ guestCount: "nope" }), null);
+    assert.equal(resolveGuestCount({}), null);
   });
 });
 
