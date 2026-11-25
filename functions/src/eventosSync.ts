@@ -108,7 +108,9 @@ export async function syncEnquiryToEventOS(
     ? ((financialSnap.data() ?? {}) as Record<string, unknown>)
     : null;
 
-  const payload = buildEventOSPayload(enquiryId, enquiry, financial);
+  const payload = buildEventOSPayload(enquiryId, enquiry, financial, {
+    onTimeUnparsed: (id) => logger.info("eventos_time_unparsed", { enquiryId: id }),
+  });
   const nextHash = hashEventOSPayload(payload);
   const bookkeeping = await readSyncBookkeeping(deps.db, enquiryId);
   const previouslySynced = !!bookkeeping?.syncedAt;

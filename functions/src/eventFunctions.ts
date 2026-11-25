@@ -96,7 +96,7 @@ export function eventFunctionsOf(data: Record<string, unknown>): EventFunction[]
   return [
     {
       id: "main",
-      eventType: str(data.eventTypeValue) ?? str(data.eventType) ?? "event",
+      eventType: str(data.eventTypeValue) ?? str(data.eventType) ?? "others",
       eventTypeLabel: str(data.eventTypeLabel),
       date,
       time: null,
